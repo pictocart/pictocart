@@ -1,11 +1,22 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useStore } from '@/hooks/useStore';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { IndianRupee, ShoppingCart, TrendingUp, Package } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { store, loading } = useStore();
+  const navigate = useNavigate();
+
+  // Redirect to onboarding if no store or onboarding incomplete
+  useEffect(() => {
+    if (!loading && (!store || (store.onboarding_step !== null && store.onboarding_step < 7))) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [loading, store, navigate]);
 
   if (loading) {
     return (
