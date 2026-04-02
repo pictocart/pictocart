@@ -29,6 +29,7 @@ import { useState } from 'react';
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Products', icon: Package, path: '/products' },
+  { label: 'Categories', icon: FolderTree, path: '/categories' },
   { label: 'Orders', icon: ShoppingCart, path: '/orders' },
   { label: 'Coupons', icon: Ticket, path: '/coupons' },
   { label: 'Blog Posts', icon: FileText, path: '/blog-posts' },
