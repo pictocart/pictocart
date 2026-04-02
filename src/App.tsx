@@ -42,6 +42,36 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/products"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <ProductList />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products/new"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <ProductForm />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products/:id"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <ProductForm />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

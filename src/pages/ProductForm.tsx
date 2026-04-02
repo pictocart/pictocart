@@ -56,7 +56,7 @@ const ProductForm = () => {
       setSku(existingProduct.sku || '');
       setTags((existingProduct.tags as string[]) || []);
       setImages((existingProduct.images as string[]) || []);
-      setVariants((existingProduct.variants as VariantOption[]) || []);
+      setVariants((existingProduct.variants as unknown as VariantOption[]) || []);
       setInventoryCount(String(existingProduct.inventory_count ?? 0));
       setIsActive(existingProduct.is_active ?? true);
       setSeoTitle(existingProduct.seo_title || '');
