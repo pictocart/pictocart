@@ -52,7 +52,10 @@ const SEOHead = ({ title, description, ogImage, url, type = 'website', product }
     setMeta('twitter:card', ogImage ? 'summary_large_image' : 'summary');
     setMeta('twitter:title', title);
     if (description) setMeta('twitter:description', description);
-    if (ogImage) setMeta('twitter:image', ogImage);
+    if (ogImage) {
+      const absoluteOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
+      setMeta('twitter:image', absoluteOgImage);
+    }
 
     // JSON-LD structured data
     let scriptEl = document.getElementById('json-ld-seo') as HTMLScriptElement;

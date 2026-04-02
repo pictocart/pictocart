@@ -12,11 +12,11 @@ interface Props {
 const MobileAddToCart = ({ price, comparePrice, onAdd, added, colors, borderRadius }: Props) => {
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center gap-4 p-3 border-t md:hidden backdrop-blur-md"
+      className="fixed left-0 right-0 z-[60] flex items-center gap-4 p-3 border-t md:hidden backdrop-blur-md"
       style={{
         borderColor: colors.secondary + '80',
         backgroundColor: colors.card + 'f5',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 52px)',
       }}
     >
       <div className="flex-1">
