@@ -187,6 +187,8 @@ const App = () => (
             <Route path="/store/:slug/product/:productId" element={<StorefrontProduct />} />
             <Route path="/store/:slug/cart" element={<StorefrontCart />} />
             <Route path="/store/:slug/checkout" element={<StorefrontCheckout />} />
+            <Route path="/store/:slug/account/auth" element={<CustomerAuth />} />
+            <Route path="/store/:slug/account" element={<CustomerRoute><CustomerAccount /></CustomerRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
