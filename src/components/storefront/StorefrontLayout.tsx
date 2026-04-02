@@ -38,6 +38,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
   const { totalItems } = useCart(store.slug);
   const { user } = useCustomerAuth(store.slug);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const footer = footerConfig || (store.settings as any)?.footer || DEFAULT_FOOTER;
   const headerConfig = (store.settings as any)?.header || {};
