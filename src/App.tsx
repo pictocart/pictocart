@@ -38,6 +38,7 @@ import BlogPosts from "@/pages/BlogPosts";
 import BlogPostForm from "@/pages/BlogPostForm";
 import Subscribers from "@/pages/Subscribers";
 import StoreAnalytics from "@/pages/StoreAnalytics";
+import Categories from "@/pages/Categories";
 import StorefrontBlog from "@/pages/storefront/StorefrontBlog";
 import StorefrontBlogPost from "@/pages/storefront/StorefrontBlogPost";
 import NotFound from "./pages/NotFound.tsx";
@@ -182,6 +183,7 @@ const App = () => (
               }
             />
             {/* Blog, Subscribers, Analytics */}
+            <Route path="/categories" element={<ProtectedRoute><DashboardLayout><Categories /></DashboardLayout></ProtectedRoute>} />
             <Route path="/blog-posts" element={<ProtectedRoute><DashboardLayout><BlogPosts /></DashboardLayout></ProtectedRoute>} />
             <Route path="/blog-posts/new" element={<ProtectedRoute><DashboardLayout><BlogPostForm /></DashboardLayout></ProtectedRoute>} />
             <Route path="/blog-posts/:id" element={<ProtectedRoute><DashboardLayout><BlogPostForm /></DashboardLayout></ProtectedRoute>} />
