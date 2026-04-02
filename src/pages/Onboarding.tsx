@@ -169,6 +169,27 @@ const Onboarding = () => {
       case 7: return <StepGoLive data={data} store={store} onFinish={async () => {
         await saveStep(TOTAL_STEPS);
         if (store) {
+          // Create the AI-generated product if available
+          if (data.aiProduct && data.aiProduct.title) {
+            try {
+              await supabase.from('products').insert({
+                store_id: store.id,
+                title: data.aiProduct.title,
+                description: data.aiProduct.description || '',
+                short_description: data.aiProduct.shortDescription || '',
+                price: data.aiProduct.suggestedPrice || 0,
+                category: data.aiProduct.category || data.category || null,
+                tags: data.aiProduct.tags || [],
+                images: data.productImageUrl ? [data.productImageUrl] : [],
+                seo_title: data.aiProduct.seoTitle || '',
+                seo_description: data.aiProduct.seoDescription || '',
+                ai_generated_data: data.aiProduct as any,
+                is_active: true,
+              });
+            } catch (e) {
+              console.error('Failed to create onboarding product:', e);
+            }
+          }
           await supabase.from('stores').update({ is_published: true, onboarding_step: TOTAL_STEPS }).eq('id', store.id);
         }
         navigate('/', { replace: true });
