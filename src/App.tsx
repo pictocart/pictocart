@@ -38,6 +38,7 @@ import BlogPosts from "@/pages/BlogPosts";
 import BlogPostForm from "@/pages/BlogPostForm";
 import Subscribers from "@/pages/Subscribers";
 import StoreAnalytics from "@/pages/StoreAnalytics";
+import Categories from "@/pages/Categories";
 import StorefrontBlog from "@/pages/storefront/StorefrontBlog";
 import StorefrontBlogPost from "@/pages/storefront/StorefrontBlogPost";
 import NotFound from "./pages/NotFound.tsx";
