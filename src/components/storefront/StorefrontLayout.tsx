@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Search, User } from 'lucide-react';
+import { ShoppingBag, Search, User, Menu, X } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { THEME_TEMPLATES, type ThemeTemplate } from '@/lib/themes';
@@ -38,6 +38,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
   const { totalItems } = useCart(store.slug);
   const { user } = useCustomerAuth(store.slug);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const footer = footerConfig || (store.settings as any)?.footer || DEFAULT_FOOTER;
   const headerConfig = (store.settings as any)?.header || {};
@@ -60,14 +61,21 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
       {/* Navigation */}
       <header className="sticky top-0 z-50 border-b backdrop-blur-sm" style={{ borderColor: colors.secondary + '80', backgroundColor: colors.card + 'ee' }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
-          <Link to={`/store/${store.slug}`} className={`flex items-center gap-2 ${headerConfig.logo_position === 'center' ? 'mx-auto' : ''}`}>
-            {(headerConfig.logo_url || store.logo_url) && <img src={headerConfig.logo_url || store.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />}
-            {headerConfig.show_store_name !== false && (
-              <span className="font-bold text-lg" style={{ fontFamily: fonts.heading }}>{store.name}</span>
+          <div className="flex items-center gap-2">
+            {headerConfig.nav_links?.length > 0 && (
+              <button className="md:hidden p-1" onClick={() => setMobileMenuOpen((v) => !v)}>
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
             )}
-          </Link>
+            <Link to={`/store/${store.slug}`} className={`flex items-center gap-2 ${headerConfig.logo_position === 'center' ? 'md:mx-auto' : ''}`}>
+              {(headerConfig.logo_url || store.logo_url) && <img src={headerConfig.logo_url || store.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />}
+              {headerConfig.show_store_name !== false && (
+                <span className="font-bold text-lg" style={{ fontFamily: fonts.heading }}>{store.name}</span>
+              )}
+            </Link>
+          </div>
 
-          {/* Nav links */}
+          {/* Desktop nav links */}
           {headerConfig.nav_links?.length > 0 && (
             <nav className="hidden md:flex items-center" style={{ gap: `${headerConfig.nav_gap ?? 16}px` }}>
               {headerConfig.nav_links.map((link: any, i: number) => (
@@ -95,6 +103,23 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
             </Link>
           </div>
         </div>
+
+        {/* Mobile nav drawer */}
+        {mobileMenuOpen && headerConfig.nav_links?.length > 0 && (
+          <nav className="md:hidden border-t px-4 py-3 flex flex-col gap-2" style={{ borderColor: colors.secondary + '80', backgroundColor: colors.card }}>
+            {headerConfig.nav_links.map((link: any, i: number) => (
+              <Link
+                key={i}
+                to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`}
+                className="text-sm py-2 px-2 rounded hover:bg-black/5 transition-colors"
+                style={{ fontFamily: headerConfig.nav_font || 'inherit', fontWeight: Number(headerConfig.nav_weight || 500) }}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        )}
       </header>
 
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
