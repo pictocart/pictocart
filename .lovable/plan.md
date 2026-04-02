@@ -1,62 +1,42 @@
+# Phase 5: Payment Gateway — Razorpay Integration
 
+## What We Build
 
-# Phase 3: Product Management — Implementation Plan
+### 1. Seller Payment Setup Page (`/settings/payments`)
+- Simple form: seller enters Razorpay Key ID + Key Secret
+- Credentials saved to `stores.settings.razorpay` JSONB
+- Test mode toggle for development
+- Connection status indicator
 
-## Acknowledged
-- UPI/Online Banking toggles are UI-only config saved to `stores.settings` — real payment integration comes in Phase 9 (Razorpay).
-- Custom domain (`antariksh.shop/slug`) is Phase 8 — deferred.
+### 2. Edge Function: `create-razorpay-order`
+- Receives cart total + store_id
+- Fetches seller's Razorpay credentials from store settings
+- Creates Razorpay order via API
+- Returns order_id for frontend checkout
 
-## What We Build Now
+### 3. Edge Function: `verify-razorpay-payment`
+- Verifies payment signature (order_id + payment_id + signature)
+- Updates order payment_status to `paid`
+- Stores razorpay_payment_id on order
 
-### 1. Product List Page (`/products`)
-- Grid/list toggle view with product cards showing image, title, price, status badge
-- Search bar (filters by title) and category dropdown filter
-- Quick actions per product: toggle active/inactive, edit, delete
-- Bulk select with bulk delete
-- "Add Product" button leading to AI-first creation flow
-- Empty state with CTA when no products exist
+### 4. Updated Storefront Checkout
+- Load Razorpay checkout.js
+- "Pay Now" → create order → open Razorpay modal → verify → success
+- COD fallback if seller hasn't connected Razorpay
 
-### 2. Add Product Page (`/products/new`)
-- **AI-first flow**: upload image → calls existing `generate-product` edge function → auto-fills all fields
-- Editable fields: title, description, short description, price, compare-at price, category, tags, SKU
-- Multiple image upload (up to 6 images) to storage bucket
-- **Category-aware variant matrix**:
-  - Fashion → Size × Color
-  - Food → Weight × Type  
-  - Electronics → Storage × Color
-  - Custom option for other categories
-- Inventory count per variant with low-stock threshold
-- SEO fields (title, description) — AI-generated, editable
-- Save as draft or publish immediately
-
-### 3. Edit Product Page (`/products/:id`)
-- Same form as Add, pre-populated with existing data
-- "Regenerate with AI" button to re-analyze
-
-### 4. Dashboard Stats — Live Data
-- Wire up the 4 stat cards on Dashboard to query real product count and order data from the database
-
-## Routing Changes
-Add to `App.tsx`:
-- `/products` → ProductList page
-- `/products/new` → ProductForm page  
-- `/products/:id` → ProductForm page (edit mode)
-
-All wrapped in `ProtectedRoute` + `DashboardLayout`.
+### 5. Admin Commission Tracking
+- Revenue page shows real commission (2% of online payments)
 
 ## New Files
-- `src/pages/ProductList.tsx` — grid/list view with search, filters, bulk actions
-- `src/pages/ProductForm.tsx` — AI-first add/edit form with variants
-- `src/components/products/ProductCard.tsx` — card for grid view
-- `src/components/products/ProductRow.tsx` — row for list view
-- `src/components/products/VariantMatrix.tsx` — category-aware variant builder
-- `src/components/products/ImageUploader.tsx` — multi-image upload component
-- `src/hooks/useProducts.ts` — React Query hooks for CRUD
+- `src/pages/PaymentSettings.tsx`
+- `supabase/functions/create-razorpay-order/index.ts`
+- `supabase/functions/verify-razorpay-payment/index.ts`
 
 ## Modified Files
-- `src/App.tsx` — add product routes
-- `src/pages/Dashboard.tsx` — wire stats to real data queries
+- `src/pages/StorefrontCheckout.tsx` — Razorpay payment flow
+- `src/App.tsx` — /settings/payments route
+- `src/components/DashboardLayout.tsx` — Settings nav
+- `src/pages/admin/AdminRevenue.tsx` — real commission data
 
-## No Database Changes Needed
-The existing `products` table already has all required columns: title, description, price, compare_at_price, images (text[]), variants (jsonb), inventory_count, category, tags, sku, seo_title, seo_description, is_active, ai_generated_data.
-
+## No DB Changes Needed
+Orders table already has payment_method, payment_status. Stores.settings JSONB stores credentials.
