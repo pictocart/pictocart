@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          min_order_amount: number | null
+          starts_at: string | null
+          store_id: string
+          type: Database["public"]["Enums"]["coupon_type"]
+          updated_at: string
+          used_count: number
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          starts_at?: string | null
+          store_id: string
+          type?: Database["public"]["Enums"]["coupon_type"]
+          updated_at?: string
+          used_count?: number
+          value?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          starts_at?: string | null
+          store_id?: string
+          type?: Database["public"]["Enums"]["coupon_type"]
+          updated_at?: string
+          used_count?: number
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
@@ -276,6 +332,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "seller"
+      coupon_type: "percentage" | "flat"
       order_status:
         | "pending"
         | "confirmed"
@@ -413,6 +470,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "seller"],
+      coupon_type: ["percentage", "flat"],
       order_status: [
         "pending",
         "confirmed",
