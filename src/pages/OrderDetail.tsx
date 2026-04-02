@@ -68,6 +68,48 @@ const OrderDetail = () => {
     updateStatus.mutate({ id: order.id, status: status as OrderStatus });
   };
 
+  const handleShipped = async (waybill: string) => {
+    // Save tracking number and update status to shipped
+    await supabase
+      .from('orders')
+      .update({ tracking_number: waybill, status: 'shipped' })
+      .eq('id', order.id);
+    refetch();
+    toast.success('Order marked as shipped');
+  };
+
+  const handleTrack = async () => {
+    if (!order.tracking_number) return;
+    const settings = store?.settings as any;
+    const shippingConfig = settings?.shipping;
+    if (!shippingConfig?.api_token) {
+      toast.error('Configure shipping settings first');
+      return;
+    }
+    setTrackingLoading(true);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/delhivery-proxy`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'track',
+            api_token: shippingConfig.api_token,
+            test_mode: shippingConfig.test_mode ?? true,
+            waybill: order.tracking_number,
+          }),
+        }
+      );
+      const data = await res.json();
+      setTrackingData(data);
+    } catch {
+      toast.error('Failed to fetch tracking info');
+    }
+    setTrackingLoading(false);
+  };
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       {/* Header */}
