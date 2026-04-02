@@ -129,6 +129,7 @@ const Storefront = () => {
                   <div className="p-2.5">
                     <h3 className="text-xs font-semibold truncate">{product.title}</h3>
                     <span className="text-xs font-bold" style={{ color: colors.primary }}>₹{Number(product.price).toLocaleString('en-IN')}</span>
+                    <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
                   </div>
                 </Link>
               ))}
