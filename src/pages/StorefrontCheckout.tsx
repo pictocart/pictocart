@@ -51,8 +51,6 @@ const StorefrontCheckout = () => {
       setRazorpayAvailable(true);
     }
   }, [store]);
-    }
-  }, [store]);
 
   if (loading) {
     return (
