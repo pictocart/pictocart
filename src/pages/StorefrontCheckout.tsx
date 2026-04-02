@@ -6,6 +6,7 @@ import { useCart } from '@/hooks/useCart';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Check, ChevronLeft, CreditCard, Banknote, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import PincodeChecker from '@/components/storefront/PincodeChecker';
 
 declare global {
   interface Window {

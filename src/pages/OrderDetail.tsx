@@ -384,6 +384,16 @@ const OrderDetail = () => {
           )}
         </div>
       </div>
+
+      {store && (
+        <ShipOrderDialog
+          open={shipDialogOpen}
+          onOpenChange={setShipDialogOpen}
+          order={order}
+          store={store}
+          onShipped={handleShipped}
+        />
+      )}
     </div>
   );
 };
