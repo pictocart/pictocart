@@ -1,7 +1,13 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { supabase } from '@/integrations/supabase/client';
+import { Upload, Image as ImageIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export interface FooterConfig {
   custom_text: string;
