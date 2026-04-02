@@ -1,12 +1,17 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOrder, useOrders, ORDER_STATUSES, PAYMENT_STATUSES, type OrderStatus } from '@/hooks/useOrders';
+import { useStore } from '@/hooks/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, MapPin, Phone, Mail, Package, Truck } from 'lucide-react';
+import { ArrowLeft, User, MapPin, Phone, Mail, Package, Truck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import ShipOrderDialog from '@/components/orders/ShipOrderDialog';
 import type { Json } from '@/integrations/supabase/types';
 
 interface OrderItem {
