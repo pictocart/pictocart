@@ -126,6 +126,11 @@ const OrderDetail = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {!order.tracking_number && store && (
+            <Button variant="outline" size="sm" onClick={() => setShipDialogOpen(true)}>
+              <Truck className="h-4 w-4 mr-1" /> Ship Order
+            </Button>
+          )}
           <Select value={order.status || 'pending'} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-40">
               <SelectValue />
