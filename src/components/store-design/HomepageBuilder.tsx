@@ -66,6 +66,8 @@ export interface HomepageSection {
   subtitle: string;
   image: string;
   layout: string;
+  height?: 'small' | 'medium' | 'large' | 'full';
+  topMargin?: number;
 }
 
 const SECTION_TYPES = [
