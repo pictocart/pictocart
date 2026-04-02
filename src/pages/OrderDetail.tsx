@@ -35,8 +35,12 @@ const STATUS_ORDER: OrderStatus[] = ['pending', 'confirmed', 'processing', 'ship
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: order, isLoading } = useOrder(id);
+  const { data: order, isLoading, refetch } = useOrder(id);
   const { updateStatus } = useOrders();
+  const { store } = useStore();
+  const [shipDialogOpen, setShipDialogOpen] = useState(false);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   if (isLoading) {
     return (
