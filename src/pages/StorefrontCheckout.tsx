@@ -33,6 +33,7 @@ const StorefrontCheckout = () => {
   const navigate = useNavigate();
   const { store, loading } = useStorefront(slug || '');
   const { items, totalPrice, clearCart } = useCart(slug || '');
+  const { user } = useCustomerAuth(slug || '');
   const [placing, setPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
   const [razorpayAvailable, setRazorpayAvailable] = useState(false);
