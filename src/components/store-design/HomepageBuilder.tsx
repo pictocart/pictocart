@@ -25,6 +25,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { GripVertical, Plus, Trash2, Image, Type, ShoppingBag, Mail, Rows3, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const HeroImageUpload = ({ currentImage, onUploaded }: { currentImage: string; onUploaded: (url: string) => void }) => {
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = useCallback(async (file: File) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `hero/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from('product-images').upload(path, file, { contentType: file.type });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+      onUploaded(publicUrl);
+      toast.success('Image uploaded!');
+    } catch {
+      toast.error('Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }, [onUploaded]);
+
+  return (
+    <div className="flex items-center gap-3">
+      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md cursor-pointer hover:bg-accent transition-colors">
+        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        {uploading ? 'Uploading…' : 'Upload Image'}
+        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} disabled={uploading} />
+      </label>
+      {currentImage && (
+        <img src={currentImage} alt="Preview" className="h-10 rounded border object-cover" style={{ maxWidth: 80 }} />
+      )}
+    </div>
+  );
+};
+
 export interface HomepageSection {
   id: string;
   type: 'hero' | 'featured_products' | 'category_grid' | 'text_block' | 'newsletter' | 'banner_carousel';
