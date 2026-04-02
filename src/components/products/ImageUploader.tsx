@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { ImagePlus, X, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -71,29 +71,51 @@ const ImageUploader = ({ images, onChange, maxImages = 6 }: ImageUploaderProps) 
           </div>
         ))}
         {images.length < maxImages && (
-          <label
-            className={cn(
-              'flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-primary/50 hover:bg-accent/50',
-              uploading && 'pointer-events-none opacity-60'
-            )}
-          >
-            {uploading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            ) : (
-              <>
-                <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground">Add</span>
-              </>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => handleFiles(e.target.files)}
-              disabled={uploading}
-            />
-          </label>
+          <div className="flex aspect-square flex-col gap-1.5">
+            {/* Gallery / file picker */}
+            <label
+              className={cn(
+                'flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-primary/50 hover:bg-accent/50',
+                uploading && 'pointer-events-none opacity-60'
+              )}
+            >
+              {uploading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Gallery</span>
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+                disabled={uploading}
+              />
+            </label>
+            {/* Camera capture */}
+            <label
+              className={cn(
+                'flex cursor-pointer items-center justify-center gap-1 rounded-lg border border-primary/30 bg-primary/5 py-1.5 transition-colors hover:bg-primary/10',
+                uploading && 'pointer-events-none opacity-60'
+              )}
+            >
+              <Camera className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] font-medium text-primary">Camera</span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+                disabled={uploading}
+              />
+            </label>
+          </div>
         )}
       </div>
     </div>
