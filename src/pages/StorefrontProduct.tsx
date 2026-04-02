@@ -4,7 +4,7 @@ import { useStorefront, useStorefrontProduct } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
 import SEOHead from '@/components/storefront/SEOHead';
 import ReviewSection from '@/components/storefront/ReviewSection';
-import ShareButton from '@/components/storefront/ShareButton';
+import ProductShareButtons from '@/components/storefront/ProductShareButtons';
 import ProductImageSwiper from '@/components/storefront/ProductImageSwiper';
 import MobileAddToCart from '@/components/storefront/MobileAddToCart';
 import { useCart } from '@/hooks/useCart';
