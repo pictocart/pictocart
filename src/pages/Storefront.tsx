@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import { useProductReviews, getAverageRating } from '@/hooks/useReviews';
@@ -9,7 +9,53 @@ import ProductShareButtons from '@/components/storefront/ProductShareButtons';
 
 import SEOHead from '@/components/storefront/SEOHead';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
-import { Loader2, Star } from 'lucide-react';
+import { Loader2, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const HeroSlider = ({ images, title, subtitle, sizeMode, useFixedHeight, heightClass, colors, fonts, borderRadius }: {
+  images: string[]; title: string; subtitle?: string; sizeMode: string; useFixedHeight: boolean; heightClass: string;
+  colors: any; fonts: any; borderRadius: number;
+}) => {
+  const [current, setCurrent] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => setCurrent((c) => (c + 1) % images.length), 4000);
+    return () => clearInterval(timerRef.current);
+  }, [images.length]);
+
+  const go = (dir: number) => {
+    clearInterval(timerRef.current);
+    setCurrent((c) => (c + dir + images.length) % images.length);
+  };
+
+  return (
+    <div className="relative overflow-hidden" style={{ backgroundColor: colors.secondary }}>
+      <div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
+        {images.map((img, i) => (
+          useFixedHeight ? (
+            <img key={i} src={img} alt={`Slide ${i + 1}`} className={`w-full shrink-0 object-cover ${heightClass}`} />
+          ) : (
+            <img key={i} src={img} alt={`Slide ${i + 1}`} className="w-full shrink-0 h-auto object-contain" />
+          )
+        ))}
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 pointer-events-none">
+        <h1 className="text-2xl md:text-4xl font-bold mb-3 text-center px-4" style={{ fontFamily: fonts.heading, color: '#fff' }}>{title}</h1>
+        {subtitle && <p className="text-sm mb-6 max-w-md mx-auto text-center px-4 text-white/85">{subtitle}</p>}
+        <a href="#products" className="inline-block px-6 py-2.5 text-sm font-semibold transition-transform hover:scale-105 pointer-events-auto" style={{ backgroundColor: colors.primary, color: '#fff', borderRadius: `${borderRadius}px` }}>
+          Shop Now
+        </a>
+      </div>
+      <button onClick={() => go(-1)} className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 transition-colors"><ChevronLeft className="h-5 w-5" /></button>
+      <button onClick={() => go(1)} className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 transition-colors"><ChevronRight className="h-5 w-5" /></button>
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+        {images.map((_, i) => (
+          <button key={i} onClick={() => { clearInterval(timerRef.current); setCurrent(i); }} className="rounded-full transition-all" style={{ width: i === current ? 20 : 8, height: 8, backgroundColor: i === current ? '#fff' : 'rgba(255,255,255,0.5)' }} />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const ProductRatingBadge = ({ productId }: { productId: string }) => {
   const { data: reviews = [] } = useProductReviews(productId);
@@ -53,24 +99,45 @@ const Storefront = () => {
     switch (section.type) {
       case 'hero':
         const heroImage = section.image || store.banner_url;
+        const heroImages = section.isSlider && section.images?.length ? section.images : (heroImage ? [heroImage] : []);
+        const isSlider = section.isSlider && heroImages.length > 1;
         const sizeMode = section.height || 'medium';
         const useFixedHeight = sizeMode !== 'full';
         const heightMap: Record<string, string> = { small: 'h-[200px] md:h-[250px]', medium: 'h-[300px] md:h-[400px]', large: 'h-[400px] md:h-[550px]' };
         const heroMargin = section.topMargin ? `${section.topMargin}px` : '0px';
+
+        if (isSlider) {
+          return (
+            <section key={index} className="relative overflow-hidden" style={{ marginTop: heroMargin }}>
+              <HeroSlider
+                images={heroImages}
+                title={section.title || store.description || `Welcome to ${store.name}`}
+                subtitle={section.subtitle}
+                sizeMode={sizeMode}
+                useFixedHeight={useFixedHeight}
+                heightClass={heightMap[sizeMode] || ''}
+                colors={colors}
+                fonts={fonts}
+                borderRadius={borderRadius}
+              />
+            </section>
+          );
+        }
+
         return (
           <section key={index} className="relative overflow-hidden" style={{ backgroundColor: colors.secondary, marginTop: heroMargin }}>
-            {heroImage && (
+            {heroImages[0] && (
               useFixedHeight ? (
-                <img src={heroImage} alt={section.title || 'Hero banner'} className={`w-full object-cover ${heightMap[sizeMode]}`} />
+                <img src={heroImages[0]} alt={section.title || 'Hero banner'} className={`w-full object-cover ${heightMap[sizeMode]}`} />
               ) : (
-                <img src={heroImage} alt={section.title || 'Hero banner'} className="w-full h-auto object-contain" />
+                <img src={heroImages[0]} alt={section.title || 'Hero banner'} className="w-full h-auto object-contain" />
               )
             )}
-            <div className={heroImage ? "absolute inset-0 flex flex-col items-center justify-center bg-black/30" : "py-12 md:py-16 flex flex-col items-center justify-center"}>
-              <h1 className="text-2xl md:text-4xl font-bold mb-3 text-center px-4" style={{ fontFamily: fonts.heading, color: heroImage ? '#fff' : colors.text }}>
+            <div className={heroImages[0] ? "absolute inset-0 flex flex-col items-center justify-center bg-black/30" : "py-12 md:py-16 flex flex-col items-center justify-center"}>
+              <h1 className="text-2xl md:text-4xl font-bold mb-3 text-center px-4" style={{ fontFamily: fonts.heading, color: heroImages[0] ? '#fff' : colors.text }}>
                 {section.title || store.description || `Welcome to ${store.name}`}
               </h1>
-              {section.subtitle && <p className="text-sm mb-6 max-w-md mx-auto text-center px-4" style={{ color: heroImage ? 'rgba(255,255,255,0.85)' : undefined, opacity: heroImage ? 1 : 0.6 }}>{section.subtitle}</p>}
+              {section.subtitle && <p className="text-sm mb-6 max-w-md mx-auto text-center px-4" style={{ color: heroImages[0] ? 'rgba(255,255,255,0.85)' : undefined, opacity: heroImages[0] ? 1 : 0.6 }}>{section.subtitle}</p>}
               <div className="flex items-center justify-center gap-3">
                 <a href="#products" className="inline-block px-6 py-2.5 text-sm font-semibold transition-transform hover:scale-105" style={{ backgroundColor: colors.primary, color: '#fff', borderRadius: `${borderRadius}px` }}>
                   Shop Now

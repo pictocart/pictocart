@@ -22,7 +22,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GripVertical, Plus, Trash2, Image, Type, ShoppingBag, Mail, Rows3, Upload, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { GripVertical, Plus, Trash2, Image, Type, ShoppingBag, Mail, Rows3, Upload, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const HeroImageUpload = ({ currentImage, onUploaded }: { currentImage: string; onUploaded: (url: string) => void }) => {
@@ -65,6 +66,8 @@ export interface HomepageSection {
   title: string;
   subtitle: string;
   image: string;
+  images?: string[];
+  isSlider?: boolean;
   layout: string;
   height?: 'small' | 'medium' | 'large' | 'full';
   topMargin?: number;
@@ -128,19 +131,81 @@ const SortableSection = ({
               </div>
               {(section.type === 'hero' || section.type === 'text_block' || section.type === 'banner_carousel') && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Image {section.type === 'hero' ? '(Recommended: 1920×600px)' : '(Recommended: 1200×400px)'}</Label>
-                  <div className="flex gap-2 items-start">
-                    <Input
-                      value={section.image}
-                      onChange={(e) => onUpdate({ ...section, image: e.target.value })}
-                      className="h-8 text-sm flex-1"
-                      placeholder="Paste URL or upload below"
-                    />
-                  </div>
-                  <HeroImageUpload
-                    currentImage={section.image}
-                    onUploaded={(url) => onUpdate({ ...section, image: url })}
-                  />
+                  {section.type === 'hero' && (
+                    <div className="flex items-center gap-3 mb-2">
+                      <Label className="text-xs font-medium">Mode:</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Static</span>
+                        <Switch
+                          checked={section.isSlider || false}
+                          onCheckedChange={(checked) => onUpdate({ ...section, isSlider: checked, images: checked ? (section.images?.length ? section.images : (section.image ? [section.image] : [])) : section.images })}
+                        />
+                        <span className="text-xs text-muted-foreground">Slider</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {section.type === 'hero' && section.isSlider ? (
+                    <div className="space-y-2">
+                      <Label className="text-xs">Slider Images (Recommended: 1920×600px)</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {(section.images || []).map((img, imgIdx) => (
+                          <div key={imgIdx} className="relative group">
+                            <img src={img} alt={`Slide ${imgIdx + 1}`} className="h-16 w-24 rounded border object-cover" />
+                            <button
+                              onClick={() => {
+                                const newImages = [...(section.images || [])];
+                                newImages.splice(imgIdx, 1);
+                                onUpdate({ ...section, images: newImages });
+                              }}
+                              className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md cursor-pointer hover:bg-accent transition-colors">
+                        <Upload className="h-3.5 w-3.5" />
+                        Add Slides
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files || []);
+                            if (!files.length) return;
+                            for (const file of files) {
+                              const ext = file.name.split('.').pop();
+                              const path = `hero/${crypto.randomUUID()}.${ext}`;
+                              const { error } = await supabase.storage.from('product-images').upload(path, file, { contentType: file.type });
+                              if (error) { toast.error('Upload failed'); continue; }
+                              const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
+                              onUpdate({ ...section, images: [...(section.images || []), publicUrl] });
+                            }
+                            toast.success('Images uploaded!');
+                          }}
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <>
+                      <Label className="text-xs">Image {section.type === 'hero' ? '(Recommended: 1920×600px)' : '(Recommended: 1200×400px)'}</Label>
+                      <div className="flex gap-2 items-start">
+                        <Input
+                          value={section.image}
+                          onChange={(e) => onUpdate({ ...section, image: e.target.value })}
+                          className="h-8 text-sm flex-1"
+                          placeholder="Paste URL or upload below"
+                        />
+                      </div>
+                      <HeroImageUpload
+                        currentImage={section.image}
+                        onUploaded={(url) => onUpdate({ ...section, image: url })}
+                      />
+                    </>
+                  )}
                 </div>
               )}
               {section.type === 'hero' && (
