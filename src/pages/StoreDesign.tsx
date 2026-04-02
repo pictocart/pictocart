@@ -86,7 +86,19 @@ const StoreDesign = () => {
     if (error) {
       toast.error('Failed to save');
     } else {
-      setStore({ ...store, theme: { name: selectedThemeId, primary_color: customColors.primary }, settings: newSettings });
+      setStore({
+        ...store,
+        theme: {
+          name: selectedThemeId,
+          primary_color: customColors.primary,
+          colors: customColors,
+          fonts: customFonts,
+          borderRadius: selectedTemplate.borderRadius,
+          layout: selectedTemplate.layout,
+          preview: selectedTemplate.preview,
+        },
+        settings: newSettings,
+      });
       toast.success('Store design saved!');
     }
     setSaving(false);
