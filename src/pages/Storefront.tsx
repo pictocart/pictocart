@@ -238,6 +238,7 @@ const Storefront = () => {
                         <span className="text-xs md:text-sm font-bold" style={{ color: colors.primary }}>₹{Number(product.price).toLocaleString('en-IN')}</span>
                         {product.compare_at_price && product.compare_at_price > product.price && <span className="text-[10px] md:text-xs line-through opacity-40">₹{Number(product.compare_at_price).toLocaleString('en-IN')}</span>}
                       </div>
+                      <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
                     </div>
                   </Link>
                 ))}
