@@ -58,14 +58,50 @@ const Dashboard = () => {
     { label: 'Products', value: String(products.length), icon: Package, change: '' },
   ];
 
+  const storeUrl = store?.slug ? `${window.location.origin}/store/${store.slug}` : '';
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(storeUrl);
+    setCopied(true);
+    toast.success('Store URL copied!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}
+          </p>
+        </div>
+        {store?.is_published && (
+          <Button
+            onClick={() => window.open(`/store/${store.slug}`, '_blank')}
+            className="gap-2"
+          >
+            <ExternalLink className="h-4 w-4" /> View Store
+          </Button>
+        )}
       </div>
+
+      {/* Store URL Banner */}
+      {store?.is_published && storeUrl && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-4">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Your store is live at</p>
+              <p className="text-sm font-mono font-semibold truncate text-primary">{storeUrl}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleCopyUrl} className="shrink-0 gap-1.5">
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? 'Copied!' : 'Copy URL'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((stat) => (
