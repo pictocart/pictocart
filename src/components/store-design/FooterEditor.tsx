@@ -6,6 +6,10 @@ import { Switch } from '@/components/ui/switch';
 export interface FooterConfig {
   custom_text: string;
   show_powered_by: boolean;
+  background_color: string;
+  text_color: string;
+  background_image: string;
+  background_opacity: number;
   social_links: {
     instagram: string;
     facebook: string;
