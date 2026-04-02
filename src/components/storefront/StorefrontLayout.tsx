@@ -61,7 +61,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
       <header className="sticky top-0 z-50 border-b backdrop-blur-sm" style={{ borderColor: colors.secondary + '80', backgroundColor: colors.card + 'ee' }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <Link to={`/store/${store.slug}`} className={`flex items-center gap-2 ${headerConfig.logo_position === 'center' ? 'mx-auto' : ''}`}>
-            {store.logo_url && <img src={store.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />}
+            {(headerConfig.logo_url || store.logo_url) && <img src={headerConfig.logo_url || store.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />}
             {headerConfig.show_store_name !== false && (
               <span className="font-bold text-lg" style={{ fontFamily: fonts.heading }}>{store.name}</span>
             )}
