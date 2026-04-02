@@ -53,24 +53,45 @@ const Storefront = () => {
     switch (section.type) {
       case 'hero':
         const heroImage = section.image || store.banner_url;
+        const heroImages = section.isSlider && section.images?.length ? section.images : (heroImage ? [heroImage] : []);
+        const isSlider = section.isSlider && heroImages.length > 1;
         const sizeMode = section.height || 'medium';
         const useFixedHeight = sizeMode !== 'full';
         const heightMap: Record<string, string> = { small: 'h-[200px] md:h-[250px]', medium: 'h-[300px] md:h-[400px]', large: 'h-[400px] md:h-[550px]' };
         const heroMargin = section.topMargin ? `${section.topMargin}px` : '0px';
+
+        if (isSlider) {
+          return (
+            <section key={index} className="relative overflow-hidden" style={{ marginTop: heroMargin }}>
+              <HeroSlider
+                images={heroImages}
+                title={section.title || store.description || `Welcome to ${store.name}`}
+                subtitle={section.subtitle}
+                sizeMode={sizeMode}
+                useFixedHeight={useFixedHeight}
+                heightClass={heightMap[sizeMode] || ''}
+                colors={colors}
+                fonts={fonts}
+                borderRadius={borderRadius}
+              />
+            </section>
+          );
+        }
+
         return (
           <section key={index} className="relative overflow-hidden" style={{ backgroundColor: colors.secondary, marginTop: heroMargin }}>
-            {heroImage && (
+            {heroImages[0] && (
               useFixedHeight ? (
-                <img src={heroImage} alt={section.title || 'Hero banner'} className={`w-full object-cover ${heightMap[sizeMode]}`} />
+                <img src={heroImages[0]} alt={section.title || 'Hero banner'} className={`w-full object-cover ${heightMap[sizeMode]}`} />
               ) : (
-                <img src={heroImage} alt={section.title || 'Hero banner'} className="w-full h-auto object-contain" />
+                <img src={heroImages[0]} alt={section.title || 'Hero banner'} className="w-full h-auto object-contain" />
               )
             )}
-            <div className={heroImage ? "absolute inset-0 flex flex-col items-center justify-center bg-black/30" : "py-12 md:py-16 flex flex-col items-center justify-center"}>
-              <h1 className="text-2xl md:text-4xl font-bold mb-3 text-center px-4" style={{ fontFamily: fonts.heading, color: heroImage ? '#fff' : colors.text }}>
+            <div className={heroImages[0] ? "absolute inset-0 flex flex-col items-center justify-center bg-black/30" : "py-12 md:py-16 flex flex-col items-center justify-center"}>
+              <h1 className="text-2xl md:text-4xl font-bold mb-3 text-center px-4" style={{ fontFamily: fonts.heading, color: heroImages[0] ? '#fff' : colors.text }}>
                 {section.title || store.description || `Welcome to ${store.name}`}
               </h1>
-              {section.subtitle && <p className="text-sm mb-6 max-w-md mx-auto text-center px-4" style={{ color: heroImage ? 'rgba(255,255,255,0.85)' : undefined, opacity: heroImage ? 1 : 0.6 }}>{section.subtitle}</p>}
+              {section.subtitle && <p className="text-sm mb-6 max-w-md mx-auto text-center px-4" style={{ color: heroImages[0] ? 'rgba(255,255,255,0.85)' : undefined, opacity: heroImages[0] ? 1 : 0.6 }}>{section.subtitle}</p>}
               <div className="flex items-center justify-center gap-3">
                 <a href="#products" className="inline-block px-6 py-2.5 text-sm font-semibold transition-transform hover:scale-105" style={{ backgroundColor: colors.primary, color: '#fff', borderRadius: `${borderRadius}px` }}>
                   Shop Now
