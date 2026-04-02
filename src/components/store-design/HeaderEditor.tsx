@@ -65,6 +65,7 @@ const HeaderEditor = ({ config, onChange }: Props) => {
       <Card>
         <CardHeader><CardTitle className="text-base">Logo & Branding</CardTitle></CardHeader>
         <CardContent className="space-y-4">
+          <LogoUploader logoUrl={c.logo_url} onSave={(url) => onChange({ ...c, logo_url: url })} />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-xs">Logo Position</Label>
