@@ -1,11 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
 import { useCart } from '@/hooks/useCart';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Check, ChevronLeft } from 'lucide-react';
+import { Loader2, Check, ChevronLeft, CreditCard, Banknote, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+const loadRazorpayScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) { resolve(true); return; }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const StorefrontCheckout = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -14,6 +31,7 @@ const StorefrontCheckout = () => {
   const { items, totalPrice, clearCart } = useCart(slug || '');
   const [placing, setPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
+  const [razorpayAvailable, setRazorpayAvailable] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -25,6 +43,14 @@ const StorefrontCheckout = () => {
     pincode: '',
     paymentMethod: 'cod',
   });
+
+  // Check if store has Razorpay configured
+  useEffect(() => {
+    const settings = store?.settings as any;
+    if (settings?.razorpay?.key_id) {
+      setRazorpayAvailable(true);
+    }
+  }, [store]);
 
   if (loading) {
     return (
@@ -41,19 +67,8 @@ const StorefrontCheckout = () => {
 
   const handleField = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
-  const handlePlaceOrder = async () => {
-    if (!form.name || !form.phone || !form.address || !form.city || !form.pincode) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    if (items.length === 0) {
-      toast.error('Your cart is empty');
-      return;
-    }
-
-    setPlacing(true);
+  const createOrder = async () => {
     const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`;
-
     const orderItems = items.map((i) => ({
       product_id: i.productId,
       title: i.title,
@@ -83,16 +98,137 @@ const StorefrontCheckout = () => {
       payment_method: form.paymentMethod,
       payment_status: form.paymentMethod === 'cod' ? 'cod' : 'pending',
       status: 'pending',
-    }).select('order_number').single();
+    }).select('id, order_number').single();
 
-    if (error) {
-      toast.error('Failed to place order. Please try again.');
-      console.error(error);
-    } else {
+    if (error) throw error;
+    return data;
+  };
+
+  const handleRazorpayPayment = async () => {
+    setPlacing(true);
+    try {
+      // 1. Create order in DB first
+      const order = await createOrder();
+
+      // 2. Load Razorpay script
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Failed to load payment gateway. Please try again.');
+        setPlacing(false);
+        return;
+      }
+
+      // 3. Create Razorpay order via edge function
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/create-razorpay-order`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            store_id: store.id,
+            amount: totalPrice,
+            order_number: order.order_number,
+            customer_name: form.name,
+            customer_email: form.email,
+            customer_phone: form.phone,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || 'Payment gateway error');
+        setPlacing(false);
+        return;
+      }
+
+      const { razorpay_order_id, razorpay_key_id } = await res.json();
+
+      // 4. Open Razorpay checkout modal
+      const options = {
+        key: razorpay_key_id,
+        amount: Math.round(totalPrice * 100),
+        currency: 'INR',
+        name: store.name,
+        description: `Order ${order.order_number}`,
+        order_id: razorpay_order_id,
+        prefill: {
+          name: form.name,
+          email: form.email,
+          contact: form.phone,
+        },
+        theme: { color: colors.primary },
+        handler: async (response: any) => {
+          // 5. Verify payment
+          const verifyRes = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/verify-razorpay-payment`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                order_id: order.id,
+                store_id: store.id,
+              }),
+            }
+          );
+
+          if (verifyRes.ok) {
+            clearCart();
+            setOrderPlaced(order.order_number);
+          } else {
+            toast.error('Payment verification failed. Contact support.');
+          }
+          setPlacing(false);
+        },
+        modal: {
+          ondismiss: () => {
+            toast.info('Payment cancelled. Your order is saved — you can pay later.');
+            setPlacing(false);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Something went wrong. Please try again.');
+      setPlacing(false);
+    }
+  };
+
+  const handleCODOrder = async () => {
+    setPlacing(true);
+    try {
+      const order = await createOrder();
       clearCart();
-      setOrderPlaced(data.order_number);
+      setOrderPlaced(order.order_number);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to place order. Please try again.');
     }
     setPlacing(false);
+  };
+
+  const handlePlaceOrder = () => {
+    if (!form.name || !form.phone || !form.address || !form.city || !form.pincode) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    if (items.length === 0) {
+      toast.error('Your cart is empty');
+      return;
+    }
+
+    if (form.paymentMethod === 'cod') {
+      handleCODOrder();
+    } else {
+      handleRazorpayPayment();
+    }
   };
 
   if (orderPlaced) {
@@ -137,6 +273,12 @@ const StorefrontCheckout = () => {
     borderRadius: `${borderRadius / 2}px`,
     color: colors.text,
   };
+
+  const paymentMethods = [
+    { id: 'cod', label: 'Cash on Delivery', icon: Banknote, always: true },
+    { id: 'upi', label: 'UPI (GPay, PhonePe, Paytm)', icon: Smartphone, always: false },
+    { id: 'online', label: 'Cards & Net Banking', icon: CreditCard, always: false },
+  ];
 
   return (
     <StorefrontLayout store={store}>
@@ -220,37 +362,49 @@ const StorefrontCheckout = () => {
               Payment Method
             </h2>
             <div className="space-y-2">
-              {[
-                { id: 'cod', label: 'Cash on Delivery' },
-                { id: 'upi', label: 'UPI' },
-                { id: 'online', label: 'Online Payment' },
-              ].map((pm) => (
-                <label
-                  key={pm.id}
-                  className="flex items-center gap-3 p-3 border cursor-pointer transition-colors"
-                  style={{
-                    borderColor: form.paymentMethod === pm.id ? colors.primary : colors.secondary,
-                    borderRadius: `${borderRadius / 2}px`,
-                    backgroundColor: form.paymentMethod === pm.id ? colors.primary + '10' : 'transparent',
-                  }}
-                >
-                  <div
-                    className="h-4 w-4 rounded-full border-2 flex items-center justify-center"
-                    style={{ borderColor: form.paymentMethod === pm.id ? colors.primary : colors.secondary }}
+              {paymentMethods.map((pm) => {
+                const disabled = !pm.always && !razorpayAvailable;
+                return (
+                  <label
+                    key={pm.id}
+                    className={`flex items-center gap-3 p-3 border cursor-pointer transition-colors ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    style={{
+                      borderColor: form.paymentMethod === pm.id ? colors.primary : colors.secondary,
+                      borderRadius: `${borderRadius / 2}px`,
+                      backgroundColor: form.paymentMethod === pm.id ? colors.primary + '10' : 'transparent',
+                    }}
+                    onClick={(e) => {
+                      if (disabled) e.preventDefault();
+                    }}
                   >
-                    {form.paymentMethod === pm.id && (
-                      <div
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: colors.primary }}
-                      />
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={pm.id}
+                      checked={form.paymentMethod === pm.id}
+                      onChange={(e) => !disabled && handleField('paymentMethod', e.target.value)}
+                      disabled={disabled}
+                      className="sr-only"
+                    />
+                    <div
+                      className="h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                      style={{ borderColor: form.paymentMethod === pm.id ? colors.primary : colors.secondary }}
+                    >
+                      {form.paymentMethod === pm.id && (
+                        <div
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: colors.primary }}
+                        />
+                      )}
+                    </div>
+                    <pm.icon className="h-4 w-4 shrink-0 opacity-60" />
+                    <span className="text-sm">{pm.label}</span>
+                    {disabled && (
+                      <span className="ml-auto text-[10px] opacity-60">Not available</span>
                     )}
-                  </div>
-                  <span className="text-sm">{pm.label}</span>
-                  {pm.id !== 'cod' && (
-                    <span className="ml-auto text-[10px] opacity-40">Coming soon</span>
-                  )}
-                </label>
-              ))}
+                  </label>
+                );
+              })}
             </div>
           </div>
 
@@ -292,7 +446,11 @@ const StorefrontCheckout = () => {
                 }}
               >
                 {placing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {placing ? 'Placing Order...' : 'Place Order'}
+                {placing
+                  ? 'Processing...'
+                  : form.paymentMethod === 'cod'
+                  ? 'Place Order (COD)'
+                  : 'Pay Now'}
               </button>
             </div>
           </div>

@@ -12,6 +12,7 @@ import ProductForm from "@/pages/ProductForm";
 import OrderList from "@/pages/OrderList";
 import OrderDetail from "@/pages/OrderDetail";
 import StoreDesign from "@/pages/StoreDesign";
+import PaymentSettings from "@/pages/PaymentSettings";
 import Onboarding from "@/pages/Onboarding";
 import Auth from "@/pages/Auth";
 import Storefront from "@/pages/Storefront";
@@ -113,6 +114,16 @@ const App = () => (
                 <ProtectedRoute>
                   <DashboardLayout>
                     <StoreDesign />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/payments"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <PaymentSettings />
                   </DashboardLayout>
                 </ProtectedRoute>
               }
