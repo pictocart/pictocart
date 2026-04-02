@@ -70,6 +70,41 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          created_at: string | null
+          id: string
+          saved_addresses: Json | null
+          store_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          saved_addresses?: Json | null
+          store_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          saved_addresses?: Json | null
+          store_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
@@ -77,6 +112,7 @@ export type Database = {
           customer_email: string | null
           customer_name: string | null
           customer_phone: string | null
+          customer_user_id: string | null
           id: string
           items: Json
           notes: string | null
@@ -98,6 +134,7 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          customer_user_id?: string | null
           id?: string
           items?: Json
           notes?: string | null
@@ -119,6 +156,7 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          customer_user_id?: string | null
           id?: string
           items?: Json
           notes?: string | null
@@ -248,6 +286,60 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          body: string | null
+          created_at: string | null
+          id: string
+          images: string[] | null
+          is_verified_purchase: boolean | null
+          product_id: string
+          rating: number
+          store_id: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string | null
+          id?: string
+          images?: string[] | null
+          is_verified_purchase?: boolean | null
+          product_id: string
+          rating: number
+          store_id: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string | null
+          id?: string
+          images?: string[] | null
+          is_verified_purchase?: boolean | null
+          product_id?: string
+          rating?: number
+          store_id?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           banner_url: string | null
@@ -335,7 +427,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "seller"
+      app_role: "admin" | "seller" | "customer"
       coupon_type: "percentage" | "flat"
       order_status:
         | "pending"
@@ -473,7 +565,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "seller"],
+      app_role: ["admin", "seller", "customer"],
       coupon_type: ["percentage", "flat"],
       order_status: [
         "pending",
