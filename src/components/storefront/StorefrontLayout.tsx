@@ -69,9 +69,9 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
 
           {/* Nav links */}
           {headerConfig.nav_links?.length > 0 && (
-            <nav className="hidden md:flex items-center gap-4">
+            <nav className="hidden md:flex items-center" style={{ gap: `${headerConfig.nav_gap ?? 16}px` }}>
               {headerConfig.nav_links.map((link: any, i: number) => (
-                <Link key={i} to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`} className="text-sm opacity-70 hover:opacity-100 transition-opacity">
+                <Link key={i} to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`} className="text-sm opacity-70 hover:opacity-100 transition-opacity" style={{ fontFamily: headerConfig.nav_font || 'inherit', fontWeight: Number(headerConfig.nav_weight || 500) }}>
                   {link.label}
                 </Link>
               ))}

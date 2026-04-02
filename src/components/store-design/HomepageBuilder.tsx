@@ -66,6 +66,8 @@ export interface HomepageSection {
   subtitle: string;
   image: string;
   layout: string;
+  height?: 'small' | 'medium' | 'large' | 'full';
+  topMargin?: number;
 }
 
 const SECTION_TYPES = [
@@ -139,6 +141,33 @@ const SortableSection = ({
                     currentImage={section.image}
                     onUploaded={(url) => onUpdate({ ...section, image: url })}
                   />
+                </div>
+              )}
+              {section.type === 'hero' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Banner Height</Label>
+                    <Select value={section.height || 'medium'} onValueChange={(v) => onUpdate({ ...section, height: v as HomepageSection['height'] })}>
+                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="small">Small (250px)</SelectItem>
+                        <SelectItem value="medium">Medium (400px)</SelectItem>
+                        <SelectItem value="large">Large (550px)</SelectItem>
+                        <SelectItem value="full">Full Screen</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Top Spacing (px)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={200}
+                      value={section.topMargin ?? 0}
+                      onChange={(e) => onUpdate({ ...section, topMargin: Number(e.target.value) })}
+                      className="h-8 text-sm"
+                    />
+                  </div>
                 </div>
               )}
             </div>

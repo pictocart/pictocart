@@ -51,10 +51,13 @@ const Storefront = () => {
     switch (section.type) {
       case 'hero':
         const heroImage = section.image || store.banner_url;
+        const heightMap: Record<string, string> = { small: 'h-[200px] md:h-[250px]', medium: 'h-[300px] md:h-[400px]', large: 'h-[400px] md:h-[550px]', full: 'h-screen' };
+        const heroHeight = heightMap[section.height || 'medium'] || heightMap.medium;
+        const heroMargin = section.topMargin ? `${section.topMargin}px` : '0px';
         return (
-          <section key={index} className="relative overflow-hidden" style={{ backgroundColor: colors.secondary }}>
+          <section key={index} className="relative overflow-hidden" style={{ backgroundColor: colors.secondary, marginTop: heroMargin }}>
             {heroImage && (
-              <img src={heroImage} alt={section.title || 'Hero banner'} className="w-full h-[300px] md:h-[450px] object-cover" />
+              <img src={heroImage} alt={section.title || 'Hero banner'} className={`w-full object-cover ${heroHeight}`} />
             )}
             <div className={heroImage ? "absolute inset-0 flex flex-col items-center justify-center bg-black/30" : "py-12 md:py-16 flex flex-col items-center justify-center"}>
               <h1 className="text-2xl md:text-4xl font-bold mb-3 text-center px-4" style={{ fontFamily: fonts.heading, color: heroImage ? '#fff' : colors.text }}>

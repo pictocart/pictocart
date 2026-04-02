@@ -3,11 +3,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FONT_OPTIONS } from '@/lib/themes';
 
 export interface HeaderConfig {
   logo_position: 'left' | 'center';
   show_store_name: boolean;
   nav_links: { label: string; href: string }[];
+  nav_font?: string;
+  nav_weight?: string;
+  nav_gap?: number;
 }
 
 const DEFAULT_HEADER: HeaderConfig = {
@@ -18,7 +22,19 @@ const DEFAULT_HEADER: HeaderConfig = {
     { label: 'Shop', href: '#products' },
     { label: 'Blog', href: '/blog' },
   ],
+  nav_font: 'Inter',
+  nav_weight: '500',
+  nav_gap: 16,
 };
+
+const WEIGHT_OPTIONS = [
+  { value: '300', label: 'Light' },
+  { value: '400', label: 'Regular' },
+  { value: '500', label: 'Medium' },
+  { value: '600', label: 'Semi Bold' },
+  { value: '700', label: 'Bold' },
+  { value: '800', label: 'Extra Bold' },
+];
 
 interface Props {
   config: HeaderConfig;
@@ -63,6 +79,33 @@ const HeaderEditor = ({ config, onChange }: Props) => {
               <Label className="text-xs">Show store name beside logo</Label>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Menu Style</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs">Font Family</Label>
+              <Select value={c.nav_font || 'Inter'} onValueChange={(v) => onChange({ ...c, nav_font: v })}>
+                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>{FONT_OPTIONS.map((f) => <SelectItem key={f} value={f} style={{ fontFamily: f }}>{f}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Font Weight</Label>
+              <Select value={c.nav_weight || '500'} onValueChange={(v) => onChange({ ...c, nav_weight: v })}>
+                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>{WEIGHT_OPTIONS.map((w) => <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Link Gap (px)</Label>
+              <Input type="number" min={4} max={48} value={c.nav_gap ?? 16} onChange={(e) => onChange({ ...c, nav_gap: Number(e.target.value) })} className="h-8 text-sm" />
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Preview: <span style={{ fontFamily: c.nav_font, fontWeight: Number(c.nav_weight || 500) }}>Home &nbsp; Shop &nbsp; Blog</span></p>
         </CardContent>
       </Card>
 
