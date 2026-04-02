@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useProducts, useProduct } from '@/hooks/useProducts';
 import { useStore } from '@/hooks/useStore';
+import { useCategories } from '@/hooks/useCategories';
 import { supabase } from '@/integrations/supabase/client';
 import ImageUploader from '@/components/products/ImageUploader';
 import VariantMatrix, { type VariantOption } from '@/components/products/VariantMatrix';
@@ -10,13 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Sparkles, Loader2, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
-
-const CATEGORIES = ['Fashion', 'Food', 'Electronics', 'Beauty', 'Home & Living', 'Sports', 'Books', 'Toys', 'Other'];
 
 const ProductForm = () => {
   const { id } = useParams();
