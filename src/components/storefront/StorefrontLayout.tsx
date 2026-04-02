@@ -105,20 +105,36 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
         </div>
 
         {/* Mobile nav drawer */}
-        {mobileMenuOpen && headerConfig.nav_links?.length > 0 && (
-          <nav className="md:hidden border-t px-4 py-3 flex flex-col gap-2" style={{ borderColor: colors.secondary + '80', backgroundColor: colors.card }}>
-            {headerConfig.nav_links.map((link: any, i: number) => (
-              <Link
-                key={i}
-                to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`}
-                className="text-sm py-2 px-2 rounded hover:bg-black/5 transition-colors"
-                style={{ fontFamily: headerConfig.nav_font || 'inherit', fontWeight: Number(headerConfig.nav_weight || 500) }}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+        {headerConfig.nav_links?.length > 0 && (
+          <div
+            className="md:hidden overflow-hidden transition-all duration-300 ease-in-out"
+            style={{
+              maxHeight: mobileMenuOpen ? `${(headerConfig.nav_links.length * 44) + 24}px` : '0px',
+              opacity: mobileMenuOpen ? 1 : 0,
+              borderTop: mobileMenuOpen ? `1px solid ${colors.secondary}80` : 'none',
+              backgroundColor: colors.card,
+            }}
+          >
+            <nav className="px-4 py-3 flex flex-col gap-1">
+              {headerConfig.nav_links.map((link: any, i: number) => (
+                <Link
+                  key={i}
+                  to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`}
+                  className="text-sm py-2 px-2 rounded hover:bg-black/5 transition-colors"
+                  style={{
+                    fontFamily: headerConfig.nav_font || 'inherit',
+                    fontWeight: Number(headerConfig.nav_weight || 500),
+                    transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-10px)',
+                    opacity: mobileMenuOpen ? 1 : 0,
+                    transition: `transform 0.3s ease ${i * 0.05}s, opacity 0.3s ease ${i * 0.05}s`,
+                  }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         )}
       </header>
 
