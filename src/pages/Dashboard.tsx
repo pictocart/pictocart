@@ -60,7 +60,7 @@ const Dashboard = () => {
   ];
 
   const storeUrl = store?.slug ? `${window.location.origin}/store/${store.slug}` : '';
-  const [copied, setCopied] = useState(false);
+
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(storeUrl);
