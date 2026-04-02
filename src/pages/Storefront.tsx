@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import SEOHead from '@/components/storefront/SEOHead';
 import { Loader2 } from 'lucide-react';
 
 const Storefront = () => {
