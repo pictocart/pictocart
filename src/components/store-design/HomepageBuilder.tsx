@@ -71,6 +71,11 @@ export interface HomepageSection {
   layout: string;
   height?: 'small' | 'medium' | 'large' | 'full';
   topMargin?: number;
+  animation?: 'none' | 'fade-in' | 'slide-up' | 'slide-in-left' | 'scale-in' | 'parallax';
+  marginTop?: number;
+  marginBottom?: number;
+  paddingX?: number;
+  paddingY?: number;
 }
 
 const SECTION_TYPES = [
