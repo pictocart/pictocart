@@ -193,8 +193,8 @@ const Storefront = () => {
           </section>
         );
       case 'featured_products':
-        return (
-          <section key={index} className="max-w-6xl mx-auto px-4 py-8">
+        return wrapAnimated(
+          <section className="max-w-6xl mx-auto px-4 py-8">
             <h2 className="text-lg md:text-xl font-bold mb-4" style={{ fontFamily: fonts.heading }}>{section.title || 'Featured Products'}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {products.slice(0, 8).map((product) => (
