@@ -6,6 +6,7 @@ import StorefrontLayout, { resolveTheme } from '@/components/storefront/Storefro
 import StorefrontFooter from '@/components/storefront/StorefrontFooter';
 import NewsletterSection from '@/components/storefront/NewsletterSection';
 import ProductShareButtons from '@/components/storefront/ProductShareButtons';
+import AnimatedSection from '@/components/storefront/AnimatedSection';
 
 import SEOHead from '@/components/storefront/SEOHead';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
