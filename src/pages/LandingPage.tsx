@@ -457,9 +457,9 @@ const LandingPage = () => {
                 <RevealSection key={i} delay={i * 100}>
                   <div className="w-72 rounded-2xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 group">
                     <div className="h-44 relative overflow-hidden">
-                      <img src={theme.img} alt={`${theme.name} theme preview`} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={theme.img} alt={`${theme.name} theme preview`} loading="lazy" className="w-full object-cover object-top transition-all duration-[3s] ease-in-out group-hover:object-bottom" style={{ height: '200%', minHeight: '200%' }} />
                       <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
-                      <div className="absolute bottom-3 left-3">
+                      <div className="absolute bottom-3 left-3 z-10">
                         <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium">{theme.cat}</span>
                       </div>
                     </div>
