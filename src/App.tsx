@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/DashboardLayout";
+import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
 import ProductList from "@/pages/ProductList";
 import ProductForm from "@/pages/ProductForm";
@@ -53,6 +54,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<Auth />} />
             <Route
               path="/onboarding"
@@ -63,7 +65,7 @@ const App = () => (
               }
             />
             <Route
-              path="/"
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <DashboardLayout>

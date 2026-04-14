@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Products', icon: Package, path: '/products' },
   { label: 'Categories', icon: FolderTree, path: '/categories' },
   { label: 'Orders', icon: ShoppingCart, path: '/orders' },

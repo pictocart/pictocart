@@ -19,7 +19,7 @@ const Auth = () => {
 
   // If user is logged in but came from a store page, don't redirect to seller dashboard
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +31,7 @@ const Auth = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     } else {
       const { error } = await signUp(email, password, fullName);
