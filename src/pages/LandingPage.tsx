@@ -8,6 +8,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import themeFashion from '@/assets/theme-fashion.jpg';
+import themeFood from '@/assets/theme-food.jpg';
+import themeElectronics from '@/assets/theme-electronics.jpg';
+import themeBeauty from '@/assets/theme-beauty.jpg';
+import themeHandcraft from '@/assets/theme-handcraft.jpg';
+import themeBooks from '@/assets/theme-books.jpg';
 import SEOHead from '@/components/storefront/SEOHead';
 
 /* ─── Intersection Observer hook for scroll animations ─── */
