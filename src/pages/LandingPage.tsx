@@ -441,16 +441,17 @@ const LandingPage = () => {
           <div className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide cursor-grab">
             <div className="flex gap-6 min-w-max">
               {[
-                { name: 'Luxe Fashion', cat: 'Fashion', gradient: 'from-rose-500 to-pink-600' },
-                { name: 'Fresh Market', cat: 'Food', gradient: 'from-emerald-500 to-green-600' },
-                { name: 'Tech Hub', cat: 'Electronics', gradient: 'from-blue-500 to-cyan-600' },
-                { name: 'Glow Beauty', cat: 'Beauty', gradient: 'from-purple-500 to-fuchsia-600' },
-                { name: 'Artisan Craft', cat: 'Handcraft', gradient: 'from-amber-500 to-orange-600' },
-                { name: 'Book Nook', cat: 'Books', gradient: 'from-indigo-500 to-violet-600' },
+                { name: 'Luxe Fashion', cat: 'Fashion', img: themeFashion },
+                { name: 'Fresh Market', cat: 'Food', img: themeFood },
+                { name: 'Tech Hub', cat: 'Electronics', img: themeElectronics },
+                { name: 'Glow Beauty', cat: 'Beauty', img: themeBeauty },
+                { name: 'Artisan Craft', cat: 'Handcraft', img: themeHandcraft },
+                { name: 'Book Nook', cat: 'Books', img: themeBooks },
               ].map((theme, i) => (
                 <RevealSection key={i} delay={i * 100}>
                   <div className="w-72 rounded-2xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 group">
-                    <div className={`h-44 bg-gradient-to-br ${theme.gradient} relative overflow-hidden`}>
+                    <div className="h-44 relative overflow-hidden">
+                      <img src={theme.img} alt={`${theme.name} theme preview`} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
                       <div className="absolute bottom-3 left-3">
                         <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium">{theme.cat}</span>
