@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   Menu,
   IndianRupee,
+  UserCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -80,7 +81,21 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
         <div className="border-t border-sidebar-border p-2 space-y-1">
           <Link
-            to="/"
+            to="/admin/profile"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              location.pathname === '/admin/profile'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent/50',
+              collapsed && 'justify-center px-2'
+            )}
+          >
+            <UserCircle className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>My Profile</span>}
+          </Link>
+          <Link
+            to="/dashboard"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
           >
             <Store className="h-4 w-4 shrink-0" />
