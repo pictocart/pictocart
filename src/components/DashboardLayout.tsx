@@ -22,6 +22,7 @@ import {
   Mail,
   TrendingUp,
   FolderTree,
+  UserCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -106,6 +107,20 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Footer */}
         <div className="border-t border-sidebar-border p-2 space-y-1">
+          <Link
+            to="/profile"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              location.pathname === '/profile'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent/50',
+              collapsed && 'justify-center px-2'
+            )}
+          >
+            <UserCircle className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>My Profile</span>}
+          </Link>
           {isAdmin && (
             <Link
               to="/admin"
@@ -151,6 +166,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex-1" />
+          <Link to="/profile">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <UserCircle className="h-5 w-5" />
+            </Button>
+          </Link>
         </header>
 
         {/* Page content */}

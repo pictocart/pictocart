@@ -32,6 +32,8 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminThemes from "@/pages/admin/AdminThemes";
 import AdminRevenue from "@/pages/admin/AdminRevenue";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminProfile from "@/pages/admin/AdminProfile";
+import SellerProfile from "@/pages/SellerProfile";
 import CustomerAuth from "@/pages/storefront/CustomerAuth";
 import CustomerAccount from "@/pages/storefront/CustomerAccount";
 import CustomerRoute from "@/components/storefront/CustomerRoute";
@@ -191,6 +193,7 @@ const App = () => (
             <Route path="/blog-posts/:id" element={<ProtectedRoute><DashboardLayout><BlogPostForm /></DashboardLayout></ProtectedRoute>} />
             <Route path="/subscribers" element={<ProtectedRoute><DashboardLayout><Subscribers /></DashboardLayout></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><DashboardLayout><StoreAnalytics /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><DashboardLayout><SellerProfile /></DashboardLayout></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminLayout><AdminOverview /></AdminLayout></AdminRoute>} />
             <Route path="/admin/stores" element={<AdminRoute><AdminLayout><AdminStores /></AdminLayout></AdminRoute>} />
@@ -198,6 +201,7 @@ const App = () => (
             <Route path="/admin/themes" element={<AdminRoute><AdminLayout><AdminThemes /></AdminLayout></AdminRoute>} />
             <Route path="/admin/revenue" element={<AdminRoute><AdminLayout><AdminRevenue /></AdminLayout></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/profile" element={<AdminRoute><AdminLayout><AdminProfile /></AdminLayout></AdminRoute>} />
             {/* Public Storefront Routes */}
             <Route path="/store/:slug" element={<Storefront />} />
             <Route path="/store/:slug/product/:productId" element={<StorefrontProduct />} />
