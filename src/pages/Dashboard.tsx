@@ -2,14 +2,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useStore } from '@/hooks/useStore';
 import { useProducts } from '@/hooks/useProducts';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { IndianRupee, ShoppingCart, TrendingUp, Package, ExternalLink, Copy, Check } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import {
+  IndianRupee, ShoppingCart, TrendingUp, Package, ExternalLink, Copy, Check,
+  CheckCircle2, Circle, ArrowRight,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -39,14 +44,32 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    if (!loading && (!store || (store.onboarding_step !== null && store.onboarding_step < 7))) {
-      // Check if user is a customer (signed up via store page) — don't force onboarding
+    if (!loading && (!store || (store.onboarding_step !== null && store.onboarding_step < 10))) {
       const isCustomer = user?.user_metadata?.is_customer === true;
       if (!isCustomer) {
         navigate('/onboarding', { replace: true });
       }
     }
   }, [loading, store, navigate, user]);
+
+  // Completion checklist
+  const checklist = useMemo(() => {
+    if (!store) return [];
+    const settings = (store.settings as any) || {};
+    return [
+      { label: 'Store name set', done: !!store.name, link: '/store-design' },
+      { label: 'Category selected', done: !!store.category, link: '/store-design' },
+      { label: 'Logo uploaded', done: !!store.logo_url, link: '/store-design' },
+      { label: 'First product added', done: products.length > 0, link: '/products/new' },
+      { label: 'Set up shipping', done: !!settings.shipping_enabled, link: '/shipping' },
+      { label: 'Connect custom domain', done: !!settings.custom_domain, link: '/domain' },
+      { label: 'Configure SEO', done: !!settings.seo_title, link: '/seo' },
+      { label: 'Write a blog post', done: false, link: '/blog/new' },
+    ];
+  }, [store, products]);
+
+  const completedCount = checklist.filter((c) => c.done).length;
+  const completionPct = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0;
 
   if (loading) {
     return (
@@ -64,7 +87,6 @@ const Dashboard = () => {
   ];
 
   const storeUrl = store?.slug ? `${window.location.origin}/store/${store.slug}` : '';
-
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(storeUrl);
@@ -123,6 +145,42 @@ const Dashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* Completion Checklist */}
+      {completionPct < 100 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Store Setup Progress</CardTitle>
+              <span className="text-sm font-semibold text-primary">{completionPct}%</span>
+            </div>
+            <Progress value={completionPct} className="h-2 mt-2" />
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            {checklist.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => !item.done && navigate(item.link)}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors text-sm',
+                  item.done
+                    ? 'text-muted-foreground'
+                    : 'hover:bg-accent cursor-pointer'
+                )}
+                disabled={item.done}
+              >
+                {item.done ? (
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                ) : (
+                  <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                )}
+                <span className={cn(item.done && 'line-through')}>{item.label}</span>
+                {!item.done && <ArrowRight className="h-3.5 w-3.5 ml-auto text-muted-foreground" />}
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {products.length === 0 ? (
         <Card>

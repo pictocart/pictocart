@@ -16,7 +16,7 @@ const StepGoLive = ({ data, store, onFinish }: Props) => {
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const storeUrl = `antariksh.shop/${data.slug || store?.slug || 'my-store'}`;
+  const storeUrl = `${window.location.host}/store/${data.slug || store?.slug || 'my-store'}`;
 
   useEffect(() => {
     // Fire confetti on mount
