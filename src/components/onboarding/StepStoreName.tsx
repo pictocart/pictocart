@@ -40,11 +40,22 @@ const StepStoreName = ({ data, setData }: Props) => {
         />
       </div>
 
+      <div className="space-y-3">
+        <Label htmlFor="store-desc">Short Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <Input
+          id="store-desc"
+          placeholder="e.g. Trendy fashion for modern women"
+          value={data.description || ''}
+          onChange={(e) => setData((d) => ({ ...d, description: e.target.value }))}
+          className="text-base h-12"
+        />
+      </div>
+
       {data.slug && (
         <div className="rounded-lg border border-border bg-secondary/50 p-3">
           <p className="text-xs text-muted-foreground mb-1">Your store URL</p>
           <p className="text-sm font-medium text-foreground">
-            <span className="text-muted-foreground">antariksh.shop/</span>
+            <span className="text-muted-foreground">store-on-tips.lovable.app/store/</span>
             {data.slug}
           </p>
         </div>

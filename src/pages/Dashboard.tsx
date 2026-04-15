@@ -39,7 +39,7 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    if (!loading && (!store || (store.onboarding_step !== null && store.onboarding_step < 7))) {
+    if (!loading && (!store || (store.onboarding_step !== null && store.onboarding_step < 10))) {
       // Check if user is a customer (signed up via store page) — don't force onboarding
       const isCustomer = user?.user_metadata?.is_customer === true;
       if (!isCustomer) {
