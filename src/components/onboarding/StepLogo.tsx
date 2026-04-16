@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ImagePlus, Loader2, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/imageCompression';
 import type { OnboardingData } from '@/pages/Onboarding';
 
 interface Props {
@@ -17,29 +18,35 @@ const StepLogo = ({ data, setData, storeId }: Props) => {
   useEffect(() => { setTimeout(() => setMounted(true), 100); }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5 MB');
+    const original = e.target.files?.[0];
+    if (!original) return;
+    if (original.size > 30 * 1024 * 1024) {
+      toast.error('Image must be under 30 MB');
       return;
     }
 
     setUploading(true);
     try {
-      const path = `logos/${crypto.randomUUID()}.${file.name.split('.').pop()}`;
+      // Auto-compress phone photos to keep uploads fast and reliable
+      const file = await compressImage(original, { maxWidth: 1024, maxHeight: 1024, maxSizeMB: 0.8 });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const path = `${user.id}/logos/${crypto.randomUUID()}.jpg`;
       const { error } = await supabase.storage
         .from('store-assets')
-        .upload(path, file, { contentType: file.type });
+        .upload(path, file, { contentType: file.type, upsert: false });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('store-assets').getPublicUrl(path);
       setData((d) => ({ ...d, logoUrl: urlData.publicUrl }));
       toast.success('Logo uploaded!');
-    } catch {
-      toast.error('Failed to upload logo');
+    } catch (err: any) {
+      console.error('Logo upload failed:', err);
+      toast.error(err?.message || 'Failed to upload logo');
     } finally {
       setUploading(false);
     }
   };
+
 
   const removeLogo = () => {
     setData((d) => ({ ...d, logoUrl: '' }));
