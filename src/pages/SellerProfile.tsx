@@ -29,7 +29,7 @@ import {
 
 const SellerProfile = () => {
   const { user } = useAuth();
-  const { store } = useStore();
+  const { store, setStore } = useStore();
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
