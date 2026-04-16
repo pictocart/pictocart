@@ -512,6 +512,30 @@ export type Database = {
         }
         Relationships: []
       }
+      theme_image_pool: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          image_url: string
+          section_type: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          image_url: string
+          section_type: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          section_type?: string
+        }
+        Relationships: []
+      }
       theme_packs: {
         Row: {
           ai_generation_cost: number
@@ -598,6 +622,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      theme_section_blueprints: {
+        Row: {
+          category_tags: string[]
+          content_json: Json
+          created_at: string
+          id: string
+          layout: string
+          section_type: string
+          variant_name: string
+        }
+        Insert: {
+          category_tags?: string[]
+          content_json?: Json
+          created_at?: string
+          id?: string
+          layout?: string
+          section_type: string
+          variant_name: string
+        }
+        Update: {
+          category_tags?: string[]
+          content_json?: Json
+          created_at?: string
+          id?: string
+          layout?: string
+          section_type?: string
+          variant_name?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

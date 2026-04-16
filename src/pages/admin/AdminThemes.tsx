@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useThemePacks, useGenerateThemePack, useUpdateThemePack, useDeleteThemePack, useAllThemePurchases, type ThemePack } from '@/hooks/useThemePacks';
+import { useThemePacks, useGenerateThemePack, useUpdateThemePack, useDeleteThemePack, useAllThemePurchases, useRemixTheme, type ThemePack } from '@/hooks/useThemePacks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -225,6 +225,14 @@ const GenerateModal = ({ onClose }: { onClose: () => void }) => {
         />
       </CollapsibleSection>
 
+      {/* Cost Savings Indicator */}
+      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 space-y-1">
+        <p className="text-xs font-semibold text-primary">💡 Smart Cost Optimization Active</p>
+        <p className="text-[11px] text-muted-foreground">
+          Two-tier AI prompting + image pool reuse. First theme in a category costs ~₹8-10. Subsequent themes drop to ₹0.50-1.50 as images are cached.
+        </p>
+      </div>
+
       {/* Generation Progress */}
       {generate.isPending && (
         <div className="bg-muted rounded-lg p-4 space-y-2">
@@ -232,7 +240,7 @@ const GenerateModal = ({ onClose }: { onClose: () => void }) => {
             <Loader2 className="h-4 w-4 animate-spin" />
             Generating premium theme with AI...
           </div>
-          <p className="text-xs text-muted-foreground">Creating structure, animations, colors, fonts, and AI images. This takes 30-90 seconds...</p>
+          <p className="text-xs text-muted-foreground">Design DNA → Blueprint assembly → Image generation (parallel). ~10-30 seconds...</p>
           <div className="h-1.5 bg-background rounded-full overflow-hidden">
             <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }} />
           </div>
@@ -526,6 +534,7 @@ const AdminThemes = () => {
   const { data: allPurchases = [] } = useAllThemePurchases();
   const updatePack = useUpdateThemePack();
   const deletePack = useDeleteThemePack();
+  const remixTheme = useRemixTheme();
   const [generateOpen, setGenerateOpen] = useState(false);
   const [editingPack, setEditingPack] = useState<ThemePack | null>(null);
   const [previewPack, setPreviewPack] = useState<ThemePack | null>(null);
@@ -614,6 +623,11 @@ const AdminThemes = () => {
                         window.open(previewUrl, '_blank');
                       }} title="Open full preview in new tab">
                         <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                        if (confirm(`Remix "${pack.name}" with new colors & fonts? (Cost: ~₹0.10-0.30)`)) remixTheme.mutate(pack.id);
+                      }} title="Remix with new colors/fonts" disabled={remixTheme.isPending}>
+                        {remixTheme.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shuffle className="h-3.5 w-3.5" />}
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingPack(pack)}>
                         <Palette className="h-3.5 w-3.5" />

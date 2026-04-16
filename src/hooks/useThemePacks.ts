@@ -91,11 +91,32 @@ export const useGenerateThemePack = () => {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['theme-packs'] });
-      toast.success('Theme pack generated!');
+      const savings = data?.optimization || '';
+      toast.success(`Theme pack generated! ${savings}`);
     },
     onError: (e: any) => toast.error(e.message || 'Generation failed'),
+  });
+};
+
+export const useRemixTheme = () => {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (themePackId: string) => {
+      const { data, error } = await supabase.functions.invoke('remix-theme', {
+        body: { themePackId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['theme-packs'] });
+      toast.success(`Remixed from "${data?.remixed_from}" — Cost: ₹${data?.cost || '0.00'}`);
+    },
+    onError: (e: any) => toast.error(e.message || 'Remix failed'),
   });
 };
 
