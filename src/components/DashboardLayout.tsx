@@ -104,6 +104,54 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const initiallyOpen = useMemo(() => {
+    const open: Record<string, boolean> = {};
+    for (const entry of navTree) {
+      if (isGroup(entry) && entry.children.some((c) => location.pathname.startsWith(c.path))) {
+        open[entry.key] = true;
+      }
+    }
+    return open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(initiallyOpen);
+
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      for (const entry of navTree) {
+        if (isGroup(entry) && entry.children.some((c) => location.pathname === c.path)) {
+          next[entry.key] = true;
+        }
+      }
+      return next;
+    });
+  }, [location.pathname]);
+
+  const toggleGroup = (key: string) => setOpenGroups((p) => ({ ...p, [key]: !p[key] }));
+
+  const renderLeaf = (item: NavLeaf, indent = false) => {
+    const isActive = location.pathname === item.path;
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={() => setMobileOpen(false)}
+        title={collapsed ? item.label : undefined}
+        className={cn(
+          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          isActive
+            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+            : 'text-sidebar-foreground hover:bg-sidebar-accent/50',
+          collapsed && 'justify-center px-2'
+        )}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </Link>
+    );
+  };
+
   return (
     <div className="flex min-h-screen bg-secondary/30">
       {/* Mobile overlay */}
@@ -136,24 +184,41 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+          {navTree.map((entry) => {
+            if (!isGroup(entry)) return renderLeaf(entry);
+
+            if (collapsed) {
+              return (
+                <div key={entry.key} className="space-y-1">
+                  {entry.children.map((c) => renderLeaf(c))}
+                </div>
+              );
+            }
+
+            const open = openGroups[entry.key];
+            const hasActive = entry.children.some((c) => location.pathname === c.path);
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50',
-                  collapsed && 'justify-center px-2'
+              <div key={entry.key}>
+                <button
+                  onClick={() => toggleGroup(entry.key)}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    hasActive
+                      ? 'text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                  )}
+                  aria-expanded={open}
+                >
+                  <entry.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-left truncate">{entry.label}</span>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
+                </button>
+                {open && (
+                  <div className="mt-1 space-y-1 border-l border-sidebar-border/60 ml-4 pl-2">
+                    {entry.children.map((c) => renderLeaf(c))}
+                  </div>
                 )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
+              </div>
             );
           })}
         </nav>
