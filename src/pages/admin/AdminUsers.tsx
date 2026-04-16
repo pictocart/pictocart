@@ -404,9 +404,6 @@ const AdminUsers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-};
 
       {/* Reset Password Dialog */}
       <Dialog open={!!resetUser} onOpenChange={(o) => { if (!o) { setResetUser(null); setNewPassword(''); } }}>
@@ -439,3 +436,4 @@ const AdminUsers = () => {
 };
 
 export default AdminUsers;
+
