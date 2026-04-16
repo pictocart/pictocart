@@ -7,15 +7,18 @@ import { useSubscription, PLAN_LIMITS } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import ImageUploader from '@/components/products/ImageUploader';
 import VariantMatrix, { type VariantOption } from '@/components/products/VariantMatrix';
+import ProductTypeFields, { PRODUCT_TYPES, getDefaultProductType, type ProductType } from '@/components/products/ProductTypeFields';
+import ProductPreviewCard from '@/components/products/ProductPreviewCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Sparkles, Loader2, X, Save, Crown } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, X, Save, Plus, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ProductForm = () => {
@@ -45,6 +48,11 @@ const ProductForm = () => {
   const [seoDescription, setSeoDescription] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [productType, setProductType] = useState<ProductType>(getDefaultProductType(store?.category));
+  const [typeMetadata, setTypeMetadata] = useState<Record<string, any>>({});
+  const [highlights, setHighlights] = useState<string[]>([]);
+  const [highlightInput, setHighlightInput] = useState('');
+  const [descriptionTab, setDescriptionTab] = useState('plain');
 
   // Populate form for edit
   useEffect(() => {
@@ -63,18 +71,20 @@ const ProductForm = () => {
       setIsActive(existingProduct.is_active ?? true);
       setSeoTitle(existingProduct.seo_title || '');
       setSeoDescription(existingProduct.seo_description || '');
+      const aiData = (existingProduct.ai_generated_data || {}) as Record<string, any>;
+      if (aiData.product_type) setProductType(aiData.product_type as ProductType);
+      if (aiData.highlights) setHighlights(aiData.highlights);
+      const { product_type, highlights: _, ...rest } = aiData;
+      setTypeMetadata(rest);
     }
   }, [existingProduct]);
 
   const generateWithAI = async () => {
-    if (images.length === 0) {
-      toast.error('Upload at least one image to generate with AI');
-      return;
-    }
+    if (images.length === 0) { toast.error('Upload at least one image to generate with AI'); return; }
     setAiLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-product', {
-        body: { imageUrl: images[0], category: category || store?.category, storeName: store?.name },
+        body: { imageUrl: images[0], category: category || store?.category, storeName: store?.name, productType },
       });
       if (error) throw error;
       const p = data.product;
@@ -86,6 +96,7 @@ const ProductForm = () => {
       if (p.tags) setTags(p.tags);
       if (p.seoTitle) setSeoTitle(p.seoTitle);
       if (p.seoDescription) setSeoDescription(p.seoDescription);
+      if (p.highlights) setHighlights(p.highlights);
       toast.success('AI generated product details!');
     } catch (err: any) {
       toast.error(err.message || 'AI generation failed');
@@ -100,20 +111,20 @@ const ProductForm = () => {
     setTagInput('');
   };
 
+  const addHighlight = () => {
+    const h = highlightInput.trim();
+    if (h) setHighlights([...highlights, h]);
+    setHighlightInput('');
+  };
+
   const handleSave = async (asDraft: boolean) => {
     if (!isEdit && typeof limits.products === 'number' && products.length >= limits.products) {
       toast.error(`Free plan allows only ${limits.products} products. Upgrade to Premium for unlimited.`);
       navigate('/billing');
       return;
     }
-    if (!title.trim()) {
-      toast.error('Product title is required');
-      return;
-    }
-    if (!price || Number(price) <= 0) {
-      toast.error('Valid price is required');
-      return;
-    }
+    if (!title.trim()) { toast.error('Product title is required'); return; }
+    if (!price || Number(price) <= 0) { toast.error('Valid price is required'); return; }
     setSaving(true);
     const payload = {
       title: title.trim(),
@@ -130,6 +141,7 @@ const ProductForm = () => {
       is_active: asDraft ? false : isActive,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
+      ai_generated_data: { product_type: productType, highlights, ...typeMetadata } as any,
     };
 
     try {
@@ -170,9 +182,7 @@ const ProductForm = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => handleSave(true)} disabled={saving}>
-            Save Draft
-          </Button>
+          <Button variant="outline" onClick={() => handleSave(true)} disabled={saving}>Save Draft</Button>
           <Button onClick={() => handleSave(false)} disabled={saving}>
             {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
             <Save className="mr-1 h-4 w-4" />
@@ -182,24 +192,34 @@ const ProductForm = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left column — main content */}
+        {/* Left column */}
         <div className="space-y-6 lg:col-span-2">
+          {/* Product Type */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Product Type</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={productType} onValueChange={(v) => setProductType(v as ProductType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRODUCT_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
           {/* Images */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Images</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={generateWithAI}
-                  disabled={aiLoading || images.length === 0}
-                >
-                  {aiLoading ? (
-                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-1 h-3.5 w-3.5" />
-                  )}
+                <Button variant="outline" size="sm" onClick={generateWithAI} disabled={aiLoading || images.length === 0}>
+                  {aiLoading ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
                   {aiLoading ? 'Generating...' : 'Generate with AI'}
                 </Button>
               </div>
@@ -221,54 +241,76 @@ const ProductForm = () => {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="shortDesc">Short Description</Label>
-                <Input
-                  id="shortDesc"
-                  value={shortDescription}
-                  onChange={(e) => setShortDescription(e.target.value)}
-                  placeholder="One-line summary"
-                />
+                <Input id="shortDesc" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} placeholder="One-line summary" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="desc">Description</Label>
-                <Textarea
-                  id="desc"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Full product description..."
-                  rows={5}
-                />
+                <Label>Description</Label>
+                <Tabs value={descriptionTab} onValueChange={setDescriptionTab}>
+                  <TabsList className="h-8">
+                    <TabsTrigger value="plain" className="text-xs px-3 h-7">Plain Text</TabsTrigger>
+                    <TabsTrigger value="highlights" className="text-xs px-3 h-7">Key Highlights</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="plain">
+                    <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Full product description..." rows={5} />
+                  </TabsContent>
+                  <TabsContent value="highlights">
+                    <div className="space-y-2">
+                      {highlights.map((h, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <GripVertical className="h-3.5 w-3.5 opacity-30" />
+                          <span className="flex-1">{h}</span>
+                          <button onClick={() => setHighlights(highlights.filter((_, j) => j !== i))} className="text-destructive hover:opacity-70">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex gap-2">
+                        <Input
+                          value={highlightInput}
+                          onChange={(e) => setHighlightInput(e.target.value)}
+                          placeholder="Add a key feature..."
+                          className="flex-1"
+                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addHighlight())}
+                        />
+                        <Button type="button" variant="secondary" size="sm" onClick={addHighlight}>
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </CardContent>
           </Card>
 
+          {/* Category-specific fields */}
+          {productType !== 'physical' && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">{PRODUCT_TYPES.find(t => t.value === productType)?.label} Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProductTypeFields
+                  productType={productType}
+                  metadata={typeMetadata}
+                  onChange={(key, value) => setTypeMetadata((prev) => ({ ...prev, [key]: value }))}
+                />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pricing */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Pricing</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Pricing</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="price">Price (₹)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0"
-                  />
+                  <Input id="price" type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="comparePrice">Compare at Price (₹)</Label>
-                  <Input
-                    id="comparePrice"
-                    type="number"
-                    min="0"
-                    value={compareAtPrice}
-                    onChange={(e) => setCompareAtPrice(e.target.value)}
-                    placeholder="0"
-                  />
+                  <Input id="comparePrice" type="number" min="0" value={compareAtPrice} onChange={(e) => setCompareAtPrice(e.target.value)} placeholder="0" />
                 </div>
               </div>
             </CardContent>
@@ -284,11 +326,18 @@ const ProductForm = () => {
 
         {/* Right column — sidebar */}
         <div className="space-y-6">
+          {/* Live Preview */}
+          <ProductPreviewCard
+            title={title}
+            price={price}
+            compareAtPrice={compareAtPrice}
+            image={images[0]}
+            category={category}
+          />
+
           {/* Status */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Status</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Status</CardTitle></CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <span className="text-sm">{isActive ? 'Active' : 'Draft'}</span>
@@ -299,32 +348,24 @@ const ProductForm = () => {
 
           {/* Organization */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Organization</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Organization</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
                 <Label>Category</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {parentCategories.length === 0 ? (
                       <SelectItem value="__none" disabled>No categories — create them first</SelectItem>
                     ) : (
                       parentCategories.map((parent) => {
                         const subs = getSubcategories(parent.id);
-                        if (subs.length === 0) {
-                          return <SelectItem key={parent.id} value={parent.name}>{parent.name}</SelectItem>;
-                        }
+                        if (subs.length === 0) return <SelectItem key={parent.id} value={parent.name}>{parent.name}</SelectItem>;
                         return (
                           <SelectGroup key={parent.id}>
                             <SelectLabel className="text-xs font-semibold text-muted-foreground">{parent.name}</SelectLabel>
                             {subs.map((sub) => (
-                              <SelectItem key={sub.id} value={`${parent.name} > ${sub.name}`}>
-                                {sub.name}
-                              </SelectItem>
+                              <SelectItem key={sub.id} value={`${parent.name} > ${sub.name}`}>{sub.name}</SelectItem>
                             ))}
                           </SelectGroup>
                         );
@@ -340,25 +381,15 @@ const ProductForm = () => {
               <div className="space-y-1.5">
                 <Label>Tags</Label>
                 <div className="flex gap-2">
-                  <Input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    placeholder="Add tag..."
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                    className="flex-1"
-                  />
-                  <Button type="button" variant="secondary" size="sm" onClick={addTag}>
-                    Add
-                  </Button>
+                  <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="Add tag..." onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())} className="flex-1" />
+                  <Button type="button" variant="secondary" size="sm" onClick={addTag}>Add</Button>
                 </div>
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {tags.map((t) => (
                       <Badge key={t} variant="secondary" className="gap-1 pr-1">
                         {t}
-                        <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))}>
-                          <X className="h-3 w-3" />
-                        </button>
+                        <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))}><X className="h-3 w-3" /></button>
                       </Badge>
                     ))}
                   </div>
@@ -369,50 +400,27 @@ const ProductForm = () => {
 
           {/* Inventory */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Inventory</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Inventory</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-1.5">
                 <Label htmlFor="inventory">Stock Quantity</Label>
-                <Input
-                  id="inventory"
-                  type="number"
-                  min="0"
-                  value={inventoryCount}
-                  onChange={(e) => setInventoryCount(e.target.value)}
-                />
+                <Input id="inventory" type="number" min="0" value={inventoryCount} onChange={(e) => setInventoryCount(e.target.value)} />
               </div>
             </CardContent>
           </Card>
 
           {/* SEO */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">SEO</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">SEO</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="seoTitle">SEO Title</Label>
-                <Input
-                  id="seoTitle"
-                  value={seoTitle}
-                  onChange={(e) => setSeoTitle(e.target.value)}
-                  placeholder="Under 60 characters"
-                  maxLength={60}
-                />
+                <Input id="seoTitle" value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder="Under 60 characters" maxLength={60} />
                 <p className="text-xs text-muted-foreground">{seoTitle.length}/60</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="seoDesc">SEO Description</Label>
-                <Textarea
-                  id="seoDesc"
-                  value={seoDescription}
-                  onChange={(e) => setSeoDescription(e.target.value)}
-                  placeholder="Under 160 characters"
-                  maxLength={160}
-                  rows={3}
-                />
+                <Textarea id="seoDesc" value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} placeholder="Under 160 characters" maxLength={160} rows={3} />
                 <p className="text-xs text-muted-foreground">{seoDescription.length}/160</p>
               </div>
             </CardContent>
