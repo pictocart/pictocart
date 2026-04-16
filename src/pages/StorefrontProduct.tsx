@@ -21,6 +21,8 @@ const StorefrontProduct = () => {
   const { data: product, isLoading: productLoading } = useStorefrontProduct(store?.id, productId || '');
   const { addItem } = useCart(slug || '');
   const { data: reviews = [] } = useProductReviews(productId || '');
+  const { user } = useCustomerAuth(slug || '');
+  const { wishlistProductIds, toggle: toggleWishlist } = useWishlist(store?.id, user?.id);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [added, setAdded] = useState(false);
