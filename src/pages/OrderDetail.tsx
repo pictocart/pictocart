@@ -64,28 +64,37 @@ const OrderDetail = () => {
   const currentStatusIndex = STATUS_ORDER.indexOf(order.status as OrderStatus);
   const isCancelled = order.status === 'cancelled' || order.status === 'returned';
 
+  const sendOrderNotification = (type: string) => {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    fetch(`https://${projectId}.supabase.co/functions/v1/send-order-notification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, order_id: order.id, store_id: order.store_id }),
+    }).catch(() => {});
+  };
+
+  const STATUS_NOTIFICATION_MAP: Record<string, string> = {
+    confirmed: 'order_confirmed',
+    shipped: 'order_shipped',
+    delivered: 'order_delivered',
+  };
+
   const handleStatusChange = (status: string) => {
     updateStatus.mutate({ id: order.id, status: status as OrderStatus });
-    // Send notification on confirmed or shipped
-    if (status === 'confirmed' || status === 'shipped') {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const type = status === 'confirmed' ? 'order_confirmed' : 'order_shipped';
-      fetch(`https://${projectId}.supabase.co/functions/v1/send-order-notification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, order_id: order.id, store_id: order.store_id }),
-      }).catch(() => {});
+    const notificationType = STATUS_NOTIFICATION_MAP[status];
+    if (notificationType) {
+      sendOrderNotification(notificationType);
     }
   };
 
   const handleShipped = async (waybill: string) => {
-    // Save tracking number and update status to shipped
     await supabase
       .from('orders')
       .update({ tracking_number: waybill, status: 'shipped' })
       .eq('id', order.id);
+    sendOrderNotification('order_shipped');
     refetch();
-    toast.success('Order marked as shipped');
+    toast.success('Order marked as shipped — customer notified');
   };
 
   const handleTrack = async () => {
