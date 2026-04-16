@@ -226,8 +226,8 @@ const GenerateModal = ({ onClose }: { onClose: () => void }) => {
       </CollapsibleSection>
 
       {/* Cost Savings Indicator */}
-      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 space-y-1">
-        <p className="text-xs font-semibold text-emerald-600">💡 Smart Cost Optimization Active</p>
+      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 space-y-1">
+        <p className="text-xs font-semibold text-primary">💡 Smart Cost Optimization Active</p>
         <p className="text-[11px] text-muted-foreground">
           Two-tier AI prompting + image pool reuse. First theme in a category costs ~₹8-10. Subsequent themes drop to ₹0.50-1.50 as images are cached.
         </p>
