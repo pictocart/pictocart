@@ -44,8 +44,16 @@ interface Props {
   onChange: (c: HeaderConfig) => void;
 }
 
+import { useStore } from '@/hooks/useStore';
+
 const HeaderEditor = ({ config, onChange }: Props) => {
-  const c = { ...DEFAULT_HEADER, ...config };
+  const { store } = useStore();
+  // Auto-default logo to onboarding-uploaded store logo if header doesn't have one yet
+  const c = {
+    ...DEFAULT_HEADER,
+    ...config,
+    logo_url: config.logo_url ?? store?.logo_url ?? null,
+  };
 
   const updateNavLink = (index: number, field: 'label' | 'href', value: string) => {
     const links = [...c.nav_links];

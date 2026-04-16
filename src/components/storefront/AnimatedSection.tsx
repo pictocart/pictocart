@@ -3,14 +3,15 @@ import type { ReactNode } from 'react';
 
 interface Props {
   animation?: string;
+  speed?: 'slow' | 'normal' | 'fast' | number;
   children: ReactNode;
   marginTop?: number;
   marginBottom?: number;
   className?: string;
 }
 
-const AnimatedSection = ({ animation = 'none', children, marginTop, marginBottom, className = '' }: Props) => {
-  const { ref, style, className: animClassName } = useAnimateOnScroll(animation);
+const AnimatedSection = ({ animation = 'none', speed = 'normal', children, marginTop, marginBottom, className = '' }: Props) => {
+  const { ref, style, className: animClassName } = useAnimateOnScroll(animation, speed);
 
   return (
     <div

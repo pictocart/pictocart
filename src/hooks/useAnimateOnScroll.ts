@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-export const useAnimateOnScroll = (animation: string = 'none') => {
+export const useAnimateOnScroll = (animation: string = 'none', speed: 'slow' | 'normal' | 'fast' | number = 'normal') => {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -21,11 +21,14 @@ export const useAnimateOnScroll = (animation: string = 'none') => {
     return () => observer.disconnect();
   }, [animation]);
 
+  const durationMs = typeof speed === 'number' ? speed : speed === 'slow' ? 1200 : speed === 'fast' ? 300 : 600;
+  const durationSec = `${(durationMs / 1000).toFixed(2)}s`;
+
   const getAnimationStyle = (): React.CSSProperties => {
     if (animation === 'none') return {};
 
     const base: React.CSSProperties = {
-      transition: 'opacity 0.6s ease-out, transform 0.6s ease-out, filter 0.6s ease-out',
+      transition: `opacity ${durationSec} ease-out, transform ${durationSec} ease-out, filter ${durationSec} ease-out`,
     };
 
     if (!isVisible) {

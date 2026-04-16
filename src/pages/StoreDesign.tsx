@@ -22,6 +22,7 @@ const StoreDesign = () => {
   const { store, setStore } = useStore();
   const [saving, setSaving] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('packs');
 
   const storeSettings = (store?.settings || {}) as any;
 
@@ -34,8 +35,12 @@ const StoreDesign = () => {
   const [homepageSections, setHomepageSections] = useState<HomepageSection[]>(storeSettings.homepage_sections || []);
   const [headerConfig, setHeaderConfig] = useState<HeaderConfig>({ ...DEFAULT_HEADER, ...(storeSettings.header || {}) });
   const [footerConfig, setFooterConfig] = useState<FooterConfig>({ ...DEFAULT_FOOTER, ...(storeSettings.footer || {}) });
+  const [showAllProductsGrid, setShowAllProductsGrid] = useState<boolean>(storeSettings.show_all_products_grid !== false);
+  const [hydratedStoreId, setHydratedStoreId] = useState<string | null>(null);
 
+  // Only hydrate from server data ONCE per store load — preserves edits across tab switches
   useEffect(() => {
+    if (!store?.id || hydratedStoreId === store.id) return;
     const nextSettings = (store?.settings || {}) as any;
     const nextTheme = (store?.theme || {}) as any;
     const nextThemeId = nextTheme.name || 'minimal-light';
@@ -47,7 +52,9 @@ const StoreDesign = () => {
     setHomepageSections(nextSettings.homepage_sections || []);
     setHeaderConfig({ ...DEFAULT_HEADER, ...(nextSettings.header || {}) });
     setFooterConfig({ ...DEFAULT_FOOTER, ...(nextSettings.footer || {}) });
-  }, [store]);
+    setShowAllProductsGrid(nextSettings.show_all_products_grid !== false);
+    setHydratedStoreId(store.id);
+  }, [store, hydratedStoreId]);
 
   const selectedTemplate = THEME_TEMPLATES.find((t) => t.id === selectedThemeId) || THEME_TEMPLATES[0];
 
@@ -83,6 +90,7 @@ const StoreDesign = () => {
       homepage_sections: homepageSections,
       header: headerConfig,
       footer: footerConfig,
+      show_all_products_grid: showAllProductsGrid,
     };
 
     const { error } = await supabase.from('stores').update({
@@ -131,7 +139,7 @@ const StoreDesign = () => {
 
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3 space-y-6">
-          <Tabs defaultValue="packs">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="flex flex-wrap h-auto gap-1">
               <TabsTrigger value="packs"><Package className="mr-1 h-3.5 w-3.5" /> Theme Packs</TabsTrigger>
               <TabsTrigger value="themes"><Palette className="mr-1 h-3.5 w-3.5" /> Themes</TabsTrigger>
@@ -231,7 +239,12 @@ const StoreDesign = () => {
               <Card>
                 <CardHeader><CardTitle className="text-base">Homepage Sections</CardTitle></CardHeader>
                 <CardContent>
-                  <HomepageBuilder sections={homepageSections} onChange={setHomepageSections} />
+                  <HomepageBuilder
+                    sections={homepageSections}
+                    onChange={setHomepageSections}
+                    showAllProductsGrid={showAllProductsGrid}
+                    onShowAllProductsGridChange={setShowAllProductsGrid}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
