@@ -96,9 +96,12 @@ const Onboarding = () => {
   const [animating, setAnimating] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Resume from saved step
+  // Resume from saved step — only on initial load
+  const hasResumed = useRef(false);
   useEffect(() => {
-    if (store && store.onboarding_step !== null && store.onboarding_step < TOTAL_STEPS) {
+    if (hasResumed.current || !store) return;
+    hasResumed.current = true;
+    if (store.onboarding_step !== null && store.onboarding_step < TOTAL_STEPS) {
       setCurrentStep(store.onboarding_step + 1);
       setData((d) => ({
         ...d,
@@ -109,7 +112,7 @@ const Onboarding = () => {
         logoUrl: store.logo_url || '',
         selectedThemeId: (store.theme as any)?.name || 'minimal-light',
       }));
-    } else if (store && store.onboarding_step !== null && store.onboarding_step >= TOTAL_STEPS) {
+    } else if (store.onboarding_step !== null && store.onboarding_step >= TOTAL_STEPS) {
       navigate('/dashboard', { replace: true });
     }
   }, [store]);
