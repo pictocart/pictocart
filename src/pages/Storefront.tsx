@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Star, X, ArrowUp } from 'lucide-react';
 import { useStorefront } from '@/hooks/useStorefront';
 import { useProductReviews, getAverageRating } from '@/hooks/useReviews';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
