@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { generateDefaultSections } from '@/lib/defaultSections';
 import { useParams, Link } from 'react-router-dom';
 import { X, ArrowUp } from 'lucide-react';
 import { useStorefront } from '@/hooks/useStorefront';
@@ -100,7 +101,8 @@ const Storefront = () => {
   const filtered = selectedCategory ? products.filter((p) => p.category === selectedCategory) : products;
   const settings = (store.settings || {}) as any;
   const seo = settings.seo || {};
-  const homepageSections = settings.homepage_sections || [];
+  const rawSections = settings.homepage_sections || [];
+  const homepageSections = rawSections.length > 0 ? rawSections : generateDefaultSections(store.name, store.category);
   const bannerCarouselSections = homepageSections.filter((section: any) => section.type === 'banner_carousel');
   const footerConfig: FooterConfig = { ...DEFAULT_FOOTER, ...(settings.footer || {}) };
 
