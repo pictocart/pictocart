@@ -543,6 +543,47 @@ export type Database = {
           },
         ]
       }
+      store_secrets: {
+        Row: {
+          created_at: string
+          delhivery_api_token: string | null
+          delhivery_test_mode: boolean | null
+          razorpay_key_id: string | null
+          razorpay_key_secret: string | null
+          razorpay_test_mode: boolean | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delhivery_api_token?: string | null
+          delhivery_test_mode?: boolean | null
+          razorpay_key_id?: string | null
+          razorpay_key_secret?: string | null
+          razorpay_test_mode?: boolean | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delhivery_api_token?: string | null
+          delhivery_test_mode?: boolean | null
+          razorpay_key_id?: string | null
+          razorpay_key_secret?: string | null
+          razorpay_test_mode?: boolean | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_secrets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           banner_url: string | null
