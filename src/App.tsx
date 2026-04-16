@@ -46,6 +46,9 @@ import Categories from "@/pages/Categories";
 import StorefrontBlog from "@/pages/storefront/StorefrontBlog";
 import StorefrontBlogPost from "@/pages/storefront/StorefrontBlogPost";
 import ThemePreview from "@/pages/ThemePreview";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
+import RefundPolicy from "@/pages/RefundPolicy";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -205,6 +208,10 @@ const App = () => (
             <Route path="/admin/revenue" element={<AdminRoute><AdminLayout><AdminRevenue /></AdminLayout></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />
             <Route path="/admin/profile" element={<AdminRoute><AdminLayout><AdminProfile /></AdminLayout></AdminRoute>} />
+            {/* Platform Legal Pages */}
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
             {/* Public Storefront Routes */}
             <Route path="/store/preview-theme" element={<ThemePreview />} />
             <Route path="/store/:slug" element={<Storefront />} />
