@@ -14,7 +14,7 @@ export const useWishlist = (storeId: string | undefined, userId: string | undefi
         .eq('store_id', storeId!)
         .eq('user_id', userId!);
       if (error) throw error;
-      return (data || []) as Array<{ id: string; product_id: string; store_id: string; user_id: string; created_at: string }>;
+      return (data || []) as unknown as Array<{ id: string; product_id: string; store_id: string; user_id: string; created_at: string }>;
     },
     enabled: !!storeId && !!userId,
   });
