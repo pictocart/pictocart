@@ -512,6 +512,94 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_events: {
+        Row: {
+          amount: number | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          razorpay_event_id: string | null
+          subscription_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          razorpay_event_id?: string | null
+          subscription_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          razorpay_event_id?: string | null
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          razorpay_plan_id: string | null
+          razorpay_subscription_id: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          razorpay_plan_id?: string | null
+          razorpay_subscription_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          razorpay_plan_id?: string | null
+          razorpay_subscription_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       theme_image_pool: {
         Row: {
           category: string
@@ -700,6 +788,13 @@ export type Database = {
         | "cancelled"
         | "returned"
       payment_status: "pending" | "paid" | "failed" | "refunded" | "cod"
+      subscription_plan: "free" | "premium"
+      subscription_status:
+        | "active"
+        | "cancelled"
+        | "past_due"
+        | "trialing"
+        | "incomplete"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -839,6 +934,14 @@ export const Constants = {
         "returned",
       ],
       payment_status: ["pending", "paid", "failed", "refunded", "cod"],
+      subscription_plan: ["free", "premium"],
+      subscription_status: [
+        "active",
+        "cancelled",
+        "past_due",
+        "trialing",
+        "incomplete",
+      ],
     },
   },
 } as const
