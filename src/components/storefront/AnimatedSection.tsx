@@ -10,7 +10,7 @@ interface Props {
 }
 
 const AnimatedSection = ({ animation = 'none', children, marginTop, marginBottom, className = '' }: Props) => {
-  const { ref, style } = useAnimateOnScroll(animation);
+  const { ref, style, className: animClassName } = useAnimateOnScroll(animation);
 
   return (
     <div
@@ -20,7 +20,7 @@ const AnimatedSection = ({ animation = 'none', children, marginTop, marginBottom
         marginTop: marginTop ? `${marginTop}px` : undefined,
         marginBottom: marginBottom ? `${marginBottom}px` : undefined,
       }}
-      className={className}
+      className={`${className} ${animClassName}`.trim()}
     >
       {children}
     </div>

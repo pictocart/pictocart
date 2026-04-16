@@ -22,7 +22,6 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
     if (authErr || !user) throw new Error("Unauthorized");
 
-    // Verify admin role
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdmin) throw new Error("Admin access required");
 
@@ -32,20 +31,29 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Step 1: Generate theme structure via tool calling
-    const structurePrompt = `You are a world-class web designer. Generate a complete, premium e-commerce theme for the "${category}" category.
-${styleHints ? `Style hints: ${styleHints}` : ""}
+    const structurePrompt = `You are a world-class e-commerce web designer who creates themes that rival Shopify's premium Dawn and Sense themes.
 
-Create a visually stunning theme with:
-- A harmonious color palette (6 colors: primary, secondary, accent, background, text, card)
-- Font pairing from Google Fonts (heading + body)
-- 5 pages with section layouts, each with animations
+Generate a COMPLETE, premium, ready-to-deploy e-commerce theme for the "${category}" category.
+${styleHints ? `\nAdmin's design brief: ${styleHints}` : ""}
 
-Section types available: hero, featured_products, category_grid, text_block, newsletter, banner_carousel, testimonials
-Layout options: full-width, split-50-50, grid-2, grid-3, grid-4
-Animation options: none, fade-in, slide-up, slide-in-left, scale-in, parallax
+CRITICAL REQUIREMENTS:
+1. The home page MUST have 8-12 sections minimum (not just 4-5)
+2. Every section MUST have a non-"none" animation
+3. Product sections MUST specify cardEffect
+4. Include an announcement_bar as the first section
+5. Include trust_badges section
+6. The theme must look like a ₹2999 premium theme — not a basic template
 
-Make it look premium and professional. The theme should look like it costs ₹2999.`;
+COLOR PALETTE: Create a harmonious 6-color palette that feels cohesive and premium.
+FONTS: Choose distinctive Google Fonts pairing — NOT Inter/Roboto/Open Sans.
+
+Section types: hero, featured_products, category_grid, text_block, newsletter, banner_carousel, testimonials, countdown_timer, trust_badges, brand_marquee, image_with_text, video_hero, instagram_feed, collection_showcase, announcement_bar
+
+Animation options: fade-in, slide-up, slide-in-left, slide-in-right, scale-in, parallax, ken-burns, stagger-children, blur-in, flip-up, bounce-in
+
+Card effects: hover-glare, hover-tilt, hover-lift, hover-border-glow, hover-zoom-image
+
+Make it absolutely stunning. This theme should make store owners say "wow, which one should I choose?"`;
 
     const structureRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -60,7 +68,7 @@ Make it look premium and professional. The theme should look like it costs ₹29
           type: "function",
           function: {
             name: "create_theme_pack",
-            description: "Create a complete multi-page theme pack",
+            description: "Create a complete premium multi-page theme pack with 8-12 sections, animations, and card effects",
             parameters: {
               type: "object",
               properties: {
@@ -84,12 +92,13 @@ Make it look premium and professional. The theme should look like it costs ₹29
                     fonts: {
                       type: "object",
                       properties: {
-                        heading: { type: "string" },
-                        body: { type: "string" },
+                        heading: { type: "string", description: "Google Fonts name for headings — choose distinctive fonts like Playfair Display, Cormorant Garamond, Space Grotesk, DM Serif Display, Outfit" },
+                        body: { type: "string", description: "Google Fonts name for body text" },
                       },
                       required: ["heading", "body"],
                     },
                     borderRadius: { type: "number" },
+                    gradientBackground: { type: "string", description: "Optional CSS gradient for hero backgrounds" },
                   },
                   required: ["colors", "fonts", "borderRadius"],
                 },
@@ -98,16 +107,49 @@ Make it look premium and professional. The theme should look like it costs ₹29
                   properties: {
                     home: {
                       type: "array",
+                      description: "Must have 8-12 sections. First should be announcement_bar.",
                       items: {
                         type: "object",
                         properties: {
-                          type: { type: "string" },
-                          layout: { type: "string" },
-                          animation: { type: "string" },
+                          type: { type: "string", enum: ["hero", "featured_products", "category_grid", "text_block", "newsletter", "banner_carousel", "testimonials", "countdown_timer", "trust_badges", "brand_marquee", "image_with_text", "collection_showcase", "instagram_feed", "announcement_bar"] },
+                          layout: { type: "string", enum: ["full-width", "split-50-50", "grid-2", "grid-3", "grid-4"] },
+                          animation: { type: "string", enum: ["fade-in", "slide-up", "slide-in-left", "slide-in-right", "scale-in", "parallax", "ken-burns", "stagger-children", "blur-in", "flip-up", "bounce-in"] },
                           title: { type: "string" },
                           subtitle: { type: "string" },
-                          height: { type: "string" },
+                          height: { type: "string", enum: ["small", "medium", "large"] },
+                          cardEffect: { type: "string", enum: ["hover-glare", "hover-tilt", "hover-lift", "hover-border-glow", "hover-zoom-image"], description: "Card hover effect for product/collection sections" },
                           cardStyle: { type: "string" },
+                          announcementText: { type: "string", description: "Text for announcement_bar sections" },
+                          countdownDate: { type: "string", description: "ISO date string for countdown_timer sections" },
+                          trustBadges: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                icon: { type: "string", description: "Emoji icon" },
+                                label: { type: "string" },
+                              },
+                            },
+                            description: "Array of trust badges for trust_badges sections"
+                          },
+                          testimonials: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                name: { type: "string" },
+                                rating: { type: "number" },
+                                quote: { type: "string" },
+                                avatar: { type: "string", description: "Emoji or initial" },
+                              },
+                            },
+                            description: "Array of testimonials for testimonials sections"
+                          },
+                          brands: {
+                            type: "array",
+                            items: { type: "string" },
+                            description: "Brand names for marquee"
+                          },
                           margins: {
                             type: "object",
                             properties: { top: { type: "number" }, bottom: { type: "number" } },
@@ -120,10 +162,6 @@ Make it look premium and professional. The theme should look like it costs ₹29
                         required: ["type", "layout", "animation", "title"],
                       },
                     },
-                    about: { type: "array", items: { type: "object" } },
-                    blog: { type: "array", items: { type: "object" } },
-                    contact: { type: "array", items: { type: "object" } },
-                    shop: { type: "array", items: { type: "object" } },
                   },
                   required: ["home"],
                 },
@@ -132,8 +170,8 @@ Make it look premium and professional. The theme should look like it costs ₹29
                   items: {
                     type: "object",
                     properties: {
-                      section: { type: "string", description: "Which section this image is for (e.g. 'home_hero')" },
-                      prompt: { type: "string", description: "Detailed image generation prompt" },
+                      section: { type: "string" },
+                      prompt: { type: "string" },
                     },
                     required: ["section", "prompt"],
                   },
@@ -172,7 +210,7 @@ Make it look premium and professional. The theme should look like it costs ₹29
     const themeData = JSON.parse(toolCall.function.arguments);
     const structureTokens = structureData.usage?.total_tokens || 3000;
 
-    // Step 2: Generate images
+    // Generate images
     const imagePrompts = themeData.image_prompts || [];
     const generatedImages: Record<string, string> = {};
     let imageTokens = 0;
@@ -196,7 +234,6 @@ Make it look premium and professional. The theme should look like it costs ₹29
           const imgData = await imgRes.json();
           const base64 = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
           if (base64) {
-            // Upload to storage
             const imageBytes = Uint8Array.from(atob(base64.split(",")[1] || base64), c => c.charCodeAt(0));
             const path = `themes/${crypto.randomUUID()}.png`;
             const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -225,17 +262,12 @@ Make it look premium and professional. The theme should look like it costs ₹29
       }
     }
 
-    // Calculate cost (approximate)
-    // Gemini Flash: ~$0.15/1M input, ~$0.60/1M output ≈ roughly ₹0.05 per 1K tokens
-    // Image gen: ~$0.04 per image ≈ ₹3.5 per image
     const textCost = (structureTokens / 1000) * 0.05;
     const imageCost = Object.keys(generatedImages).length * 3.5;
     const totalCostInr = Math.round((textCost + imageCost) * 100) / 100;
 
-    // Use thumbnail from hero image if available
     const thumbnail = generatedImages["home_hero"] || Object.values(generatedImages)[0] || null;
 
-    // Save to database using service role
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceKey);
 

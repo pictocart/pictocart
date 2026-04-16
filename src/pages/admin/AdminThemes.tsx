@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useThemePacks, useGenerateThemePack, useUpdateThemePack, useDeleteThemePack, useAllThemePurchases, type ThemePack } from '@/hooks/useThemePacks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,56 +10,237 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Crown, Sparkles, Loader2, Palette, Trash2, Eye, IndianRupee, TrendingUp, Package, ExternalLink } from 'lucide-react';
+import { Crown, Sparkles, Loader2, Palette, Trash2, Eye, IndianRupee, TrendingUp, Package, ExternalLink, Shuffle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const CATEGORIES = ['fashion', 'food', 'electronics', 'beauty', 'health', 'sports', 'home-decor', 'general'];
 
+const MOODS = ['Minimalist', 'Luxurious', 'Bold', 'Playful', 'Earthy', 'Futuristic', 'Vintage', 'Editorial'];
+const CARD_EFFECTS = ['Glare', 'Tilt 3D', 'Lift Shadow', 'Border Glow', 'Zoom Image'];
+const HERO_STYLES = ['Parallax', 'Ken Burns Zoom', 'Video Background', 'Split Layout', 'Full Bleed'];
+const COLOR_MOODS = ['Warm', 'Cool', 'Monochrome', 'Vibrant', 'Pastel', 'Dark', 'Earth Tones'];
+const TYPOGRAPHY_FEELS = ['Modern Sans', 'Classic Serif', 'Handwritten', 'Geometric', 'Mixed'];
+const SECTIONS_OPTIONS = [
+  'Announcement Bar', 'Testimonials', 'Countdown Timer', 'Trust Badges',
+  'Brand Marquee', 'Instagram Feed', 'Collection Showcase', 'Newsletter',
+  'Image With Text', 'FAQ Accordion',
+];
+
+const CATEGORY_DEFAULTS: Record<string, { mood: string; hero: string; cards: string[]; color: string; typo: string; sections: string[] }> = {
+  fashion:      { mood: 'Luxurious',   hero: 'Parallax',       cards: ['Glare', 'Lift Shadow'],  color: 'Vibrant', typo: 'Modern Sans',   sections: ['Testimonials', 'Instagram Feed', 'Newsletter', 'Collection Showcase'] },
+  food:         { mood: 'Earthy',      hero: 'Split Layout',   cards: ['Lift Shadow', 'Zoom Image'], color: 'Warm',  typo: 'Classic Serif', sections: ['Trust Badges', 'Testimonials', 'Newsletter', 'Image With Text'] },
+  electronics:  { mood: 'Futuristic',  hero: 'Ken Burns Zoom', cards: ['Glare', 'Tilt 3D'],      color: 'Dark',    typo: 'Geometric',    sections: ['Trust Badges', 'Countdown Timer', 'Brand Marquee', 'Newsletter'] },
+  beauty:       { mood: 'Minimalist',  hero: 'Full Bleed',     cards: ['Glare', 'Zoom Image'],   color: 'Pastel',  typo: 'Modern Sans',   sections: ['Testimonials', 'Instagram Feed', 'Newsletter', 'Image With Text'] },
+  health:       { mood: 'Earthy',      hero: 'Split Layout',   cards: ['Lift Shadow'],           color: 'Earth Tones', typo: 'Modern Sans', sections: ['Trust Badges', 'Testimonials', 'Newsletter'] },
+  sports:       { mood: 'Bold',        hero: 'Parallax',       cards: ['Tilt 3D', 'Lift Shadow'], color: 'Vibrant', typo: 'Geometric',    sections: ['Countdown Timer', 'Trust Badges', 'Brand Marquee', 'Newsletter'] },
+  'home-decor': { mood: 'Minimalist',  hero: 'Ken Burns Zoom', cards: ['Lift Shadow', 'Zoom Image'], color: 'Warm', typo: 'Classic Serif', sections: ['Image With Text', 'Instagram Feed', 'Newsletter', 'Collection Showcase'] },
+  general:      { mood: 'Bold',        hero: 'Full Bleed',     cards: ['Glare', 'Lift Shadow'],  color: 'Vibrant', typo: 'Modern Sans',   sections: ['Trust Badges', 'Newsletter', 'Testimonials'] },
+};
+
+const ChipSelect = ({ options, value, onChange, multi = false }: { options: string[]; value: string | string[]; onChange: (v: any) => void; multi?: boolean }) => {
+  const selected = multi ? (value as string[]) : [value as string];
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map(opt => {
+        const active = selected.includes(opt);
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => {
+              if (multi) {
+                const arr = value as string[];
+                onChange(active ? arr.filter(v => v !== opt) : [...arr, opt]);
+              } else {
+                onChange(opt);
+              }
+            }}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${active ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary text-secondary-foreground border-border hover:bg-accent'}`}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+const CollapsibleSection = ({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-sm font-semibold hover:text-primary transition-colors">
+        {title}
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-2 pb-3">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
 const GenerateModal = ({ onClose }: { onClose: () => void }) => {
   const [category, setCategory] = useState('fashion');
-  const [styleHints, setStyleHints] = useState('');
+  const defaults = CATEGORY_DEFAULTS[category] || CATEGORY_DEFAULTS.general;
+
+  const [mood, setMood] = useState(defaults.mood);
+  const [animIntensity, setAnimIntensity] = useState([65]);
+  const [cardEffects, setCardEffects] = useState<string[]>(defaults.cards);
+  const [heroStyle, setHeroStyle] = useState(defaults.hero);
+  const [colorMood, setColorMood] = useState(defaults.color);
+  const [typoFeel, setTypoFeel] = useState(defaults.typo);
+  const [sections, setSections] = useState<string[]>(defaults.sections);
+  const [specialReqs, setSpecialReqs] = useState('');
+
   const generate = useGenerateThemePack();
 
+  const applyDefaults = (cat: string) => {
+    const d = CATEGORY_DEFAULTS[cat] || CATEGORY_DEFAULTS.general;
+    setMood(d.mood);
+    setCardEffects(d.cards);
+    setHeroStyle(d.hero);
+    setColorMood(d.color);
+    setTypoFeel(d.typo);
+    setSections(d.sections);
+  };
+
+  const surpriseMe = () => {
+    const r = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+    const rMulti = <T,>(arr: T[], n: number) => arr.sort(() => 0.5 - Math.random()).slice(0, n);
+    setMood(r(MOODS));
+    setAnimIntensity([Math.floor(Math.random() * 80) + 20]);
+    setCardEffects(rMulti(CARD_EFFECTS, 2 + Math.floor(Math.random() * 2)));
+    setHeroStyle(r(HERO_STYLES));
+    setColorMood(r(COLOR_MOODS));
+    setTypoFeel(r(TYPOGRAPHY_FEELS));
+    setSections(rMulti(SECTIONS_OPTIONS, 4 + Math.floor(Math.random() * 4)));
+  };
+
+  const buildStyleHints = () => {
+    const parts = [
+      `Mood: ${mood}`,
+      `Animation Intensity: ${animIntensity[0]}%`,
+      `Card Effects: ${cardEffects.join(', ') || 'none'}`,
+      `Hero Style: ${heroStyle}`,
+      `Color Mood: ${colorMood}`,
+      `Typography: ${typoFeel}`,
+      `Include Sections: ${sections.join(', ')}`,
+    ];
+    if (specialReqs.trim()) parts.push(`Special: ${specialReqs.trim()}`);
+    return parts.join('. ');
+  };
+
   const handleGenerate = async () => {
-    await generate.mutateAsync({ category, styleHints: styleHints || undefined });
+    const styleHints = buildStyleHints();
+    await generate.mutateAsync({ category, styleHints });
     onClose();
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Category</Label>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {CATEGORIES.map(c => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
+    <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+      {/* Category + Surprise Me */}
+      <div className="flex items-end gap-3">
+        <div className="flex-1 space-y-1.5">
+          <Label className="text-xs font-semibold">Category</Label>
+          <Select value={category} onValueChange={(v) => { setCategory(v); applyDefaults(v); }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map(c => <SelectItem key={c} value={c} className="capitalize">{c.replace('-', ' ')}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button variant="outline" size="sm" onClick={surpriseMe} className="gap-1.5 shrink-0">
+          <Shuffle className="h-3.5 w-3.5" /> Surprise Me
+        </Button>
       </div>
-      <div className="space-y-2">
-        <Label>Style Hints (optional)</Label>
+
+      <div className="border-t" />
+
+      {/* Mood & Aesthetic */}
+      <CollapsibleSection title="🎨 Mood & Aesthetic" defaultOpen>
+        <ChipSelect options={MOODS} value={mood} onChange={setMood} />
+      </CollapsibleSection>
+
+      {/* Animation Intensity */}
+      <CollapsibleSection title="✨ Animation Intensity" defaultOpen>
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Subtle</span>
+            <span className="font-semibold text-foreground">{animIntensity[0]}%</span>
+            <span>Dramatic</span>
+          </div>
+          <Slider value={animIntensity} onValueChange={setAnimIntensity} min={10} max={100} step={5} />
+        </div>
+      </CollapsibleSection>
+
+      {/* Card Effects */}
+      <CollapsibleSection title="💎 Card Effects">
+        <ChipSelect options={CARD_EFFECTS} value={cardEffects} onChange={setCardEffects} multi />
+      </CollapsibleSection>
+
+      {/* Hero Style */}
+      <CollapsibleSection title="🖼️ Hero Style">
+        <ChipSelect options={HERO_STYLES} value={heroStyle} onChange={setHeroStyle} />
+      </CollapsibleSection>
+
+      {/* Color Mood */}
+      <CollapsibleSection title="🌈 Color Mood">
+        <ChipSelect options={COLOR_MOODS} value={colorMood} onChange={setColorMood} />
+      </CollapsibleSection>
+
+      {/* Typography */}
+      <CollapsibleSection title="🔤 Typography Feel">
+        <ChipSelect options={TYPOGRAPHY_FEELS} value={typoFeel} onChange={setTypoFeel} />
+      </CollapsibleSection>
+
+      {/* Sections to Include */}
+      <CollapsibleSection title="📄 Sections to Include" defaultOpen>
+        <div className="grid grid-cols-2 gap-2">
+          {SECTIONS_OPTIONS.map(sec => (
+            <label key={sec} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-accent rounded px-2 py-1.5 transition-colors">
+              <Checkbox
+                checked={sections.includes(sec)}
+                onCheckedChange={(checked) => {
+                  setSections(checked ? [...sections, sec] : sections.filter(s => s !== sec));
+                }}
+              />
+              {sec}
+            </label>
+          ))}
+        </div>
+      </CollapsibleSection>
+
+      {/* Special Requests */}
+      <CollapsibleSection title="💬 Special Requests">
         <Textarea
-          value={styleHints}
-          onChange={(e) => setStyleHints(e.target.value)}
-          placeholder="e.g., minimalist, luxury gold & black, vibrant neon, earthy organic..."
-          className="h-20"
+          value={specialReqs}
+          onChange={e => setSpecialReqs(e.target.value)}
+          placeholder="e.g., 'Use dark mode with neon accents', 'Add a video hero section with autoplay'..."
+          className="h-16 text-xs"
         />
-      </div>
+      </CollapsibleSection>
+
+      {/* Generation Progress */}
       {generate.isPending && (
         <div className="bg-muted rounded-lg p-4 space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Generating theme with AI...
+            Generating premium theme with AI...
           </div>
-          <p className="text-xs text-muted-foreground">This takes 30-60 seconds. Generating structure, colors, fonts, and images...</p>
+          <p className="text-xs text-muted-foreground">Creating structure, animations, colors, fonts, and AI images. This takes 30-90 seconds...</p>
           <div className="h-1.5 bg-background rounded-full overflow-hidden">
             <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }} />
           </div>
         </div>
       )}
-      <Button onClick={handleGenerate} disabled={generate.isPending} className="w-full">
-        {generate.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : <><Sparkles className="mr-2 h-4 w-4" /> Generate Theme Pack</>}
+
+      <Button onClick={handleGenerate} disabled={generate.isPending} className="w-full" size="lg">
+        {generate.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : <><Sparkles className="mr-2 h-4 w-4" /> Generate Premium Theme</>}
       </Button>
     </div>
   );
@@ -136,7 +317,7 @@ const ThemePreviewModal = ({ pack }: { pack: ThemePack }) => {
 
   return (
     <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-      {/* Page: Header */}
+      {/* Header */}
       <div className="rounded-lg border bg-muted/30 p-3 relative">
         <SectionLabel label="Header / Navigation" />
         <div className="mt-5 flex items-center justify-between">
@@ -153,68 +334,151 @@ const ThemePreviewModal = ({ pack }: { pack: ThemePack }) => {
         </div>
       </div>
 
-      {/* Page: Hero Section */}
-      <div className="rounded-lg border bg-muted/30 p-3 relative">
-        <SectionLabel label="Hero Banner" />
-        <div className="mt-5 h-28 rounded bg-muted-foreground/10 flex flex-col items-center justify-center gap-2">
-          <WireframeBlock h="h-4" w="w-48" />
-          <WireframeBlock h="h-3" w="w-64" />
-          <div className="h-7 w-28 rounded bg-muted-foreground/25 mt-1" />
-        </div>
-      </div>
+      {/* Home sections */}
+      {homeSections.map((section: any, i: number) => {
+        const label = section.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || `Section ${i + 1}`;
+        const animBadge = section.animation && section.animation !== 'none' ? section.animation : null;
 
-      {/* Home sections from theme data */}
-      {homeSections.map((section: any, i: number) => (
-        <div key={i} className="rounded-lg border bg-muted/30 p-3 relative">
-          <SectionLabel label={section.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || `Section ${i + 1}`} />
-          <div className="mt-5">
-            {section.type === 'featured_products' && (
-              <div className="space-y-2">
-                <WireframeBlock h="h-3" w="w-36" />
-                <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 3, 4].map(n => (
-                    <div key={n} className="rounded border border-muted-foreground/10 overflow-hidden">
-                      <div className="h-14 bg-muted-foreground/10" />
-                      <div className="p-1.5 space-y-1">
-                        <WireframeBlock h="h-2" w="w-3/4" />
-                        <WireframeBlock h="h-2" w="w-1/2" />
+        return (
+          <div key={i} className="rounded-lg border bg-muted/30 p-3 relative">
+            <SectionLabel label={label} />
+            {animBadge && (
+              <div className="absolute top-1 right-1 bg-primary/20 text-primary text-[8px] font-semibold px-1.5 py-0.5 rounded">
+                ✨ {animBadge}
+              </div>
+            )}
+            <div className="mt-5">
+              {section.type === 'hero' && (
+                <div className="h-28 rounded bg-muted-foreground/10 flex flex-col items-center justify-center gap-2">
+                  <WireframeBlock h="h-4" w="w-48" />
+                  <WireframeBlock h="h-3" w="w-64" />
+                  <div className="h-7 w-28 rounded bg-muted-foreground/25 mt-1" />
+                </div>
+              )}
+              {section.type === 'featured_products' && (
+                <div className="space-y-2">
+                  <WireframeBlock h="h-3" w="w-36" />
+                  <div className="grid grid-cols-4 gap-2">
+                    {[1, 2, 3, 4].map(n => (
+                      <div key={n} className="rounded border border-muted-foreground/10 overflow-hidden">
+                        <div className="h-14 bg-muted-foreground/10" />
+                        <div className="p-1.5 space-y-1">
+                          <WireframeBlock h="h-2" w="w-3/4" />
+                          <WireframeBlock h="h-2" w="w-1/2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {section.type === 'testimonials' && (
+                <div className="flex gap-2">
+                  {[1, 2, 3].map(n => (
+                    <div key={n} className="flex-1 rounded border border-muted-foreground/10 p-2 space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-5 w-5 rounded-full bg-muted-foreground/15" />
+                        <WireframeBlock h="h-2" w="w-12" />
+                      </div>
+                      <div className="flex gap-0.5">{[1,2,3,4,5].map(s => <div key={s} className="h-2 w-2 rounded-full bg-muted-foreground/20" />)}</div>
+                      <WireframeBlock h="h-2" w="w-full" />
+                      <WireframeBlock h="h-2" w="w-3/4" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {section.type === 'countdown_timer' && (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <WireframeBlock h="h-3" w="w-32" />
+                  <div className="flex gap-3">
+                    {['DD', 'HH', 'MM', 'SS'].map(u => (
+                      <div key={u} className="flex flex-col items-center">
+                        <div className="h-10 w-10 rounded bg-muted-foreground/15 flex items-center justify-center text-[8px] font-bold text-muted-foreground">00</div>
+                        <span className="text-[7px] text-muted-foreground mt-0.5">{u}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {section.type === 'trust_badges' && (
+                <div className="flex justify-center gap-4 py-2">
+                  {['🚚', '🔒', '↩️', '💬'].map((icon, idx) => (
+                    <div key={idx} className="flex flex-col items-center gap-1">
+                      <span className="text-lg">{icon}</span>
+                      <WireframeBlock h="h-2" w="w-12" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {section.type === 'brand_marquee' && (
+                <div className="flex gap-4 py-2 overflow-hidden">
+                  {Array(6).fill(0).map((_, idx) => (
+                    <div key={idx} className="h-8 w-16 rounded bg-muted-foreground/10 shrink-0" />
+                  ))}
+                </div>
+              )}
+              {section.type === 'image_with_text' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="h-20 rounded bg-muted-foreground/10" />
+                  <div className="space-y-1.5 flex flex-col justify-center">
+                    <WireframeBlock h="h-3" w="w-3/4" />
+                    <WireframeBlock h="h-2" w="w-full" />
+                    <WireframeBlock h="h-2" w="w-5/6" />
+                    <div className="h-6 w-20 rounded bg-muted-foreground/25 mt-1" />
+                  </div>
+                </div>
+              )}
+              {section.type === 'collection_showcase' && (
+                <div className="grid grid-cols-3 gap-2">
+                  {[1, 2, 3].map(n => (
+                    <div key={n} className="relative h-20 rounded bg-muted-foreground/10 overflow-hidden">
+                      <div className="absolute bottom-1 left-1 right-1">
+                        <WireframeBlock h="h-2.5" w="w-2/3" />
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-            {section.type === 'newsletter' && (
-              <div className="flex flex-col items-center gap-2 py-2">
-                <WireframeBlock h="h-3" w="w-40" />
-                <div className="flex gap-2 w-full max-w-xs">
-                  <div className="flex-1 h-7 rounded border border-muted-foreground/15" />
-                  <div className="h-7 w-20 rounded bg-muted-foreground/25" />
+              )}
+              {section.type === 'instagram_feed' && (
+                <div className="space-y-1.5">
+                  <WireframeBlock h="h-3" w="w-32" />
+                  <div className="grid grid-cols-4 gap-1">
+                    {Array(4).fill(0).map((_, idx) => (
+                      <div key={idx} className="aspect-square rounded bg-muted-foreground/10" />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            {section.type === 'text_block' && (
-              <div className="flex flex-col items-center gap-1.5 py-2">
-                <WireframeBlock h="h-3" w="w-44" />
-                <WireframeBlock h="h-2" w="w-56" />
-              </div>
-            )}
-            {section.type === 'hero' && (
-              <div className="h-20 rounded bg-muted-foreground/10 flex flex-col items-center justify-center gap-1.5">
-                <WireframeBlock h="h-3" w="w-32" />
-                <WireframeBlock h="h-2" w="w-48" />
-              </div>
-            )}
-            {!['featured_products', 'newsletter', 'text_block', 'hero'].includes(section.type) && (
-              <div className="h-16 rounded bg-muted-foreground/8 flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground capitalize">{section.type?.replace(/_/g, ' ')}</span>
-              </div>
-            )}
+              )}
+              {section.type === 'newsletter' && (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <WireframeBlock h="h-3" w="w-40" />
+                  <div className="flex gap-2 w-full max-w-xs">
+                    <div className="flex-1 h-7 rounded border border-muted-foreground/15" />
+                    <div className="h-7 w-20 rounded bg-muted-foreground/25" />
+                  </div>
+                </div>
+              )}
+              {section.type === 'announcement_bar' && (
+                <div className="h-8 rounded bg-muted-foreground/15 flex items-center justify-center">
+                  <WireframeBlock h="h-2" w="w-48" />
+                </div>
+              )}
+              {section.type === 'text_block' && (
+                <div className="flex flex-col items-center gap-1.5 py-2">
+                  <WireframeBlock h="h-3" w="w-44" />
+                  <WireframeBlock h="h-2" w="w-56" />
+                </div>
+              )}
+              {!['hero', 'featured_products', 'testimonials', 'countdown_timer', 'trust_badges', 'brand_marquee', 'image_with_text', 'collection_showcase', 'instagram_feed', 'newsletter', 'announcement_bar', 'text_block', 'category_grid'].includes(section.type) && (
+                <div className="h-16 rounded bg-muted-foreground/8 flex items-center justify-center">
+                  <span className="text-[10px] text-muted-foreground capitalize">{section.type?.replace(/_/g, ' ')}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
-      {/* Page: Product Listing */}
+      {/* Product Listing Page */}
       <div className="rounded-lg border bg-muted/30 p-3 relative">
         <SectionLabel label="Product Listing Page" />
         <div className="mt-5 space-y-2">
@@ -239,61 +503,7 @@ const ThemePreviewModal = ({ pack }: { pack: ThemePack }) => {
         </div>
       </div>
 
-      {/* Page: Product Detail */}
-      <div className="rounded-lg border bg-muted/30 p-3 relative">
-        <SectionLabel label="Product Detail Page" />
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="h-32 rounded bg-muted-foreground/10" />
-          <div className="space-y-2">
-            <WireframeBlock h="h-4" w="w-3/4" />
-            <WireframeBlock h="h-3" w="w-1/3" />
-            <WireframeBlock h="h-2" w="w-full" />
-            <WireframeBlock h="h-2" w="w-5/6" />
-            <div className="flex gap-2 mt-3">
-              <div className="h-7 w-24 rounded bg-muted-foreground/25" />
-              <div className="h-7 w-20 rounded border border-muted-foreground/15" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Page: Cart */}
-      <div className="rounded-lg border bg-muted/30 p-3 relative">
-        <SectionLabel label="Cart Page" />
-        <div className="mt-5 space-y-2">
-          {[1, 2].map(n => (
-            <div key={n} className="flex items-center gap-3 p-2 rounded border border-muted-foreground/10">
-              <div className="h-10 w-10 rounded bg-muted-foreground/10 shrink-0" />
-              <div className="flex-1 space-y-1">
-                <WireframeBlock h="h-2" w="w-2/3" />
-                <WireframeBlock h="h-2" w="w-1/4" />
-              </div>
-              <div className="h-6 w-14 rounded border border-muted-foreground/15" />
-            </div>
-          ))}
-          <div className="flex justify-end pt-2">
-            <div className="h-8 w-32 rounded bg-muted-foreground/25" />
-          </div>
-        </div>
-      </div>
-
-      {/* Page: Blog */}
-      <div className="rounded-lg border bg-muted/30 p-3 relative">
-        <SectionLabel label="Blog Page" />
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          {[1, 2, 3].map(n => (
-            <div key={n} className="rounded border border-muted-foreground/10 overflow-hidden">
-              <div className="h-12 bg-muted-foreground/10" />
-              <div className="p-1.5 space-y-1">
-                <WireframeBlock h="h-2" w="w-full" />
-                <WireframeBlock h="h-2" w="w-2/3" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Page: Footer */}
+      {/* Footer */}
       <div className="rounded-lg border bg-muted/30 p-3 relative">
         <SectionLabel label="Footer" />
         <div className="mt-5 grid grid-cols-4 gap-3">
@@ -320,7 +530,6 @@ const AdminThemes = () => {
   const [editingPack, setEditingPack] = useState<ThemePack | null>(null);
   const [previewPack, setPreviewPack] = useState<ThemePack | null>(null);
 
-  // Cost matrix calculations
   const totalAiCost = packs.reduce((s, p) => s + Number(p.ai_generation_cost), 0);
   const totalRevenue = packs.reduce((s, p) => s + (p.price * p.sales_count), 0);
   const totalSales = packs.reduce((s, p) => s + p.sales_count, 0);
@@ -336,8 +545,8 @@ const AdminThemes = () => {
           <DialogTrigger asChild>
             <Button><Sparkles className="mr-2 h-4 w-4" /> Generate with AI</Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Generate Theme Pack with AI</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Generate Premium Theme Pack</DialogTitle></DialogHeader>
             <GenerateModal onClose={() => setGenerateOpen(false)} />
           </DialogContent>
         </Dialog>
@@ -350,32 +559,11 @@ const AdminThemes = () => {
         </TabsList>
 
         <TabsContent value="themes" className="space-y-4">
-          {/* Summary cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Total Themes</p>
-                <p className="text-2xl font-bold">{packs.length}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Published</p>
-                <p className="text-2xl font-bold">{packs.filter(p => p.is_published).length}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Total Sales</p>
-                <p className="text-2xl font-bold">{totalSales}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold">₹{totalRevenue.toLocaleString('en-IN')}</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Themes</p><p className="text-2xl font-bold">{packs.length}</p></CardContent></Card>
+            <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Published</p><p className="text-2xl font-bold">{packs.filter(p => p.is_published).length}</p></CardContent></Card>
+            <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Sales</p><p className="text-2xl font-bold">{totalSales}</p></CardContent></Card>
+            <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Revenue</p><p className="text-2xl font-bold">₹{totalRevenue.toLocaleString('en-IN')}</p></CardContent></Card>
           </div>
 
           {isLoading ? (
@@ -415,10 +603,7 @@ const AdminThemes = () => {
                       <span className="text-muted-foreground">{pack.sales_count} sales · AI Cost ₹{Number(pack.ai_generation_cost).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Switch
-                        checked={pack.is_published}
-                        onCheckedChange={(checked) => updatePack.mutate({ id: pack.id, is_published: checked })}
-                      />
+                      <Switch checked={pack.is_published} onCheckedChange={(checked) => updatePack.mutate({ id: pack.id, is_published: checked })} />
                       <span className="text-xs text-muted-foreground">Published</span>
                       <div className="flex-1" />
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPreviewPack(pack)} title="Wireframe preview">
@@ -448,22 +633,10 @@ const AdminThemes = () => {
 
         <TabsContent value="economics" className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total AI Spend</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-bold">₹{totalAiCost.toFixed(2)}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Theme Revenue</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-bold">₹{totalRevenue.toLocaleString('en-IN')}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Net Profit</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-bold">₹{(totalRevenue - totalAiCost).toFixed(2)}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Avg ROI</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-bold">{totalAiCost > 0 ? `${Math.round(((totalRevenue - totalAiCost) / totalAiCost) * 100)}%` : 'N/A'}</p></CardContent>
-            </Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total AI Spend</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">₹{totalAiCost.toFixed(2)}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Theme Revenue</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">₹{totalRevenue.toLocaleString('en-IN')}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Net Profit</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">₹{(totalRevenue - totalAiCost).toFixed(2)}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Avg ROI</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{totalAiCost > 0 ? `${Math.round(((totalRevenue - totalAiCost) / totalAiCost) * 100)}%` : 'N/A'}</p></CardContent></Card>
           </div>
 
           <Card>
