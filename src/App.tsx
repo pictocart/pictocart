@@ -20,6 +20,7 @@ import CouponList from "@/pages/CouponList";
 import SEOSettings from "@/pages/SEOSettings";
 import Onboarding from "@/pages/Onboarding";
 import Auth from "@/pages/Auth";
+import ResetPassword from "@/pages/ResetPassword";
 import Storefront from "@/pages/Storefront";
 import StorefrontProduct from "@/pages/StorefrontProduct";
 import StorefrontCart from "@/pages/StorefrontCart";
