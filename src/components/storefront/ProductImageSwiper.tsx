@@ -14,14 +14,10 @@ const ProductImageSwiper = ({ images, title, colors, borderRadius }: Props) => {
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
-
     const handleScroll = () => {
-      const scrollLeft = container.scrollLeft;
-      const width = container.clientWidth;
-      const index = Math.round(scrollLeft / width);
+      const index = Math.round(container.scrollLeft / container.clientWidth);
       setActiveIndex(index);
     };
-
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
   }, []);
@@ -45,15 +41,21 @@ const ProductImageSwiper = ({ images, title, colors, borderRadius }: Props) => {
         style={{ borderRadius: `${borderRadius}px`, scrollbarWidth: 'none' }}
       >
         {images.map((img, i) => (
-          <div
-            key={i}
-            className="w-full shrink-0 snap-center aspect-square"
-            style={{ backgroundColor: colors.secondary }}
-          >
+          <div key={i} className="w-full shrink-0 snap-center aspect-square relative" style={{ backgroundColor: colors.secondary }}>
             <img src={img} alt={`${title} ${i + 1}`} className="w-full h-full object-cover" />
           </div>
         ))}
       </div>
+
+      {/* Image counter */}
+      {images.length > 1 && (
+        <div
+          className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-medium"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff' }}
+        >
+          {activeIndex + 1}/{images.length}
+        </div>
+      )}
 
       {/* Dots */}
       {images.length > 1 && (
@@ -63,9 +65,9 @@ const ProductImageSwiper = ({ images, title, colors, borderRadius }: Props) => {
               key={i}
               className="rounded-full transition-all duration-200"
               style={{
-                width: i === activeIndex ? 16 : 6,
-                height: 6,
-                backgroundColor: i === activeIndex ? colors.primary : colors.text + '40',
+                width: i === activeIndex ? 18 : 7,
+                height: 7,
+                backgroundColor: i === activeIndex ? colors.primary : 'rgba(255,255,255,0.6)',
               }}
             />
           ))}
