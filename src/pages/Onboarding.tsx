@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/hooks/useStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, SkipForward } from 'lucide-react';
+import { ArrowLeft, ArrowRight, SkipForward, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { THEME_TEMPLATES } from '@/lib/themes';
 
@@ -93,6 +92,9 @@ const Onboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(defaultData);
   const [saving, setSaving] = useState(false);
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
+  const [animating, setAnimating] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Resume from saved step
   useEffect(() => {
@@ -148,7 +150,6 @@ const Onboarding = () => {
       } else {
         const updates: any = { onboarding_step: step };
         if (data.storeName) updates.name = data.storeName;
-        // slug is never updated after creation to keep store URL intact
         if (data.category) updates.category = data.category;
         if (data.description) updates.description = data.description;
         updates.logo_url = data.logoUrl || null;
@@ -175,21 +176,32 @@ const Onboarding = () => {
     setSaving(false);
   };
 
+  const animateTransition = (dir: 'forward' | 'back', callback: () => void) => {
+    setDirection(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      callback();
+      setTimeout(() => setAnimating(false), 50);
+    }, 200);
+  };
+
   const goNext = async () => {
     await saveStep(currentStep);
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep((s) => s + 1);
+      animateTransition('forward', () => setCurrentStep((s) => s + 1));
     }
   };
 
   const goBack = () => {
-    if (currentStep > 1) setCurrentStep((s) => s - 1);
+    if (currentStep > 1) {
+      animateTransition('back', () => setCurrentStep((s) => s - 1));
+    }
   };
 
   const skip = async () => {
     await saveStep(currentStep);
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep((s) => s + 1);
+      animateTransition('forward', () => setCurrentStep((s) => s + 1));
     }
   };
 
@@ -197,14 +209,14 @@ const Onboarding = () => {
     switch (currentStep) {
       case 1: return data.storeName.trim().length >= 2 && data.slugAvailable;
       case 2: return data.category !== '';
-      case 3: return true; // logo is skippable
+      case 3: return true;
       case 4: return data.selectedThemeId !== '';
-      case 5: return true; // image upload skippable
-      case 6: return true; // AI generate skippable
-      case 7: return true; // store info skippable
-      case 8: return true; // payment has defaults
-      case 9: return true; // email branding skippable
-      case 10: return true; // preview is view only
+      case 5: return true;
+      case 6: return true;
+      case 7: return true;
+      case 8: return true;
+      case 9: return true;
+      case 10: return true;
       case 11: return true;
       default: return true;
     }
@@ -256,74 +268,142 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20 flex flex-col">
       {/* Header */}
-      <header className="border-b border-border px-4 py-3 flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-          S
+      <header className="border-b border-border/50 px-6 py-4 flex items-center gap-3 backdrop-blur-sm bg-background/80 sticky top-0 z-10">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-lg shadow-primary/20">
+          {data.storeName ? data.storeName[0].toUpperCase() : 'S'}
         </div>
-        <span className="font-semibold text-foreground">Set up your store</span>
+        <div>
+          <span className="font-semibold text-foreground block leading-tight">
+            {data.storeName || 'Set up your store'}
+          </span>
+          <span className="text-xs text-muted-foreground">Step {currentStep} of {TOTAL_STEPS}</span>
+        </div>
+        <div className="ml-auto">
+          <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full">
+            {stepLabels[currentStep - 1]}
+          </span>
+        </div>
       </header>
 
-      {/* Progress */}
-      <div className="px-4 pt-4 pb-2 max-w-2xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-muted-foreground">Step {currentStep} of {TOTAL_STEPS}</span>
-          <span className="text-xs font-medium text-primary">{stepLabels[currentStep - 1]}</span>
+      {/* Progress stepper */}
+      <div className="px-6 pt-8 pb-4 max-w-3xl mx-auto w-full">
+        {/* Progress bar */}
+        <div className="relative h-1.5 bg-muted rounded-full overflow-hidden mb-6">
+          <div
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-700 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+          {/* Glow effect */}
+          <div
+            className="absolute inset-y-0 left-0 bg-primary/30 rounded-full blur-sm transition-all duration-700 ease-out"
+            style={{ width: `${progress}%` }}
+          />
         </div>
-        <Progress value={progress} className="h-2" />
-        {/* Step dots */}
-        <div className="flex justify-between mt-2">
-          {stepLabels.map((label, i) => (
-            <div
-              key={label}
-              className={cn(
-                'flex flex-col items-center',
-                i + 1 <= currentStep ? 'text-primary' : 'text-muted-foreground/40'
-              )}
-            >
-              <div
-                className={cn(
-                  'h-2 w-2 rounded-full',
-                  i + 1 < currentStep ? 'bg-primary' : i + 1 === currentStep ? 'bg-primary ring-2 ring-primary/30' : 'bg-muted-foreground/20'
-                )}
-              />
-              <span className="text-[10px] mt-1 hidden sm:block">{label}</span>
-            </div>
-          ))}
+
+        {/* Step indicators */}
+        <div className="flex justify-between items-start">
+          {stepLabels.map((label, i) => {
+            const stepNum = i + 1;
+            const isCompleted = stepNum < currentStep;
+            const isCurrent = stepNum === currentStep;
+            const isFuture = stepNum > currentStep;
+
+            return (
+              <div key={label} className="flex flex-col items-center group" style={{ width: `${100 / TOTAL_STEPS}%` }}>
+                {/* Dot / checkmark */}
+                <div
+                  className={cn(
+                    'flex items-center justify-center rounded-full transition-all duration-500 ease-out',
+                    isCompleted
+                      ? 'h-6 w-6 bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                      : isCurrent
+                      ? 'h-7 w-7 bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-primary/15'
+                      : 'h-5 w-5 bg-muted border-2 border-muted-foreground/15'
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="h-3 w-3" strokeWidth={3} />
+                  ) : isCurrent ? (
+                    <div className="h-2 w-2 rounded-full bg-primary-foreground animate-pulse" />
+                  ) : null}
+                </div>
+
+                {/* Label */}
+                <span
+                  className={cn(
+                    'text-[9px] sm:text-[10px] mt-2 text-center leading-tight transition-all duration-300 hidden sm:block',
+                    isCompleted ? 'text-primary font-medium' : isCurrent ? 'text-foreground font-semibold' : 'text-muted-foreground/50'
+                  )}
+                >
+                  {label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Step content */}
-      <div className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
-        {renderStep()}
+      {/* Step content with animation */}
+      <div className="flex-1 px-6 py-8 max-w-3xl mx-auto w-full">
+        <div
+          ref={contentRef}
+          className={cn(
+            'transition-all duration-300 ease-out',
+            animating
+              ? direction === 'forward'
+                ? 'opacity-0 translate-x-8'
+                : 'opacity-0 -translate-x-8'
+              : 'opacity-100 translate-x-0'
+          )}
+        >
+          {renderStep()}
+        </div>
       </div>
 
       {/* Footer navigation */}
       {currentStep < 11 && (
-        <div className="border-t border-border px-4 py-3 flex items-center justify-between max-w-2xl mx-auto w-full">
-          <Button
-            variant="ghost"
-            onClick={goBack}
-            disabled={currentStep === 1}
-            className="gap-1"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back
-          </Button>
-
-          <div className="flex gap-2">
-            {isSkippable(currentStep) && (
-              <Button variant="ghost" onClick={skip} className="gap-1 text-muted-foreground">
-                Skip <SkipForward className="h-4 w-4" />
-              </Button>
-            )}
+        <div className="border-t border-border/50 backdrop-blur-sm bg-background/80 sticky bottom-0">
+          <div className="px-6 py-4 flex items-center justify-between max-w-3xl mx-auto w-full">
             <Button
-              onClick={goNext}
-              disabled={!canProceed() || saving}
-              className="gap-1"
+              variant="ghost"
+              onClick={goBack}
+              disabled={currentStep === 1 || saving}
+              className="gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
-              {saving ? 'Saving...' : 'Continue'} <ArrowRight className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" /> Back
             </Button>
+
+            <div className="flex gap-3">
+              {isSkippable(currentStep) && (
+                <Button
+                  variant="ghost"
+                  onClick={skip}
+                  disabled={saving}
+                  className="gap-1.5 text-muted-foreground hover:text-foreground"
+                >
+                  Skip <SkipForward className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <Button
+                onClick={goNext}
+                disabled={!canProceed() || saving}
+                className="gap-2 px-6 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
+                size="lg"
+              >
+                {saving ? (
+                  <>
+                    <div className="h-4 w-4 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Continue <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}

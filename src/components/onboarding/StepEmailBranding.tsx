@@ -26,8 +26,9 @@ const StepEmailBranding = ({ data, setData, storeId }: Props) => {
   const [generated, setGenerated] = useState(false);
   const [templates, setTemplates] = useState<Record<string, any> | null>(null);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setTimeout(() => setMounted(true), 100); }, []);
 
-  // Check if templates already exist
   useEffect(() => {
     if (!storeId) return;
     const check = async () => {
@@ -73,42 +74,42 @@ const StepEmailBranding = ({ data, setData, storeId }: Props) => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className={`space-y-6 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
       <div className="text-center space-y-2">
-        <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-          <Mail className="h-7 w-7 text-primary" />
+        <div className="mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10 shadow-lg shadow-primary/10 flex items-center justify-center">
+          <Mail className="h-8 w-8 text-primary" />
         </div>
-        <h2 className="text-xl font-bold">Brand Your Emails</h2>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Your customers will receive emails that look like they come directly from <strong>{data.storeName || 'your store'}</strong> — with your logo, colors, and brand identity. No third-party branding, ever.
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Brand Your Emails</h2>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Customers will receive emails that look like they come directly from <strong>{data.storeName || 'your store'}</strong> — with your logo, colors, and brand identity.
         </p>
       </div>
 
-      {/* Template type cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {TEMPLATE_TYPES.map((t) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+        {TEMPLATE_TYPES.map((t, i) => {
           const Icon = t.icon;
           const isReady = generated && templates?.[t.key];
           return (
             <Card
               key={t.key}
+              style={{ transitionDelay: `${i * 60}ms` }}
               className={cn(
-                'cursor-pointer transition-all border',
-                previewKey === t.key ? 'ring-2 ring-primary border-primary' : '',
+                'cursor-pointer transition-all duration-300 border-2 hover:-translate-y-0.5',
+                previewKey === t.key ? 'ring-2 ring-primary border-primary shadow-md' : '',
                 isReady ? 'border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20' : ''
               )}
               onClick={() => isReady && setPreviewKey(previewKey === t.key ? null : t.key)}
             >
-              <CardContent className="p-3 flex items-start gap-3">
+              <CardContent className="p-4 flex items-start gap-3">
                 <div className={cn(
-                  'h-9 w-9 rounded-lg flex items-center justify-center shrink-0',
+                  'h-10 w-10 rounded-xl flex items-center justify-center shrink-0',
                   isReady ? 'bg-green-100 dark:bg-green-900' : 'bg-muted'
                 )}>
-                  {isReady ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Icon className="h-4 w-4 text-muted-foreground" />}
+                  {isReady ? <CheckCircle2 className="h-5 w-5 text-green-600" /> : <Icon className="h-5 w-5 text-muted-foreground" />}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{t.label}</p>
-                  <p className="text-xs text-muted-foreground">{t.desc}</p>
+                  <p className="text-sm font-semibold">{t.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
                 </div>
               </CardContent>
             </Card>
@@ -116,11 +117,10 @@ const StepEmailBranding = ({ data, setData, storeId }: Props) => {
         })}
       </div>
 
-      {/* Preview iframe */}
       {previewKey && templates?.[previewKey]?.html && (
-        <Card className="overflow-hidden">
-          <div className="bg-muted/50 border-b px-3 py-1.5 flex items-center gap-2">
-            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+        <Card className="overflow-hidden max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-muted/50 border-b px-4 py-2 flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium">
               Preview: {TEMPLATE_TYPES.find(t => t.key === previewKey)?.label}
             </span>
@@ -131,42 +131,43 @@ const StepEmailBranding = ({ data, setData, storeId }: Props) => {
           <iframe
             srcDoc={templates[previewKey].html}
             title="Email Preview"
-            className="w-full h-[300px] border-0 bg-white"
+            className="w-full h-[320px] border-0 bg-white"
             sandbox="allow-same-origin"
           />
         </Card>
       )}
 
-      {/* Generate button */}
       {!generated ? (
-        <Button
-          onClick={handleGenerate}
-          disabled={generating || !storeId}
-          className="w-full h-12 text-base gap-2"
-          size="lg"
-        >
-          {generating ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Generating your branded templates...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-5 w-5" />
-              Generate My Email Templates
-            </>
-          )}
-        </Button>
+        <div className="max-w-md mx-auto">
+          <Button
+            onClick={handleGenerate}
+            disabled={generating || !storeId}
+            className="w-full h-13 text-base gap-2 shadow-lg shadow-primary/20 rounded-xl"
+            size="lg"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Generating your branded templates...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-5 w-5" />
+                Generate My Email Templates
+              </>
+            )}
+          </Button>
+        </div>
       ) : (
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2 text-green-600">
             <CheckCircle2 className="h-5 w-5" />
-            <span className="font-medium">All 5 templates ready!</span>
+            <span className="font-semibold">All 5 templates ready!</span>
           </div>
           <p className="text-xs text-muted-foreground">
             Tap any template above to preview it. You can regenerate anytime from your dashboard.
           </p>
-          <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating} className="gap-1">
+          <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating} className="gap-1.5 rounded-xl">
             {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             Regenerate
           </Button>
