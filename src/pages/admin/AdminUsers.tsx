@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, MoreVertical, Trash2, ShieldPlus, ShieldMinus, Eye, UserPlus, Users } from 'lucide-react';
+import { Search, MoreVertical, Trash2, ShieldPlus, ShieldMinus, Eye, UserPlus, Users, KeyRound } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,6 +32,8 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
   const [viewUser, setViewUser] = useState<AdminUser | null>(null);
+  const [resetUser, setResetUser] = useState<AdminUser | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const queryClient = useQueryClient();
 
   const { data: users, isLoading } = useQuery({
@@ -79,7 +81,7 @@ const AdminUsers = () => {
   });
 
   const manageMutation = useMutation({
-    mutationFn: async (body: { action: string; userId: string; role?: string }) => {
+    mutationFn: async (body: { action: string; userId: string; role?: string; newPassword?: string }) => {
       const { data, error } = await supabase.functions.invoke('admin-manage-user', { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -89,6 +91,22 @@ const AdminUsers = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users-full'] });
     },
   });
+
+  const handleResetPassword = async () => {
+    if (!resetUser) return;
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    try {
+      await manageMutation.mutateAsync({ action: 'reset_password', userId: resetUser.user_id, newPassword });
+      toast.success(`Password reset for ${resetUser.full_name || resetUser.email}`);
+      setResetUser(null);
+      setNewPassword('');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to reset password');
+    }
+  };
 
   const handleAddRole = async (user: AdminUser, role: string) => {
     try {
@@ -281,6 +299,9 @@ const AdminUsers = () => {
                             <UserPlus className="h-4 w-4 mr-2" /> Add Customer Role
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem onClick={() => { setResetUser(user); setNewPassword(''); }}>
+                          <KeyRound className="h-4 w-4 mr-2" /> Reset Password
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => setDeleteUser(user)}
@@ -383,8 +404,36 @@ const AdminUsers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetUser} onOpenChange={(o) => { if (!o) { setResetUser(null); setNewPassword(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Set a new password for <strong>{resetUser?.full_name || resetUser?.email}</strong>. The user will need to use this password on their next login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Input
+              type="text"
+              placeholder="New password (min 6 chars)"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetUser(null); setNewPassword(''); }}>Cancel</Button>
+            <Button onClick={handleResetPassword} disabled={manageMutation.isPending || newPassword.length < 6}>
+              {manageMutation.isPending ? 'Resetting...' : 'Reset Password'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default AdminUsers;
+

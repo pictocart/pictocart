@@ -27,10 +27,9 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await adminClient.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdmin) throw new Error("Forbidden");
 
-    const { action, userId, role } = await req.json();
+    const { action, userId, role, newPassword } = await req.json();
 
     if (action === "delete_user") {
-      // Delete from auth (cascade handles profiles, roles, etc.)
       const { error } = await adminClient.auth.admin.deleteUser(userId);
       if (error) throw error;
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -48,8 +47,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "reset_password") {
+      if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+        throw new Error("Password must be at least 6 characters");
+      }
+      const { error } = await adminClient.auth.admin.updateUserById(userId, { password: newPassword });
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "list_users") {
-      // Get all auth users with emails
       const { data: { users }, error } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
       if (error) throw error;
       return new Response(JSON.stringify({ users: users.map(u => ({ id: u.id, email: u.email, created_at: u.created_at, last_sign_in_at: u.last_sign_in_at, email_confirmed_at: u.email_confirmed_at })) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
