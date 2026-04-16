@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useStore } from '@/hooks/useStore';
 import { useProducts } from '@/hooks/useProducts';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,10 +12,12 @@ import {
   IndianRupee, ShoppingCart, TrendingUp, Package, ExternalLink, Copy, Check,
   CheckCircle2, Circle, ArrowRight,
 } from 'lucide-react';
-import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
+import RevenueChart from '@/components/dashboard/RevenueChart';
+import TopProducts from '@/components/dashboard/TopProducts';
+import RecentOrders from '@/components/dashboard/RecentOrders';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -25,21 +27,29 @@ const Dashboard = () => {
   const [copied, setCopied] = useState(false);
   useOrderNotifications(store?.id);
 
+  // All-time + today stats
   const { data: orderStats } = useQuery({
-    queryKey: ['order-stats', store?.id],
+    queryKey: ['dashboard-stats', store?.id],
     queryFn: async () => {
-      if (!store?.id) return { count: 0, revenue: 0 };
+      if (!store?.id) return { todayCount: 0, todayRevenue: 0, totalCount: 0, totalRevenue: 0, pendingCount: 0 };
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const { data, error } = await supabase
+
+      const { data: allOrders } = await supabase
         .from('orders')
-        .select('total')
-        .eq('store_id', store.id)
-        .gte('created_at', today.toISOString());
-      if (error) throw error;
+        .select('total, status, created_at')
+        .eq('store_id', store.id);
+
+      const orders = allOrders || [];
+      const todayOrders = orders.filter(o => new Date(o.created_at) >= today);
+
       return {
-        count: data.length,
-        revenue: data.reduce((sum, o) => sum + (o.total || 0), 0),
+        todayCount: todayOrders.length,
+        todayRevenue: todayOrders.reduce((s, o) => s + (Number(o.total) || 0), 0),
+        totalCount: orders.length,
+        totalRevenue: orders.reduce((s, o) => s + (Number(o.total) || 0), 0),
+        pendingCount: orders.filter(o => o.status === 'pending').length,
       };
     },
     enabled: !!store?.id,
@@ -54,7 +64,6 @@ const Dashboard = () => {
     }
   }, [loading, store, navigate, user]);
 
-  // Completion checklist
   const checklist = useMemo(() => {
     if (!store) return [];
     const settings = (store.settings as any) || {};
@@ -82,10 +91,10 @@ const Dashboard = () => {
   }
 
   const stats = [
-    { label: "Today's Sales", value: `₹${orderStats?.revenue ?? 0}`, icon: IndianRupee, change: '' },
-    { label: 'Orders', value: String(orderStats?.count ?? 0), icon: ShoppingCart, change: '' },
-    { label: 'Conversion', value: '0%', icon: TrendingUp, change: '' },
-    { label: 'Products', value: String(products.length), icon: Package, change: '' },
+    { label: "Today's Revenue", value: `₹${(orderStats?.todayRevenue ?? 0).toLocaleString('en-IN')}`, icon: IndianRupee },
+    { label: "Today's Orders", value: String(orderStats?.todayCount ?? 0), icon: ShoppingCart },
+    { label: 'Total Revenue', value: `₹${(orderStats?.totalRevenue ?? 0).toLocaleString('en-IN')}`, icon: TrendingUp },
+    { label: 'Pending Orders', value: String(orderStats?.pendingCount ?? 0), icon: Package },
   ];
 
   const storeUrl = store?.slug ? `${window.location.origin}/store/${store.slug}` : '';
@@ -107,10 +116,7 @@ const Dashboard = () => {
           </p>
         </div>
         {store?.is_published && (
-          <Button
-            onClick={() => window.open(`/store/${store.slug}`, '_blank')}
-            className="gap-2"
-          >
+          <Button onClick={() => window.open(`/store/${store.slug}`, '_blank')} className="gap-2">
             <ExternalLink className="h-4 w-4" /> View Store
           </Button>
         )}
@@ -132,13 +138,12 @@ const Dashboard = () => {
         </Card>
       )}
 
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.label}
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.label}</CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -147,6 +152,21 @@ const Dashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* Charts Row */}
+      {store?.id && (
+        <div className="grid gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <RevenueChart storeId={store.id} />
+          </div>
+          <div className="lg:col-span-2">
+            <TopProducts storeId={store.id} />
+          </div>
+        </div>
+      )}
+
+      {/* Recent Orders */}
+      {store?.id && <RecentOrders storeId={store.id} />}
 
       {/* Completion Checklist */}
       {completionPct < 100 && (
@@ -165,9 +185,7 @@ const Dashboard = () => {
                 onClick={() => !item.done && navigate(item.link)}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors text-sm',
-                  item.done
-                    ? 'text-muted-foreground'
-                    : 'hover:bg-accent cursor-pointer'
+                  item.done ? 'text-muted-foreground' : 'hover:bg-accent cursor-pointer'
                 )}
                 disabled={item.done}
               >
@@ -184,7 +202,7 @@ const Dashboard = () => {
         </Card>
       )}
 
-      {products.length === 0 ? (
+      {products.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent">
@@ -197,15 +215,6 @@ const Dashboard = () => {
             <Button className="mt-4" onClick={() => navigate('/products/new')}>
               Add Product
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Recent Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">No orders yet. Share your store to start receiving orders.</p>
           </CardContent>
         </Card>
       )}
