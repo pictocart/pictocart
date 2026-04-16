@@ -15,6 +15,7 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ const Dashboard = () => {
   const { products, loading: productsLoading } = useProducts();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  useOrderNotifications(store?.id);
 
   const { data: orderStats } = useQuery({
     queryKey: ['order-stats', store?.id],
