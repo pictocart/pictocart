@@ -461,6 +461,53 @@ export type Database = {
           },
         ]
       }
+      store_email_domains: {
+        Row: {
+          created_at: string
+          dns_records: Json | null
+          domain: string
+          id: string
+          resend_domain_id: string | null
+          sender_prefix: string
+          status: string
+          store_id: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          dns_records?: Json | null
+          domain: string
+          id?: string
+          resend_domain_id?: string | null
+          sender_prefix?: string
+          status?: string
+          store_id: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          dns_records?: Json | null
+          domain?: string
+          id?: string
+          resend_domain_id?: string | null
+          sender_prefix?: string
+          status?: string
+          store_id?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_email_domains_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_email_templates: {
         Row: {
           created_at: string
