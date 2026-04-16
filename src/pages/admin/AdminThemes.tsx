@@ -225,6 +225,14 @@ const GenerateModal = ({ onClose }: { onClose: () => void }) => {
         />
       </CollapsibleSection>
 
+      {/* Cost Savings Indicator */}
+      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 space-y-1">
+        <p className="text-xs font-semibold text-emerald-600">💡 Smart Cost Optimization Active</p>
+        <p className="text-[11px] text-muted-foreground">
+          Two-tier AI prompting + image pool reuse. First theme in a category costs ~₹8-10. Subsequent themes drop to ₹0.50-1.50 as images are cached.
+        </p>
+      </div>
+
       {/* Generation Progress */}
       {generate.isPending && (
         <div className="bg-muted rounded-lg p-4 space-y-2">
@@ -232,7 +240,7 @@ const GenerateModal = ({ onClose }: { onClose: () => void }) => {
             <Loader2 className="h-4 w-4 animate-spin" />
             Generating premium theme with AI...
           </div>
-          <p className="text-xs text-muted-foreground">Creating structure, animations, colors, fonts, and AI images. This takes 30-90 seconds...</p>
+          <p className="text-xs text-muted-foreground">Design DNA → Blueprint assembly → Image generation (parallel). ~10-30 seconds...</p>
           <div className="h-1.5 bg-background rounded-full overflow-hidden">
             <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }} />
           </div>
