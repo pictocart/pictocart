@@ -172,72 +172,119 @@ const ThemeMarketplace = ({ onApply }: Props) => {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Browse professionally designed theme packs. Purchase and apply to transform your store instantly.</p>
+  const freePacks = packs.filter(p => p.price === 0);
+  const paidPacks = packs.filter(p => p.price > 0);
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {packs.map(pack => {
-          const owned = purchasedIds.has(pack.id) || pack.price === 0;
-          const isApplied = ((store?.settings as any)?.applied_theme_pack) === pack.id;
+  const renderPackCard = (pack: ThemePack) => {
+    const owned = purchasedIds.has(pack.id) || pack.price === 0;
+    const isApplied = ((store?.settings as any)?.applied_theme_pack) === pack.id;
+    const discountPct = pack.compare_at_price && pack.compare_at_price > pack.price && pack.price > 0
+      ? Math.round(((pack.compare_at_price - pack.price) / pack.compare_at_price) * 100) : 0;
 
-          return (
-            <Card key={pack.id} className="overflow-hidden">
-              {pack.thumbnail ? (
-                <img src={pack.thumbnail} alt={pack.name} className="h-36 w-full object-cover" />
+    return (
+      <Card key={pack.id} className="overflow-hidden">
+        {pack.thumbnail ? (
+          <div className="relative">
+            <img src={pack.thumbnail} alt={pack.name} className="h-36 w-full object-cover" />
+            {pack.price === 0 && (
+              <Badge className="absolute top-2 left-2 bg-green-500 text-white border-0 shadow-lg">FREE</Badge>
+            )}
+            {discountPct > 0 && (
+              <Badge className="absolute top-2 left-2 bg-red-500 text-white border-0 shadow-lg">{discountPct}% OFF</Badge>
+            )}
+          </div>
+        ) : (
+          <div className="h-36 flex gap-0 relative">
+            {Object.values(pack.theme_config?.colors || {}).slice(0, 6).map((c: any, i) => (
+              <div key={i} className="flex-1" style={{ backgroundColor: c }} />
+            ))}
+            {pack.price === 0 && (
+              <Badge className="absolute top-2 left-2 bg-green-500 text-white border-0 shadow-lg">FREE</Badge>
+            )}
+            {discountPct > 0 && (
+              <Badge className="absolute top-2 left-2 bg-red-500 text-white border-0 shadow-lg">{discountPct}% OFF</Badge>
+            )}
+          </div>
+        )}
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="font-semibold text-sm flex items-center gap-1.5">
+                {pack.price > 0 && <Crown className="h-3 w-3 text-amber-500" />}
+                {pack.name}
+              </h3>
+              <p className="text-xs text-muted-foreground capitalize">{pack.category}</p>
+            </div>
+            {owned ? (
+              <Badge variant="outline" className="text-green-600 border-green-200 shrink-0">
+                <Check className="mr-1 h-3 w-3" /> {isApplied ? 'Active' : 'Owned'}
+              </Badge>
+            ) : pack.price === 0 ? (
+              <Badge className="bg-green-500 text-white border-0 shrink-0">Free</Badge>
+            ) : (
+              <div className="text-right shrink-0">
+                <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
+                  ₹{pack.price}
+                </Badge>
+                {pack.compare_at_price && pack.compare_at_price > pack.price && (
+                  <p className="text-[10px] line-through opacity-40 mt-0.5">₹{pack.compare_at_price}</p>
+                )}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground line-clamp-2">{pack.description}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => setPreviewPack(pack)}>
+              <Eye className="mr-1 h-3.5 w-3.5" /> Preview
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              disabled={isApplied || applying === pack.id}
+              onClick={() => handleApply(pack)}
+            >
+              {applying === pack.id ? (
+                <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Applying...</>
+              ) : isApplied ? (
+                <><Check className="mr-1 h-3.5 w-3.5" /> Applied</>
+              ) : owned || pack.price === 0 ? (
+                'Apply Theme'
               ) : (
-                <div className="h-36 flex gap-0">
-                  {Object.values(pack.theme_config?.colors || {}).slice(0, 6).map((c: any, i) => (
-                    <div key={i} className="flex-1" style={{ backgroundColor: c }} />
-                  ))}
-                </div>
+                <><ShoppingCart className="mr-1 h-3.5 w-3.5" /> Purchase & Apply</>
               )}
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-sm flex items-center gap-1.5">
-                      {pack.price > 0 && <Crown className="h-3 w-3 text-amber-500" />}
-                      {pack.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground capitalize">{pack.category}</p>
-                  </div>
-                  {owned ? (
-                    <Badge variant="outline" className="text-green-600 border-green-200 shrink-0">
-                      <Check className="mr-1 h-3 w-3" /> {isApplied ? 'Active' : 'Owned'}
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shrink-0">
-                      ₹{pack.price}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">{pack.description}</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => setPreviewPack(pack)}>
-                    <Eye className="mr-1 h-3.5 w-3.5" /> Preview
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    disabled={isApplied || applying === pack.id}
-                    onClick={() => handleApply(pack)}
-                  >
-                    {applying === pack.id ? (
-                      <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Applying...</>
-                    ) : isApplied ? (
-                      <><Check className="mr-1 h-3.5 w-3.5" /> Applied</>
-                    ) : owned ? (
-                      'Apply Theme'
-                    ) : (
-                      <><ShoppingCart className="mr-1 h-3.5 w-3.5" /> Purchase & Apply</>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">Browse professionally designed theme packs. Apply to transform your store instantly.</p>
+
+      {freePacks.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            🎁 Free Themes
+            <Badge variant="outline" className="text-green-600 border-green-200">{freePacks.length} available</Badge>
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {freePacks.map(renderPackCard)}
+          </div>
+        </div>
+      )}
+
+      {paidPacks.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Crown className="h-4 w-4 text-amber-500" /> Premium Themes
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {paidPacks.map(renderPackCard)}
+          </div>
+        </div>
+      )}
 
       <Dialog open={!!previewPack} onOpenChange={(o) => !o && setPreviewPack(null)}>
         <DialogContent className="max-w-lg">
