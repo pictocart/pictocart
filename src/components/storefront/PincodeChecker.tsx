@@ -3,9 +3,6 @@ import { Loader2, CheckCircle2, XCircle, MapPin } from 'lucide-react';
 
 interface PincodeCheckerProps {
   storeId: string;
-  apiToken: string;
-  testMode: boolean;
-  originPincode: string;
   colors: { primary: string; text: string; card: string; secondary: string };
   borderRadius: number;
   onDeliveryInfo?: (info: { serviceable: boolean; estimated_days: number | null }) => void;
@@ -13,9 +10,6 @@ interface PincodeCheckerProps {
 
 const PincodeChecker = ({
   storeId,
-  apiToken,
-  testMode,
-  originPincode,
   colors,
   borderRadius,
   onDeliveryInfo,
@@ -41,9 +35,7 @@ const PincodeChecker = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'check-serviceability',
-            api_token: apiToken,
-            test_mode: testMode,
-            origin_pincode: originPincode,
+            store_id: storeId,
             destination_pincode: pincode,
           }),
         }

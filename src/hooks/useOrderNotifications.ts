@@ -1,38 +1,29 @@
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 
+/**
+ * Periodically refreshes orders for the store. We deliberately do NOT use Supabase
+ * Realtime here because the orders table contains customer PII (name, email, phone,
+ * address) and Realtime channels are not subject to fine-grained per-row auth.
+ */
 export const useOrderNotifications = (storeId: string | undefined) => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!storeId) return;
 
-    const channel = supabase
-      .channel(`orders-${storeId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
-          filter: `store_id=eq.${storeId}`,
-        },
-        (payload) => {
-          const order = payload.new as any;
-          toast.success(`🔔 New order received! #${order.order_number}`, {
-            duration: 8000,
-            description: `${order.customer_name} — ₹${order.total?.toLocaleString('en-IN')}`,
-          });
-          queryClient.invalidateQueries({ queryKey: ['orders', storeId] });
-          queryClient.invalidateQueries({ queryKey: ['order-stats', storeId] });
-        }
-      )
-      .subscribe();
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ['orders', storeId] });
+      queryClient.invalidateQueries({ queryKey: ['order-stats', storeId] });
+    };
+
+    const interval = window.setInterval(refresh, 30_000);
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
     };
   }, [storeId, queryClient]);
 };
