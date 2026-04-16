@@ -6,11 +6,9 @@ import {
   Package,
   ShoppingCart,
   Palette,
-  BarChart3,
-  Settings,
   LogOut,
-  Store,
   ChevronLeft,
+  ChevronDown,
   Menu,
   Shield,
   CreditCard,
@@ -24,26 +22,79 @@ import {
   FolderTree,
   UserCircle,
   Crown,
+  ShoppingBag,
+  Megaphone,
+  Settings as SettingsIcon,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-const navItems = [
+type NavLeaf = { label: string; icon: any; path: string };
+type NavGroup = { label: string; icon: any; key: string; children: NavLeaf[] };
+type NavEntry = NavLeaf | NavGroup;
+
+const isGroup = (e: NavEntry): e is NavGroup => 'children' in e;
+
+const navTree: NavEntry[] = [
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  {
+    label: 'Catalog',
+    icon: Package,
+    key: 'catalog',
+    children: [
+      { label: 'Products', icon: Package, path: '/products' },
+      { label: 'Categories', icon: FolderTree, path: '/categories' },
+    ],
+  },
+  {
+    label: 'Sales',
+    icon: ShoppingBag,
+    key: 'sales',
+    children: [
+      { label: 'Orders', icon: ShoppingCart, path: '/orders' },
+      { label: 'Coupons', icon: Ticket, path: '/coupons' },
+    ],
+  },
+  {
+    label: 'Marketing',
+    icon: Megaphone,
+    key: 'marketing',
+    children: [
+      { label: 'Blog Posts', icon: FileText, path: '/blog-posts' },
+      { label: 'Subscribers', icon: Mail, path: '/subscribers' },
+      { label: 'SEO', icon: Search, path: '/settings/seo' },
+    ],
+  },
+  {
+    label: 'Storefront',
+    icon: Sparkles,
+    key: 'storefront',
+    children: [
+      { label: 'Store Design', icon: Palette, path: '/store-design' },
+      { label: 'Analytics', icon: TrendingUp, path: '/analytics' },
+    ],
+  },
+  {
+    label: 'Settings',
+    icon: SettingsIcon,
+    key: 'settings',
+    children: [
+      { label: 'Payments', icon: CreditCard, path: '/settings/payments' },
+      { label: 'Shipping', icon: Truck, path: '/settings/shipping' },
+      { label: 'Domain', icon: Globe, path: '/settings/domain' },
+      { label: 'Billing', icon: Crown, path: '/billing' },
+    ],
+  },
+];
+
+const mobileBottomNav: NavLeaf[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Products', icon: Package, path: '/products' },
-  { label: 'Categories', icon: FolderTree, path: '/categories' },
   { label: 'Orders', icon: ShoppingCart, path: '/orders' },
-  { label: 'Coupons', icon: Ticket, path: '/coupons' },
-  { label: 'Blog Posts', icon: FileText, path: '/blog-posts' },
-  { label: 'Subscribers', icon: Mail, path: '/subscribers' },
-  { label: 'Store Design', icon: Palette, path: '/store-design' },
-  { label: 'Analytics', icon: TrendingUp, path: '/analytics' },
-  { label: 'SEO', icon: Search, path: '/settings/seo' },
-  { label: 'Payments', icon: CreditCard, path: '/settings/payments' },
-  { label: 'Shipping', icon: Truck, path: '/settings/shipping' },
-  { label: 'Domain', icon: Globe, path: '/settings/domain' },
-  { label: 'Billing', icon: Crown, path: '/billing' },
+  { label: 'Design', icon: Palette, path: '/store-design' },
+  { label: 'Profile', icon: UserCircle, path: '/profile' },
 ];
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
