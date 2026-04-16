@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSubscription, PLAN_LIMITS } from '@/hooks/useSubscription';
 import { useStore } from '@/hooks/useStore';
 import { useProducts } from '@/hooks/useProducts';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,8 @@ declare global {
 }
 
 const PREMIUM_PRICE = 499;
+const RAZORPAY_KEY_ID = 'rzp_test_Se7Yf4ajKPSPlS';
+
 const FEATURES = [
   { key: 'products', label: 'Products', icon: Package, free: '10 products', premium: 'Unlimited' },
   { key: 'themes', label: 'Premium Themes', icon: Palette, free: '1 theme', premium: 'Unlimited' },
@@ -36,36 +39,35 @@ const Billing = () => {
 
   const handleUpgrade = async () => {
     if (!store) return;
-
-    const settings = store.settings as any;
-    const razorpayKey = settings?.razorpay?.key_id;
-
-    // For now, use a simple Razorpay payment (not subscription API)
-    // In production, you'd create a Razorpay Subscription Plan
-    if (!razorpayKey) {
-      toast.error('Platform payment gateway not configured. Contact support.');
-      return;
-    }
-
     setUpgrading(true);
+
     try {
+      // 1. Create Razorpay Subscription via edge function
+      const { data, error } = await supabase.functions.invoke('create-razorpay-subscription', {
+        body: { store_id: store.id },
+      });
+
+      if (error || !data?.subscription_id) {
+        throw new Error(error?.message || 'Failed to create subscription');
+      }
+
+      // 2. Load Razorpay checkout
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       document.body.appendChild(script);
       await new Promise(resolve => { script.onload = resolve; });
 
       const options = {
-        key: razorpayKey,
-        amount: PREMIUM_PRICE * 100,
-        currency: 'INR',
+        key: RAZORPAY_KEY_ID,
+        subscription_id: data.subscription_id,
         name: 'Store on Tips',
-        description: 'Premium Plan — Monthly Subscription',
-        prefill: { email: '' },
+        description: 'Premium Plan — ₹499/month',
         theme: { color: '#F97316' },
-        handler: async () => {
-          // In production: verify via webhook, update subscription
+        handler: async (response: any) => {
           toast.success('Payment successful! Your plan will be upgraded shortly.');
           setUpgrading(false);
+          // Webhook will handle the DB update
+          setTimeout(() => window.location.reload(), 3000);
         },
         modal: {
           ondismiss: () => setUpgrading(false),
@@ -74,8 +76,9 @@ const Billing = () => {
 
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch {
-      toast.error('Failed to initiate payment');
+    } catch (err: any) {
+      console.error('Upgrade error:', err);
+      toast.error(err.message || 'Failed to initiate payment');
       setUpgrading(false);
     }
   };
