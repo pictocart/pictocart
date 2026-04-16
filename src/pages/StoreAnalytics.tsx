@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Sparkles, Loader2, TrendingUp, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
+import PremiumGate from '@/components/PremiumGate';
 
 interface EngagementReport {
   score: number;
@@ -50,6 +51,7 @@ const StoreAnalytics = () => {
   };
 
   return (
+    <PremiumGate feature="analytics" fallbackMessage="Upgrade to Premium for AI-powered store analytics and engagement insights.">
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
@@ -152,6 +154,7 @@ const StoreAnalytics = () => {
         </Card>
       )}
     </div>
+    </PremiumGate>
   );
 };
 

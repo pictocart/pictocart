@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Trash2, Copy, Ticket, Percent, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import PremiumGate from '@/components/PremiumGate';
 
 const generateCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -53,6 +54,7 @@ const CouponList = () => {
   const isMaxed = (c: Coupon) => c.max_uses !== null && c.used_count >= c.max_uses;
 
   return (
+    <PremiumGate feature="coupons" fallbackMessage="Upgrade to Premium to create discount codes and coupons for your customers.">
     <div className="space-y-6 pb-20 md:pb-0">
       <div className="flex items-center justify-between">
         <div>
@@ -202,6 +204,7 @@ const CouponList = () => {
         </div>
       )}
     </div>
+    </PremiumGate>
   );
 };
 

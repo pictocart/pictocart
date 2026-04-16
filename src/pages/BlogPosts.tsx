@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import PremiumGate from '@/components/PremiumGate';
 
 const BlogPosts = () => {
   const { store } = useStore();
@@ -22,6 +23,7 @@ const BlogPosts = () => {
   };
 
   return (
+    <PremiumGate feature="blog" fallbackMessage="Upgrade to Premium to create blog posts and grow your audience.">
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -75,6 +77,7 @@ const BlogPosts = () => {
         </div>
       )}
     </div>
+    </PremiumGate>
   );
 };
 

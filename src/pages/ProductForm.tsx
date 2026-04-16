@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useProducts, useProduct } from '@/hooks/useProducts';
 import { useStore } from '@/hooks/useStore';
 import { useCategories } from '@/hooks/useCategories';
+import { useSubscription, PLAN_LIMITS } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import ImageUploader from '@/components/products/ImageUploader';
 import VariantMatrix, { type VariantOption } from '@/components/products/VariantMatrix';
@@ -14,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Sparkles, Loader2, X, Save } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, X, Save, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ProductForm = () => {
@@ -23,7 +24,8 @@ const ProductForm = () => {
   const navigate = useNavigate();
   const { store } = useStore();
   const { parentCategories, getSubcategories, loading: loadingCategories } = useCategories();
-  const { createProduct, updateProduct } = useProducts();
+  const { products, createProduct, updateProduct } = useProducts();
+  const { plan, limits } = useSubscription();
   const { data: existingProduct, isLoading: loadingProduct } = useProduct(id);
 
   const [title, setTitle] = useState('');
@@ -99,6 +101,11 @@ const ProductForm = () => {
   };
 
   const handleSave = async (asDraft: boolean) => {
+    if (!isEdit && typeof limits.products === 'number' && products.length >= limits.products) {
+      toast.error(`Free plan allows only ${limits.products} products. Upgrade to Premium for unlimited.`);
+      navigate('/billing');
+      return;
+    }
     if (!title.trim()) {
       toast.error('Product title is required');
       return;

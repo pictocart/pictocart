@@ -7,6 +7,8 @@
 - **Routing**: `/` is marketing landing page, `/dashboard` is the seller application.
 - **Auth**: Customers have `is_customer: true` metadata. Never redirect them to seller onboarding.
 - **Cart**: Persistent customer shopping cart is managed via `localStorage`.
+- **Email**: Resend via connector gateway (not Lovable Emails). Lovable Emails disabled.
+- **Billing**: Razorpay subscriptions for platform billing. Free vs Premium (₹499/mo). Feature gating via useSubscription hook.
 
 ## Memories
 - [Onboarding Wizard](mem://features/onboarding-wizard) — 7-step mandatory flow, AI product saved only on completion
@@ -20,7 +22,7 @@
 - [Customer Storefront](mem://features/customer-storefront) — Dynamic theme rendering, one-page checkout flow
 - [Payment Gateway](mem://features/payment-gateway) — Razorpay & COD, seller keys, HMAC-SHA256 verification
 - [Coupons & Discounts](mem://features/coupons-discounts) — Usage limits, minimum order rules, DB RPC validation
-- [Notifications](mem://features/customer-notifications) — HTML emails for orders and shipping via Edge Functions
+- [Notifications](mem://features/customer-notifications) — Resend connector gateway, order/shipping/seller emails
 - [SEO & Marketing](mem://features/seo-marketing) — SEOHead, absolute URLs, 1200x630 OG dims for rich cards
 - [Customer Accounts](mem://features/customer-accounts) — Store-specific auth, multi-address CRUD, order history
 - [Reviews & Ratings](mem://features/reviews-and-ratings) — 1-5 stars, image uploads, Verified Purchase badges
@@ -33,4 +35,4 @@
 - [Dynamic Categories](mem://features/dynamic-categories) — Seller-defined custom taxonomies and nested subcategories
 - [Theme Marketplace](mem://features/enterprise-theme-marketplace) — 5-page AI generated themes, cost/revenue tracking
 - [Animation System](mem://tech/animation-system) — useAnimateOnScroll hook, CSS transitions, intersection observer
-- [Theme Cost Optimization](mem://tech/theme-cost-optimization) — Two-tier prompting, blueprint library, image pool, remix feature
+- [Subscription Billing](mem://features/subscription-billing) — Razorpay subscriptions, Free/Premium plans, PremiumGate component

@@ -23,6 +23,7 @@ import {
   TrendingUp,
   FolderTree,
   UserCircle,
+  Crown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,7 @@ const navItems = [
   { label: 'Payments', icon: CreditCard, path: '/settings/payments' },
   { label: 'Shipping', icon: Truck, path: '/settings/shipping' },
   { label: 'Domain', icon: Globe, path: '/settings/domain' },
+  { label: 'Billing', icon: Crown, path: '/billing' },
 ];
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
