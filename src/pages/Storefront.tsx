@@ -83,6 +83,7 @@ const Storefront = () => {
   const isOwnerPreview = searchParams.get('preview') === 'owner';
   const { store, products, loading, error } = useStorefront(slug || '', isOwnerPreview);
   const { user } = useCustomerAuth(slug || '');
+  const { wishlistProductIds, toggle: toggleWishlist } = useWishlist(store?.id, user?.id);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -96,15 +97,15 @@ const Storefront = () => {
 
   const theme = resolveTheme(store.theme);
   const { colors, fonts, borderRadius } = theme;
-  const { wishlistProductIds, toggle: toggleWishlist } = useWishlist(store.id, user?.id);
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
   const filtered = selectedCategory ? products.filter((p) => p.category === selectedCategory) : products;
   const settings = (store.settings || {}) as any;
   const seo = settings.seo || {};
-  const rawSections = settings.homepage_sections || [];
+  const rawSections = Array.isArray(settings.homepage_sections) ? settings.homepage_sections : [];
   const homepageSections = rawSections.length > 0 ? rawSections : generateDefaultSections(store.name, store.category);
   const bannerCarouselSections = homepageSections.filter((section: any) => section.type === 'banner_carousel');
   const footerConfig: FooterConfig = { ...DEFAULT_FOOTER, ...(settings.footer || {}) };
+  const showCategoryFilters = categories.length > 0 && !homepageSections.some((section: any) => section.type === 'category_grid');
 
   const renderSection = (section: any, index: number) => {
     const anim = section.animation || 'none';
@@ -362,111 +363,57 @@ const Storefront = () => {
     }
   };
 
-  // If no sections configured, show default hero + products
-  const hasCustomSections = homepageSections.length > 0;
-
   return (
     <StorefrontLayout store={store} products={products} footerConfig={footerConfig}>
       <SEOHead title={seo.meta_title || store.name} description={seo.meta_description || store.description || `Shop at ${store.name}`} ogImage={seo.og_image || store.banner_url || undefined} url={`${window.location.origin}/store/${slug}`} />
 
-      {hasCustomSections ? (
-        <>
-          {homepageSections.map(renderSection)}
-          {/* Always show all products after custom sections */}
-          <section id="products" className="max-w-6xl mx-auto px-4 pb-16">
-            <h2 className="text-lg md:text-xl font-bold mb-4 md:mb-6" style={{ fontFamily: fonts.heading }}>
-              {selectedCategory || 'All Products'} ({filtered.length})
-            </h2>
-            {filtered.length === 0 ? (
-              <div className="text-center py-16 opacity-50"><p>No products available yet.</p></div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                {filtered.map((product) => (
-                  <Link key={product.id} to={`/store/${slug}/product/${product.id}`} className="group overflow-hidden transition-all hover:shadow-lg active:scale-[0.98]" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
-                    <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>
-                      {product.images?.[0] ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No image</div>}
-                      {(product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0) && (
-                        <div className="absolute top-2 left-2 px-2 py-0.5 text-[10px] font-bold rounded" style={{ backgroundColor: '#ef4444', color: '#fff' }}>Out of Stock</div>
-                      )}
-                      <div className="absolute top-2 right-2">
-                        <WishlistButton isWishlisted={wishlistProductIds.has(product.id)} onToggle={() => toggleWishlist(product.id)} isLoggedIn={!!user} primaryColor={colors.primary} />
-                      </div>
-                    </div>
-                    <div className="p-2.5 md:p-3">
-                      <h3 className="text-xs md:text-sm font-semibold truncate" style={{ fontFamily: fonts.heading }}>{product.title}</h3>
-                      {product.short_description && <p className="text-[10px] md:text-xs opacity-60 mt-0.5 line-clamp-1 md:line-clamp-2">{product.short_description}</p>}
-                      <ProductRatingBadge productId={product.id} />
-                      <div className="flex items-baseline gap-1.5 md:gap-2 mt-1.5">
-                        <span className="text-xs md:text-sm font-bold" style={{ color: colors.primary }}>₹{Number(product.price).toLocaleString('en-IN')}</span>
-                        {product.compare_at_price && product.compare_at_price > product.price && <span className="text-[10px] md:text-xs line-through opacity-40">₹{Number(product.compare_at_price).toLocaleString('en-IN')}</span>}
-                      </div>
-                      <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
-      ) : (
-        <>
-          {/* Default hero */}
-          <section className="relative overflow-hidden" style={{ backgroundColor: colors.secondary }}>
-            {store.banner_url && <img src={store.banner_url} alt="Store banner" className="w-full h-[300px] md:h-[450px] object-cover" />}
-            <div className={store.banner_url ? "absolute inset-0 flex flex-col items-center justify-center bg-black/30" : "py-12 md:py-16 flex flex-col items-center justify-center"}>
-              <h1 className="text-2xl md:text-4xl font-bold mb-3 text-center px-4" style={{ fontFamily: fonts.heading, color: store.banner_url ? '#fff' : colors.text }}>{store.description || `Welcome to ${store.name}`}</h1>
-              <p className="text-sm mb-6 max-w-md mx-auto text-center px-4" style={{ color: store.banner_url ? 'rgba(255,255,255,0.85)' : undefined, opacity: store.banner_url ? 1 : 0.6 }}>Explore our curated collection of products</p>
-              <div className="flex items-center justify-center gap-3">
-                <a href="#products" className="inline-block px-6 py-2.5 text-sm font-semibold transition-transform hover:scale-105" style={{ backgroundColor: colors.primary, color: '#fff', borderRadius: `${borderRadius}px` }}>Shop Now</a>
-              </div>
-            </div>
-          </section>
+      {homepageSections.map(renderSection)}
 
-          {categories.length > 0 && (
-            <section className="max-w-6xl mx-auto px-4 py-6 md:py-8">
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={() => setSelectedCategory(null)} className="px-3 py-1 text-xs font-medium rounded-full transition-colors" style={{ backgroundColor: !selectedCategory ? colors.primary : colors.secondary, color: !selectedCategory ? '#fff' : colors.text }}>All</button>
-                {categories.map((cat) => (
-                  <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat!)} className="px-3 py-1 text-xs font-medium rounded-full transition-colors" style={{ backgroundColor: selectedCategory === cat ? colors.primary : colors.secondary, color: selectedCategory === cat ? '#fff' : colors.text }}>{cat}</button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <section id="products" className="max-w-6xl mx-auto px-4 pb-16">
-            <h2 className="text-lg md:text-xl font-bold mb-4 md:mb-6" style={{ fontFamily: fonts.heading }}>{selectedCategory || 'All Products'} ({filtered.length})</h2>
-            {filtered.length === 0 ? (
-              <div className="text-center py-16 opacity-50"><p>No products available yet.</p></div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                {filtered.map((product) => (
-                  <Link key={product.id} to={`/store/${slug}/product/${product.id}`} className="group overflow-hidden transition-all hover:shadow-lg active:scale-[0.98]" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
-                    <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>
-                      {product.images?.[0] ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No image</div>}
-                      {(product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0) && (
-                        <div className="absolute top-2 left-2 px-2 py-0.5 text-[10px] font-bold rounded" style={{ backgroundColor: '#ef4444', color: '#fff' }}>Out of Stock</div>
-                      )}
-                      <div className="absolute top-2 right-2">
-                        <WishlistButton isWishlisted={wishlistProductIds.has(product.id)} onToggle={() => toggleWishlist(product.id)} isLoggedIn={!!user} primaryColor={colors.primary} />
-                      </div>
-                    </div>
-                    <div className="p-2.5 md:p-3">
-                      <h3 className="text-xs md:text-sm font-semibold truncate" style={{ fontFamily: fonts.heading }}>{product.title}</h3>
-                      {product.short_description && <p className="text-[10px] md:text-xs opacity-60 mt-0.5 line-clamp-1 md:line-clamp-2">{product.short_description}</p>}
-                      <ProductRatingBadge productId={product.id} />
-                      <div className="flex items-baseline gap-1.5 md:gap-2 mt-1.5">
-                        <span className="text-xs md:text-sm font-bold" style={{ color: colors.primary }}>₹{Number(product.price).toLocaleString('en-IN')}</span>
-                        {product.compare_at_price && product.compare_at_price > product.price && <span className="text-[10px] md:text-xs line-through opacity-40">₹{Number(product.compare_at_price).toLocaleString('en-IN')}</span>}
-                      </div>
-                      <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
+      {showCategoryFilters && (
+        <section className="max-w-6xl mx-auto px-4 py-6 md:py-8">
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setSelectedCategory(null)} className="px-3 py-1 text-xs font-medium rounded-full transition-colors" style={{ backgroundColor: !selectedCategory ? colors.primary : colors.secondary, color: !selectedCategory ? '#fff' : colors.text }}>All</button>
+            {categories.map((cat) => (
+              <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat!)} className="px-3 py-1 text-xs font-medium rounded-full transition-colors" style={{ backgroundColor: selectedCategory === cat ? colors.primary : colors.secondary, color: selectedCategory === cat ? '#fff' : colors.text }}>{cat}</button>
+            ))}
+          </div>
+        </section>
       )}
+
+      <section id="products" className="max-w-6xl mx-auto px-4 pb-16">
+        <h2 className="text-lg md:text-xl font-bold mb-4 md:mb-6" style={{ fontFamily: fonts.heading }}>
+          {selectedCategory || 'All Products'} ({filtered.length})
+        </h2>
+        {filtered.length === 0 ? (
+          <div className="text-center py-16 opacity-50"><p>No products available yet.</p></div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            {filtered.map((product) => (
+              <Link key={product.id} to={`/store/${slug}/product/${product.id}`} className="group overflow-hidden transition-all hover:shadow-lg active:scale-[0.98]" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
+                <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>
+                  {product.images?.[0] ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No image</div>}
+                  {(product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0) && (
+                    <div className="absolute top-2 left-2 px-2 py-0.5 text-[10px] font-bold rounded" style={{ backgroundColor: '#ef4444', color: '#fff' }}>Out of Stock</div>
+                  )}
+                  <div className="absolute top-2 right-2">
+                    <WishlistButton isWishlisted={wishlistProductIds.has(product.id)} onToggle={() => toggleWishlist(product.id)} isLoggedIn={!!user} primaryColor={colors.primary} />
+                  </div>
+                </div>
+                <div className="p-2.5 md:p-3">
+                  <h3 className="text-xs md:text-sm font-semibold truncate" style={{ fontFamily: fonts.heading }}>{product.title}</h3>
+                  {product.short_description && <p className="text-[10px] md:text-xs opacity-60 mt-0.5 line-clamp-1 md:line-clamp-2">{product.short_description}</p>}
+                  <ProductRatingBadge productId={product.id} />
+                  <div className="flex items-baseline gap-1.5 md:gap-2 mt-1.5">
+                    <span className="text-xs md:text-sm font-bold" style={{ color: colors.primary }}>₹{Number(product.price).toLocaleString('en-IN')}</span>
+                    {product.compare_at_price && product.compare_at_price > product.price && <span className="text-[10px] md:text-xs line-through opacity-40">₹{Number(product.compare_at_price).toLocaleString('en-IN')}</span>}
+                  </div>
+                  <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
     </StorefrontLayout>
   );
 };

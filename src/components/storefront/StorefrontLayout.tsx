@@ -25,10 +25,26 @@ interface Props {
 
 function resolveTheme(themeData: any): ThemeTemplate {
   const base = THEME_TEMPLATES.find((t) => t.id === themeData?.name) || THEME_TEMPLATES[0];
+  const flattenedColors = Object.fromEntries(
+    Object.entries({
+      primary: themeData?.primary || themeData?.primary_color,
+      secondary: themeData?.secondary,
+      accent: themeData?.accent,
+      background: themeData?.background,
+      text: themeData?.text,
+      card: themeData?.card,
+    }).filter(([, value]) => typeof value === 'string' && value.length > 0)
+  );
+
   return {
     ...base,
-    colors: themeData?.colors || base.colors,
+    colors: {
+      ...base.colors,
+      ...flattenedColors,
+      ...(themeData?.colors || {}),
+    },
     fonts: themeData?.fonts || base.fonts,
+    borderRadius: themeData?.borderRadius ?? base.borderRadius,
   };
 }
 
