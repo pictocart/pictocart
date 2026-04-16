@@ -67,6 +67,7 @@ export interface OnboardingData {
     razorpay: boolean;
   };
   emailTemplatesGenerated: boolean;
+  slugAvailable: boolean;
 }
 
 const defaultData: OnboardingData = {
