@@ -63,7 +63,8 @@ const SellerProfile = () => {
       }
     };
     fetchProfile();
-  }, [user]);
+    if (store) setStoreName(store.name);
+  }, [user, store]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
