@@ -36,6 +36,8 @@ const ProductForm = () => {
   const [shortDescription, setShortDescription] = useState('');
   const [price, setPrice] = useState('');
   const [compareAtPrice, setCompareAtPrice] = useState('');
+  const [discountPercent, setDiscountPercent] = useState('');
+  const [productHint, setProductHint] = useState('');
   const [category, setCategory] = useState('');
   const [sku, setSku] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -62,6 +64,12 @@ const ProductForm = () => {
       setShortDescription(existingProduct.short_description || '');
       setPrice(String(existingProduct.price));
       setCompareAtPrice(existingProduct.compare_at_price ? String(existingProduct.compare_at_price) : '');
+      if (existingProduct.compare_at_price && existingProduct.price) {
+        const disc = Math.round(((existingProduct.compare_at_price - existingProduct.price) / existingProduct.compare_at_price) * 100);
+        if (disc > 0) setDiscountPercent(String(disc));
+      }
+      const aiData = (existingProduct.ai_generated_data || {}) as Record<string, any>;
+      if (aiData.product_hint) setProductHint(aiData.product_hint);
       setCategory(existingProduct.category || '');
       setSku(existingProduct.sku || '');
       setTags((existingProduct.tags as string[]) || []);
@@ -84,7 +92,7 @@ const ProductForm = () => {
     setAiLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-product', {
-        body: { imageUrl: images[0], category: category || store?.category, storeName: store?.name, productType },
+        body: { imageUrl: images[0], category: category || store?.category, storeName: store?.name, productType, productHint: productHint || undefined },
       });
       if (error) throw error;
       const p = data.product;
@@ -141,7 +149,7 @@ const ProductForm = () => {
       is_active: asDraft ? false : isActive,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
-      ai_generated_data: { product_type: productType, highlights, ...typeMetadata } as any,
+      ai_generated_data: { product_type: productType, highlights, product_hint: productHint || undefined, ...typeMetadata } as any,
     };
 
     try {
@@ -213,19 +221,36 @@ const ProductForm = () => {
             </CardContent>
           </Card>
 
-          {/* Images */}
+          {/* Images & Product Hint */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Images</CardTitle>
+                <CardTitle className="text-base">Images & Product Hint</CardTitle>
                 <Button variant="outline" size="sm" onClick={generateWithAI} disabled={aiLoading || images.length === 0}>
                   {aiLoading ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
                   {aiLoading ? 'Generating...' : 'Generate with AI'}
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <ImageUploader images={images} onChange={setImages} />
+              {images.length > 0 && images.length < 4 && (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  💡 Upload 4–5 photos from different angles for much better AI-generated details and a richer product page.
+                </p>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="productHint">One-liner about this product</Label>
+                <Input
+                  id="productHint"
+                  value={productHint}
+                  onChange={(e) => setProductHint(e.target.value)}
+                  placeholder="e.g. Georgette saree with stone work and shimmer finish"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Briefly describe the product in your own words — this helps AI generate accurate details.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -299,20 +324,78 @@ const ProductForm = () => {
             </Card>
           )}
 
-          {/* Pricing */}
+          {/* Pricing & Discount */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base">Pricing</CardTitle></CardHeader>
-            <CardContent>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Pricing & Discount</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="price">Price (₹)</Label>
-                  <Input id="price" type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" />
+                  <Label htmlFor="comparePrice">MRP (₹)</Label>
+                  <Input
+                    id="comparePrice"
+                    type="number"
+                    min="0"
+                    value={compareAtPrice}
+                    onChange={(e) => {
+                      const mrp = e.target.value;
+                      setCompareAtPrice(mrp);
+                      if (mrp && discountPercent) {
+                        const selling = Math.round(Number(mrp) * (1 - Number(discountPercent) / 100));
+                        setPrice(String(selling));
+                      } else if (mrp && !discountPercent) {
+                        setPrice(mrp);
+                      }
+                    }}
+                    placeholder="Maximum Retail Price"
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="comparePrice">Compare at Price (₹)</Label>
-                  <Input id="comparePrice" type="number" min="0" value={compareAtPrice} onChange={(e) => setCompareAtPrice(e.target.value)} placeholder="0" />
+                  <Label htmlFor="discount">Discount (%)</Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={discountPercent}
+                    onChange={(e) => {
+                      const disc = e.target.value;
+                      setDiscountPercent(disc);
+                      if (compareAtPrice && disc) {
+                        const selling = Math.round(Number(compareAtPrice) * (1 - Number(disc) / 100));
+                        setPrice(String(selling));
+                      } else if (compareAtPrice && !disc) {
+                        setPrice(compareAtPrice);
+                      }
+                    }}
+                    placeholder="0"
+                  />
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="price">Selling Price (₹)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  value={price}
+                  onChange={(e) => {
+                    const sp = e.target.value;
+                    setPrice(sp);
+                    if (compareAtPrice && sp) {
+                      const disc = Math.round(((Number(compareAtPrice) - Number(sp)) / Number(compareAtPrice)) * 100);
+                      setDiscountPercent(disc > 0 ? String(disc) : '');
+                    }
+                  }}
+                  placeholder="Auto-calculated or enter manually"
+                />
+              </div>
+              {Number(compareAtPrice) > 0 && Number(price) > 0 && Number(price) < Number(compareAtPrice) && (
+                <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm">
+                  <span className="line-through text-muted-foreground">₹{Number(compareAtPrice).toLocaleString('en-IN')}</span>
+                  <span className="font-bold text-green-700">₹{Number(price).toLocaleString('en-IN')}</span>
+                  <Badge className="bg-green-600 text-white text-[10px]">{discountPercent || Math.round(((Number(compareAtPrice) - Number(price)) / Number(compareAtPrice)) * 100)}% OFF</Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
 
