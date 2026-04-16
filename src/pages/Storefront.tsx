@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { X, ArrowUp } from 'lucide-react';
 import { useStorefront } from '@/hooks/useStorefront';
 import { useProductReviews, getAverageRating } from '@/hooks/useReviews';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
@@ -225,6 +226,125 @@ const Storefront = () => {
             </div>
           </section>
         ) : null;
+      case 'testimonials':
+        const testItems = section.testimonials?.length ? section.testimonials : [
+          { name: 'Happy Customer', rating: 5, quote: 'Absolutely love the quality!', avatar: '👩' },
+          { name: 'Regular Buyer', rating: 5, quote: 'Fast delivery and great service!', avatar: '👨' },
+          { name: 'New Fan', rating: 4, quote: 'Beautiful products, very impressed!', avatar: '👩‍💼' },
+        ];
+        return wrapAnimated(
+          <section className="py-12 px-4" style={{ backgroundColor: colors.secondary }}>
+            <h2 className="text-lg md:text-xl font-bold mb-6 text-center" style={{ fontFamily: fonts.heading }}>{section.title || 'What Our Customers Say'}</h2>
+            <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-4">
+              {testItems.map((t: any, ti: number) => (
+                <div key={ti} className="p-5 text-center" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px` }}>
+                  <span className="text-2xl">{t.avatar || '👤'}</span>
+                  <div className="flex justify-center gap-0.5 my-2">
+                    {Array(5).fill(0).map((_, si) => (
+                      <Star key={si} className="h-3.5 w-3.5" style={{ fill: si < (t.rating || 5) ? '#facc15' : 'transparent', color: si < (t.rating || 5) ? '#facc15' : colors.text + '30' }} />
+                    ))}
+                  </div>
+                  <p className="text-xs italic opacity-70 mb-2">"{t.quote}"</p>
+                  <p className="text-xs font-semibold">{t.name}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      case 'trust_badges':
+        const badges = section.trustBadges?.length ? section.trustBadges : [
+          { icon: '🚚', label: 'Free Shipping' }, { icon: '🔒', label: 'Secure Payment' },
+          { icon: '↩️', label: 'Easy Returns' }, { icon: '💬', label: '24/7 Support' },
+        ];
+        return wrapAnimated(
+          <section className="py-8 px-4">
+            <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-8">
+              {badges.map((b: any, bi: number) => (
+                <div key={bi} className="flex flex-col items-center gap-2 min-w-[80px]">
+                  <span className="text-2xl">{b.icon}</span>
+                  <span className="text-xs font-semibold text-center">{b.label}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      case 'countdown_timer':
+        return wrapAnimated(
+          <section className="py-12 px-4 text-center" style={{ background: `linear-gradient(135deg, ${colors.primary}15, ${colors.accent || colors.secondary}30)` }}>
+            <h2 className="text-lg md:text-xl font-bold mb-2" style={{ fontFamily: fonts.heading }}>{section.title || '⚡ Flash Sale!'}</h2>
+            {section.subtitle && <p className="text-sm opacity-60 mb-4">{section.subtitle}</p>}
+            <div className="flex gap-3 justify-center">
+              {['Days', 'Hrs', 'Min', 'Sec'].map(u => (
+                <div key={u} className="flex flex-col items-center">
+                  <div className="text-2xl font-bold px-3 py-2 rounded-lg" style={{ backgroundColor: colors.card, fontFamily: fonts.heading, color: colors.primary }}>00</div>
+                  <span className="text-[10px] mt-1 opacity-50">{u}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      case 'brand_marquee':
+        const brands = section.brands?.length ? section.brands : ['Brand A', 'Brand B', 'Brand C', 'Brand D', 'Brand E'];
+        return wrapAnimated(
+          <section className="py-6 overflow-hidden" style={{ backgroundColor: colors.secondary }}>
+            <div className="animate-marquee flex gap-12 whitespace-nowrap">
+              {[...brands, ...brands].map((b: string, bi: number) => (
+                <span key={bi} className="text-base font-bold opacity-25 select-none" style={{ fontFamily: fonts.heading }}>{b}</span>
+              ))}
+            </div>
+          </section>
+        );
+      case 'image_with_text':
+        return wrapAnimated(
+          <section className="max-w-6xl mx-auto px-4 py-12">
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="h-64 rounded-xl overflow-hidden" style={{ backgroundColor: colors.secondary, borderRadius: `${borderRadius}px` }}>
+                {section.image && <img src={section.image} alt="" className="w-full h-full object-cover" />}
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold mb-3" style={{ fontFamily: fonts.heading }}>{section.title || 'Our Story'}</h2>
+                <p className="opacity-60 text-sm mb-4 leading-relaxed">{section.subtitle || 'Crafted with passion and purpose.'}</p>
+                <a href="#products" className="inline-block px-6 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius}px` }}>Learn More</a>
+              </div>
+            </div>
+          </section>
+        );
+      case 'collection_showcase':
+        return wrapAnimated(
+          <section className="max-w-6xl mx-auto px-4 py-12">
+            <h2 className="text-lg md:text-xl font-bold mb-6 text-center" style={{ fontFamily: fonts.heading }}>{section.title || 'Shop by Collection'}</h2>
+            <div className="grid md:grid-cols-3 gap-4">
+              {(categories.length > 0 ? categories.slice(0, 3) : ['New Arrivals', 'Best Sellers', 'Sale']).map((col, ci) => (
+                <div key={ci} className="relative h-48 rounded-xl overflow-hidden cursor-pointer group" style={{ backgroundColor: colors.secondary, borderRadius: `${borderRadius}px` }}>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  <div className="absolute bottom-3 left-3">
+                    <h3 className="text-base font-bold text-white" style={{ fontFamily: fonts.heading }}>{col}</h3>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      case 'instagram_feed':
+        return wrapAnimated(
+          <section className="max-w-6xl mx-auto px-4 py-12">
+            <h2 className="text-lg font-bold mb-2 text-center" style={{ fontFamily: fonts.heading }}>{section.title || '📸 Follow Us'}</h2>
+            <p className="text-xs text-center opacity-40 mb-6">@{store.slug}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {products.slice(0, 4).map((p, pi) => (
+                <div key={pi} className="aspect-square rounded-lg overflow-hidden" style={{ backgroundColor: colors.secondary, borderRadius: `${borderRadius / 2}px` }}>
+                  {p.images?.[0] && <img src={p.images[0]} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      case 'announcement_bar':
+        return wrapAnimated(
+          <div className="py-2 px-4 text-center text-sm font-medium" style={{ backgroundColor: colors.primary, color: '#fff' }}>
+            {section.announcementText || section.title || '🎉 Free shipping on orders above ₹999!'}
+          </div>
+        );
       default:
         return null;
     }
