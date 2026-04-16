@@ -461,6 +461,41 @@ export type Database = {
           },
         ]
       }
+      store_email_templates: {
+        Row: {
+          created_at: string
+          generated_at: string | null
+          id: string
+          store_id: string
+          templates: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string | null
+          id?: string
+          store_id: string
+          templates?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string | null
+          id?: string
+          store_id?: string
+          templates?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_email_templates_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           banner_url: string | null

@@ -11,12 +11,12 @@ const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// ── Email HTML generators ──
+// ── Default email HTML generators (fallback when no custom templates) ──
 
 const baseStyle = `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#ffffff;color:#1a1a1a;`;
 const headerStyle = `text-align:center;padding-bottom:24px;border-bottom:2px solid #f0f0f0;margin-bottom:24px;`;
 
-function itemsTable(items: any[], total: number): string {
+function buildItemsTable(items: any[], total: number): string {
   const rows = (items || []).map((item: any) => `
     <tr style="border-bottom:1px solid #f0f0f0;">
       <td style="padding:8px 0;">${item.title} × ${item.quantity}</td>
@@ -29,82 +29,70 @@ function itemsTable(items: any[], total: number): string {
   </table>`;
 }
 
-function orderConfirmedHTML(d: any) {
+function defaultOrderConfirmed(d: any) {
   return {
     subject: `Order Confirmed — ${d.order_number} | ${d.store_name}`,
-    html: `<div style="${baseStyle}">
-      <div style="${headerStyle}"><h1 style="font-size:20px;margin:0;">${d.store_name}</h1></div>
-      <h2 style="font-size:18px;color:#16a34a;">✓ Order Confirmed</h2>
-      <p>Hi ${d.customer_name},</p>
-      <p>Your order <strong>${d.order_number}</strong> has been confirmed and is being processed.</p>
-      ${itemsTable(d.items, d.total)}
-      <p style="color:#666;font-size:13px;">We'll notify you when your order ships.</p>
-      <p style="margin-top:24px;">Thank you for shopping with ${d.store_name}!</p>
-    </div>`,
+    html: `<div style="${baseStyle}"><div style="${headerStyle}"><h1 style="font-size:20px;margin:0;">${d.store_name}</h1></div><h2 style="font-size:18px;color:#16a34a;">✓ Order Confirmed</h2><p>Hi ${d.customer_name},</p><p>Your order <strong>${d.order_number}</strong> has been confirmed and is being processed.</p>${d.items_table}<p style="color:#666;font-size:13px;">We'll notify you when your order ships.</p><p style="margin-top:24px;">Thank you for shopping with ${d.store_name}!</p></div>`,
   };
 }
 
-function orderShippedHTML(d: any) {
+function defaultOrderShipped(d: any) {
   return {
     subject: `Your Order Has Shipped — ${d.order_number} | ${d.store_name}`,
-    html: `<div style="${baseStyle}">
-      <div style="${headerStyle}"><h1 style="font-size:20px;margin:0;">${d.store_name}</h1></div>
-      <h2 style="font-size:18px;color:#2563eb;">📦 Order Shipped</h2>
-      <p>Hi ${d.customer_name},</p>
-      <p>Great news! Your order <strong>${d.order_number}</strong> has been shipped.</p>
-      ${d.tracking_number ? `<div style="background:#f7f7f7;padding:16px;border-radius:8px;margin:16px 0;">
-        <p style="margin:0;font-size:13px;color:#666;">Tracking Number</p>
-        <p style="margin:4px 0 0;font-size:16px;font-weight:bold;font-family:monospace;">${d.tracking_number}</p>
-      </div>` : ''}
-      <p style="color:#666;font-size:13px;">You'll receive your order soon!</p>
-      <p style="margin-top:24px;">Thank you for shopping with ${d.store_name}!</p>
-    </div>`,
+    html: `<div style="${baseStyle}"><div style="${headerStyle}"><h1 style="font-size:20px;margin:0;">${d.store_name}</h1></div><h2 style="font-size:18px;color:#2563eb;">📦 Order Shipped</h2><p>Hi ${d.customer_name},</p><p>Great news! Your order <strong>${d.order_number}</strong> has been shipped.</p>${d.tracking_number ? `<div style="background:#f7f7f7;padding:16px;border-radius:8px;margin:16px 0;"><p style="margin:0;font-size:13px;color:#666;">Tracking Number</p><p style="margin:4px 0 0;font-size:16px;font-weight:bold;font-family:monospace;">${d.tracking_number}</p></div>` : ''}<p style="margin-top:24px;">Thank you for shopping with ${d.store_name}!</p></div>`,
   };
 }
 
-function orderDeliveredHTML(d: any) {
+function defaultOrderDelivered(d: any) {
   return {
     subject: `Order Delivered — ${d.order_number} | ${d.store_name}`,
-    html: `<div style="${baseStyle}">
-      <div style="${headerStyle}"><h1 style="font-size:20px;margin:0;">${d.store_name}</h1></div>
-      <h2 style="font-size:18px;color:#16a34a;">✅ Order Delivered</h2>
-      <p>Hi ${d.customer_name},</p>
-      <p>Your order <strong>${d.order_number}</strong> has been delivered successfully.</p>
-      ${itemsTable(d.items, d.total)}
-      <p style="color:#666;font-size:13px;">We hope you love your purchase! If you have any issues, please don't hesitate to reach out.</p>
-      <p style="margin-top:24px;">Thank you for shopping with ${d.store_name}!</p>
-    </div>`,
+    html: `<div style="${baseStyle}"><div style="${headerStyle}"><h1 style="font-size:20px;margin:0;">${d.store_name}</h1></div><h2 style="font-size:18px;color:#16a34a;">✅ Order Delivered</h2><p>Hi ${d.customer_name},</p><p>Your order <strong>${d.order_number}</strong> has been delivered successfully.</p>${d.items_table}<p style="color:#666;font-size:13px;">We hope you love your purchase!</p><p style="margin-top:24px;">Thank you for shopping with ${d.store_name}!</p></div>`,
   };
 }
 
-function newOrderSellerHTML(d: any) {
+function defaultNewOrderSeller(d: any) {
   return {
     subject: `🔔 New Order Received — ${d.order_number}`,
-    html: `<div style="${baseStyle}">
-      <div style="${headerStyle}"><h1 style="font-size:20px;margin:0;">${d.store_name} — New Order</h1></div>
-      <h2 style="font-size:18px;">New Order: ${d.order_number}</h2>
-      <p><strong>Customer:</strong> ${d.customer_name}</p>
-      ${d.customer_phone ? `<p><strong>Phone:</strong> ${d.customer_phone}</p>` : ''}
-      ${d.customer_email ? `<p><strong>Email:</strong> ${d.customer_email}</p>` : ''}
-      ${itemsTable(d.items, d.total)}
-      <p>Payment: <strong>${d.payment_method || 'N/A'}</strong></p>
-    </div>`,
+    html: `<div style="${baseStyle}"><div style="${headerStyle}"><h1 style="font-size:20px;margin:0;">${d.store_name} — New Order</h1></div><h2 style="font-size:18px;">New Order: ${d.order_number}</h2><p><strong>Customer:</strong> ${d.customer_name}</p>${d.customer_phone ? `<p><strong>Phone:</strong> ${d.customer_phone}</p>` : ''}${d.customer_email ? `<p><strong>Email:</strong> ${d.customer_email}</p>` : ''}${d.items_table}<p>Payment: <strong>${d.payment_method || 'N/A'}</strong></p></div>`,
   };
 }
 
-const GENERATORS: Record<string, (d: any) => { subject: string; html: string }> = {
-  order_confirmed: orderConfirmedHTML,
-  order_shipped: orderShippedHTML,
-  order_delivered: orderDeliveredHTML,
-  new_order_seller: newOrderSellerHTML,
+const DEFAULT_GENERATORS: Record<string, (d: any) => { subject: string; html: string }> = {
+  order_confirmed: defaultOrderConfirmed,
+  order_shipped: defaultOrderShipped,
+  order_delivered: defaultOrderDelivered,
+  new_order_seller: defaultNewOrderSeller,
 };
+
+// ── Apply custom template with placeholder replacement ──
+
+function applyCustomTemplate(template: { subject: string; html: string }, data: any): { subject: string; html: string } {
+  const replacements: Record<string, string> = {
+    '{{customer_name}}': data.customer_name || 'Customer',
+    '{{order_number}}': data.order_number || '',
+    '{{items_table}}': data.items_table || '',
+    '{{total}}': `₹${data.total?.toLocaleString('en-IN') || '0'}`,
+    '{{tracking_number}}': data.tracking_number || '',
+    '{{store_name}}': data.store_name || '',
+    '{{payment_method}}': data.payment_method || 'N/A',
+    '{{customer_email}}': data.customer_email || '',
+    '{{customer_phone}}': data.customer_phone || '',
+  };
+
+  let html = template.html;
+  let subject = template.subject;
+  for (const [placeholder, value] of Object.entries(replacements)) {
+    html = html.replaceAll(placeholder, value);
+    subject = subject.replaceAll(placeholder, value);
+  }
+  return { subject, html };
+}
 
 // ── Send email via Resend connector gateway ──
 
 async function sendEmail(to: string, subject: string, html: string, fromName: string) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-
   if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
 
@@ -147,10 +135,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch order + store in parallel
-    const [orderRes, storeRes] = await Promise.all([
+    // Fetch order, store, and custom templates in parallel
+    const [orderRes, storeRes, templatesRes] = await Promise.all([
       supabase.from('orders').select('*').eq('id', order_id).single(),
       supabase.from('stores').select('name, user_id').eq('id', store_id).single(),
+      supabase.from('store_email_templates').select('templates').eq('store_id', store_id).maybeSingle(),
     ]);
 
     if (orderRes.error || !orderRes.data) {
@@ -162,6 +151,9 @@ Deno.serve(async (req) => {
     const order = orderRes.data;
     const store = storeRes.data;
     const storeName = store?.name || 'Store';
+    const customTemplates = (templatesRes.data?.templates as any) || null;
+
+    const itemsTable = buildItemsTable(order.items as any[], order.total as number);
 
     const emailData = {
       store_name: storeName,
@@ -170,13 +162,22 @@ Deno.serve(async (req) => {
       customer_email: order.customer_email,
       customer_phone: order.customer_phone,
       items: order.items,
+      items_table: itemsTable,
       total: order.total,
       tracking_number: order.tracking_number,
       payment_method: order.payment_method,
     };
 
-    const generator = GENERATORS[type];
-    if (!generator) {
+    // Determine email content: custom template or default
+    let emailContent: { subject: string; html: string } | null = null;
+
+    if (customTemplates?.[type]?.html && customTemplates?.[type]?.subject) {
+      // Use store's custom AI-generated template
+      emailContent = applyCustomTemplate(customTemplates[type], emailData);
+    } else if (DEFAULT_GENERATORS[type]) {
+      // Fall back to default templates
+      emailContent = DEFAULT_GENERATORS[type](emailData);
+    } else {
       return new Response(JSON.stringify({ error: 'Unknown notification type' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -186,8 +187,7 @@ Deno.serve(async (req) => {
 
     // Customer email
     if (['order_confirmed', 'order_shipped', 'order_delivered'].includes(type) && order.customer_email) {
-      const { subject, html } = generator(emailData);
-      const sent = await sendEmail(order.customer_email, subject, html, storeName);
+      const sent = await sendEmail(order.customer_email, emailContent.subject, emailContent.html, storeName);
       results.push(`customer_email: ${sent ? 'sent' : 'failed'}`);
     }
 
@@ -196,8 +196,7 @@ Deno.serve(async (req) => {
       const { data: authUser } = await supabase.auth.admin.getUserById(store.user_id);
       const sellerEmail = authUser?.user?.email;
       if (sellerEmail) {
-        const { subject, html } = generator(emailData);
-        const sent = await sendEmail(sellerEmail, subject, html, storeName);
+        const sent = await sendEmail(sellerEmail, emailContent.subject, emailContent.html, storeName);
         results.push(`seller_email: ${sent ? 'sent' : 'failed'}`);
       }
     }
