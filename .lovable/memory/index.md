@@ -9,7 +9,7 @@
 - **Cart**: Persistent customer shopping cart is managed via `localStorage`.
 
 ## Memories
-- [Onboarding Wizard](mem://features/onboarding-wizard) — 11-step mandatory flow (Store Name → Email Branding → Go Live), AI product saved only on completion
+- [Onboarding Wizard](mem://features/onboarding-wizard) — 7-step mandatory flow, AI product saved only on completion
 - [Product Logic](mem://features/product-logic) — Category variants, 6-image uploader (Gallery/Camera)
 - [Monetization](mem://business/monetization-strategy) — Premium themes (₹500), 2% platform commission
 - [Shipping & Logistics](mem://features/shipping-logistics) — Delhivery proxy, AWB generation, PincodeChecker
@@ -33,4 +33,5 @@
 - [Dynamic Categories](mem://features/dynamic-categories) — Seller-defined custom taxonomies and nested subcategories
 - [Theme Marketplace](mem://features/enterprise-theme-marketplace) — 5-page AI generated themes, cost/revenue tracking
 - [Animation System](mem://tech/animation-system) — useAnimateOnScroll hook, CSS transitions, intersection observer
-- [White-Label Emails](mem://features/white-label-emails) — Per-store AI-generated branded email templates, onboarding step 9
+- [White-Label Emails](mem://features/white-label-emails) — AI-generated branded email templates per store
+- [Email Sender Identity](mem://features/email-sender-identity) — Resend multi-domain API for custom sender addresses

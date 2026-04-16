@@ -90,11 +90,16 @@ function applyCustomTemplate(template: { subject: string; html: string }, data: 
 
 // ── Send email via Resend connector gateway ──
 
-async function sendEmail(to: string, subject: string, html: string, fromName: string) {
+async function sendEmail(to: string, subject: string, html: string, fromName: string, fromAddress?: string) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
   if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
+
+  // Use verified custom domain or fallback to platform default
+  const fromField = fromAddress
+    ? `${fromName} <${fromAddress}>`
+    : `${fromName} <onboarding@resend.dev>`;
 
   const res = await fetch(`${GATEWAY_URL}/emails`, {
     method: 'POST',
@@ -104,7 +109,7 @@ async function sendEmail(to: string, subject: string, html: string, fromName: st
       'X-Connection-Api-Key': RESEND_API_KEY,
     },
     body: JSON.stringify({
-      from: `${fromName} <onboarding@resend.dev>`,
+      from: fromField,
       to: [to],
       subject,
       html,
@@ -136,10 +141,12 @@ Deno.serve(async (req) => {
     }
 
     // Fetch order, store, and custom templates in parallel
-    const [orderRes, storeRes, templatesRes] = await Promise.all([
+    // Fetch order, store, custom templates, and email domain in parallel
+    const [orderRes, storeRes, templatesRes, emailDomainRes] = await Promise.all([
       supabase.from('orders').select('*').eq('id', order_id).single(),
       supabase.from('stores').select('name, user_id').eq('id', store_id).single(),
       supabase.from('store_email_templates').select('templates').eq('store_id', store_id).maybeSingle(),
+      supabase.from('store_email_domains').select('domain, sender_prefix, status').eq('store_id', store_id).maybeSingle(),
     ]);
 
     if (orderRes.error || !orderRes.data) {
@@ -152,6 +159,12 @@ Deno.serve(async (req) => {
     const store = storeRes.data;
     const storeName = store?.name || 'Store';
     const customTemplates = (templatesRes.data?.templates as any) || null;
+
+    // Determine sender address from verified email domain
+    const emailDomain = emailDomainRes.data;
+    const fromAddress = emailDomain?.status === 'verified' && emailDomain.domain
+      ? `${emailDomain.sender_prefix || 'notifications'}@${emailDomain.domain}`
+      : undefined;
 
     const itemsTable = buildItemsTable(order.items as any[], order.total as number);
 
@@ -187,7 +200,7 @@ Deno.serve(async (req) => {
 
     // Customer email
     if (['order_confirmed', 'order_shipped', 'order_delivered'].includes(type) && order.customer_email) {
-      const sent = await sendEmail(order.customer_email, emailContent.subject, emailContent.html, storeName);
+      const sent = await sendEmail(order.customer_email, emailContent.subject, emailContent.html, storeName, fromAddress);
       results.push(`customer_email: ${sent ? 'sent' : 'failed'}`);
     }
 
@@ -196,7 +209,7 @@ Deno.serve(async (req) => {
       const { data: authUser } = await supabase.auth.admin.getUserById(store.user_id);
       const sellerEmail = authUser?.user?.email;
       if (sellerEmail) {
-        const sent = await sendEmail(sellerEmail, emailContent.subject, emailContent.html, storeName);
+        const sent = await sendEmail(sellerEmail, emailContent.subject, emailContent.html, storeName, fromAddress);
         results.push(`seller_email: ${sent ? 'sent' : 'failed'}`);
       }
     }
