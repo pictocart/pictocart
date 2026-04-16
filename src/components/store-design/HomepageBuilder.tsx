@@ -308,9 +308,11 @@ const SortableSection = ({
                           onChange={async (e) => {
                             const files = Array.from(e.target.files || []);
                             if (!files.length) return;
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (!user) { toast.error('Not authenticated'); return; }
                             for (const file of files) {
                               const ext = file.name.split('.').pop();
-                              const path = `hero/${crypto.randomUUID()}.${ext}`;
+                              const path = `${user.id}/hero/${crypto.randomUUID()}.${ext}`;
                               const { error } = await supabase.storage.from('product-images').upload(path, file, { contentType: file.type });
                               if (error) { toast.error('Upload failed'); continue; }
                               const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
