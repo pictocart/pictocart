@@ -50,6 +50,7 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import RefundPolicy from "@/pages/RefundPolicy";
 import Billing from "@/pages/Billing";
+import StorefrontPolicy from "@/pages/storefront/StorefrontPolicy";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -224,6 +225,7 @@ const App = () => (
             <Route path="/store/:slug/blog/:postSlug" element={<StorefrontBlogPost />} />
             <Route path="/store/:slug/account/auth" element={<CustomerAuth />} />
             <Route path="/store/:slug/account" element={<CustomerRoute><CustomerAccount /></CustomerRoute>} />
+            <Route path="/store/:slug/:policyType" element={<StorefrontPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
