@@ -74,11 +74,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Logo */}
         <div className={cn('flex h-14 items-center border-b border-sidebar-border px-4', collapsed && 'justify-center')}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm shrink-0">
-            S
+            P
           </div>
           {!collapsed && (
             <span className="ml-2 font-semibold text-sidebar-foreground truncate">
-              Store on Tips
+              Pic to Cart
             </span>
           )}
         </div>

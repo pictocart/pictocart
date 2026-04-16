@@ -7,7 +7,7 @@ const PrivacyPolicy = () => (
       <div className="prose prose-sm max-w-none space-y-6 text-muted-foreground">
         <section>
           <h2 className="text-xl font-semibold text-foreground">1. Information We Collect</h2>
-          <p>When you create a store or make a purchase on Store on Tips, we collect personal information such as your name, email address, phone number, billing address, and payment details. We also collect usage data including pages visited, features used, and device information.</p>
+          <p>When you create a store or make a purchase on Pic to Cart, we collect personal information such as your name, email address, phone number, billing address, and payment details. We also collect usage data including pages visited, features used, and device information.</p>
         </section>
 
         <section>

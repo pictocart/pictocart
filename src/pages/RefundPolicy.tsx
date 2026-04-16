@@ -17,7 +17,7 @@ const RefundPolicy = () => (
 
         <section>
           <h2 className="text-xl font-semibold text-foreground">3. Product Purchases (Store Customers)</h2>
-          <p>Refund policies for products purchased from individual stores are set by each seller. Store on Tips acts as a platform provider and does not directly handle product refunds. Customers should contact the store seller directly for return and refund requests.</p>
+          <p>Refund policies for products purchased from individual stores are set by each seller. Pic to Cart acts as a platform provider and does not directly handle product refunds. Customers should contact the store seller directly for return and refund requests.</p>
         </section>
 
         <section>

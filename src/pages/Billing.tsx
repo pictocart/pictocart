@@ -60,7 +60,7 @@ const Billing = () => {
       const options = {
         key: RAZORPAY_KEY_ID,
         subscription_id: data.subscription_id,
-        name: 'Store on Tips',
+        name: 'Pic to Cart',
         description: 'Premium Plan — ₹499/month',
         theme: { color: '#F97316' },
         handler: async (response: any) => {

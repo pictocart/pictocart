@@ -1,6 +1,6 @@
 {
-  "name": "Store",
-  "short_name": "Store",
+  "name": "Pic to Cart",
+  "short_name": "PictoCart",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

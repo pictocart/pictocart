@@ -70,7 +70,7 @@ const categories = ['Fashion', 'Food & Bakery', 'Electronics', 'Beauty', 'Handcr
 /* ─── Testimonials ─── */
 const testimonials = [
   { name: 'Priya Sharma', store: 'Priya\'s Boutique', category: 'Fashion', quote: 'I set up my store in literally 5 minutes. The AI wrote better product descriptions than I ever could!', stars: 5, growth: '300% sales in 2 months' },
-  { name: 'Ravi Kumar', store: 'Ravi\'s Organic Farm', category: 'Organic Food', quote: 'As a farmer, I just take photos of my produce. Store on Tips handles everything else. My online orders have tripled.', stars: 5, growth: '₹2L monthly revenue' },
+  { name: 'Ravi Kumar', store: 'Ravi\'s Organic Farm', category: 'Organic Food', quote: 'As a farmer, I just take photos of my produce. Pic to Cart handles everything else. My online orders have tripled.', stars: 5, growth: '₹2L monthly revenue' },
   { name: 'Meera Jain', store: 'Sparkle Jewelry', category: 'Jewelry', quote: 'The premium themes are gorgeous. My customers think I hired a professional web designer. Worth every rupee!', stars: 5, growth: '500+ orders in first month' },
 ];
 
@@ -110,9 +110,9 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
       <SEOHead
-        title="Store on Tips — Launch Your Online Store in 5 Minutes"
+        title="Pic to Cart — Launch Your Online Store in 5 Minutes"
         description="Create your online store instantly. Just snap a photo — AI generates product titles, descriptions, pricing & SEO. Free forever. 50+ premium themes."
-        url="https://store-on-tips.lovable.app"
+        url="https://pictocart.in"
         type="website"
       />
 
@@ -126,7 +126,7 @@ const LandingPage = () => {
                 <Store className="h-5 w-5 text-white" />
               </div>
               <span className={`font-extrabold text-lg tracking-tight ${scrolled ? 'text-slate-900' : 'text-white'}`}>
-                Store on Tips
+                Pic to Cart
               </span>
             </div>
 
@@ -632,7 +632,7 @@ const LandingPage = () => {
               Your Store is One Click Away
             </h2>
             <p className="text-lg text-white/70 mb-10 max-w-xl mx-auto">
-              Join 10,000+ merchants who've launched their online business with Store on Tips. No credit card required.
+              Join 10,000+ merchants who've launched their online business with Pic to Cart. No credit card required.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4 justify-center max-w-md mx-auto">
               <Link to="/auth" className="w-full sm:w-auto">
@@ -664,7 +664,7 @@ const LandingPage = () => {
               <ul className="space-y-2 text-sm">
                 <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
                 <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-                <li><a href="mailto:support@storeontips.com" className="hover:text-white transition-colors">Support</a></li>
+                <li><a href="mailto:support@pictocart.in" className="hover:text-white transition-colors">Support</a></li>
               </ul>
             </div>
             <div>
@@ -690,9 +690,9 @@ const LandingPage = () => {
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
                 <Store className="h-4 w-4 text-white" />
               </div>
-              <span className="font-bold text-white">Store on Tips</span>
+              <span className="font-bold text-white">Pic to Cart</span>
             </div>
-            <p className="text-sm">© {new Date().getFullYear()} Store on Tips. All rights reserved.</p>
+            <p className="text-sm">© {new Date().getFullYear()} Pic to Cart. All rights reserved.</p>
             <div className="flex items-center gap-4">
               {[Instagram, Twitter, Facebook, Youtube].map((Icon, i) => (
                 <a key={i} href="#" className="hover:text-white transition-colors"><Icon className="h-5 w-5" /></a>
@@ -709,9 +709,9 @@ const LandingPage = () => {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
-            "name": "Store on Tips",
+            "name": "Pic to Cart",
             "description": "AI-powered online store builder for merchants. Create your store in 5 minutes.",
-            "url": "https://store-on-tips.lovable.app",
+            "url": "https://pictocart.in",
             "applicationCategory": "BusinessApplication",
             "operatingSystem": "Web",
             "offers": {
@@ -721,8 +721,8 @@ const LandingPage = () => {
             },
             "creator": {
               "@type": "Organization",
-              "name": "Store on Tips",
-              "url": "https://store-on-tips.lovable.app"
+              "name": "Pic to Cart",
+              "url": "https://pictocart.in"
             }
           })
         }}
