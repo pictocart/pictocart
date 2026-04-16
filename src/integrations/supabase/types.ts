@@ -710,6 +710,7 @@ export type Database = {
         Row: {
           ai_generation_cost: number
           category: string
+          compare_at_price: number | null
           created_at: string
           created_by: string
           description: string | null
@@ -726,6 +727,7 @@ export type Database = {
         Insert: {
           ai_generation_cost?: number
           category?: string
+          compare_at_price?: number | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -742,6 +744,7 @@ export type Database = {
         Update: {
           ai_generation_cost?: number
           category?: string
+          compare_at_price?: number | null
           created_at?: string
           created_by?: string
           description?: string | null
