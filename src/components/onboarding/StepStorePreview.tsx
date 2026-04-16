@@ -31,7 +31,7 @@ const StepStorePreview = ({ data, storeSlug }: Props) => {
             <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
           </div>
           <div className="flex-1 bg-background rounded-md px-3 py-1 text-xs text-muted-foreground font-mono truncate">
-            {window.location.origin}/store/{slug}
+            https://pictocart.in/store/{slug}
           </div>
           <Button
             variant="ghost"
