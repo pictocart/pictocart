@@ -29,7 +29,7 @@ interface StoreContextValue {
 const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,24 +39,36 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
+    setLoading(true);
     const { data, error } = await supabase
       .from('stores')
       .select('*')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (!error && data) {
-      setStore(data as Store);
+    if (error) {
+      console.error('[StoreContext] fetch error:', error);
+      // Don't clobber existing store on transient error
+      setLoading(false);
+      return;
     }
+    setStore((data as Store) ?? null);
     setLoading(false);
   }, [user]);
 
   useEffect(() => {
+    // Wait until auth has finished restoring the session before deciding
+    // whether the user has a store. Otherwise we briefly see user=null and
+    // incorrectly redirect to onboarding.
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
     fetchStore();
-  }, [fetchStore]);
+  }, [authLoading, fetchStore]);
 
   return (
-    <StoreContext.Provider value={{ store, loading, setStore, refetchStore: fetchStore }}>
+    <StoreContext.Provider value={{ store, loading: loading || authLoading, setStore, refetchStore: fetchStore }}>
       {children}
     </StoreContext.Provider>
   );
