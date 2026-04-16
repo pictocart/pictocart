@@ -54,6 +54,139 @@ const HERO_ANIMATION_MAP: Record<string, string> = {
 function pickRandom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function shuffleArray<T>(arr: T[]): T[] { return [...arr].sort(() => 0.5 - Math.random()); }
 
+// ── Deterministic multi-page generation (zero AI cost) ──
+function generateAllPages(themeName: string, category: string) {
+  const storeName = `${themeName} Store`;
+
+  const shop = {
+    layout: "grid-4",
+    title: "All Products",
+    filters: ["Category", "Price", "Rating", "Availability"],
+    sorting: ["Newest", "Price: Low to High", "Price: High to Low", "Popularity"],
+    productsPerPage: 12,
+  };
+
+  const about = {
+    sections: [
+      { type: "hero_banner", title: `About ${storeName}`, subtitle: "Our story, our passion, our commitment to you." },
+      { type: "story", title: "Our Story", content: `Welcome to ${storeName}. We started with a simple belief — everyone deserves access to premium quality products at honest prices. What began as a small passion project has grown into a brand trusted by thousands of happy customers across India.\n\nEvery product in our store is carefully curated, tested, and approved before it reaches you. We work directly with artisans and manufacturers who share our commitment to quality and sustainability.` },
+      { type: "mission", title: "Our Mission", content: "To deliver exceptional products with uncompromising quality, transparent pricing, and an unforgettable shopping experience. We believe in building lasting relationships with our customers — not just transactions." },
+      { type: "values", title: "What We Stand For", values: [
+        { icon: "✨", title: "Quality First", description: "Every product passes our rigorous quality checks before reaching you." },
+        { icon: "💚", title: "Sustainability", description: "We're committed to eco-friendly packaging and ethical sourcing." },
+        { icon: "🤝", title: "Customer Love", description: "Your satisfaction is our top priority. Always." },
+        { icon: "🚀", title: "Innovation", description: "We continuously evolve to bring you the latest and best." },
+      ]},
+      { type: "team", title: "Meet Our Team", subtitle: "The passionate people behind the brand." },
+    ],
+  };
+
+  const contact = {
+    title: "Get In Touch",
+    subtitle: "We'd love to hear from you. Reach out anytime!",
+    fields: ["Name", "Email", "Phone", "Subject", "Message"],
+    info: [
+      { icon: "📧", label: "Email", value: `hello@${category}store.com` },
+      { icon: "📱", label: "Phone", value: "+91 98765 43210" },
+      { icon: "📍", label: "Address", value: "123 Commerce Street, Mumbai, Maharashtra 400001" },
+      { icon: "🕐", label: "Hours", value: "Mon-Sat: 10am - 7pm IST" },
+    ],
+  };
+
+  const faq = {
+    title: "Frequently Asked Questions",
+    subtitle: "Find answers to the most common questions about our store.",
+    items: [
+      { q: "How long does delivery take?", a: "Standard delivery takes 3-7 business days across India. Express delivery (1-3 days) is available for select pincodes at an additional charge." },
+      { q: "What payment methods do you accept?", a: "We accept UPI, Credit/Debit Cards, Net Banking, and Cash on Delivery (COD). All online payments are processed securely through Razorpay." },
+      { q: "Can I return or exchange a product?", a: "Yes! We offer a 7-day easy return and exchange policy. Products must be unused and in original packaging. Refunds are processed within 5-7 business days." },
+      { q: "Do you offer free shipping?", a: "Yes, we offer free shipping on all orders above ₹999. For orders below ₹999, a flat shipping fee of ₹49 applies." },
+      { q: "How can I track my order?", a: "Once your order is shipped, you'll receive a tracking link via email and SMS. You can also track your order from your account dashboard." },
+      { q: "Is Cash on Delivery available?", a: "Yes, COD is available for orders up to ₹5,000 across most serviceable pincodes in India." },
+      { q: "How do I contact customer support?", a: "You can reach us via email, phone, or the Contact Us page. Our support team responds within 24 hours on business days." },
+      { q: "Do you ship internationally?", a: "Currently, we ship only within India. International shipping is coming soon!" },
+    ],
+  };
+
+  const privacyPolicy = {
+    title: "Privacy Policy",
+    lastUpdated: new Date().toISOString().split("T")[0],
+    sections: [
+      { heading: "Information We Collect", content: `At ${storeName}, we collect information you provide directly to us, including your name, email address, phone number, shipping address, and payment information when you make a purchase. We also automatically collect certain information about your device, including your IP address, browser type, and browsing patterns on our site.` },
+      { heading: "How We Use Your Information", content: "We use the information we collect to: process and fulfill your orders, communicate with you about your orders and our products, improve and personalize your shopping experience, send promotional communications (with your consent), prevent fraud and ensure security, and comply with legal obligations." },
+      { heading: "Information Sharing", content: "We do not sell, trade, or rent your personal information to third parties. We may share your information with: payment processors (Razorpay) to process transactions, shipping partners (Delhivery) to deliver your orders, and service providers who assist us in operating our website." },
+      { heading: "Data Security", content: "We implement industry-standard security measures including SSL encryption, secure payment processing, and regular security audits to protect your personal information. However, no method of transmission over the Internet is 100% secure." },
+      { heading: "Cookies", content: "We use cookies and similar tracking technologies to enhance your browsing experience, analyze site traffic, and personalize content. You can control cookie settings through your browser preferences." },
+      { heading: "Your Rights", content: "You have the right to: access, update, or delete your personal information, opt out of marketing communications, request a copy of your data, and lodge a complaint with a data protection authority." },
+      { heading: "Contact Us", content: `If you have questions about this Privacy Policy, please contact us at privacy@${category}store.com or through our Contact Us page.` },
+    ],
+  };
+
+  const returnPolicy = {
+    title: "Return & Refund Policy",
+    lastUpdated: new Date().toISOString().split("T")[0],
+    sections: [
+      { heading: "Return Window", content: "We offer a 7-day return window from the date of delivery. To be eligible for a return, the item must be unused, in its original packaging, and in the same condition as received." },
+      { heading: "How to Initiate a Return", content: "To initiate a return: 1) Log in to your account and go to 'My Orders', 2) Select the order and click 'Return', 3) Choose your reason for return, 4) Our team will arrange a pickup within 2-3 business days." },
+      { heading: "Refund Process", content: "Once we receive and inspect the returned item, we'll notify you via email. If approved, your refund will be processed within 5-7 business days to your original payment method. For COD orders, refunds will be credited to your bank account." },
+      { heading: "Exchange Policy", content: "We offer free exchanges for size or color variations, subject to availability. Exchange requests follow the same 7-day window and process as returns." },
+      { heading: "Non-Returnable Items", content: "The following items cannot be returned: personalized or customized products, intimate wear and undergarments, items marked as 'Final Sale', and products with broken seals (for hygiene products)." },
+      { heading: "Damaged or Defective Items", content: "If you receive a damaged or defective item, please contact us within 48 hours of delivery with photos. We'll arrange a free replacement or full refund immediately." },
+    ],
+  };
+
+  const terms = {
+    title: "Terms of Service",
+    lastUpdated: new Date().toISOString().split("T")[0],
+    sections: [
+      { heading: "Acceptance of Terms", content: `By accessing and using ${storeName}'s website, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.` },
+      { heading: "Products and Pricing", content: "All product descriptions, images, and prices are provided in good faith. We reserve the right to modify prices without prior notice. Prices are listed in Indian Rupees (INR) and include applicable taxes unless stated otherwise." },
+      { heading: "Orders and Payment", content: "By placing an order, you agree to provide accurate and complete information. We reserve the right to cancel orders due to pricing errors, stock unavailability, or suspected fraud. Payment must be completed at the time of order unless Cash on Delivery is selected." },
+      { heading: "Shipping and Delivery", content: "We aim to deliver within the estimated timeframe but cannot guarantee exact delivery dates. Risk of loss transfers to you upon delivery. We are not responsible for delays caused by shipping carriers or force majeure events." },
+      { heading: "Intellectual Property", content: `All content on this website, including text, images, logos, and designs, is the property of ${storeName} and protected by Indian copyright and trademark laws. Unauthorized use is prohibited.` },
+      { heading: "Limitation of Liability", content: `${storeName} shall not be liable for any indirect, incidental, or consequential damages arising from the use of our products or services. Our total liability shall not exceed the amount paid for the specific product in question.` },
+      { heading: "Governing Law", content: "These terms shall be governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of courts in Mumbai, Maharashtra." },
+    ],
+  };
+
+  const shippingPolicy = {
+    title: "Shipping Policy",
+    lastUpdated: new Date().toISOString().split("T")[0],
+    sections: [
+      { heading: "Shipping Coverage", content: "We currently ship across India to all major cities and most pin codes. Enter your pin code on the product page to check serviceability in your area." },
+      { heading: "Shipping Rates", content: "Free shipping on all orders above ₹999. For orders below ₹999, a flat shipping charge of ₹49 applies. Express shipping is available at ₹149 for select pin codes." },
+      { heading: "Delivery Timeframes", content: "Standard Delivery: 3-7 business days. Express Delivery: 1-3 business days. Metro cities (Mumbai, Delhi, Bangalore, Chennai, Hyderabad, Kolkata): 2-4 business days. Remote areas may take 7-10 business days." },
+      { heading: "Order Processing", content: "Orders placed before 2 PM IST on business days are processed the same day. Orders placed after 2 PM or on weekends/holidays are processed the next business day." },
+      { heading: "Order Tracking", content: "Once your order is shipped, you'll receive a tracking number via email and SMS. You can track your order in real-time through your account dashboard or the courier partner's website." },
+      { heading: "Undelivered Orders", content: "If a delivery attempt fails, our courier partner will make up to 3 attempts. If the order remains undelivered, it will be returned to us and a refund will be initiated." },
+    ],
+  };
+
+  return { shop, about, contact, faq, privacy_policy: privacyPolicy, return_policy: returnPolicy, terms, shipping_policy: shippingPolicy };
+}
+
+// ── Standard footer for generated themes ──
+function generateFooter(themeName: string) {
+  return {
+    columns: [
+      { title: "Quick Links", links: [
+        { label: "Shop", href: "/shop" }, { label: "New Arrivals", href: "/shop?sort=newest" },
+        { label: "Best Sellers", href: "/shop?sort=popular" }, { label: "About Us", href: "/about" },
+      ]},
+      { title: "Customer Support", links: [
+        { label: "Contact Us", href: "/contact" }, { label: "FAQ", href: "/faq" },
+        { label: "Shipping Info", href: "/shipping-policy" }, { label: "Track Order", href: "/account" },
+      ]},
+      { title: "Legal", links: [
+        { label: "Privacy Policy", href: "/privacy-policy" }, { label: "Return Policy", href: "/return-policy" },
+        { label: "Terms of Service", href: "/terms" }, { label: "Shipping Policy", href: "/shipping-policy" },
+      ]},
+    ],
+    copyright: `© ${new Date().getFullYear()} ${themeName} Store. All rights reserved.`,
+    social_links: { instagram: "#", facebook: "#", twitter: "#" },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -81,7 +214,6 @@ serve(async (req) => {
     const { category, styleHints } = await req.json();
     if (!category) throw new Error("Category is required");
 
-    // ── Parse style hints to extract structured preferences ──
     const parsedHints = parseStyleHints(styleHints || "");
 
     // ── TIER 1: Lightweight AI call for Design DNA only ──
@@ -132,7 +264,7 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
                 image_prompts: {
                   type: "array",
                   items: { type: "object", properties: { section: { type: "string" }, prompt: { type: "string" } }, required: ["section", "prompt"] },
-                  description: "4-6 image prompts for hero and key sections",
+                  description: "4-6 image prompts for hero and key sections. Use section types like 'hero', 'image_with_text', etc.",
                 },
               },
               required: ["name", "description", "colors", "fonts", "borderRadius", "section_order", "image_prompts"],
@@ -159,50 +291,40 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
     const dnaTokens = dnaData.usage?.total_tokens || 1000;
 
     // ── TIER 2: Deterministic Assembly from blueprints ──
-
-    // Fetch DB blueprints
     const { data: dbBlueprints } = await adminClient
       .from("theme_section_blueprints")
       .select("*")
       .or(`category_tags.cs.{${category}},category_tags.cs.{general}`);
 
-    // Build blueprint lookup: section_type -> array of variants
     const blueprintLookup: Record<string, any[]> = {};
     for (const bp of (dbBlueprints || [])) {
       if (!blueprintLookup[bp.section_type]) blueprintLookup[bp.section_type] = [];
       blueprintLookup[bp.section_type].push(bp.content_json);
     }
 
-    // Determine animation pool from intensity
     const intensity = parsedHints.animationIntensity;
     const animPool = intensity > 70 ? ANIMATION_POOLS.dramatic : intensity > 40 ? ANIMATION_POOLS.moderate : ANIMATION_POOLS.subtle;
 
-    // Determine card effects
     const cardEffects = parsedHints.cardEffects.map((e: string) => CARD_EFFECT_MAP[e]).filter(Boolean);
     const defaultCardEffect = cardEffects.length > 0 ? cardEffects[0] : "hover-lift";
 
-    // Assemble sections
     const sectionOrder = designDna.section_order || ["announcement_bar", "hero", "featured_products", "category_grid", "testimonials", "trust_badges", "newsletter"];
     const homeSections: any[] = [];
 
     for (const sectionType of sectionOrder) {
-      // Pick blueprint: DB first, then fallback
       const variants = blueprintLookup[sectionType];
       let section = variants && variants.length > 0
         ? JSON.parse(JSON.stringify(pickRandom(variants)))
         : JSON.parse(JSON.stringify(FALLBACK_BLUEPRINTS[sectionType] || { type: sectionType, layout: "full-width", title: sectionType.replace(/_/g, " ") }));
 
-      // Override type
       section.type = sectionType;
 
-      // Assign animation
       if (sectionType === "hero") {
         section.animation = HERO_ANIMATION_MAP[parsedHints.heroStyle] || pickRandom(animPool);
       } else {
         section.animation = pickRandom(animPool);
       }
 
-      // Assign card effect for product sections
       if (["featured_products", "category_grid", "collection_showcase"].includes(sectionType)) {
         section.cardEffect = cardEffects.length > 0 ? pickRandom(cardEffects) : defaultCardEffect;
       }
@@ -214,7 +336,6 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
     const imagePrompts = designDna.image_prompts || [];
     const generatedImages: Record<string, string> = {};
 
-    // Check pool first
     const { data: poolImages } = await adminClient
       .from("theme_image_pool")
       .select("*")
@@ -226,19 +347,16 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
       poolBySection[img.section_type].push(img.image_url);
     }
 
-    // Determine which prompts need generation vs pool reuse
     const promptsToGenerate: typeof imagePrompts = [];
     for (const imgReq of imagePrompts.slice(0, 5)) {
       const poolForSection = poolBySection[imgReq.section];
       if (poolForSection && poolForSection.length >= 3) {
-        // Reuse from pool
         generatedImages[imgReq.section] = pickRandom(poolForSection);
       } else {
         promptsToGenerate.push(imgReq);
       }
     }
 
-    // Parallel image generation (max 3 concurrent)
     let imageTokens = 0;
     const generateImage = async (imgReq: { section: string; prompt: string }) => {
       try {
@@ -264,7 +382,6 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
               const { data: { publicUrl } } = adminClient.storage.from("product-images").getPublicUrl(path);
               generatedImages[imgReq.section] = publicUrl;
 
-              // Save to image pool for future reuse
               await adminClient.from("theme_image_pool").insert({
                 category,
                 section_type: imgReq.section,
@@ -279,19 +396,25 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
       }
     };
 
-    // Run in parallel batches of 3
     for (let i = 0; i < promptsToGenerate.length; i += 3) {
       const batch = promptsToGenerate.slice(i, i + 3);
       await Promise.all(batch.map(generateImage));
     }
 
-    // Assign images to sections
+    // ── FIX: Assign images using the SAME keys the AI returns (e.g. "hero", not "home_hero") ──
     for (const section of homeSections) {
-      const key = `home_${section.type}`;
-      if (generatedImages[key]) section.image = generatedImages[key];
+      // Try direct match first (AI returns "hero", "image_with_text", etc.)
+      if (generatedImages[section.type]) {
+        section.image = generatedImages[section.type];
+      }
+      // Also check with prefix for backward compatibility
+      const prefixKey = `home_${section.type}`;
+      if (!section.image && generatedImages[prefixKey]) {
+        section.image = generatedImages[prefixKey];
+      }
     }
 
-    // ── Save blueprints from this generation for future reuse ──
+    // Save blueprints for future reuse
     const blueprintInserts = homeSections
       .filter(s => !blueprintLookup[s.type] || blueprintLookup[s.type].length < 5)
       .map(s => ({
@@ -306,6 +429,10 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
       await adminClient.from("theme_section_blueprints").insert(blueprintInserts);
     }
 
+    // ── Generate all other pages deterministically (zero AI cost) ──
+    const otherPages = generateAllPages(designDna.name, category);
+    const footer = generateFooter(designDna.name);
+
     // ── Calculate cost ──
     const textCost = (dnaTokens / 1000) * 0.05;
     const newImagesCount = promptsToGenerate.length;
@@ -313,19 +440,21 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
     const totalCostInr = Math.round((textCost + imageCost) * 100) / 100;
     const poolReused = imagePrompts.length - newImagesCount;
 
-    const thumbnail = generatedImages["home_hero"] || Object.values(generatedImages)[0] || null;
+    // Thumbnail: use hero image or first available
+    const thumbnail = generatedImages["hero"] || generatedImages["home_hero"] || Object.values(generatedImages)[0] || null;
 
     const { data: pack, error: insertErr } = await adminClient.from("theme_packs").insert({
       name: designDna.name,
       category,
       description: designDna.description,
       thumbnail,
-      pages: { home: homeSections },
+      pages: { home: homeSections, ...otherPages },
       theme_config: {
         colors: designDna.colors,
         fonts: designDna.fonts,
         borderRadius: designDna.borderRadius,
         gradientBackground: designDna.gradientBackground,
+        footer,
       },
       price: 499,
       ai_generation_cost: totalCostInr,
@@ -341,6 +470,7 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
       images_generated: newImagesCount,
       images_reused: poolReused,
       cost: totalCostInr,
+      pages_generated: Object.keys({ home: true, ...otherPages }).length,
       optimization: poolReused > 0 ? `Saved ₹${(poolReused * 3.5).toFixed(2)} by reusing ${poolReused} cached images` : "First generation for this category — images cached for next time",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -353,7 +483,6 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
   }
 });
 
-// ── Parse styleHints string into structured preferences ──
 function parseStyleHints(hints: string) {
   const result = {
     mood: "Bold",

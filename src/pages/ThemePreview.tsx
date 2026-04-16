@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, ArrowLeft, Star, ChevronLeft, ChevronRight, ArrowUp, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Star, ChevronLeft, ChevronRight, ArrowUp, X, Mail, Phone, MapPin, Clock, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAnimateOnScroll } from '@/hooks/useAnimateOnScroll';
 
@@ -80,6 +80,53 @@ const TestimonialCarousel = ({ testimonials, colors, fonts, borderRadius }: { te
   );
 };
 
+/* ── FAQ Accordion ── */
+const FAQAccordion = ({ items, colors, fonts, borderRadius }: { items: any[]; colors: any; fonts: any; borderRadius: number }) => {
+  const [openIdx, setOpenIdx] = useState<number | null>(0);
+  return (
+    <div className="space-y-2">
+      {items.map((item: any, i: number) => (
+        <div key={i} className="border overflow-hidden" style={{ borderColor: colors.secondary, borderRadius: `${borderRadius / 2}px` }}>
+          <button
+            className="w-full flex items-center justify-between p-4 text-left text-sm font-medium transition-colors hover:opacity-80"
+            style={{ backgroundColor: openIdx === i ? colors.secondary : 'transparent' }}
+            onClick={() => setOpenIdx(openIdx === i ? null : i)}
+          >
+            <span style={{ fontFamily: fonts.heading }}>{item.q}</span>
+            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${openIdx === i ? 'rotate-180' : ''}`} />
+          </button>
+          <div
+            className="overflow-hidden transition-all duration-300"
+            style={{ maxHeight: openIdx === i ? '200px' : '0px', opacity: openIdx === i ? 1 : 0 }}
+          >
+            <p className="p-4 pt-0 text-sm opacity-70 leading-relaxed" style={{ fontFamily: fonts.body }}>{item.a}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ── Page navigation ── */
+const PAGE_TABS = [
+  { key: 'home', label: 'Home' },
+  { key: 'shop', label: 'Shop' },
+  { key: 'about', label: 'About' },
+  { key: 'contact', label: 'Contact' },
+  { key: 'faq', label: 'FAQ' },
+  { key: 'privacy_policy', label: 'Privacy' },
+  { key: 'return_policy', label: 'Returns' },
+  { key: 'terms', label: 'Terms' },
+  { key: 'shipping_policy', label: 'Shipping' },
+];
+
+/* ── Footer links constant ── */
+const FOOTER_COLUMNS = [
+  { title: 'Quick Links', links: ['Shop', 'New Arrivals', 'Best Sellers', 'About Us'] },
+  { title: 'Customer Support', links: ['Contact Us', 'FAQ', 'Shipping Info', 'Track Order'] },
+  { title: 'Legal', links: ['Privacy Policy', 'Return Policy', 'Terms of Service', 'Shipping Policy'] },
+];
+
 const ThemePreview = () => {
   const [searchParams] = useSearchParams();
   const themeId = searchParams.get('theme');
@@ -87,6 +134,7 @@ const ThemePreview = () => {
   const [loading, setLoading] = useState(true);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  const [currentPage, setCurrentPage] = useState('home');
 
   useEffect(() => {
     if (!themeId) return;
@@ -108,9 +156,14 @@ const ThemePreview = () => {
   const pages = pack.pages || {};
   const homeSections = pages.home || [];
   const borderRadius = config.borderRadius || 12;
+  const footerConfig = config.footer || {};
 
-  // Load Google Fonts
   const fontLink = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fonts.heading || 'Inter')}:wght@400;500;600;700&family=${encodeURIComponent(fonts.body || 'Inter')}:wght@400;500;600&display=swap`;
+
+  const switchPage = (page: string) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const renderSection = (section: any, i: number) => {
     const anim = section.animation || 'fade-in';
@@ -129,7 +182,7 @@ const ThemePreview = () => {
       case 'hero':
         return (
           <AnimSection key={i} animation={anim}>
-            <div className={`relative overflow-hidden ${anim === 'ken-burns' ? '' : ''}`} style={{ backgroundColor: colors.primary, minHeight: section.height === 'large' ? 550 : section.height === 'small' ? 280 : 420 }}>
+            <div className={`relative overflow-hidden`} style={{ backgroundColor: colors.primary, minHeight: section.height === 'large' ? 550 : section.height === 'small' ? 280 : 420 }}>
               {section.image && <img src={section.image} alt="" className={`absolute inset-0 w-full h-full object-cover ${anim === 'ken-burns' ? 'animate-ken-burns' : ''}`} />}
               <div className="absolute inset-0 bg-black/40" />
               <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6 py-20" style={{ minHeight: section.height === 'large' ? 550 : section.height === 'small' ? 280 : 420 }}>
@@ -327,6 +380,179 @@ const ThemePreview = () => {
     }
   };
 
+  /* ── Render non-home pages ── */
+  const renderShopPage = () => (
+    <div className="py-12 px-6 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: fonts.heading }}>All Products</h1>
+      <p className="text-sm opacity-60 mb-8">Browse our complete collection</p>
+      <div className="flex flex-wrap gap-2 mb-8">
+        {(pages.shop?.filters || ['Category', 'Price', 'Rating']).map((f: string) => (
+          <span key={f} className="px-4 py-2 text-xs font-medium rounded-full border cursor-pointer hover:opacity-80" style={{ borderColor: colors.secondary, backgroundColor: colors.card }}>{f}</span>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        {Array(8).fill(0).map((_, n) => (
+          <div key={n} className="overflow-hidden group cursor-pointer hover-lift" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
+            <div className="aspect-square" style={{ backgroundColor: colors.secondary }} />
+            <div className="p-4 space-y-2">
+              <div className="h-4 rounded" style={{ backgroundColor: colors.secondary, width: '75%' }} />
+              <div className="h-3 rounded" style={{ backgroundColor: colors.primary + '40', width: '35%' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderAboutPage = () => {
+    const about = pages.about || {};
+    const sections = about.sections || [];
+    return (
+      <div>
+        {sections.map((s: any, i: number) => {
+          switch (s.type) {
+            case 'hero_banner':
+              return (
+                <div key={i} className="py-20 px-6 text-center" style={{ background: config.gradientBackground || `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}30)` }}>
+                  <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ fontFamily: fonts.heading }}>{s.title}</h1>
+                  <p className="text-lg opacity-70 max-w-xl mx-auto">{s.subtitle}</p>
+                </div>
+              );
+            case 'story':
+            case 'mission':
+              return (
+                <div key={i} className="py-12 px-6 max-w-3xl mx-auto">
+                  <h2 className="text-2xl font-bold mb-4" style={{ fontFamily: fonts.heading }}>{s.title}</h2>
+                  <p className="opacity-70 leading-relaxed whitespace-pre-line" style={{ fontFamily: fonts.body }}>{s.content}</p>
+                </div>
+              );
+            case 'values':
+              return (
+                <div key={i} className="py-12 px-6" style={{ backgroundColor: colors.secondary }}>
+                  <h2 className="text-2xl font-bold mb-8 text-center" style={{ fontFamily: fonts.heading }}>{s.title}</h2>
+                  <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+                    {(s.values || []).map((v: any, vi: number) => (
+                      <div key={vi} className="text-center p-6 rounded-xl" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px` }}>
+                        <span className="text-3xl">{v.icon}</span>
+                        <h3 className="font-semibold text-sm mt-3 mb-2" style={{ fontFamily: fonts.heading }}>{v.title}</h3>
+                        <p className="text-xs opacity-60">{v.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            case 'team':
+              return (
+                <div key={i} className="py-12 px-6 max-w-4xl mx-auto text-center">
+                  <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: fonts.heading }}>{s.title}</h2>
+                  <p className="text-sm opacity-60 mb-8">{s.subtitle}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    {['Founder', 'Designer', 'Developer', 'Marketing'].map((role, ri) => (
+                      <div key={ri}>
+                        <div className="w-20 h-20 rounded-full mx-auto mb-3" style={{ backgroundColor: colors.secondary }} />
+                        <p className="text-sm font-semibold">{role}</p>
+                        <p className="text-xs opacity-50">Team Member</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            default:
+              return null;
+          }
+        })}
+      </div>
+    );
+  };
+
+  const renderContactPage = () => {
+    const contact = pages.contact || {};
+    return (
+      <div className="py-16 px-6 max-w-5xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ fontFamily: fonts.heading }}>{contact.title || 'Get In Touch'}</h1>
+          <p className="opacity-60">{contact.subtitle || 'We\'d love to hear from you.'}</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            {(contact.fields || ['Name', 'Email', 'Subject', 'Message']).map((field: string) => (
+              <div key={field}>
+                <label className="text-xs font-semibold block mb-1.5">{field}</label>
+                {field === 'Message' ? (
+                  <div className="h-32 border rounded-lg" style={{ borderColor: colors.secondary, backgroundColor: colors.card, borderRadius: `${borderRadius / 2}px` }} />
+                ) : (
+                  <div className="h-11 border rounded-lg" style={{ borderColor: colors.secondary, backgroundColor: colors.card, borderRadius: `${borderRadius / 2}px` }} />
+                )}
+              </div>
+            ))}
+            <button className="w-full py-3 text-sm font-semibold text-white" style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius}px` }}>Send Message</button>
+          </div>
+          <div className="space-y-6">
+            {(contact.info || []).map((info: any, i: number) => (
+              <div key={i} className="flex items-start gap-4">
+                <span className="text-2xl">{info.icon}</span>
+                <div>
+                  <p className="text-sm font-semibold">{info.label}</p>
+                  <p className="text-sm opacity-60">{info.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderFAQPage = () => {
+    const faq = pages.faq || {};
+    return (
+      <div className="py-16 px-6 max-w-3xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ fontFamily: fonts.heading }}>{faq.title || 'FAQ'}</h1>
+          <p className="opacity-60">{faq.subtitle || 'Find answers to common questions.'}</p>
+        </div>
+        <FAQAccordion items={faq.items || []} colors={colors} fonts={fonts} borderRadius={borderRadius} />
+      </div>
+    );
+  };
+
+  const renderLegalPage = (pageKey: string) => {
+    const data = pages[pageKey] || {};
+    return (
+      <div className="py-16 px-6 max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: fonts.heading }}>{data.title || pageKey.replace(/_/g, ' ')}</h1>
+        {data.lastUpdated && <p className="text-xs opacity-50 mb-8">Last updated: {data.lastUpdated}</p>}
+        <div className="space-y-8">
+          {(data.sections || []).map((s: any, i: number) => (
+            <div key={i}>
+              <h2 className="text-lg font-semibold mb-3" style={{ fontFamily: fonts.heading }}>{s.heading}</h2>
+              <p className="text-sm opacity-70 leading-relaxed whitespace-pre-line" style={{ fontFamily: fonts.body }}>{s.content}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'home': return <>{homeSections.map(renderSection)}</>;
+      case 'shop': return renderShopPage();
+      case 'about': return renderAboutPage();
+      case 'contact': return renderContactPage();
+      case 'faq': return renderFAQPage();
+      case 'privacy_policy':
+      case 'return_policy':
+      case 'terms':
+      case 'shipping_policy':
+        return renderLegalPage(currentPage);
+      default: return <>{homeSections.map(renderSection)}</>;
+    }
+  };
+
+  // Build nav items from available pages
+  const availablePages = PAGE_TABS.filter(p => p.key === 'home' || pages[p.key]);
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: colors.background, color: colors.text }}>
       <link rel="stylesheet" href={fontLink} />
@@ -338,18 +564,24 @@ const ThemePreview = () => {
             <ArrowLeft className="h-4 w-4" /> Back
           </Button>
           <span className="text-sm font-semibold">{pack.name}</span>
-          <span className="text-xs text-muted-foreground capitalize">— {pack.category} theme</span>
+          <span className="text-xs text-muted-foreground capitalize">— {pack.category} theme · {availablePages.length} pages</span>
         </div>
         <span className="text-xs text-muted-foreground">Preview Mode · ₹{pack.price}</span>
       </div>
 
-      {/* Render all home sections */}
-      {/* Header */}
+      {/* Store Header with real navigation */}
       <header className="px-6 py-4 flex items-center justify-between border-b sticky top-[49px] z-40 backdrop-blur-sm" style={{ backgroundColor: colors.card + 'ee', borderColor: colors.secondary }}>
         <span className="text-lg font-bold" style={{ fontFamily: fonts.heading }}>{pack.name} Store</span>
         <nav className="hidden md:flex gap-6 text-sm" style={{ fontFamily: fonts.body }}>
-          {['Home', 'Shop', 'About', 'Blog', 'Contact'].map(item => (
-            <span key={item} className="cursor-default opacity-70 hover:opacity-100 transition-opacity">{item}</span>
+          {availablePages.slice(0, 6).map(item => (
+            <button
+              key={item.key}
+              onClick={() => switchPage(item.key)}
+              className="transition-opacity cursor-pointer"
+              style={{ opacity: currentPage === item.key ? 1 : 0.6, fontWeight: currentPage === item.key ? 600 : 400, borderBottom: currentPage === item.key ? `2px solid ${colors.primary}` : '2px solid transparent', paddingBottom: '4px' }}
+            >
+              {item.label}
+            </button>
           ))}
         </nav>
         <div className="flex gap-3">
@@ -361,28 +593,57 @@ const ThemePreview = () => {
         </div>
       </header>
 
-      {homeSections.map(renderSection)}
+      {/* Page Content */}
+      {renderCurrentPage()}
 
-      {/* Footer */}
+      {/* Industry-Standard Footer */}
       <footer className="py-12 px-6 border-t" style={{ backgroundColor: colors.card, borderColor: colors.secondary }}>
         <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-8">
           <div>
             <h4 className="font-bold mb-3" style={{ fontFamily: fonts.heading }}>{pack.name} Store</h4>
             <p className="text-xs opacity-50 leading-relaxed">Premium quality products curated for you. Shop with confidence.</p>
-          </div>
-          {['Quick Links', 'Support', 'Legal'].map(col => (
-            <div key={col}>
-              <h4 className="font-semibold text-sm mb-3">{col}</h4>
-              <div className="space-y-2">
-                {['Link 1', 'Link 2', 'Link 3'].map(l => (
-                  <div key={l} className="text-xs opacity-50 hover:opacity-80 cursor-default">{l}</div>
+            {footerConfig.social_links && (
+              <div className="flex gap-3 mt-4">
+                {Object.entries(footerConfig.social_links || {}).filter(([, url]) => url).map(([platform]) => (
+                  <span key={platform} className="text-sm opacity-50 hover:opacity-100 cursor-pointer capitalize">{platform}</span>
                 ))}
+              </div>
+            )}
+          </div>
+          {(footerConfig.columns || FOOTER_COLUMNS).map((col: any) => (
+            <div key={col.title}>
+              <h4 className="font-semibold text-sm mb-3">{col.title}</h4>
+              <div className="space-y-2">
+                {(col.links || []).map((link: any) => {
+                  const label = typeof link === 'string' ? link : link.label;
+                  const pageKey = typeof link === 'string'
+                    ? label.toLowerCase().replace(/\s+/g, '_').replace('&', 'and')
+                    : null;
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => {
+                        // Map footer links to pages
+                        const linkMap: Record<string, string> = {
+                          'Shop': 'shop', 'New Arrivals': 'shop', 'Best Sellers': 'shop', 'About Us': 'about',
+                          'Contact Us': 'contact', 'FAQ': 'faq', 'Shipping Info': 'shipping_policy', 'Track Order': 'shop',
+                          'Privacy Policy': 'privacy_policy', 'Return Policy': 'return_policy', 'Terms of Service': 'terms', 'Shipping Policy': 'shipping_policy',
+                        };
+                        const target = linkMap[label] || 'home';
+                        switchPage(target);
+                      }}
+                      className="block text-xs opacity-50 hover:opacity-80 cursor-pointer transition-opacity"
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
         </div>
         <div className="max-w-6xl mx-auto mt-8 pt-6 border-t text-center text-xs opacity-40" style={{ borderColor: colors.secondary }}>
-          © 2026 {pack.name} Store. All rights reserved.
+          {footerConfig.copyright || `© ${new Date().getFullYear()} ${pack.name} Store. All rights reserved.`}
         </div>
       </footer>
 

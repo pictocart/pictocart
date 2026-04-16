@@ -310,219 +310,47 @@ const ThemePackEditor = ({ pack, onClose }: { pack: ThemePack; onClose: () => vo
 };
 
 const ThemePreviewModal = ({ pack }: { pack: ThemePack }) => {
-  const pages = pack.pages || {};
-  const homeSections = pages.home || [];
-
-  const SectionLabel = ({ label }: { label: string }) => (
-    <div className="absolute top-1 left-1 bg-foreground/70 text-background text-[9px] font-semibold px-1.5 py-0.5 rounded z-10">
-      {label}
-    </div>
-  );
-
-  const WireframeBlock = ({ h = 'h-3', w = 'w-full' }: { h?: string; w?: string }) => (
-    <div className={`${h} ${w} rounded bg-muted-foreground/20`} />
-  );
+  const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const previewUrl = `${window.location.origin}/store/preview-theme?theme=${pack.id}`;
+  const widthMap = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
   return (
-    <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-      {/* Header */}
-      <div className="rounded-lg border bg-muted/30 p-3 relative">
-        <SectionLabel label="Header / Navigation" />
-        <div className="mt-5 flex items-center justify-between">
-          <div className="h-6 w-20 rounded bg-muted-foreground/25" />
-          <div className="flex gap-3">
-            {['Home', 'Shop', 'About', 'Blog', 'Contact'].map(l => (
-              <div key={l} className="h-3 w-10 rounded bg-muted-foreground/15" />
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <div className="h-5 w-5 rounded-full bg-muted-foreground/15" />
-            <div className="h-5 w-5 rounded-full bg-muted-foreground/15" />
-          </div>
-        </div>
+    <div className="space-y-3">
+      {/* Responsive toggles */}
+      <div className="flex items-center justify-center gap-2">
+        {(['desktop', 'tablet', 'mobile'] as const).map(vp => (
+          <button
+            key={vp}
+            onClick={() => setViewport(vp)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all capitalize ${viewport === vp ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary text-secondary-foreground border-border hover:bg-accent'}`}
+          >
+            {vp === 'desktop' ? '🖥️' : vp === 'tablet' ? '📱' : '📲'} {vp}
+          </button>
+        ))}
       </div>
 
-      {/* Home sections */}
-      {homeSections.map((section: any, i: number) => {
-        const label = section.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || `Section ${i + 1}`;
-        const animBadge = section.animation && section.animation !== 'none' ? section.animation : null;
-
-        return (
-          <div key={i} className="rounded-lg border bg-muted/30 p-3 relative">
-            <SectionLabel label={label} />
-            {animBadge && (
-              <div className="absolute top-1 right-1 bg-primary/20 text-primary text-[8px] font-semibold px-1.5 py-0.5 rounded">
-                ✨ {animBadge}
-              </div>
-            )}
-            <div className="mt-5">
-              {section.type === 'hero' && (
-                <div className="h-28 rounded bg-muted-foreground/10 flex flex-col items-center justify-center gap-2">
-                  <WireframeBlock h="h-4" w="w-48" />
-                  <WireframeBlock h="h-3" w="w-64" />
-                  <div className="h-7 w-28 rounded bg-muted-foreground/25 mt-1" />
-                </div>
-              )}
-              {section.type === 'featured_products' && (
-                <div className="space-y-2">
-                  <WireframeBlock h="h-3" w="w-36" />
-                  <div className="grid grid-cols-4 gap-2">
-                    {[1, 2, 3, 4].map(n => (
-                      <div key={n} className="rounded border border-muted-foreground/10 overflow-hidden">
-                        <div className="h-14 bg-muted-foreground/10" />
-                        <div className="p-1.5 space-y-1">
-                          <WireframeBlock h="h-2" w="w-3/4" />
-                          <WireframeBlock h="h-2" w="w-1/2" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {section.type === 'testimonials' && (
-                <div className="flex gap-2">
-                  {[1, 2, 3].map(n => (
-                    <div key={n} className="flex-1 rounded border border-muted-foreground/10 p-2 space-y-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-5 w-5 rounded-full bg-muted-foreground/15" />
-                        <WireframeBlock h="h-2" w="w-12" />
-                      </div>
-                      <div className="flex gap-0.5">{[1,2,3,4,5].map(s => <div key={s} className="h-2 w-2 rounded-full bg-muted-foreground/20" />)}</div>
-                      <WireframeBlock h="h-2" w="w-full" />
-                      <WireframeBlock h="h-2" w="w-3/4" />
-                    </div>
-                  ))}
-                </div>
-              )}
-              {section.type === 'countdown_timer' && (
-                <div className="flex flex-col items-center gap-2 py-2">
-                  <WireframeBlock h="h-3" w="w-32" />
-                  <div className="flex gap-3">
-                    {['DD', 'HH', 'MM', 'SS'].map(u => (
-                      <div key={u} className="flex flex-col items-center">
-                        <div className="h-10 w-10 rounded bg-muted-foreground/15 flex items-center justify-center text-[8px] font-bold text-muted-foreground">00</div>
-                        <span className="text-[7px] text-muted-foreground mt-0.5">{u}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {section.type === 'trust_badges' && (
-                <div className="flex justify-center gap-4 py-2">
-                  {['🚚', '🔒', '↩️', '💬'].map((icon, idx) => (
-                    <div key={idx} className="flex flex-col items-center gap-1">
-                      <span className="text-lg">{icon}</span>
-                      <WireframeBlock h="h-2" w="w-12" />
-                    </div>
-                  ))}
-                </div>
-              )}
-              {section.type === 'brand_marquee' && (
-                <div className="flex gap-4 py-2 overflow-hidden">
-                  {Array(6).fill(0).map((_, idx) => (
-                    <div key={idx} className="h-8 w-16 rounded bg-muted-foreground/10 shrink-0" />
-                  ))}
-                </div>
-              )}
-              {section.type === 'image_with_text' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="h-20 rounded bg-muted-foreground/10" />
-                  <div className="space-y-1.5 flex flex-col justify-center">
-                    <WireframeBlock h="h-3" w="w-3/4" />
-                    <WireframeBlock h="h-2" w="w-full" />
-                    <WireframeBlock h="h-2" w="w-5/6" />
-                    <div className="h-6 w-20 rounded bg-muted-foreground/25 mt-1" />
-                  </div>
-                </div>
-              )}
-              {section.type === 'collection_showcase' && (
-                <div className="grid grid-cols-3 gap-2">
-                  {[1, 2, 3].map(n => (
-                    <div key={n} className="relative h-20 rounded bg-muted-foreground/10 overflow-hidden">
-                      <div className="absolute bottom-1 left-1 right-1">
-                        <WireframeBlock h="h-2.5" w="w-2/3" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {section.type === 'instagram_feed' && (
-                <div className="space-y-1.5">
-                  <WireframeBlock h="h-3" w="w-32" />
-                  <div className="grid grid-cols-4 gap-1">
-                    {Array(4).fill(0).map((_, idx) => (
-                      <div key={idx} className="aspect-square rounded bg-muted-foreground/10" />
-                    ))}
-                  </div>
-                </div>
-              )}
-              {section.type === 'newsletter' && (
-                <div className="flex flex-col items-center gap-2 py-2">
-                  <WireframeBlock h="h-3" w="w-40" />
-                  <div className="flex gap-2 w-full max-w-xs">
-                    <div className="flex-1 h-7 rounded border border-muted-foreground/15" />
-                    <div className="h-7 w-20 rounded bg-muted-foreground/25" />
-                  </div>
-                </div>
-              )}
-              {section.type === 'announcement_bar' && (
-                <div className="h-8 rounded bg-muted-foreground/15 flex items-center justify-center">
-                  <WireframeBlock h="h-2" w="w-48" />
-                </div>
-              )}
-              {section.type === 'text_block' && (
-                <div className="flex flex-col items-center gap-1.5 py-2">
-                  <WireframeBlock h="h-3" w="w-44" />
-                  <WireframeBlock h="h-2" w="w-56" />
-                </div>
-              )}
-              {!['hero', 'featured_products', 'testimonials', 'countdown_timer', 'trust_badges', 'brand_marquee', 'image_with_text', 'collection_showcase', 'instagram_feed', 'newsletter', 'announcement_bar', 'text_block', 'category_grid'].includes(section.type) && (
-                <div className="h-16 rounded bg-muted-foreground/8 flex items-center justify-center">
-                  <span className="text-[10px] text-muted-foreground capitalize">{section.type?.replace(/_/g, ' ')}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Product Listing Page */}
-      <div className="rounded-lg border bg-muted/30 p-3 relative">
-        <SectionLabel label="Product Listing Page" />
-        <div className="mt-5 space-y-2">
-          <div className="flex items-center justify-between">
-            <WireframeBlock h="h-3" w="w-24" />
-            <div className="flex gap-2">
-              <div className="h-5 w-16 rounded border border-muted-foreground/15 bg-muted-foreground/5" />
-              <div className="h-5 w-16 rounded border border-muted-foreground/15 bg-muted-foreground/5" />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {[1, 2, 3, 4, 5, 6].map(n => (
-              <div key={n} className="rounded border border-muted-foreground/10 overflow-hidden">
-                <div className="h-16 bg-muted-foreground/10" />
-                <div className="p-1.5 space-y-1">
-                  <WireframeBlock h="h-2" w="w-3/4" />
-                  <WireframeBlock h="h-2" w="w-1/3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Pages info */}
+      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+        <span className="text-xs text-muted-foreground">Pages:</span>
+        {Object.keys(pack.pages || {}).map(page => (
+          <span key={page} className="px-2 py-0.5 text-[10px] font-medium bg-secondary rounded-full capitalize">
+            {page.replace(/_/g, ' ')}
+          </span>
+        ))}
       </div>
 
-      {/* Footer */}
-      <div className="rounded-lg border bg-muted/30 p-3 relative">
-        <SectionLabel label="Footer" />
-        <div className="mt-5 grid grid-cols-4 gap-3">
-          {['Brand', 'Links', 'Support', 'Social'].map(col => (
-            <div key={col} className="space-y-1.5">
-              <WireframeBlock h="h-2.5" w="w-12" />
-              <WireframeBlock h="h-2" w="w-16" />
-              <WireframeBlock h="h-2" w="w-14" />
-              <WireframeBlock h="h-2" w="w-10" />
-            </div>
-          ))}
+      {/* Iframe preview */}
+      <div className="flex justify-center" style={{ minHeight: '500px' }}>
+        <div
+          className="border rounded-lg overflow-hidden shadow-lg transition-all duration-300 bg-white"
+          style={{ width: widthMap[viewport], maxWidth: '100%', height: viewport === 'mobile' ? '667px' : viewport === 'tablet' ? '600px' : '500px' }}
+        >
+          <iframe
+            src={previewUrl}
+            className="w-full h-full border-0"
+            title={`${pack.name} Preview`}
+            style={{ transform: viewport === 'desktop' ? 'scale(0.65)' : viewport === 'tablet' ? 'scale(0.75)' : 'scale(0.85)', transformOrigin: 'top left', width: viewport === 'desktop' ? '153.8%' : viewport === 'tablet' ? '133.3%' : '117.6%', height: viewport === 'desktop' ? '153.8%' : viewport === 'tablet' ? '133.3%' : '117.6%' }}
+          />
         </div>
       </div>
     </div>
