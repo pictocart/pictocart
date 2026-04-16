@@ -13,6 +13,7 @@ import { CreditCard, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff, IndianRupe
 const PaymentSettings = () => {
   const { store, setStore } = useStore();
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showSecret, setShowSecret] = useState(false);
   const [form, setForm] = useState({
     key_id: '',
@@ -21,15 +22,25 @@ const PaymentSettings = () => {
   });
 
   useEffect(() => {
-    if (store?.settings?.razorpay) {
-      const rp = store.settings.razorpay;
-      setForm({
-        key_id: rp.key_id || '',
-        key_secret: rp.key_secret || '',
-        test_mode: rp.test_mode ?? true,
-      });
-    }
-  }, [store]);
+    const load = async () => {
+      if (!store?.id) return;
+      setLoading(true);
+      const { data } = await supabase
+        .from('store_secrets' as any)
+        .select('razorpay_key_id, razorpay_key_secret, razorpay_test_mode')
+        .eq('store_id', store.id)
+        .maybeSingle();
+      if (data) {
+        setForm({
+          key_id: (data as any).razorpay_key_id || '',
+          key_secret: (data as any).razorpay_key_secret || '',
+          test_mode: (data as any).razorpay_test_mode ?? true,
+        });
+      }
+      setLoading(false);
+    };
+    load();
+  }, [store?.id]);
 
   const isConnected = !!form.key_id && !!form.key_secret;
 
@@ -41,25 +52,26 @@ const PaymentSettings = () => {
     }
 
     setSaving(true);
-    const updatedSettings = {
-      ...(store.settings || {}),
-      razorpay: {
-        key_id: form.key_id,
-        key_secret: form.key_secret,
-        test_mode: form.test_mode,
-      },
-    };
-
     const { error } = await supabase
-      .from('stores')
-      .update({ settings: updatedSettings })
-      .eq('id', store.id);
+      .from('store_secrets' as any)
+      .upsert({
+        store_id: store.id,
+        razorpay_key_id: form.key_id,
+        razorpay_key_secret: form.key_secret,
+        razorpay_test_mode: form.test_mode,
+      }, { onConflict: 'store_id' });
 
     if (error) {
       toast.error('Failed to save payment settings');
     } else {
-      toast.success('Payment settings saved successfully');
+      // Mirror "connected" flag (no secrets) into public settings for UI gating
+      const updatedSettings = {
+        ...((store.settings as any) || {}),
+        razorpay: { connected: true, test_mode: form.test_mode },
+      };
+      await supabase.from('stores').update({ settings: updatedSettings }).eq('id', store.id);
       setStore({ ...store, settings: updatedSettings });
+      toast.success('Payment settings saved successfully');
     }
     setSaving(false);
   };
@@ -67,21 +79,18 @@ const PaymentSettings = () => {
   const handleDisconnect = async () => {
     if (!store) return;
     setSaving(true);
-    const updatedSettings = { ...(store.settings || {}) };
+    await supabase
+      .from('store_secrets' as any)
+      .update({ razorpay_key_id: null, razorpay_key_secret: null })
+      .eq('store_id', store.id);
+
+    const updatedSettings = { ...((store.settings as any) || {}) };
     delete updatedSettings.razorpay;
+    await supabase.from('stores').update({ settings: updatedSettings }).eq('id', store.id);
 
-    const { error } = await supabase
-      .from('stores')
-      .update({ settings: updatedSettings })
-      .eq('id', store.id);
-
-    if (error) {
-      toast.error('Failed to disconnect');
-    } else {
-      setForm({ key_id: '', key_secret: '', test_mode: true });
-      toast.success('Razorpay disconnected');
-      setStore({ ...store, settings: updatedSettings });
-    }
+    setForm({ key_id: '', key_secret: '', test_mode: true });
+    setStore({ ...store, settings: updatedSettings });
+    toast.success('Razorpay disconnected');
     setSaving(false);
   };
 
@@ -94,7 +103,6 @@ const PaymentSettings = () => {
         </p>
       </div>
 
-      {/* Status Banner */}
       <Card className={isConnected ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' : 'border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20'}>
         <CardContent className="flex items-center gap-3 p-4">
           {isConnected ? (
@@ -124,7 +132,6 @@ const PaymentSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Razorpay Setup */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -150,6 +157,7 @@ const PaymentSettings = () => {
               placeholder="rzp_test_xxxxxxxxxx or rzp_live_xxxxxxxxxx"
               value={form.key_id}
               onChange={(e) => setForm((f) => ({ ...f, key_id: e.target.value }))}
+              disabled={loading}
             />
           </div>
 
@@ -162,6 +170,7 @@ const PaymentSettings = () => {
                 value={form.key_secret}
                 onChange={(e) => setForm((f) => ({ ...f, key_secret: e.target.value }))}
                 className="pr-10"
+                disabled={loading}
               />
               <button
                 type="button"
@@ -171,6 +180,9 @@ const PaymentSettings = () => {
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Stored securely server-side — never exposed to your storefront visitors.
+            </p>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-3">
@@ -187,7 +199,7 @@ const PaymentSettings = () => {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || loading}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Settings
             </Button>
@@ -200,7 +212,6 @@ const PaymentSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Payment Methods Info */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">

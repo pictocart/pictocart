@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,11 +17,63 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, api_token, test_mode } = body;
+    const { action, store_id } = body;
 
-    if (!action || !api_token) {
+    if (!action || !store_id) {
       return new Response(
-        JSON.stringify({ error: "action and api_token are required" }),
+        JSON.stringify({ error: "action and store_id are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const admin = createClient(supabaseUrl, serviceKey);
+
+    // Look up the API token server-side. Never accept it from the client.
+    const { data: secrets } = await admin
+      .from("store_secrets")
+      .select("delhivery_api_token, delhivery_test_mode")
+      .eq("store_id", store_id)
+      .maybeSingle();
+
+    const api_token = secrets?.delhivery_api_token;
+    const test_mode = secrets?.delhivery_test_mode ?? true;
+
+    // For mutating/sensitive actions, require an authenticated store owner
+    const sensitiveActions = new Set(["create-shipment"]);
+    if (sensitiveActions.has(action)) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+      if (claimsErr || !claimsData?.claims?.sub) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: store } = await admin
+        .from("stores")
+        .select("user_id")
+        .eq("id", store_id)
+        .maybeSingle();
+      if (!store || store.user_id !== claimsData.claims.sub) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (!api_token) {
+      return new Response(
+        JSON.stringify({ error: "Shipping not configured for this store" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -35,10 +88,10 @@ serve(async (req) => {
 
     switch (action) {
       case "check-serviceability": {
-        const { origin_pincode, destination_pincode } = body;
-        if (!origin_pincode || !destination_pincode) {
+        const { destination_pincode } = body;
+        if (!destination_pincode) {
           return new Response(
-            JSON.stringify({ error: "origin_pincode and destination_pincode required" }),
+            JSON.stringify({ error: "destination_pincode required" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -190,7 +243,7 @@ serve(async (req) => {
     });
   } catch (error: unknown) {
     console.error("delhivery-proxy error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = "Shipping provider error";
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

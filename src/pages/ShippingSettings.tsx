@@ -10,51 +10,74 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Truck, Loader2, CheckCircle2, XCircle, MapPin } from 'lucide-react';
 
-interface ShippingConfig {
-  api_token: string;
-  test_mode: boolean;
-  pickup: {
-    name: string;
-    phone: string;
-    address: string;
-    city: string;
-    state: string;
-    pincode: string;
-  };
+interface PickupAddress {
+  name: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
 }
 
-const emptyConfig: ShippingConfig = {
-  api_token: '',
-  test_mode: true,
-  pickup: { name: '', phone: '', address: '', city: '', state: '', pincode: '' },
-};
+const emptyPickup: PickupAddress = { name: '', phone: '', address: '', city: '', state: '', pincode: '' };
 
 const ShippingSettings = () => {
   const { store, setStore } = useStore();
-  const [config, setConfig] = useState<ShippingConfig>(emptyConfig);
+  const [pickup, setPickup] = useState<PickupAddress>(emptyPickup);
+  const [apiToken, setApiToken] = useState('');
+  const [testMode, setTestMode] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
 
   useEffect(() => {
-    if (store?.settings) {
-      const s = store.settings as any;
-      if (s?.shipping) {
-        setConfig({ ...emptyConfig, ...s.shipping });
+    const load = async () => {
+      if (!store?.id) return;
+      setLoading(true);
+      // Pickup address (non-secret) lives in stores.settings.shipping
+      const s = (store.settings as any)?.shipping;
+      if (s?.pickup) setPickup({ ...emptyPickup, ...s.pickup });
+      // Token (secret) lives in store_secrets
+      const { data } = await supabase
+        .from('store_secrets' as any)
+        .select('delhivery_api_token, delhivery_test_mode')
+        .eq('store_id', store.id)
+        .maybeSingle();
+      if (data) {
+        setApiToken((data as any).delhivery_api_token || '');
+        setTestMode((data as any).delhivery_test_mode ?? true);
       }
-    }
-  }, [store]);
+      setLoading(false);
+    };
+    load();
+  }, [store?.id]);
 
   const handleSave = async () => {
     if (!store) return;
     setSaving(true);
-    const settings = { ...(store.settings as any), shipping: config };
-    const { error } = await supabase
-      .from('stores')
-      .update({ settings })
-      .eq('id', store.id);
 
-    if (error) {
+    // Save pickup + flags (NO api_token) to public settings
+    const settings = {
+      ...((store.settings as any) || {}),
+      shipping: {
+        configured: !!apiToken,
+        test_mode: testMode,
+        pickup,
+      },
+    };
+    const { error } = await supabase.from('stores').update({ settings }).eq('id', store.id);
+
+    // Save token to private store_secrets
+    const { error: secErr } = await supabase
+      .from('store_secrets' as any)
+      .upsert({
+        store_id: store.id,
+        delhivery_api_token: apiToken || null,
+        delhivery_test_mode: testMode,
+      }, { onConflict: 'store_id' });
+
+    if (error || secErr) {
       toast.error('Failed to save shipping settings');
     } else {
       toast.success('Shipping settings saved');
@@ -64,8 +87,9 @@ const ShippingSettings = () => {
   };
 
   const handleTestConnection = async () => {
-    if (!config.api_token || !config.pickup.pincode) {
-      toast.error('Enter API token and pickup pincode first');
+    if (!store?.id) return;
+    if (!apiToken || !pickup.pincode) {
+      toast.error('Enter API token and pickup pincode first, then save before testing');
       return;
     }
     setTesting(true);
@@ -79,10 +103,8 @@ const ShippingSettings = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'check-serviceability',
-            api_token: config.api_token,
-            test_mode: config.test_mode,
-            origin_pincode: config.pickup.pincode,
-            destination_pincode: '110001', // Delhi for test
+            store_id: store.id,
+            destination_pincode: '110001',
           }),
         }
       );
@@ -91,7 +113,7 @@ const ShippingSettings = () => {
         toast.success('Connection successful! Delhivery API is working.');
       } else {
         setTestResult('error');
-        toast.error('Connection failed. Check your API token.');
+        toast.error('Connection failed. Save your settings, then try again.');
       }
     } catch {
       setTestResult('error');
@@ -100,10 +122,10 @@ const ShippingSettings = () => {
     setTesting(false);
   };
 
-  const updatePickup = (key: string, value: string) =>
-    setConfig((c) => ({ ...c, pickup: { ...c.pickup, [key]: value } }));
+  const updatePickup = (key: keyof PickupAddress, value: string) =>
+    setPickup((c) => ({ ...c, [key]: value }));
 
-  const isConfigured = !!config.api_token && !!config.pickup.pincode;
+  const isConfigured = !!apiToken && !!pickup.pincode;
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -112,7 +134,6 @@ const ShippingSettings = () => {
         <p className="text-sm text-muted-foreground">Configure Delhivery for automated shipping</p>
       </div>
 
-      {/* Status */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -132,11 +153,12 @@ const ShippingSettings = () => {
         </CardHeader>
       </Card>
 
-      {/* API Token */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">API Credentials</CardTitle>
-          <CardDescription>Get your API token from the Delhivery partner dashboard</CardDescription>
+          <CardDescription>
+            API token is stored securely server-side and never sent to storefront visitors.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -144,8 +166,9 @@ const ShippingSettings = () => {
             <Input
               type="password"
               placeholder="Enter your Delhivery API Token"
-              value={config.api_token}
-              onChange={(e) => setConfig((c) => ({ ...c, api_token: e.target.value }))}
+              value={apiToken}
+              onChange={(e) => setApiToken(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
@@ -154,12 +177,12 @@ const ShippingSettings = () => {
               <p className="text-xs text-muted-foreground">Use staging API for testing</p>
             </div>
             <Switch
-              checked={config.test_mode}
-              onCheckedChange={(checked) => setConfig((c) => ({ ...c, test_mode: checked }))}
+              checked={testMode}
+              onCheckedChange={setTestMode}
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleTestConnection} variant="outline" disabled={testing || !config.api_token}>
+            <Button onClick={handleTestConnection} variant="outline" disabled={testing || !apiToken}>
               {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Test Connection
             </Button>
@@ -177,7 +200,6 @@ const ShippingSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Pickup Address */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -189,58 +211,34 @@ const ShippingSettings = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Contact Name *</Label>
-              <Input
-                placeholder="Warehouse contact name"
-                value={config.pickup.name}
-                onChange={(e) => updatePickup('name', e.target.value)}
-              />
+              <Input placeholder="Warehouse contact name" value={pickup.name} onChange={(e) => updatePickup('name', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Phone *</Label>
-              <Input
-                placeholder="10-digit phone number"
-                value={config.pickup.phone}
-                onChange={(e) => updatePickup('phone', e.target.value)}
-              />
+              <Input placeholder="10-digit phone number" value={pickup.phone} onChange={(e) => updatePickup('phone', e.target.value)} />
             </div>
             <div className="md:col-span-2 space-y-2">
               <Label>Address *</Label>
-              <Input
-                placeholder="Full pickup address"
-                value={config.pickup.address}
-                onChange={(e) => updatePickup('address', e.target.value)}
-              />
+              <Input placeholder="Full pickup address" value={pickup.address} onChange={(e) => updatePickup('address', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>City *</Label>
-              <Input
-                placeholder="City"
-                value={config.pickup.city}
-                onChange={(e) => updatePickup('city', e.target.value)}
-              />
+              <Input placeholder="City" value={pickup.city} onChange={(e) => updatePickup('city', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>State *</Label>
-              <Input
-                placeholder="State"
-                value={config.pickup.state}
-                onChange={(e) => updatePickup('state', e.target.value)}
-              />
+              <Input placeholder="State" value={pickup.state} onChange={(e) => updatePickup('state', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Pincode *</Label>
-              <Input
-                placeholder="6-digit pincode"
-                value={config.pickup.pincode}
-                onChange={(e) => updatePickup('pincode', e.target.value)}
-              />
+              <Input placeholder="6-digit pincode" value={pickup.pincode} onChange={(e) => updatePickup('pincode', e.target.value)} />
             </div>
           </div>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving || loading}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
           Save Shipping Settings
         </Button>

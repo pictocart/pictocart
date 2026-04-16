@@ -11,6 +11,29 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Require authenticated caller (customer placing the order)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { store_id, amount, order_number, customer_name, customer_email, customer_phone } = await req.json();
 
     if (!store_id || !amount || !order_number) {
@@ -20,34 +43,45 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    if (typeof amount !== "number" || amount <= 0 || amount > 10_000_000) {
+      return new Response(
+        JSON.stringify({ error: "Invalid amount" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Fetch store's Razorpay credentials
-    const { data: store, error: storeError } = await supabase
+    const admin = createClient(supabaseUrl, serviceKey);
+
+    // Validate store is published and fetch credentials from store_secrets (server-only)
+    const { data: store, error: storeError } = await admin
       .from("stores")
-      .select("settings")
+      .select("id, is_published")
       .eq("id", store_id)
-      .single();
+      .maybeSingle();
 
-    if (storeError || !store?.settings?.razorpay) {
+    if (storeError || !store || !store.is_published) {
+      return new Response(
+        JSON.stringify({ error: "Store not available" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: secrets } = await admin
+      .from("store_secrets")
+      .select("razorpay_key_id, razorpay_key_secret")
+      .eq("store_id", store_id)
+      .maybeSingle();
+
+    const key_id = secrets?.razorpay_key_id;
+    const key_secret = secrets?.razorpay_key_secret;
+
+    if (!key_id || !key_secret) {
       return new Response(
         JSON.stringify({ error: "Razorpay not configured for this store" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { key_id, key_secret } = store.settings.razorpay;
-
-    if (!key_id || !key_secret) {
-      return new Response(
-        JSON.stringify({ error: "Razorpay credentials incomplete" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Create Razorpay order
     const razorpayRes = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
       headers: {
@@ -55,7 +89,7 @@ Deno.serve(async (req) => {
         Authorization: "Basic " + btoa(`${key_id}:${key_secret}`),
       },
       body: JSON.stringify({
-        amount: Math.round(amount * 100), // Convert to paise
+        amount: Math.round(amount * 100),
         currency: "INR",
         receipt: order_number,
         notes: {
@@ -72,7 +106,7 @@ Deno.serve(async (req) => {
       console.error("Razorpay error:", errBody);
       return new Response(
         JSON.stringify({ error: "Failed to create Razorpay order" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

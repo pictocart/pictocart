@@ -14,6 +14,29 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const token = authHeader.replace('Bearer ', '')
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token)
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const userId = claimsData.claims.sub
+
     const { store_id } = await req.json()
     if (!store_id) {
       return new Response(JSON.stringify({ error: 'store_id is required' }), {
@@ -21,11 +44,20 @@ Deno.serve(async (req) => {
       })
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const admin = createClient(supabaseUrl, serviceKey)
 
-    // Get Razorpay key_secret from platform config or env
+    // Verify caller owns the store
+    const { data: store, error: storeErr } = await admin
+      .from('stores')
+      .select('id, user_id')
+      .eq('id', store_id)
+      .maybeSingle()
+    if (storeErr || !store || store.user_id !== userId) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET')
     if (!RAZORPAY_KEY_SECRET) {
       return new Response(JSON.stringify({ error: 'Razorpay secret not configured' }), {
@@ -33,7 +65,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Create Razorpay Subscription
     const res = await fetch('https://api.razorpay.com/v1/subscriptions', {
       method: 'POST',
       headers: {
@@ -42,7 +73,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         plan_id: RAZORPAY_PLAN_ID,
-        total_count: 120, // max billing cycles
+        total_count: 120,
         quantity: 1,
         notes: { store_id },
       }),
@@ -52,7 +83,7 @@ Deno.serve(async (req) => {
       const errBody = await res.text()
       console.error('Razorpay error:', errBody)
       return new Response(JSON.stringify({ error: 'Failed to create subscription' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -67,7 +98,7 @@ Deno.serve(async (req) => {
     })
   } catch (err: any) {
     console.error('Error:', err)
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }

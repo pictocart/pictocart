@@ -53,10 +53,10 @@ const StorefrontCheckout = () => {
     paymentMethod: 'cod',
   });
 
-  // Check if store has Razorpay configured
+  // Check if store has Razorpay configured (only `connected` flag is exposed publicly)
   useEffect(() => {
     const settings = store?.settings as any;
-    if (settings?.razorpay?.key_id) {
+    if (settings?.razorpay?.connected || settings?.razorpay?.key_id) {
       setRazorpayAvailable(true);
     }
   }, [store]);
@@ -139,6 +139,16 @@ const StorefrontCheckout = () => {
   const handleRazorpayPayment = async () => {
     setPlacing(true);
     try {
+      // Customer must be signed in to use online payment (auth required by edge fn)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        toast.error('Please sign in to pay online, or choose Cash on Delivery.');
+        navigate(`/store/${slug}/account?redirect=checkout`);
+        setPlacing(false);
+        return;
+      }
+
       // 1. Create order in DB first
       const order = await createOrder();
 
@@ -150,13 +160,16 @@ const StorefrontCheckout = () => {
         return;
       }
 
-      // 3. Create Razorpay order via edge function
+      // 3. Create Razorpay order via edge function (authenticated)
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/create-razorpay-order`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify({
             store_id: store.id,
             amount: finalTotal,
@@ -192,12 +205,15 @@ const StorefrontCheckout = () => {
         },
         theme: { color: colors.primary },
         handler: async (response: any) => {
-          // 5. Verify payment
+          // 5. Verify payment (authenticated)
           const verifyRes = await fetch(
             `https://${projectId}.supabase.co/functions/v1/verify-razorpay-payment`,
             {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`,
+              },
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
@@ -418,13 +434,11 @@ const StorefrontCheckout = () => {
             {(() => {
               const settings = store?.settings as any;
               const shipping = settings?.shipping;
-              if (shipping?.api_token && shipping?.pickup?.pincode) {
+              // Show only if seller has configured shipping (token is server-side)
+              if ((shipping?.configured || shipping?.api_token) && shipping?.pickup?.pincode) {
                 return (
                   <PincodeChecker
                     storeId={store.id}
-                    apiToken={shipping.api_token}
-                    testMode={shipping.test_mode ?? true}
-                    originPincode={shipping.pickup.pincode}
                     colors={colors}
                     borderRadius={borderRadius}
                   />

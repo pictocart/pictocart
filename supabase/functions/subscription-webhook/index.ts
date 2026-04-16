@@ -2,13 +2,34 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-razorpay-signature',
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const RAZORPAY_WEBHOOK_SECRET = Deno.env.get('RAZORPAY_WEBHOOK_SECRET');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+async function hmacSha256Hex(message: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,7 +37,30 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
+    if (!RAZORPAY_WEBHOOK_SECRET) {
+      console.error('RAZORPAY_WEBHOOK_SECRET not configured');
+      return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const signature = req.headers.get('x-razorpay-signature');
+    const rawBody = await req.text();
+
+    if (!signature) {
+      return new Response(JSON.stringify({ error: 'Missing signature' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const expected = await hmacSha256Hex(rawBody, RAZORPAY_WEBHOOK_SECRET);
+    if (!timingSafeEqual(expected, signature)) {
+      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = JSON.parse(rawBody);
     const event = body.event;
     const payload = body.payload;
 
@@ -63,7 +107,6 @@ Deno.serve(async (req) => {
           current_period_end: new Date(entity.current_end * 1000).toISOString(),
         }, { onConflict: 'store_id' });
 
-        // Log event
         const { data: sub } = await supabase.from('subscriptions')
           .select('id').eq('store_id', storeId).single();
         if (sub) {
@@ -94,7 +137,6 @@ Deno.serve(async (req) => {
       }
 
       case 'subscription.halted': {
-        // Downgrade to free
         await supabase.from('subscriptions').update({
           plan: 'free',
           status: 'cancelled',
@@ -112,7 +154,7 @@ Deno.serve(async (req) => {
     });
   } catch (err: any) {
     console.error('Webhook error:', err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: 'Internal error' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

@@ -24,7 +24,13 @@ async function verifySignature(
   const expectedSignature = Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-  return expectedSignature === signature;
+  // Constant-time comparison
+  if (expectedSignature.length !== signature.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expectedSignature.length; i++) {
+    diff |= expectedSignature.charCodeAt(i) ^ signature.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 Deno.serve(async (req) => {
@@ -33,6 +39,28 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -48,30 +76,48 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const admin = createClient(supabaseUrl, serviceKey);
 
-    // Fetch store Razorpay credentials
-    const { data: store, error: storeError } = await supabase
-      .from("stores")
-      .select("settings")
-      .eq("id", store_id)
-      .single();
+    // CRITICAL: confirm the order belongs to the supplied store (prevents cross-store fraud)
+    const { data: order, error: orderErr } = await admin
+      .from("orders")
+      .select("id, store_id, payment_status")
+      .eq("id", order_id)
+      .eq("store_id", store_id)
+      .maybeSingle();
 
-    if (storeError || !store?.settings?.razorpay?.key_secret) {
+    if (orderErr || !order) {
+      return new Response(
+        JSON.stringify({ error: "Order not found for this store" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (order.payment_status === "paid") {
+      return new Response(
+        JSON.stringify({ success: true, payment_id: razorpay_payment_id, alreadyPaid: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: secrets } = await admin
+      .from("store_secrets")
+      .select("razorpay_key_secret")
+      .eq("store_id", store_id)
+      .maybeSingle();
+
+    if (!secrets?.razorpay_key_secret) {
       return new Response(
         JSON.stringify({ error: "Razorpay not configured" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Verify signature
     const isValid = await verifySignature(
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      store.settings.razorpay.key_secret
+      secrets.razorpay_key_secret
     );
 
     if (!isValid) {
@@ -81,8 +127,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update order as paid
-    const { error: updateError } = await supabase
+    const { error: updateError } = await admin
       .from("orders")
       .update({
         payment_status: "paid",
@@ -90,7 +135,8 @@ Deno.serve(async (req) => {
         tracking_number: razorpay_payment_id,
         status: "confirmed",
       })
-      .eq("id", order_id);
+      .eq("id", order_id)
+      .eq("store_id", store_id);
 
     if (updateError) {
       console.error("Order update error:", updateError);

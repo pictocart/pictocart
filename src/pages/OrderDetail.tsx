@@ -98,10 +98,10 @@ const OrderDetail = () => {
   };
 
   const handleTrack = async () => {
-    if (!order.tracking_number) return;
+    if (!order.tracking_number || !store) return;
     const settings = store?.settings as any;
     const shippingConfig = settings?.shipping;
-    if (!shippingConfig?.api_token) {
+    if (!shippingConfig?.configured && !shippingConfig?.api_token) {
       toast.error('Configure shipping settings first');
       return;
     }
@@ -115,8 +115,7 @@ const OrderDetail = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'track',
-            api_token: shippingConfig.api_token,
-            test_mode: shippingConfig.test_mode ?? true,
+            store_id: store.id,
             waybill: order.tracking_number,
           }),
         }

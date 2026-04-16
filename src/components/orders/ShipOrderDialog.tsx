@@ -29,7 +29,9 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
 
   const settings = store.settings as any;
   const shippingConfig = settings?.shipping;
-  const isConfigured = !!shippingConfig?.api_token && !!shippingConfig?.pickup?.pincode;
+  const isConfigured =
+    (!!shippingConfig?.configured || !!shippingConfig?.api_token) &&
+    !!shippingConfig?.pickup?.pincode;
 
   const handleShip = async () => {
     if (!isConfigured) {
@@ -39,19 +41,25 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
 
     setShipping(true);
     try {
+      const { supabase } = await import('@/integrations/supabase/client');
       const address = order.customer_address as unknown as CustomerAddress;
       const pickup = shippingConfig.pickup;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
 
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/delhivery-proxy`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
           body: JSON.stringify({
             action: 'create-shipment',
-            api_token: shippingConfig.api_token,
-            test_mode: shippingConfig.test_mode ?? true,
+            store_id: store.id,
             shipment: {
               order_number: order.order_number,
               customer_name: order.customer_name,
