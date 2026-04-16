@@ -521,8 +521,8 @@ const AdminThemes = () => {
 
       {/* Preview dialog */}
       <Dialog open={!!previewPack} onOpenChange={(o) => !o && setPreviewPack(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{previewPack?.name} — Preview</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>{previewPack?.name} — Page Wireframes</DialogTitle></DialogHeader>
           {previewPack && <ThemePreviewModal pack={previewPack} />}
         </DialogContent>
       </Dialog>
