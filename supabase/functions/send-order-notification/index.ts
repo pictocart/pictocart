@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
 
     // Customer email
     if (['order_confirmed', 'order_shipped', 'order_delivered'].includes(type) && order.customer_email) {
-      const sent = await sendEmail(order.customer_email, emailContent.subject, emailContent.html, storeName);
+      const sent = await sendEmail(order.customer_email, emailContent.subject, emailContent.html, storeName, fromAddress);
       results.push(`customer_email: ${sent ? 'sent' : 'failed'}`);
     }
 
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
       const { data: authUser } = await supabase.auth.admin.getUserById(store.user_id);
       const sellerEmail = authUser?.user?.email;
       if (sellerEmail) {
-        const sent = await sendEmail(sellerEmail, emailContent.subject, emailContent.html, storeName);
+        const sent = await sendEmail(sellerEmail, emailContent.subject, emailContent.html, storeName, fromAddress);
         results.push(`seller_email: ${sent ? 'sent' : 'failed'}`);
       }
     }
