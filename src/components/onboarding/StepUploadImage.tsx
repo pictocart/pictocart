@@ -125,7 +125,7 @@ const StepUploadImage = ({ data, setData, storeId }: Props) => {
             <p className="text-sm font-semibold mb-1">
               {uploading ? 'Uploading...' : 'Drag & drop or click to upload'}
             </p>
-            <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
+            <p className="text-xs text-muted-foreground">PNG or JPG · Auto-compressed for fast upload</p>
             <input
               id="file-input"
               type="file"
