@@ -534,6 +534,7 @@ const AdminThemes = () => {
   const { data: allPurchases = [] } = useAllThemePurchases();
   const updatePack = useUpdateThemePack();
   const deletePack = useDeleteThemePack();
+  const remixTheme = useRemixTheme();
   const [generateOpen, setGenerateOpen] = useState(false);
   const [editingPack, setEditingPack] = useState<ThemePack | null>(null);
   const [previewPack, setPreviewPack] = useState<ThemePack | null>(null);
