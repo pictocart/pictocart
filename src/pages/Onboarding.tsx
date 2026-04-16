@@ -67,6 +67,7 @@ export interface OnboardingData {
     razorpay: boolean;
   };
   emailTemplatesGenerated: boolean;
+  slugAvailable: boolean;
 }
 
 const defaultData: OnboardingData = {
@@ -82,6 +83,7 @@ const defaultData: OnboardingData = {
   storeInfo: { phone: '', city: '', gst: '' },
   paymentSettings: { cod: true, upi: false, razorpay: false },
   emailTemplatesGenerated: false,
+  slugAvailable: false,
 };
 
 const Onboarding = () => {
@@ -146,7 +148,7 @@ const Onboarding = () => {
       } else {
         const updates: any = { onboarding_step: step };
         if (data.storeName) updates.name = data.storeName;
-        if (data.slug) updates.slug = data.slug;
+        // slug is never updated after creation to keep store URL intact
         if (data.category) updates.category = data.category;
         if (data.description) updates.description = data.description;
         updates.logo_url = data.logoUrl || null;
@@ -193,7 +195,7 @@ const Onboarding = () => {
 
   const canProceed = (): boolean => {
     switch (currentStep) {
-      case 1: return data.storeName.trim().length >= 2;
+      case 1: return data.storeName.trim().length >= 2 && data.slugAvailable;
       case 2: return data.category !== '';
       case 3: return true; // logo is skippable
       case 4: return data.selectedThemeId !== '';
