@@ -56,7 +56,7 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    if (!loading && (!store || (store.onboarding_step !== null && store.onboarding_step < 10))) {
+    if (!loading && !store) {
       const isCustomer = user?.user_metadata?.is_customer === true;
       if (!isCustomer) {
         navigate('/onboarding', { replace: true });
