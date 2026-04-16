@@ -19,8 +19,9 @@ import StepStoreInfo from '@/components/onboarding/StepStoreInfo';
 import StepPaymentSetup from '@/components/onboarding/StepPaymentSetup';
 import StepStorePreview from '@/components/onboarding/StepStorePreview';
 import StepGoLive from '@/components/onboarding/StepGoLive';
+import StepEmailBranding from '@/components/onboarding/StepEmailBranding';
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 11;
 
 const stepLabels = [
   'Store Name',
@@ -31,6 +32,7 @@ const stepLabels = [
   'AI Magic',
   'Store Info',
   'Payments',
+  'Email Branding',
   'Preview',
   'Go Live',
 ];
