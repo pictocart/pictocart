@@ -262,7 +262,19 @@ const Onboarding = () => {
               console.error('Failed to create onboarding product:', e);
             }
           }
-          await supabase.from('stores').update({ is_published: true, onboarding_step: TOTAL_STEPS }).eq('id', store.id);
+          // Auto-generate default homepage sections if none exist
+          const currentSettings = (store.settings as any) || {};
+          if (!currentSettings.homepage_sections?.length) {
+            const { generateDefaultSections } = await import('@/lib/defaultSections');
+            const defaultSections = generateDefaultSections(data.storeName || store.name, data.category || store.category || undefined);
+            await supabase.from('stores').update({
+              is_published: true,
+              onboarding_step: TOTAL_STEPS,
+              settings: { ...currentSettings, homepage_sections: defaultSections },
+            }).eq('id', store.id);
+          } else {
+            await supabase.from('stores').update({ is_published: true, onboarding_step: TOTAL_STEPS }).eq('id', store.id);
+          }
         }
         navigate('/dashboard', { replace: true });
       }} />;

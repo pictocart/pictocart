@@ -1,0 +1,1 @@
+ALTER TABLE public.theme_packs ADD COLUMN compare_at_price integer DEFAULT NULL;

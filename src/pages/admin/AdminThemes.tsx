@@ -258,13 +258,21 @@ const ThemePackEditor = ({ pack, onClose }: { pack: ThemePack; onClose: () => vo
   const [name, setName] = useState(pack.name);
   const [description, setDescription] = useState(pack.description);
   const [price, setPrice] = useState(pack.price);
+  const [compareAtPrice, setCompareAtPrice] = useState(pack.compare_at_price || 0);
+  const [isFree, setIsFree] = useState(pack.price === 0);
   const [category, setCategory] = useState(pack.category);
   const update = useUpdateThemePack();
 
   const handleSave = async () => {
-    await update.mutateAsync({ id: pack.id, name, description, price, category });
+    const finalPrice = isFree ? 0 : price;
+    const finalCompare = isFree ? null : (compareAtPrice > finalPrice ? compareAtPrice : null);
+    await update.mutateAsync({ id: pack.id, name, description, price: finalPrice, compare_at_price: finalCompare as any, category });
     onClose();
   };
+
+  const discountPct = !isFree && compareAtPrice > price && price > 0
+    ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100)
+    : 0;
 
   return (
     <div className="space-y-4">
@@ -276,20 +284,40 @@ const ThemePackEditor = ({ pack, onClose }: { pack: ThemePack; onClose: () => vo
         <Label>Description</Label>
         <Textarea value={description} onChange={e => setDescription(e.target.value)} className="h-20" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label>Price (₹)</Label>
-          <Input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} />
+
+      {/* Free toggle */}
+      <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+        <Switch checked={isFree} onCheckedChange={(checked) => { setIsFree(checked); if (checked) setPrice(0); }} />
+        <div>
+          <Label className="text-sm font-semibold">Free Theme</Label>
+          <p className="text-xs text-muted-foreground">Make this theme available to all sellers for free</p>
         </div>
-        <div className="space-y-2">
-          <Label>Category</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map(c => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+      </div>
+
+      {!isFree && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>Selling Price (₹)</Label>
+            <Input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} />
+          </div>
+          <div className="space-y-2">
+            <Label>MRP / Compare Price (₹)</Label>
+            <Input type="number" value={compareAtPrice} onChange={e => setCompareAtPrice(Number(e.target.value))} placeholder="Original price" />
+            {discountPct > 0 && (
+              <Badge className="bg-red-500 text-white border-0 text-xs">{discountPct}% OFF</Badge>
+            )}
+          </div>
         </div>
+      )}
+
+      <div className="space-y-2">
+        <Label>Category</Label>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {CATEGORIES.map(c => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
       {pack.thumbnail && (
         <div>
@@ -436,8 +464,24 @@ const AdminThemes = () => {
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{pack.description}</p>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold">₹{pack.price}</span>
-                      <span className="text-muted-foreground">{pack.sales_count} sales · AI Cost ₹{Number(pack.ai_generation_cost).toFixed(2)}</span>
+                      <div className="flex items-center gap-1.5">
+                        {pack.price === 0 ? (
+                          <Badge className="bg-green-500 text-white border-0 text-[10px]">FREE</Badge>
+                        ) : (
+                          <>
+                            <span className="font-bold">₹{pack.price}</span>
+                            {pack.compare_at_price && pack.compare_at_price > pack.price && (
+                              <>
+                                <span className="line-through opacity-40">₹{pack.compare_at_price}</span>
+                                <Badge className="bg-red-500 text-white border-0 text-[10px]">
+                                  {Math.round(((pack.compare_at_price - pack.price) / pack.compare_at_price) * 100)}% OFF
+                                </Badge>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <span className="text-muted-foreground">{pack.sales_count} sales · ₹{Number(pack.ai_generation_cost).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Switch checked={pack.is_published} onCheckedChange={(checked) => updatePack.mutate({ id: pack.id, is_published: checked })} />

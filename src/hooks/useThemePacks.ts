@@ -12,6 +12,7 @@ export interface ThemePack {
   pages: any;
   theme_config: any;
   price: number;
+  compare_at_price: number | null;
   ai_generation_cost: number;
   sales_count: number;
   is_published: boolean;
