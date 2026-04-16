@@ -624,6 +624,11 @@ const AdminThemes = () => {
                       }} title="Open full preview in new tab">
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                        if (confirm(`Remix "${pack.name}" with new colors & fonts? (Cost: ~₹0.10-0.30)`)) remixTheme.mutate(pack.id);
+                      }} title="Remix with new colors/fonts" disabled={remixTheme.isPending}>
+                        {remixTheme.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shuffle className="h-3.5 w-3.5" />}
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingPack(pack)}>
                         <Palette className="h-3.5 w-3.5" />
                       </Button>
