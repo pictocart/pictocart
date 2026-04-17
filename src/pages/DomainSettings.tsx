@@ -793,7 +793,7 @@ const DomainSettings = () => {
         </CardContent>
       </Card>
 
-      {/* DNS Instructions */}
+      {/* DNS Instructions with live status */}
       {customDomain && sslStatus !== 'active' && (
         <Card>
           <CardHeader>
@@ -802,61 +802,94 @@ const DomainSettings = () => {
               Add DNS Records at Your Registrar
             </CardTitle>
             <CardDescription>
-              Go to your DNS provider (GoDaddy, Namecheap, Cloudflare, etc.) and add the following CNAME records.
+              Go to your DNS provider (GoDaddy, Namecheap, Hostinger, Cloudflare, etc.) and add these CNAME records.
+              We'll automatically detect them within seconds.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            <DomainProgressBar
+              apexOk={!!dnsApex?.ok}
+              wwwOk={!!dnsWww?.ok}
+              sslStatus={sslStatus}
+            />
+
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
-                <h3 className="text-sm font-semibold">Root domain (apex)</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
+                  <h3 className="text-sm font-semibold">Root domain (apex)</h3>
+                </div>
+                <DnsStatusPill check={dnsApex} loading={!dnsCheckedAt} />
               </div>
               <DnsRecordRow type="CNAME" name="@" value={cnameTarget} />
+              {dnsApex && !dnsApex.ok && dnsApex.records.length > 0 && (
+                <p className="text-xs text-destructive">
+                  Currently resolves to: <code className="font-mono">{dnsApex.records.join(', ')}</code> — should be <code className="font-mono">{cnameTarget}</code>
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Some registrars don't allow CNAME on the apex — use ALIAS / ANAME / flattened CNAME instead. If yours doesn't, set up only <code>www</code> below and add a redirect from apex.
               </p>
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
-                <h3 className="text-sm font-semibold">www subdomain</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
+                  <h3 className="text-sm font-semibold">www subdomain</h3>
+                </div>
+                <DnsStatusPill check={dnsWww} loading={!dnsCheckedAt} />
               </div>
               <DnsRecordRow type="CNAME" name="www" value={cnameTarget} />
+              {dnsWww && !dnsWww.ok && dnsWww.records.length > 0 && (
+                <p className="text-xs text-destructive">
+                  Currently resolves to: <code className="font-mono">{dnsWww.records.join(', ')}</code> — should be <code className="font-mono">{cnameTarget}</code>
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
-                <h3 className="text-sm font-semibold">Wait & verify</h3>
+                <h3 className="text-sm font-semibold">SSL certificate</h3>
               </div>
-              <p className="text-sm text-muted-foreground">
-                After adding the records, wait 1–10 minutes for propagation. We'll automatically check status every 15 seconds. SSL is issued automatically once DNS propagates.
-              </p>
-              <Button onClick={handleCheck} disabled={checking}>
-                {checking ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
-                Check Status Now
-              </Button>
-
-              {(hostnameStatus || sslStatus) && (
-                <div className="rounded-lg border p-4 space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span><strong>Hostname:</strong> {hostnameStatus ?? '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {String(sslStatus) === 'active'
-                      ? <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      : <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                    <span><strong>SSL:</strong> {sslStatus ?? 'pending'}</span>
-                  </div>
-                  {verificationErrors.length > 0 && (
-                    <div className="rounded bg-destructive/10 p-3 text-destructive text-xs space-y-1">
-                      {verificationErrors.map((e, i) => <p key={i}>{e}</p>)}
-                    </div>
+              <div className="rounded-lg border p-4 space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  {sslStatus === 'active' ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : sslStatus === 'failed' ? (
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  ) : (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   )}
+                  <span><strong>SSL status:</strong> {humanSsl(sslStatus)}</span>
                 </div>
-              )}
+                {hostnameStatus && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <Shield className="h-3 w-3" />
+                    <span>Hostname: {hostnameStatus}</span>
+                  </div>
+                )}
+                {dnsCheckedAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Auto-checking every 10s · Last checked {dnsCheckedAt.toLocaleTimeString()}
+                  </p>
+                )}
+                {verificationErrors.length > 0 && (
+                  <div className="rounded bg-destructive/10 p-3 text-destructive text-xs space-y-1">
+                    {verificationErrors.map((e, i) => <p key={i}>{e}</p>)}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCheck} disabled={checking} variant="outline" size="sm">
+                  {checking ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
+                  Force SSL Re-check
+                </Button>
+                <Button onClick={() => void handleDnsCheck()} variant="ghost" size="sm">
+                  Re-check DNS
+                </Button>
+              </div>
             </div>
 
             <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800 space-y-1">
