@@ -43,24 +43,135 @@ const Counter = ({ end, suffix = '', duration = 2000 }: { end: number; suffix?: 
   return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
 };
 
-/* ─── Typewriter effect ─── */
-const merchantTypes = ['Fashion Brands', 'Home Bakers', 'Artisan Jewelers', 'Organic Farmers', 'Beauty Studios', 'Book Stores', 'Fitness Coaches', 'Handicraft Sellers'];
-const Typewriter = () => {
-  const [idx, setIdx] = useState(0);
+/* ─── Merchant types paired with real theme previews (synced shuffle) ─── */
+const merchantShowcase = [
+  { label: 'Fashion Brands',     image: themeFashion,     accent: 'from-rose-500 to-pink-400' },
+  { label: 'Home Bakers',        image: themeFood,        accent: 'from-amber-500 to-orange-400' },
+  { label: 'Electronics Stores', image: themeElectronics, accent: 'from-sky-500 to-indigo-400' },
+  { label: 'Beauty Studios',     image: themeBeauty,      accent: 'from-fuchsia-500 to-violet-400' },
+  { label: 'Handicraft Sellers', image: themeHandcraft,   accent: 'from-emerald-500 to-teal-400' },
+  { label: 'Book Stores',        image: themeBooks,       accent: 'from-indigo-500 to-purple-400' },
+];
+
+/* ─── Typewriter (driven by external index for sync) ─── */
+const Typewriter = ({ idx }: { idx: number }) => {
   const [text, setText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const word = merchantShowcase[idx].label;
+
+  // reset on idx change
+  useEffect(() => { setDeleting(false); setText(''); }, [idx]);
+
   useEffect(() => {
-    const word = merchantTypes[idx];
-    const timeout = deleting ? 40 : 80;
-    if (!deleting && text === word) { setTimeout(() => setDeleting(true), 2000); return; }
-    if (deleting && text === '') { setDeleting(false); setIdx((i) => (i + 1) % merchantTypes.length); return; }
-    const timer = setTimeout(() => { setText(deleting ? word.slice(0, text.length - 1) : word.slice(0, text.length + 1)); }, timeout);
+    const timeout = deleting ? 28 : 55;
+    if (!deleting && text === word) return; // hold; parent advances idx
+    if (deleting && text === '') return;
+    const timer = setTimeout(() => {
+      setText(deleting ? word.slice(0, text.length - 1) : word.slice(0, text.length + 1));
+    }, timeout);
     return () => clearTimeout(timer);
-  }, [text, deleting, idx]);
+  }, [text, deleting, word]);
+
   return (
     <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-300">
       {text}<span className="border-r-2 border-emerald-400 animate-typewriter-cursor ml-0.5">&nbsp;</span>
     </span>
+  );
+};
+
+/* ─── Shuffling website card deck — synced to merchant type ─── */
+const ShowcaseDeck = ({ idx }: { idx: number }) => {
+  const len = merchantShowcase.length;
+  // Build z-ordered stack: front card = idx, then idx+1, idx+2, idx+3 behind
+  const stack = Array.from({ length: 4 }, (_, i) => (idx + i) % len);
+
+  return (
+    <div className="relative w-full max-w-[560px] aspect-[4/3] mx-auto" style={{ perspective: '1800px' }}>
+      {/* ambient glow behind deck */}
+      <div className={`absolute inset-0 -z-10 blur-3xl opacity-40 rounded-[3rem] bg-gradient-to-br ${merchantShowcase[idx].accent} transition-all duration-700`} />
+
+      {stack.map((cardIdx, pos) => {
+        const item = merchantShowcase[cardIdx];
+        // pos 0 = front, 3 = deepest back
+        const translateY = pos * 22;
+        const translateX = pos * -14;
+        const scale = 1 - pos * 0.06;
+        const rotate = -4 + pos * 2;
+        const opacity = pos === 0 ? 1 : 0.55 - pos * 0.1;
+        const blur = pos === 0 ? 0 : pos * 1.2;
+        const z = 40 - pos;
+
+        return (
+          <div
+            key={`${cardIdx}-${pos}`}
+            className="absolute inset-0 transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+            style={{
+              transform: `translate3d(${translateX}px, ${translateY}px, 0) scale(${scale}) rotateY(${rotate}deg) rotateX(${pos * 1.5}deg)`,
+              opacity,
+              filter: `blur(${blur}px)`,
+              zIndex: z,
+              transformStyle: 'preserve-3d',
+            }}
+          >
+            {/* Browser-window card */}
+            <div className="relative w-full h-full rounded-2xl overflow-hidden bg-slate-900 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.7),0_25px_50px_-25px_rgba(99,102,241,0.5)] ring-1 ring-white/10">
+              {/* Browser chrome */}
+              <div className="h-8 bg-gradient-to-b from-slate-800 to-slate-900 border-b border-white/5 flex items-center px-3 gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+                <div className="ml-3 flex-1 h-4 rounded bg-white/5 max-w-[180px]" />
+              </div>
+              {/* Screenshot */}
+              <div className="relative w-full h-[calc(100%-2rem)] overflow-hidden">
+                <img
+                  src={item.image}
+                  alt={`${item.label} store theme preview`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {/* Vignette */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                {/* Glare sweep — only on front card */}
+                {pos === 0 && (
+                  <div
+                    key={`glare-${cardIdx}`}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%)',
+                      transform: 'translateX(-100%)',
+                      animation: 'deck-glare 1.4s ease-out 0.25s 1 forwards',
+                    }}
+                  />
+                )}
+                {/* Category tag — front card only */}
+                {pos === 0 && (
+                  <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-[11px] font-semibold text-white/90 border border-white/10">
+                    {item.label}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Floating accent badges (kept, but pinned to deck) */}
+      <div className="absolute -left-6 top-6 bg-white rounded-xl shadow-2xl p-3 flex items-center gap-2 z-50 animate-fade-up">
+        <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center"><Camera className="h-4 w-4 text-emerald-600" /></div>
+        <div>
+          <div className="text-xs font-bold text-slate-800">Photo Uploaded</div>
+          <div className="text-[10px] text-slate-400">AI processing…</div>
+        </div>
+      </div>
+      <div className="absolute -right-4 bottom-10 bg-white rounded-xl shadow-2xl p-3 flex items-center gap-2 z-50 animate-fade-up" style={{ animationDelay: '0.4s' }}>
+        <div className="h-8 w-8 rounded-lg bg-violet-50 flex items-center justify-center"><Sparkles className="h-4 w-4 text-violet-600" /></div>
+        <div>
+          <div className="text-xs font-bold text-slate-800">AI Generated</div>
+          <div className="text-[10px] text-slate-400">Title, price, SEO ✓</div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -89,6 +200,7 @@ const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showcaseIdx, setShowcaseIdx] = useState(0);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -99,6 +211,12 @@ const LandingPage = () => {
   // Auto-rotate testimonials
   useEffect(() => {
     const t = setInterval(() => setTestimonialIdx(i => (i + 1) % testimonials.length), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Sync: shuffle the website deck + drive typewriter on the same beat
+  useEffect(() => {
+    const t = setInterval(() => setShowcaseIdx(i => (i + 1) % merchantShowcase.length), 2800);
     return () => clearInterval(t);
   }, []);
 
@@ -202,7 +320,7 @@ const LandingPage = () => {
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-[1.1] tracking-tight mb-6">
                 Launch Your Store<br />
-                for <Typewriter />
+                for <Typewriter idx={showcaseIdx} />
               </h1>
 
               <p className="text-lg sm:text-xl text-white/70 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
@@ -237,58 +355,9 @@ const LandingPage = () => {
               </div>
             </div>
 
-            {/* Right - Phone Mockup */}
+            {/* Right - Shuffling Website Deck */}
             <div className="relative flex justify-center lg:justify-end">
-              <div className="relative animate-float">
-                {/* Phone frame */}
-                <div className="w-[280px] sm:w-[320px] rounded-[2.5rem] border-[8px] border-slate-700 bg-slate-800 shadow-2xl shadow-black/50 overflow-hidden">
-                  {/* Status bar */}
-                  <div className="h-7 bg-slate-900 flex items-center justify-center">
-                    <div className="w-20 h-4 bg-slate-800 rounded-full" />
-                  </div>
-                  {/* Screen content */}
-                  <div className="bg-white">
-                    {/* Store header */}
-                    <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-5">
-                      <div className="h-3 w-24 bg-white/30 rounded mb-2" />
-                      <div className="h-2 w-32 bg-white/20 rounded" />
-                    </div>
-                    {/* Product grid */}
-                    <div className="p-3 grid grid-cols-2 gap-2">
-                      {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="rounded-xl overflow-hidden border border-slate-100">
-                          <div className={`h-24 ${i % 2 === 0 ? 'bg-gradient-to-br from-violet-100 to-indigo-100' : 'bg-gradient-to-br from-emerald-50 to-teal-100'}`} />
-                          <div className="p-2">
-                            <div className="h-2 w-16 bg-slate-200 rounded mb-1" />
-                            <div className="h-2 w-10 bg-emerald-200 rounded" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Bottom nav */}
-                    <div className="flex justify-around py-3 border-t border-slate-100">
-                      {[Store, Search, ShoppingCart, Users].map((Icon, i) => (
-                        <Icon key={i} className={`h-4 w-4 ${i === 0 ? 'text-indigo-600' : 'text-slate-300'}`} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                {/* Floating badges */}
-                <div className="absolute -left-8 top-1/4 bg-white rounded-xl shadow-xl p-3 flex items-center gap-2 animate-fade-up" style={{ animationDelay: '0.5s' }}>
-                  <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center"><Camera className="h-4 w-4 text-emerald-600" /></div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-800">Photo Uploaded</div>
-                    <div className="text-[10px] text-slate-400">AI processing...</div>
-                  </div>
-                </div>
-                <div className="absolute -right-6 bottom-1/3 bg-white rounded-xl shadow-xl p-3 flex items-center gap-2 animate-fade-up" style={{ animationDelay: '1s' }}>
-                  <div className="h-8 w-8 rounded-lg bg-violet-50 flex items-center justify-center"><Sparkles className="h-4 w-4 text-violet-600" /></div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-800">AI Generated</div>
-                    <div className="text-[10px] text-slate-400">Title, price, SEO ✓</div>
-                  </div>
-                </div>
-              </div>
+              <ShowcaseDeck idx={showcaseIdx} />
             </div>
           </div>
         </div>

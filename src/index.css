@@ -186,6 +186,13 @@
   animation: marquee-scroll 25s linear infinite;
 }
 
+/* Showcase deck glare sweep — fires on each card swap */
+@keyframes deck-glare {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateX(120%); opacity: 0; }
+}
+
 /* Hover glare — glossy sweep */
 .hover-glare {
   position: relative;
