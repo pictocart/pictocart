@@ -133,28 +133,33 @@ async function handleVerify(data: z.infer<typeof VerifySchema>) {
 }
 
 async function handleRemove(data: z.infer<typeof RemoveSchema>) {
-  const { data: domainConfig, error: fetchErr } = await supabase
+  const { data: domainConfig } = await supabase
     .from('store_email_domains')
     .select('resend_domain_id')
     .eq('store_id', data.store_id)
-    .single();
+    .maybeSingle();
 
-  if (fetchErr || !domainConfig) throw new Error('No email domain configured for this store');
+  // Idempotent — if nothing exists, treat as already removed.
+  if (!domainConfig) {
+    return { success: true, removed: true, already_absent: true };
+  }
 
-  const headers = getResendHeaders();
-
-  // Delete from Resend
+  // Best-effort delete at Resend (don't fail the whole call if Resend errors).
   if (domainConfig.resend_domain_id) {
-    const delRes = await fetch(`${GATEWAY_URL}/domains/${domainConfig.resend_domain_id}`, {
-      method: 'DELETE',
-      headers,
-    });
-    if (!delRes.ok) {
-      console.error('Resend domain deletion failed:', await delRes.text());
+    try {
+      const headers = getResendHeaders();
+      const delRes = await fetch(`${GATEWAY_URL}/domains/${domainConfig.resend_domain_id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!delRes.ok) {
+        console.error('Resend domain deletion failed:', await delRes.text());
+      }
+    } catch (e) {
+      console.error('Resend deletion threw:', e);
     }
   }
 
-  // Delete from DB
   const { error } = await supabase
     .from('store_email_domains')
     .delete()
