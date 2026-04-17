@@ -320,7 +320,7 @@ const LandingPage = () => {
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-[1.1] tracking-tight mb-6">
                 Launch Your Store<br />
-                for <Typewriter />
+                for <Typewriter idx={showcaseIdx} />
               </h1>
 
               <p className="text-lg sm:text-xl text-white/70 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
