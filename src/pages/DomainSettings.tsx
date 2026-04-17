@@ -934,7 +934,7 @@ const DomainSettings = () => {
               </div>
               <div className="rounded-lg border p-4 space-y-2 text-sm">
                 <div className="flex items-center gap-2">
-                  {sslStatus === 'active' ? (
+                  {(sslStatus as string) === 'active' ? (
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                   ) : sslStatus === 'failed' ? (
                     <XCircle className="h-4 w-4 text-destructive" />
