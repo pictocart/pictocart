@@ -1,1 +1,4 @@
 project_id = "qxeyndsvkfsmkilkzmuc"
+
+[functions.check-dns-records]
+verify_jwt = false
