@@ -812,7 +812,7 @@ const DomainSettings = () => {
                     <span><strong>Hostname:</strong> {hostnameStatus ?? '—'}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {sslStatus === 'active'
+                    {String(sslStatus) === 'active'
                       ? <CheckCircle2 className="h-4 w-4 text-green-600" />
                       : <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                     <span><strong>SSL:</strong> {sslStatus ?? 'pending'}</span>
