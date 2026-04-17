@@ -578,6 +578,13 @@ function EmailDomainSection({ store }: { store: any }) {
 
 type SslStatus = 'pending' | 'pending_validation' | 'pending_issuance' | 'pending_deployment' | 'active' | 'failed' | null;
 
+interface DnsRecordCheck {
+  host: string;
+  ok: boolean;
+  records: string[];
+  type: string;
+}
+
 const DomainSettings = () => {
   const { store, refetchStore } = useStore();
   const [domain, setDomain] = useState('');
@@ -587,6 +594,9 @@ const DomainSettings = () => {
   const [hostnameStatus, setHostnameStatus] = useState<string | null>(null);
   const [sslStatus, setSslStatus] = useState<SslStatus>(null);
   const [verificationErrors, setVerificationErrors] = useState<string[]>([]);
+  const [dnsApex, setDnsApex] = useState<DnsRecordCheck | null>(null);
+  const [dnsWww, setDnsWww] = useState<DnsRecordCheck | null>(null);
+  const [dnsCheckedAt, setDnsCheckedAt] = useState<Date | null>(null);
 
   const cnameTarget = 'fallback.pictocart.in';
   const customDomain: string | null = (store as any)?.custom_domain ?? null;
@@ -597,10 +607,33 @@ const DomainSettings = () => {
     setSslStatus(((store as any)?.ssl_status as SslStatus) ?? null);
   }, [customDomain, store]);
 
-  // Auto-poll status every 15s while pending
+  // Lightweight DNS check — runs every 10s while not yet live.
+  const handleDnsCheck = async () => {
+    if (!customDomain) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('check-dns-records', {
+        body: { domain: customDomain, expected_target: cnameTarget },
+      });
+      if (error) throw error;
+      const d = data as any;
+      if (d?.error) throw new Error(d.error);
+      setDnsApex(d.apex);
+      setDnsWww(d.www);
+      setDnsCheckedAt(new Date());
+      // If both DNS records resolve correctly but SSL still pending, kick a Cloudflare check.
+      if (d.apex?.ok && d.www?.ok && sslStatus !== 'active') {
+        void handleCheck();
+      }
+    } catch {
+      // Silent — DNS lookup failures shouldn't toast on every poll
+    }
+  };
+
+  // Live DNS + SSL polling every 10s while pending.
   useEffect(() => {
     if (!customDomain || sslStatus === 'active' || sslStatus === 'failed') return;
-    const id = setInterval(() => { void handleCheck(); }, 15000);
+    void handleDnsCheck();
+    const id = setInterval(() => { void handleDnsCheck(); }, 10000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customDomain, sslStatus]);
