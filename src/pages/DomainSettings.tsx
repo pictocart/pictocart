@@ -910,14 +910,19 @@ const DomainSettings = () => {
                 </div>
                 <DnsStatusPill check={dnsApex} loading={!dnsCheckedAt} />
               </div>
-              <DnsRecordRow type="CNAME" name="@" value={cnameTarget} />
+              <DnsRecordRow type="CNAME (or ALIAS/ANAME)" name="@" value={cnameTarget} />
               {dnsApex && !dnsApex.ok && dnsApex.records.length > 0 && (
-                <p className="text-xs text-destructive">
-                  Currently resolves to: <code className="font-mono">{dnsApex.records.join(', ')}</code> — should be <code className="font-mono">{cnameTarget}</code>
-                </p>
+                <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+                  <p className="text-xs text-destructive font-medium">
+                    ⚠ Conflicting record detected — apex resolves to <code className="font-mono">{dnsApex.records.join(', ')}</code>
+                  </p>
+                  <p className="text-xs text-destructive/90">
+                    You likely have a leftover <strong>A record</strong> on <code>@</code> (often <code className="font-mono">2.57.91.91</code> from Hostinger parking). <strong>Delete that A record</strong> in your registrar's DNS panel — keep only the ALIAS/ANAME/CNAME pointing to <code className="font-mono">{cnameTarget}</code>. ALIAS &amp; ANAME flatten to the target's IPs, which Cloudflare accepts.
+                  </p>
+                </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Some registrars don't allow CNAME on the apex — use ALIAS / ANAME / flattened CNAME instead. If yours doesn't, set up only <code>www</code> below and add a redirect from apex.
+                Most registrars don't allow CNAME on the apex — use <strong>ALIAS</strong> (Hostinger), <strong>ANAME</strong> (DNSimple), or <strong>flattened CNAME</strong> (Cloudflare) instead. If unavailable, set up only <code>www</code> below and add an apex→www redirect at your registrar.
               </p>
             </div>
 
