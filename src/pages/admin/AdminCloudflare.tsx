@@ -158,7 +158,7 @@ const AdminCloudflare = () => {
               <p className="text-xs text-muted-foreground">No incidents yet — agent is quiet.</p>
             ) : incidents.map((i) => (
               <div key={i.id} className="text-xs border-l-2 pl-3 py-1" style={{ borderColor: severityColor(i.severity) }}>
-                <div className="font-medium">{i.action.replaceAll('_', ' ')}</div>
+                <div className="font-medium">{i.action.split('_').join(' ')}</div>
                 <div className="text-muted-foreground">{i.domain ?? '—'}</div>
                 <div className="text-muted-foreground">{formatDistanceToNow(new Date(i.created_at), { addSuffix: true })}</div>
               </div>
@@ -181,7 +181,7 @@ const SSLBadge = ({ status, down }: { status: string | null; down: boolean }) =>
   if (down) return <Badge variant="destructive">Down</Badge>;
   if (status === 'active') return <Badge className="bg-emerald-500 hover:bg-emerald-500">Active</Badge>;
   if (!status) return <Badge variant="secondary">—</Badge>;
-  return <Badge variant="outline" className="text-amber-600 border-amber-300">{status.replaceAll('_', ' ')}</Badge>;
+  return <Badge variant="outline" className="text-amber-600 border-amber-300">{status.split('_').join(' ')}</Badge>;
 };
 
 const IconBtn = ({ children, onClick, title, busy, variant = 'outline' }: any) => (
