@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hostname: store.custom_domain,
-          ssl: { method: 'http', type: 'dv', settings: { min_tls_version: '1.2' } },
+          ssl: { method: 'txt', type: 'dv', settings: { min_tls_version: '1.2' } },
           custom_origin_server: fallback,
         }),
       });
@@ -88,23 +88,56 @@ Deno.serve(async (req) => {
         downtime_started_at: null,
         downtime_notified_at: null,
       }).eq('id', store_id);
-      await logIncident(supabase, store, 'admin_reprovisioned', 'info', { hostname_id: cfData.result.id, by: user.email });
-      return ok({ success: true, action, hostname_id: cfData.result.id });
+      await logIncident(supabase, store, 'admin_reprovisioned', 'info', {
+        hostname_id: cfData.result.id,
+        by: user.email,
+        ssl_method: 'txt',
+        validation_records: cfData.result.ssl?.txt_name ? {
+          ssl_txt_name: cfData.result.ssl.txt_name,
+          ssl_txt_value: cfData.result.ssl.txt_value,
+        } : null,
+        ownership_verification: cfData.result.ownership_verification,
+      });
+      return ok({
+        success: true,
+        action,
+        hostname_id: cfData.result.id,
+        ssl_validation: {
+          name: cfData.result.ssl?.txt_name,
+          value: cfData.result.ssl?.txt_value,
+        },
+        ownership_verification: cfData.result.ownership_verification,
+      });
     }
 
     if (action === 'force_ssl') {
       if (!store.cloudflare_hostname_id) return jsonError('No hostname provisioned', 400);
+      // Force re-issuance by switching to TXT validation (works even when origin is unreachable)
       const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${store.cloudflare_hostname_id}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ssl: { method: 'http', type: 'dv' } }),
+        body: JSON.stringify({ ssl: { method: 'txt', type: 'dv', settings: { min_tls_version: '1.2' } } }),
       });
       const cfData = await cfRes.json();
       if (!cfRes.ok || !cfData.success) {
         return jsonError(cfData.errors?.[0]?.message ?? 'Cloudflare API error', 400);
       }
-      await logIncident(supabase, store, 'admin_force_ssl', 'info', { by: user.email });
-      return ok({ success: true, action });
+      await logIncident(supabase, store, 'admin_force_ssl', 'info', {
+        by: user.email,
+        ssl_method: 'txt',
+        validation_records: cfData.result.ssl?.txt_name ? {
+          ssl_txt_name: cfData.result.ssl.txt_name,
+          ssl_txt_value: cfData.result.ssl.txt_value,
+        } : null,
+      });
+      return ok({
+        success: true,
+        action,
+        ssl_validation: {
+          name: cfData.result.ssl?.txt_name,
+          value: cfData.result.ssl?.txt_value,
+        },
+      });
     }
 
     if (action === 'recheck') {
