@@ -42,37 +42,53 @@ Deno.serve(async (req) => {
     const zoneId = Deno.env.get('CLOUDFLARE_ZONE_ID')!;
     const fallback = Deno.env.get('CLOUDFLARE_FALLBACK_TARGET') ?? 'fallback.pictocart.in';
 
-    if (store.cloudflare_hostname_id) {
-      await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${store.cloudflare_hostname_id}`, {
+    const deleteHostname = async (id: string) => {
+      await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${apiToken}` },
       }).catch(() => {});
+    };
+
+    if (store.cloudflare_hostname_id) {
+      await deleteHostname(store.cloudflare_hostname_id);
     }
 
-    // Create the Custom Hostname in Cloudflare for SaaS
-    const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        hostname: cleanDomain,
-        ssl: {
-          method: 'http',
-          type: 'dv',
-          settings: { min_tls_version: '1.2' },
-        },
-        custom_origin_server: fallback,
-      }),
-    });
-    const cfData = await cfRes.json();
+    const provision = async () => {
+      const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hostname: cleanDomain,
+          ssl: { method: 'http', type: 'dv', settings: { min_tls_version: '1.2' } },
+          custom_origin_server: fallback,
+        }),
+      });
+      return { res, data: await res.json() };
+    };
+
+    let { res: cfRes, data: cfData } = await provision();
+
+    // Code 1406 = Duplicate custom hostname → orphan in CF, look it up and delete then retry
+    if (!cfRes.ok && cfData?.errors?.[0]?.code === 1406) {
+      console.log('Duplicate hostname found in CF, attempting cleanup & retry');
+      const lookup = await fetch(
+        `https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames?hostname=${encodeURIComponent(cleanDomain)}`,
+        { headers: { Authorization: `Bearer ${apiToken}` } },
+      );
+      const lookupData = await lookup.json();
+      const existing = lookupData?.result?.[0];
+      if (existing?.id) {
+        await deleteHostname(existing.id);
+        await new Promise((r) => setTimeout(r, 1500));
+        ({ res: cfRes, data: cfData } = await provision());
+      }
+    }
+
     if (!cfRes.ok || !cfData.success) {
       console.error('Cloudflare provision failed', JSON.stringify(cfData));
       const cfErr = cfData.errors?.[0];
       const code = cfErr?.code ? ` (code ${cfErr.code})` : '';
       const msg = cfErr?.message ?? 'Cloudflare API error';
-      // Code 10000 = Authentication error → token invalid/expired or missing permissions
       const hint = cfErr?.code === 10000
         ? ' — Your Cloudflare API token is invalid or lacks "SSL and Certificates: Edit" + "Zone: Read" permissions on the zone. Please update the CLOUDFLARE_API_TOKEN secret.'
         : '';
