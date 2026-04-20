@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hostname: cleanDomain,
-          ssl: { method: 'http', type: 'dv', settings: { min_tls_version: '1.2' } },
+          ssl: { method: 'txt', type: 'dv', settings: { min_tls_version: '1.2' } },
           custom_origin_server: fallback,
         }),
       });
