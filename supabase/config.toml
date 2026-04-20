@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.cloudflare-agent]
 verify_jwt = false
+
+[functions.check-custom-hostname]
+verify_jwt = false
+
+[functions.admin-cloudflare-action]
+verify_jwt = false
