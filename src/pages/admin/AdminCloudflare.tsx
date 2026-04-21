@@ -230,9 +230,41 @@ const Kpi = ({ icon, label, value }: { icon: React.ReactNode; label: string; val
 const SSLBadge = ({ status, down }: { status: string | null; down: boolean }) => {
   if (down) return <Badge variant="destructive">Down</Badge>;
   if (status === 'active') return <Badge className="bg-emerald-500 hover:bg-emerald-500">Active</Badge>;
+  if (status === 'managed_by_merchant') return <Badge variant="outline">Merchant CF</Badge>;
   if (!status) return <Badge variant="secondary">—</Badge>;
   return <Badge variant="outline" className="text-amber-600 border-amber-300">{status.split('_').join(' ')}</Badge>;
 };
+
+const StateBadge = ({ state, strategy }: { state: string | null; strategy: string | null }) => {
+  if (!state) return <Badge variant="secondary">—</Badge>;
+  const tone =
+    state === 'healthy' ? 'bg-emerald-500 hover:bg-emerald-500 text-white' :
+    state === 'down' ? '' :
+    state === 'ssl_pending' || state === 'dns_propagating' ? 'border-amber-300 text-amber-700' :
+    'border-muted-foreground/30';
+  const variant = state === 'down' ? 'destructive' : state === 'healthy' ? 'default' : 'outline';
+  return (
+    <div className="flex flex-col gap-0.5">
+      <Badge variant={variant as any} className={tone}>{state.replace(/_/g, ' ')}</Badge>
+      {strategy && <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{strategy}</span>}
+    </div>
+  );
+};
+
+const Field = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex justify-between gap-4">
+    <span className="text-muted-foreground">{label}</span>
+    <span className="font-mono truncate max-w-[60%]" title={value}>{value}</span>
+  </div>
+);
+
+const CopyRow = ({ label, value, onCopy }: { label: string; value: string; onCopy: (v: string) => void }) => (
+  <div className="flex items-center gap-2">
+    <span className="text-muted-foreground w-12 shrink-0">{label}</span>
+    <code className="flex-1 px-2 py-1 rounded bg-background border truncate font-mono text-[11px]" title={value}>{value}</code>
+    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onCopy(value)}><Copy className="h-3 w-3" /></Button>
+  </div>
+);
 
 const IconBtn = ({ children, onClick, title, busy, variant = 'outline' }: any) => (
   <Button size="icon" variant={variant} className="h-7 w-7" onClick={onClick} disabled={busy} title={title}>
