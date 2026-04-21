@@ -12,6 +12,12 @@ export type StoreWithHealth = {
   last_health_check_at: string | null;
   consecutive_failures: number;
   downtime_started_at: string | null;
+  domain_state: string | null;
+  domain_strategy: string | null;
+  ns_provider: string | null;
+  ssl_validation_name: string | null;
+  ssl_validation_value: string | null;
+  state_entered_at: string | null;
 };
 
 export type AgentIncident = {
