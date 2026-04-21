@@ -42,7 +42,7 @@ const AdminCloudflare = () => {
     });
   }, [stores, filter, search]);
 
-  const action = async (storeId: string, kind: 'reprovision' | 'force_ssl' | 'delete' | 'recheck') => {
+  const action = async (storeId: string, kind: 'reprovision' | 'force_ssl' | 'delete' | 'recheck' | 'clear_stale_id' | 'refresh_validation_token') => {
     if (kind === 'delete' && !confirm('Disconnect this domain from Cloudflare? The store will lose its custom domain.')) return;
     setBusyId(`${storeId}-${kind}`);
     const { data, error } = await supabase.functions.invoke('admin-cloudflare-action', { body: { action: kind, store_id: storeId } });
@@ -51,9 +51,11 @@ const AdminCloudflare = () => {
       toast.error((data as any)?.error ?? error?.message ?? 'Action failed');
       return;
     }
-    toast.success(`${kind.replace('_', ' ')} succeeded`);
+    toast.success(`${kind.replace(/_/g, ' ')} succeeded`);
     refetch();
   };
+
+  const copy = (v: string) => { navigator.clipboard.writeText(v); toast.success('Copied'); };
 
   const runAgentNow = async () => {
     setBulkBusy(true);
