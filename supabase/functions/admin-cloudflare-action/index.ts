@@ -140,15 +140,37 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === 'recheck') {
-      // Trigger the agent to run for this single store inline
+    if (action === 'recheck' || action === 'refresh_validation_token') {
+      if (!store.cloudflare_hostname_id) return jsonError('No hostname provisioned', 400);
       const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${store.cloudflare_hostname_id}`, {
         headers: { Authorization: `Bearer ${apiToken}` },
       });
       const cfData = await cfRes.json();
-      const sslStatus = cfData?.result?.ssl?.status ?? 'pending';
-      await supabase.from('stores').update({ ssl_status: sslStatus, last_health_check_at: new Date().toISOString() }).eq('id', store_id);
-      return ok({ success: true, action, ssl_status: sslStatus });
+      if (!cfRes.ok || !cfData.success) {
+        // Stale ID — auto-clear so the agent reprovisions next tick
+        if (cfRes.status === 404 || cfData?.errors?.[0]?.code === 1436) {
+          await supabase.from('stores').update({ cloudflare_hostname_id: null }).eq('id', store_id);
+          await logIncident(supabase, store, 'admin_cleared_stale_id', 'warning', { by: user.email });
+          return jsonError('Hostname was stale and has been cleared. It will reprovision automatically.', 410);
+        }
+        return jsonError(cfData.errors?.[0]?.message ?? 'Cloudflare API error', 400);
+      }
+      const sslStatus = cfData.result.ssl?.status ?? 'pending';
+      const txt_name = cfData.result.ssl?.txt_name ?? null;
+      const txt_value = cfData.result.ssl?.txt_value ?? null;
+      await supabase.from('stores').update({
+        ssl_status: sslStatus,
+        last_health_check_at: new Date().toISOString(),
+        ssl_validation_name: txt_name,
+        ssl_validation_value: txt_value,
+      }).eq('id', store_id);
+      return ok({ success: true, action, ssl_status: sslStatus, ssl_validation: { name: txt_name, value: txt_value } });
+    }
+
+    if (action === 'clear_stale_id') {
+      await supabase.from('stores').update({ cloudflare_hostname_id: null }).eq('id', store_id);
+      await logIncident(supabase, store, 'admin_cleared_stale_id', 'warning', { by: user.email });
+      return ok({ success: true, action });
     }
 
     return jsonError('Unknown action', 400);

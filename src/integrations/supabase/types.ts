@@ -268,6 +268,50 @@ export type Database = {
           },
         ]
       }
+      domain_connect_sessions: {
+        Row: {
+          callback_token: string
+          completed_at: string | null
+          created_at: string
+          domain: string
+          id: string
+          metadata: Json | null
+          registrar: string | null
+          status: string
+          store_id: string
+        }
+        Insert: {
+          callback_token?: string
+          completed_at?: string | null
+          created_at?: string
+          domain: string
+          id?: string
+          metadata?: Json | null
+          registrar?: string | null
+          status?: string
+          store_id: string
+        }
+        Update: {
+          callback_token?: string
+          completed_at?: string | null
+          created_at?: string
+          domain?: string
+          id?: string
+          metadata?: Json | null
+          registrar?: string | null
+          status?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_connect_sessions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       domain_health_log: {
         Row: {
           checked_at: string
@@ -708,6 +752,8 @@ export type Database = {
           created_at: string
           custom_domain: string | null
           description: string | null
+          domain_state: string | null
+          domain_strategy: string | null
           downtime_notified_at: string | null
           downtime_started_at: string | null
           id: string
@@ -715,11 +761,15 @@ export type Database = {
           last_health_check_at: string | null
           logo_url: string | null
           name: string
+          ns_provider: string | null
           onboarding_step: number | null
           settings: Json | null
           slug: string
           ssl_last_checked_at: string | null
           ssl_status: string | null
+          ssl_validation_name: string | null
+          ssl_validation_value: string | null
+          state_entered_at: string | null
           theme: Json | null
           updated_at: string
           user_id: string
@@ -732,6 +782,8 @@ export type Database = {
           created_at?: string
           custom_domain?: string | null
           description?: string | null
+          domain_state?: string | null
+          domain_strategy?: string | null
           downtime_notified_at?: string | null
           downtime_started_at?: string | null
           id?: string
@@ -739,11 +791,15 @@ export type Database = {
           last_health_check_at?: string | null
           logo_url?: string | null
           name: string
+          ns_provider?: string | null
           onboarding_step?: number | null
           settings?: Json | null
           slug: string
           ssl_last_checked_at?: string | null
           ssl_status?: string | null
+          ssl_validation_name?: string | null
+          ssl_validation_value?: string | null
+          state_entered_at?: string | null
           theme?: Json | null
           updated_at?: string
           user_id: string
@@ -756,6 +812,8 @@ export type Database = {
           created_at?: string
           custom_domain?: string | null
           description?: string | null
+          domain_state?: string | null
+          domain_strategy?: string | null
           downtime_notified_at?: string | null
           downtime_started_at?: string | null
           id?: string
@@ -763,11 +821,15 @@ export type Database = {
           last_health_check_at?: string | null
           logo_url?: string | null
           name?: string
+          ns_provider?: string | null
           onboarding_step?: number | null
           settings?: Json | null
           slug?: string
           ssl_last_checked_at?: string | null
           ssl_status?: string | null
+          ssl_validation_name?: string | null
+          ssl_validation_value?: string | null
+          state_entered_at?: string | null
           theme?: Json | null
           updated_at?: string
           user_id?: string

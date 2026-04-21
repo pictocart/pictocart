@@ -12,6 +12,12 @@ export type StoreWithHealth = {
   last_health_check_at: string | null;
   consecutive_failures: number;
   downtime_started_at: string | null;
+  domain_state: string | null;
+  domain_strategy: string | null;
+  ns_provider: string | null;
+  ssl_validation_name: string | null;
+  ssl_validation_value: string | null;
+  state_entered_at: string | null;
 };
 
 export type AgentIncident = {
@@ -41,7 +47,7 @@ export const useDomainStores = () =>
     queryFn: async (): Promise<StoreWithHealth[]> => {
       const { data, error } = await supabase
         .from('stores')
-        .select('id, name, slug, custom_domain, cloudflare_hostname_id, ssl_status, last_health_check_at, consecutive_failures, downtime_started_at')
+        .select('id, name, slug, custom_domain, cloudflare_hostname_id, ssl_status, last_health_check_at, consecutive_failures, downtime_started_at, domain_state, domain_strategy, ns_provider, ssl_validation_name, ssl_validation_value, state_entered_at')
         .not('custom_domain', 'is', null)
         .order('name');
       if (error) throw error;
