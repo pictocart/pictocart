@@ -92,7 +92,7 @@ export const useHealthSummary = () =>
       const since = new Date(Date.now() - 24 * 3600_000).toISOString();
       const { data, error } = await supabase
         .from('domain_health_log')
-        .select('store_id, status')
+        .select('store_id, status, http_code')
         .gte('checked_at', since);
       if (error) throw error;
       const byStore: Record<string, { up: number; total: number }> = {};
@@ -100,7 +100,7 @@ export const useHealthSummary = () =>
         const k = r.store_id;
         byStore[k] = byStore[k] ?? { up: 0, total: 0 };
         byStore[k].total += 1;
-        if (r.status === 'up') byStore[k].up += 1;
+        if (r.status === 'up' && r.http_code >= 200 && r.http_code < 400) byStore[k].up += 1;
       });
       return byStore;
     },

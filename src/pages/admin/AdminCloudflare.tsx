@@ -24,9 +24,9 @@ const AdminCloudflare = () => {
 
   const kpis = useMemo(() => {
     const total = stores.length;
-    const active = stores.filter((s) => s.ssl_status === 'active' && (s.consecutive_failures ?? 0) === 0).length;
-    const pending = stores.filter((s) => s.ssl_status && s.ssl_status !== 'active').length;
-    const down = stores.filter((s) => (s.consecutive_failures ?? 0) >= 3).length;
+    const active = stores.filter((s) => s.domain_state === 'healthy').length;
+    const pending = stores.filter((s) => s.domain_state === 'ssl_pending' || s.domain_state === 'dns_propagating').length;
+    const down = stores.filter((s) => s.domain_state === 'down').length;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const healed = incidents.filter((i) => ['recovered', 'reprovisioned', 'admin_reprovisioned'].includes(i.action) && new Date(i.created_at) >= today).length;
     return { total, active, pending, down, healed };
@@ -35,9 +35,9 @@ const AdminCloudflare = () => {
   const filtered = useMemo(() => {
     return stores.filter((s) => {
       if (search && !(`${s.name} ${s.custom_domain}`.toLowerCase().includes(search.toLowerCase()))) return false;
-      if (filter === 'active') return s.ssl_status === 'active' && (s.consecutive_failures ?? 0) === 0;
-      if (filter === 'pending') return s.ssl_status !== 'active';
-      if (filter === 'down') return (s.consecutive_failures ?? 0) >= 3;
+      if (filter === 'active') return s.domain_state === 'healthy';
+      if (filter === 'pending') return s.domain_state === 'ssl_pending' || s.domain_state === 'dns_propagating';
+      if (filter === 'down') return s.domain_state === 'down';
       return true;
     });
   }, [stores, filter, search]);
@@ -123,7 +123,7 @@ const AdminCloudflare = () => {
                     const up = uptime[s.id]?.up ?? 0;
                     const total = uptime[s.id]?.total ?? 0;
                     const pct = total ? Math.round((up / total) * 100) : null;
-                    const isDown = (s.consecutive_failures ?? 0) >= 3;
+                    const isDown = s.domain_state === 'down';
                     const isOpen = expandedId === s.id;
                     return (
                       <Fragment key={s.id}>

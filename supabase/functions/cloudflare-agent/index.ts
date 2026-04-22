@@ -135,7 +135,13 @@ async function processStore(store: any, ctx: any) {
     const res = await fetch(`https://${domain}`, { method: 'HEAD', signal: ctrl.signal, redirect: 'follow' });
     clearTimeout(timer);
     httpCode = res.status;
-    healthy = res.status < 500;
+    healthy = res.status >= 200 && res.status < 400;
+    if (!healthy) {
+      const servedBy = res.headers.get('server')?.toLowerCase() ?? '';
+      errorMessage = servedBy.includes('cloudflare') && res.status === 403
+        ? 'Cloudflare blocked the request (likely proxy/cross-account issue)'
+        : `HTTP ${res.status}`;
+    }
   } catch (err: any) {
     errorMessage = err?.message ?? 'fetch failed';
   }
