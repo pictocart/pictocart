@@ -34,9 +34,8 @@ Deno.serve(async (req) => {
   const zoneId = Deno.env.get('CLOUDFLARE_ZONE_ID')!;
   const fallback = Deno.env.get('CLOUDFLARE_FALLBACK_TARGET') ?? 'store-on-tips.lovable.app';
 
-  await supabase.rpc('cleanup_domain_health_log', { _retain_days: 3 }).catch((err: any) => {
-    console.warn('health log cleanup skipped', err?.message);
-  });
+  const { error: cleanupError } = await supabase.rpc('cleanup_domain_health_log', { _retain_days: 3 });
+  if (cleanupError) console.warn('health log cleanup skipped', cleanupError.message);
 
   const { data: settings } = await supabase
     .from('admin_settings')
