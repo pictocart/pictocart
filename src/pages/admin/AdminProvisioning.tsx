@@ -377,10 +377,12 @@ const ThemeMasterRow = ({ master, onChange }: { master: ThemeMaster; onChange: (
   );
 };
 
+const REQUIRED_FIELDS = ['store_name', 'slug', 'store_id', 'logo_url', 'primary', 'accent'] as const;
+
 const CreateRequestForm = ({
   stores, themes, onDone,
 }: {
-  stores: Array<{ id: string; name: string; category?: string | null }>;
+  stores: Array<{ id: string; name: string; slug?: string; logo_url?: string | null; custom_domain?: string | null; category?: string | null }>;
   themes: ThemeMaster[];
   onDone: () => void;
 }) => {
@@ -391,14 +393,30 @@ const CreateRequestForm = ({
   const [tagline, setTagline] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Suggest default theme based on store category
   const selectedStore = stores.find((s) => s.id === storeId);
   const suggested = selectedStore?.category
     ? themes.find((t) => t.is_active && t.is_default && t.category === selectedStore.category)
     : null;
 
+  // Auto-filled payload preview
+  const payload: Record<string, string | null | undefined> = {
+    store_name: selectedStore?.name,
+    slug: selectedStore?.slug,
+    store_id: selectedStore?.id,
+    logo_url: selectedStore?.logo_url,
+    custom_domain: selectedStore?.custom_domain,
+    primary,
+    accent,
+    tagline,
+  };
+  const missing = REQUIRED_FIELDS.filter((k) => {
+    const v = payload[k];
+    return v === undefined || v === null || String(v).trim() === '';
+  });
+
   const submit = async () => {
     if (!storeId) { toast.error('Pick a store'); return; }
+    if (missing.length) { toast.error(`Missing required: ${missing.join(', ')}`); return; }
     setSubmitting(true);
     const { data, error } = await supabase.functions.invoke('provision-storefront', {
       body: {
@@ -408,17 +426,32 @@ const CreateRequestForm = ({
       },
     });
     setSubmitting(false);
-    if (error || (data as { error?: unknown })?.error) {
-      const err = (data as { error?: unknown; missing?: string[] }) ?? {};
-      toast.error(`Validation failed${err.missing ? `: missing ${err.missing.join(', ')}` : ''}`);
+    const errPayload = (data as { error?: unknown; missing?: string[] }) ?? {};
+    if (error || errPayload?.error) {
+      toast.error(`Validation failed${errPayload.missing ? `: missing ${errPayload.missing.join(', ')}` : ''}`);
       return;
     }
     toast.success('Request queued');
     onDone();
   };
 
+  const applyIndilipiPreset = () => {
+    const indilipi = stores.find((s) => s.slug === 'indilipi' || s.name?.toLowerCase().includes('indilipi'));
+    if (indilipi) setStoreId(indilipi.id);
+    setPrimary('#9A2A2A');
+    setAccent('#C9A227');
+    setTagline('Handcrafted ethnic luxury, delivered.');
+    const fashionTheme = themes.find((t) => t.is_active && t.category === 'fashion');
+    if (fashionTheme) setThemeId(fashionTheme.id);
+    toast.success(indilipi ? 'Indilipi preset applied' : 'Preset applied — pick the Indilipi store');
+  };
+
   return (
     <div className="space-y-4 mt-4">
+      <Button variant="outline" size="sm" onClick={applyIndilipiPreset} className="w-full">
+        ✨ Auto-fill for Indilipi (Fashion)
+      </Button>
+
       <div>
         <Label>Store</Label>
         <Select value={storeId} onValueChange={setStoreId}>
@@ -446,8 +479,32 @@ const CreateRequestForm = ({
         <div><Label>Accent color</Label><Input value={accent} onChange={(e) => setAccent(e.target.value)} /></div>
       </div>
       <div><Label>Tagline</Label><Input value={tagline} onChange={(e) => setTagline(e.target.value)} /></div>
-      <Button className="w-full" onClick={submit} disabled={submitting}>
-        {submitting ? 'Validating…' : 'Queue request'}
+
+      {storeId && (
+        <div className="rounded-md border p-3 text-xs space-y-1 bg-muted/30">
+          <div className="font-medium mb-1">Patch placeholders preview</div>
+          {REQUIRED_FIELDS.map((k) => {
+            const v = payload[k];
+            const ok = v !== undefined && v !== null && String(v).trim() !== '';
+            return (
+              <div key={k} className="flex justify-between gap-2">
+                <span className="text-muted-foreground">{k}</span>
+                <span className={ok ? 'text-foreground truncate max-w-[260px]' : 'text-destructive'}>
+                  {ok ? String(v) : 'missing'}
+                </span>
+              </div>
+            );
+          })}
+          {missing.length > 0 && (
+            <p className="text-destructive mt-2">
+              Fix these on the store record before queuing: {missing.join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+
+      <Button className="w-full" onClick={submit} disabled={submitting || missing.length > 0}>
+        {submitting ? 'Validating…' : missing.length > 0 ? `Fix ${missing.length} missing field(s)` : 'Queue request'}
       </Button>
     </div>
   );
