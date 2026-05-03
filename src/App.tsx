@@ -13,7 +13,7 @@ import ProductList from "@/pages/ProductList";
 import ProductForm from "@/pages/ProductForm";
 import OrderList from "@/pages/OrderList";
 import OrderDetail from "@/pages/OrderDetail";
-import StoreDesign from "@/pages/StoreDesign";
+import Customise from "@/pages/Customise";
 import PaymentSettings from "@/pages/PaymentSettings";
 import ShippingSettings from "@/pages/ShippingSettings";
 import DomainSettings from "@/pages/DomainSettings";
@@ -167,14 +167,18 @@ const AppRoutes = () => {
               }
             />
             <Route
-              path="/store-design"
+              path="/customise"
               element={
                 <ProtectedRoute>
                   <DashboardLayout>
-                    <StoreDesign />
+                    <Customise />
                   </DashboardLayout>
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/store-design"
+              element={<Navigate to="/customise" replace />}
             />
             <Route
               path="/settings/payments"
