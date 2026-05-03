@@ -1,243 +1,227 @@
 
-# PicToCart 2.0 — The Provisioning Agent Model
+# PicToCart 2.0 — Execution Plan (Theme-Remix Model)
 
-You nailed the missing piece. Lovable doesn't expose a public "create project" API, but it **does** accept a chat prompt inside any project. So we don't need an API — we need an **agent that acts as you, the admin**, opens a remix of the master Storefront Template, pastes a fully-prepared prompt, and lets Lovable's own agent do the build. Humans only click "Approve". This is the breakthrough.
+## Key amendment
 
-This plan covers four parallel tracks so we can ship Indilipi this week and scale immediately after.
+We are **dropping the "Mega Prompt rebuilds storefront from scratch"** approach.
+
+Instead, every premium theme (Bazaar, Atelier, Pulse, Bloom, Forge, Garden) will be built **once** by you in the Admin Panel as a fully working storefront project (a "Theme Master Project"). For each new client we simply:
+
+1. Remix the Theme Master Project they picked.
+2. Run a small **Client Patch Prompt** that only swaps:
+   - `STORE_SLUG`, store name, logo, favicon
+   - Brand colors / fonts (theme tokens)
+   - Custom domain
+   - Any one-off section toggles
+3. All products, banners, content, blog, reviews stream from the shared Supabase backend (filtered by `store_id`). No code changes per client for content.
+
+So: **theme code = static, content = dynamic from DB.** This is faster, cheaper, fully deterministic, and avoids an LLM rebuilding 50 files for every signup.
 
 ---
 
-## Track 1 — The Provisioning Agent (the heart of the system)
+## Phase 1 — Database foundations
 
-### How it works end-to-end
+One migration. Three new tables + minor columns.
 
+### 1.1 `theme_master_projects`
+Tracks each finished Theme Master Project that lives as its own Lovable project.
 ```text
-1. Customer signs up on pictocart.in
-2. Completes onboarding (store name, category, logo, products, theme, domain)
-3. Cockpit creates a `provision_request` row (status: queued)
-4. Provisioning Agent (admin-side tool) picks up the request:
-     a. Opens https://lovable.dev/projects/<MASTER_TEMPLATE_ID>?action=remix in a new tab
-     b. Auto-fills project name = "storefront-{slug}"
-     c. Pastes the pre-baked Mega Prompt into Lovable chat
-     d. Waits for Lovable to finish + extract the new project URL
-     e. Writes new project URL back into `stores.storefront_project_url`
-     f. Triggers Lovable's domain connection flow (manual click for now)
-5. Customer sees status pipeline in cockpit: Queued → Building → Connect Domain → Live
+theme_master_projects(
+  id uuid pk,
+  theme_id text unique,           -- 'bazaar', 'atelier', ...
+  name text,
+  lovable_project_url text,       -- the Master remix URL
+  remix_url text,                 -- prebuilt ?remix=true link
+  client_patch_prompt text,       -- short prompt to apply per-client tweaks
+  preview_image text,
+  is_active bool,
+  created_at, updated_at
+)
 ```
+RLS: admins manage; authenticated read active rows.
 
-### Phase A — Manual + assisted (this week, for Indilipi)
-A simple **admin dashboard page** (`/admin/provisioning`) that for each new signup shows:
-- A "Mega Prompt" generated from the customer's onboarding choices (store name, category, theme ID, color palette, hero copy, product list, policies, payment mode).
-- A **"Copy Prompt + Open Remix"** button that:
-  - Copies the Mega Prompt to clipboard
-  - Opens `lovable.dev/projects/{MASTER_ID}` in a new tab with `?remix=true`
-- Fields to paste back the new project URL + `.lovable.app` subdomain
-- A "Mark as Built" button that updates `stores.storefront_project_url` and notifies the customer
-
-Admin (you) does ~30 seconds of clicking per new store. Customer never knows.
-
-### Phase B — Browser-extension agent (week 2)
-A small Chrome extension ("PicToCart Provisioner") that:
-- Reads queued requests from Supabase
-- Opens the remix URL itself
-- Pastes the Mega Prompt into Lovable's chat box (DOM injection)
-- Detects when Lovable finishes (watches chat for "Build complete" / preview URL)
-- Posts the new project URL back to Supabase
-- Repeats for the next request
-
-This stays within Lovable ToS because **you are signed in as the admin** — the extension just automates clicks you'd do anyway. No reverse-engineering of private APIs.
-
-### Phase C — Headless agent (week 4)
-Move the extension logic to a Playwright script running on a small VPS, triggered by a Supabase webhook. Same flow, no browser tab needed.
-
-### The Mega Prompt template
-Stored in `prompt_templates` table (one per theme). Filled at provision time with the customer's data:
-
-```
-Build a complete e-commerce storefront for "{store_name}" — a {category} store.
-
-Theme: {theme_name} (refer to design-system.md)
-Brand colors: primary {primary}, accent {accent}, background {bg}
-Logo: {logo_url}
-Domain: {custom_domain}
-
-Backend: Use the existing Supabase project (URL + anon key already in .env).
-Hardcode STORE_SLUG = "{slug}" in src/config.ts.
-Pull all products, categories, content, theme overrides, blog, reviews from
-the shared backend filtered by store_id = "{store_id}".
-
-Pages required: Home, Product Detail, Cart, Checkout (Razorpay + COD),
-Customer Account, Wishlist, Blog, Policies (Privacy, Refund, Terms, Shipping).
-
-Use the components in src/components/storefront/ exactly as-is.
-Hero, banners, USP strip, featured products, testimonials, newsletter — all
-read from the `store_content` table so the seller can edit them later from
-pictocart.in cockpit.
-
-Connect the custom domain "{custom_domain}" using Lovable's native domain flow.
-
-Do NOT include: dashboard, onboarding, admin, or seller routes.
-This project is read-only storefront only.
-```
-
----
-
-## Track 2 — Indilipi launch playbook (do this within 48h)
-
-### Step 1 — Clean the test data
-- Reset Supabase: keep only `antarikshdwivedi@gmail.com` as admin user.
-- Delete all other auth.users, profiles, stores, products, orders, customers, wishlists, reviews, subscriptions, theme_purchases, domain_health_log.
-- Keep `theme_packs`, `theme_section_blueprints`, `theme_image_pool`, `admin_settings`.
-- Re-create only the Indilipi store under your admin account, then transfer ownership to `contact.indilipi@gmail.com` once they sign up.
-
-### Step 2 — Manual remix for Indilipi
-- Open this PicToCart project → Remix as `storefront-indilipi` in your Antariksh workspace.
-- In the new project, run the Mega Prompt manually with Indilipi's data filled in.
-- Strip everything except `/`, `/product/:id`, `/cart`, `/checkout`, `/account`, `/wishlist`, `/blog`, `/policies/*`.
-- Hardcode `STORE_SLUG = "indilipi"`.
-- Connect `indilipi.shop` + `www.indilipi.shop` via Lovable's native custom domain (A `185.158.133.1` + `_lovable` TXT). **No Cloudflare-for-SaaS.**
-- Publish. Indilipi is live.
-
-### Step 3 — Cockpit handoff
-- In pictocart.in dashboard, Indilipi logs in and manages all products/orders/banners.
-- Banner edits flow through the new `store_content` table → storefront refetches without redeploy.
-
----
-
-## Track 3 — Cloudflare Pages as Customer Portal
-
-Repurpose Cloudflare Pages (which already serves your domain edge) into the **customer-facing self-service portal** at `account.pictocart.in`:
-
-**What it shows the seller:**
-- Active subscription (Free/Premium) + renewal date
-- AI credit balance + top-up packs (₹99 = 100 credits, ₹499 = 1000)
-- Add-on purchases: extra themes, premium support, custom domain SSL
-- Storefront project status: building / live / domain connected
-- Quick links: "Edit storefront content", "View orders", "Open dashboard"
-
-**Why Cloudflare Pages, not part of the cockpit:**
-- Lighter weight, cached at edge → loads in <500ms even on slow 4G
-- Sellers check billing more often than they edit products
-- Frees the main cockpit React bundle from billing/payment code
-- Stripe/Razorpay subscription pages can be embedded without bloating the main app
-
-**Tables to add:**
-- `ai_credits` (store_id, balance, last_topup_at)
-- `ai_credit_transactions` (store_id, type, amount, reason, created_at)
-- `addon_purchases` (store_id, addon_type, amount, razorpay_payment_id, created_at)
-
-**Edge functions:**
-- `purchase-ai-credits` — Razorpay order + verification → credit ai_credits.balance
-- `consume-ai-credit` — atomic decrement, called by every AI-using edge function (generate-product, generate-blog, generate-theme-pack, store-engagement)
-
----
-
-## Track 4 — Premium Themes overhaul (the "amaze me" part)
-
-Current pain: 6 themes look identical because they only swap colors. Fix it by giving each theme a **completely different layout system**, not just a palette.
-
-### New theme architecture
-
-Each theme = a folder under `src/themes/{theme-id}/` containing:
-- `Hero.tsx` — unique hero design (split, full-bleed video, marquee, 3D card stack…)
-- `ProductCard.tsx` — unique card (overlay, magazine, tile-flip, sticker)
-- `ProductDetail.tsx` — unique PDP layout (sticky-rail, scroll-tell, gallery-first)
-- `Header.tsx` + `Footer.tsx`
-- `tokens.ts` — colors, fonts, radii, shadows, motion curves
-- `preview.png` — real screenshot for the picker
-
-The `Storefront` route reads `theme.id` from the store and dynamically imports `./themes/{theme.id}/index.tsx` as the root.
-
-### The 6 launch themes (each genuinely distinct)
-
-| Theme | Vibe | Hero | PDP | Card | Best for |
-|---|---|---|---|---|---|
-| **Atelier** | Editorial luxury | Split image + serif headline | Sticky gallery + long-form story | Magazine tile | Fashion, jewelry |
-| **Bazaar** | Indian handcraft | Mosaic banner + Devanagari accent | Tabbed (Story, Craft, Care) | Bordered card with motif | Indilipi, Kalamkari, sarees |
-| **Pulse** | Streetwear neon | Full-bleed video + glitch text | Asymmetric grid | Floating sticker | Gen-Z, sneakers, gadgets |
-| **Bloom** | Beauty pastel | 3-up product carousel + soft blob | Ingredient breakdown + reviews-first | Rounded card + emoji rating | Skincare, candles |
-| **Forge** | Industrial dark | Marquee + monospace | Spec sheet + comparison table | Dense terminal-style | Tools, electronics |
-| **Garden** | Organic earthy | Parallax leaves + handwritten | Story + farmer profile | Polaroid-style | Food, organic, wellness |
-
-### Theme builder process (you, with AI)
-For each theme, run the existing `generate-theme-pack` edge function with a **per-theme design brief** (not just colors). Output goes into `theme_packs.pages` with full JSX for each section. Premium themes (5 of 6) priced at ₹500-₹1500 with realistic preview screenshots.
-
-### Theme preview that actually previews
-`/themes/preview/:id` already exists — extend it to render the **full theme** (not a swatch), with mock products, so customers see exactly what they'll get.
-
----
-
-## Database additions (one migration)
-
+### 1.2 `provision_requests`
 ```text
--- Provisioning queue
-provision_requests(id, store_id, status, mega_prompt, project_url, project_subdomain,
-                   queued_at, started_at, completed_at, error)
+provision_requests(
+  id uuid pk,
+  store_id uuid,
+  theme_master_id uuid -> theme_master_projects.id,
+  status text,                    -- queued | remixing | patching | domain_pending | live | failed
+  client_patch_payload jsonb,     -- {store_name, slug, logo_url, colors, domain, ...}
+  rendered_patch_prompt text,     -- patch prompt with values filled in
+  new_project_url text,           -- captured from Lovable after remix
+  new_project_subdomain text,     -- e.g. storefront-indilipi.lovable.app
+  notes text,
+  queued_at, started_at, completed_at, error
+)
+```
+RLS: admins all; store owners read own.
 
--- Dynamic storefront content (banners, hero, USPs, testimonials)
-store_content(id, store_id, section_key, content jsonb, updated_at)
-UNIQUE(store_id, section_key)
+### 1.3 `store_content`
+Per-section dynamic content edited from the cockpit (no redeploy).
+```text
+store_content(
+  id uuid pk,
+  store_id uuid,
+  section_key text,               -- 'hero', 'banners', 'usp_strip', 'testimonials', 'newsletter'
+  content jsonb,
+  updated_at
+)
+UNIQUE (store_id, section_key)
+```
+RLS: store owners CRUD own; public SELECT when parent store `is_published`.
 
--- AI credits
-ai_credits(store_id PK, balance int, last_topup_at)
-ai_credit_transactions(id, store_id, type, amount, reason, ref_id, created_at)
+### 1.4 (Optional now, kept) `prompt_templates`
+Repurposed as the **Client Patch Prompt library**, keyed by `theme_id`. Stores the small patch prompt + variable schema. Not the giant rebuild prompt.
 
--- Add-ons
-addon_purchases(id, store_id, addon_type, amount, razorpay_payment_id,
-                metadata jsonb, created_at)
+---
 
--- Mega prompt templates (one per theme)
-prompt_templates(id, theme_id UNIQUE, prompt_body text, version, updated_at)
+## Phase 2 — Admin Provisioning Console (`/admin/provisioning`)
+
+New page at `src/pages/admin/AdminProvisioning.tsx`, registered in `AdminLayout`.
+
+### Layout
+- **Queue table**: all `provision_requests` with status pills, client name, theme picked, domain.
+- **Detail drawer** for a selected request:
+  - Client snapshot (store name, slug, category, logo preview, color palette, domain, products count).
+  - Picked theme card → shows linked Theme Master Project + its `remix_url`.
+  - **"Copy Patch Prompt"** button → copies the rendered Client Patch Prompt to clipboard.
+  - **"Open Remix in Lovable"** button → opens `theme_master.remix_url` in new tab with project name suggestion `storefront-{slug}`.
+  - Field: paste-back `new_project_url` and `new_project_subdomain`.
+  - Status updater: `queued → remixing → patching → domain_pending → live`.
+  - "Mark Live" notifies the store owner (existing email infra) and writes URL into `stores.settings.storefront_project_url`.
+
+### Client Patch Prompt template (small, deterministic)
+Stored per theme. Example:
+```
+Patch this remixed storefront for client "{store_name}".
+- Set src/config.ts:
+    STORE_SLUG = "{slug}"
+    STORE_ID   = "{store_id}"
+- Replace logo at src/assets/logo.svg with: {logo_url}
+- Update src/themes/{theme_id}/tokens.ts:
+    primary  = "{primary}"
+    accent   = "{accent}"
+    bg       = "{background}"
+    heading_font = "{heading_font}"
+- Update index.html <title> and meta description to "{store_name} — {tagline}"
+- Update public/manifest.json name and short_name.
+- Do NOT modify any component logic, layout, or data fetching.
+- Confirm and publish. Connect domain "{custom_domain}".
+```
+That's the entire prompt. Lovable changes ~6 files. No regeneration risk.
+
+### Companion: `provision-storefront` edge function (used by cockpit)
+- Called when a customer finishes onboarding.
+- Inserts the `provision_requests` row.
+- Renders the patch prompt from the picked theme + onboarding data.
+- Pings admin (existing notification path).
+
+---
+
+## Phase 3 — `get-storefront-bundle` edge function
+
+Single endpoint every storefront calls on first paint. Replaces 4–6 round-trips.
+
+`supabase/functions/get-storefront-bundle/index.ts`
+- Input: `{ store_slug }` or `{ host }`
+- Output (JSON, cached 60s via `Cache-Control: public, max-age=60, s-maxage=60`):
+```json
+{
+  "store":   { ...row from stores },
+  "theme":   { theme_id, tokens, fonts },
+  "content": { hero, banners, usp_strip, testimonials, newsletter },   // from store_content
+  "products":{ featured: [...], all_count },
+  "categories":[...],
+  "policies":{ ... },
+  "blog_recent":[...]
+}
+```
+- Public (no JWT). Validates input with zod. Honors RLS via service role + `is_published = true` filter.
+- All theme master projects use a tiny `useStorefrontBundle()` hook that calls this endpoint, eliminating per-page Supabase chatter.
+
+---
+
+## Phase 4 — Per-theme folders + the Bazaar theme
+
+### 4.1 New structure
+```text
+src/themes/
+  index.ts                  -- registry: { bazaar: () => import('./bazaar'), ... }
+  _shared/                  -- primitives: Price, Rating, ImageSwiper wrappers
+  bazaar/
+    index.tsx               -- theme root: routes Home/PDP/Cart/etc using its own components
+    tokens.ts               -- colors, fonts, radii, motion
+    Header.tsx
+    Footer.tsx
+    Hero.tsx                -- mosaic banner + Devanagari accent
+    ProductCard.tsx         -- bordered card with motif corner
+    ProductDetail.tsx       -- tabbed (Story / Craft / Care)
+    sections/
+      USPStrip.tsx
+      FeaturedGrid.tsx
+      Testimonials.tsx
+      Newsletter.tsx
+    preview.png
 ```
 
-All RLS-scoped by store_id + admin override.
+### 4.2 Storefront entry
+`src/pages/Storefront.tsx` becomes a tiny shell:
+1. Resolve store via host/slug (existing `useStoreByHost`).
+2. Read `store.theme.theme_id`.
+3. Dynamically `import()` `src/themes/{theme_id}/index.tsx` and render it, passing the bundle from `get-storefront-bundle`.
+4. Fallback to `minimal-light` if theme missing.
+
+### 4.3 Bazaar theme content
+Designed for Indilipi (Indian handcraft / calligraphy):
+- **Tokens**: primary `#9A2A2A` (kumkum red), accent `#C9A227` (brass gold), bg `#FBF6EE` (handmade paper), text `#2A1A0F`. Headings: Cormorant Garamond + a Devanagari pair (Tiro Devanagari Hindi). Body: Inter. Radius 6px, soft warm shadows.
+- **Hero**: 60/40 mosaic — left: handcraft photo from `theme_image_pool`; right: serif headline + small Devanagari kicker + CTA. Subtle paper-grain background.
+- **USP Strip**: 4 icons — "Handmade in India", "Free shipping ₹999+", "7-day returns", "GI-tagged crafts".
+- **Featured Grid**: 2-col mobile / 4-col desktop, ProductCard with hand-drawn motif corner; price in serif.
+- **PDP**: sticky gallery left, content right with **Tabs**: Story · Craft · Care. Reviews-first below. Pincode checker prominent.
+- **Footer**: dark warm with Indian motif divider; newsletter; policies; payment badges.
+- **Motion**: gentle fade-up on scroll using existing `useAnimateOnScroll`. No flashy effects — feels editorial.
+
+### 4.4 Master Project workflow (for Bazaar — to be done after Phase 4 ships)
+1. You remix this PicToCart project as `theme-master-bazaar`.
+2. Strip dashboard/admin/onboarding routes, keep storefront routes only.
+3. Hardwire `theme_id = 'bazaar'`, leave everything else dynamic.
+4. Connect to the same shared Supabase via env vars.
+5. Save its `remix_url` into `theme_master_projects.remix_url`.
+6. From now on every Bazaar customer just remixes this and runs the Client Patch Prompt.
 
 ---
 
-## Edge functions to add
-- `get-storefront-bundle` — single call returning `{store, products, content, theme}` cached 60s, used by every storefront on first load
-- `provision-storefront` — creates the `provision_request` row + generates Mega Prompt
-- `consume-ai-credit` — atomic decrement guard for all AI calls
-- `purchase-ai-credits` — Razorpay order + webhook
-- `notify-admin-new-signup` — Telegram/email ping when a new provision request is queued
+## Phase 5 — Indilipi go-live (uses Phase 1–4)
+
+1. In `/admin/provisioning`, create the `provision_request` row for Indilipi with theme = `bazaar`.
+2. Click **Open Remix** → `theme-master-bazaar` opens.
+3. Click **Copy Patch Prompt** → paste into the new project's chat → Lovable applies the 6-file patch.
+4. Connect `indilipi.shop` + `www.indilipi.shop` (A `185.158.133.1` + `_lovable` TXT).
+5. Mark Live in console → store owner notified, cockpit shows "Storefront: Live".
+
+Estimated turnaround once the Bazaar Master exists: **under 5 minutes per new client**.
 
 ---
 
-## Execution order (proposed sprint)
+## Technical details (for engineers)
 
-**Day 1-2 — Indilipi live**
-1. Wipe test data, keep only your admin account
-2. Manually remix + launch `storefront-indilipi` on `indilipi.shop`
-3. Customer starts using cockpit immediately
-
-**Day 3-5 — Foundations**
-4. Add `provision_requests`, `store_content`, `prompt_templates` tables
-5. Build `/admin/provisioning` queue page with Copy-Prompt + Open-Remix flow
-6. Build `get-storefront-bundle` edge function
-7. Add "My Storefront" page in cockpit with iframe preview + banner editor
-
-**Day 6-10 — Themes**
-8. Refactor theme system to per-theme folders
-9. Build the 6 distinct themes (one per day with AI)
-10. Rebuild `/themes/preview/:id` to render full theme
-
-**Day 11-14 — Customer portal & credits**
-11. Add `ai_credits`, `addon_purchases` tables + edge functions
-12. Deploy `account.pictocart.in` on Cloudflare Pages
-13. Wire AI credit consumption into all AI edge functions
-
-**Week 3+ — Automation**
-14. Ship Chrome extension provisioner
-15. Onboard 5 paying clients
+- New types regenerate automatically after migration; do not hand-edit `src/integrations/supabase/types.ts`.
+- New edge function gets `verify_jwt = false` (public) and uses service role key + zod validation.
+- `useStorefrontBundle(slug)` hook in `src/hooks/` — React Query, 60s `staleTime`, key `['bundle', slug]`.
+- Theme registry uses `React.lazy` + `Suspense` so unused themes are tree-shaken in master projects.
+- `store_content` writes from cockpit invalidate the bundle query and bump a `content_version` in the response so storefronts can revalidate without a hard reload.
+- Admin page guarded by existing `AdminRoute`.
 
 ---
 
-## Why this wins
+## Build order
 
-- **Indilipi is live in 48h** — manual but working, unblocking the customer immediately.
-- **Provisioning Agent** turns Lovable's chat into your private API. No ToS violation, no fragile reverse-engineering.
-- **Cloudflare Pages portal** keeps the cockpit lean and gives sellers a fast billing/credits view.
-- **Themes that genuinely differ** — sellers will pay ₹1500 for Atelier or Bazaar because the layout itself is the value.
-- **Shared Supabase + Lovable's native domain pipeline** = zero Cloudflare-for-SaaS pain.
+1. Phase 1 — migration (tables + RLS).
+2. Phase 3 — `get-storefront-bundle` edge function (small, unblocks themes).
+3. Phase 4.1 + 4.2 — theme registry plumbing in this project.
+4. Phase 4.3 — Bazaar theme components.
+5. Phase 2 — `/admin/provisioning` console + `provision-storefront` function.
+6. Phase 5 — manual Indilipi launch using the new console.
 
-Approve and I'll start with **Day 1-2** immediately: wipe test data (keeping `antarikshdwivedi@gmail.com` as the only admin), then prepare the Indilipi remix playbook + the Mega Prompt for `storefront-indilipi`.
+Approve and I will start with Phase 1 immediately.
