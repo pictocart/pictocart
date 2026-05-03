@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Copy, ExternalLink, Plus, Rocket, ListTree } from 'lucide-react';
+import { Copy, ExternalLink, Plus, Rocket, ListTree, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ThemeMaster {
@@ -327,10 +327,10 @@ const JobLogDrawer = ({ requestId, onClose }: { requestId: string | null; onClos
 
 const ThemeMasterRow = ({ master, onChange }: { master: ThemeMaster; onChange: () => void }) => {
   const [category, setCategory] = useState(master.category ?? '');
+  const [editOpen, setEditOpen] = useState(false);
 
   const setDefault = async (val: boolean) => {
     if (val && master.category) {
-      // Clear other defaults in same category
       await supabase.from('theme_master_projects')
         .update({ is_default: false })
         .eq('category', master.category).neq('id', master.id);
@@ -340,10 +340,22 @@ const ThemeMasterRow = ({ master, onChange }: { master: ThemeMaster; onChange: (
     if (error) toast.error(error.message); else { toast.success('Updated'); onChange(); }
   };
 
+  const toggleActive = async (val: boolean) => {
+    const { error } = await supabase.from('theme_master_projects')
+      .update({ is_active: val }).eq('id', master.id);
+    if (error) toast.error(error.message); else { toast.success(val ? 'Activated' : 'Deactivated'); onChange(); }
+  };
+
   const saveCategory = async () => {
     const { error } = await supabase.from('theme_master_projects')
       .update({ category: category || null }).eq('id', master.id);
     if (error) toast.error(error.message); else { toast.success('Category saved'); onChange(); }
+  };
+
+  const remove = async () => {
+    if (!confirm(`Delete theme master "${master.name}"? This cannot be undone.`)) return;
+    const { error } = await supabase.from('theme_master_projects').delete().eq('id', master.id);
+    if (error) toast.error(error.message); else { toast.success('Deleted'); onChange(); }
   };
 
   return (
@@ -357,13 +369,21 @@ const ThemeMasterRow = ({ master, onChange }: { master: ThemeMaster; onChange: (
           </div>
           <div className="text-xs text-muted-foreground">{master.theme_id}</div>
         </div>
-        {master.remix_url && (
-          <a href={master.remix_url} target="_blank" rel="noreferrer">
-            <Button variant="outline" size="sm" className="gap-1">
-              <ExternalLink className="h-3 w-3" /> Remix
-            </Button>
-          </a>
-        )}
+        <div className="flex items-center gap-1">
+          {master.remix_url && (
+            <a href={master.remix_url} target="_blank" rel="noreferrer">
+              <Button variant="outline" size="sm" className="gap-1">
+                <ExternalLink className="h-3 w-3" /> Remix
+              </Button>
+            </a>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditOpen(true)} title="Edit">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={remove} title="Delete">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="category (e.g. fashion)" className="h-8 text-xs" />
@@ -373,7 +393,52 @@ const ThemeMasterRow = ({ master, onChange }: { master: ThemeMaster; onChange: (
         <Label className="text-xs text-muted-foreground">Default for category</Label>
         <Switch checked={master.is_default} onCheckedChange={setDefault} disabled={!master.category} />
       </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-muted-foreground">Active (selectable for new requests)</Label>
+        <Switch checked={master.is_active} onCheckedChange={toggleActive} />
+      </div>
+
+      <ThemeMasterEdit master={master} open={editOpen} onOpenChange={setEditOpen} onSaved={onChange} />
     </div>
+  );
+};
+
+const ThemeMasterEdit = ({
+  master, open, onOpenChange, onSaved,
+}: {
+  master: ThemeMaster; open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void;
+}) => {
+  const [name, setName] = useState(master.name);
+  const [theme_id, setThemeId] = useState(master.theme_id);
+  const [remix_url, setRemix] = useState(master.remix_url ?? '');
+  const [prompt, setPrompt] = useState(master.client_patch_prompt ?? '');
+  const [category, setCategory] = useState(master.category ?? '');
+
+  const save = async () => {
+    const { error } = await supabase.from('theme_master_projects').update({
+      name, theme_id, remix_url: remix_url || null,
+      client_patch_prompt: prompt, category: category || null,
+    }).eq('id', master.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Theme master updated');
+    onOpenChange(false);
+    onSaved();
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-lg overflow-y-auto">
+        <SheetHeader><SheetTitle>Edit Theme Master</SheetTitle></SheetHeader>
+        <div className="space-y-3 mt-4">
+          <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div><Label>Theme ID</Label><Input value={theme_id} onChange={(e) => setThemeId(e.target.value)} /></div>
+          <div><Label>Category</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="fashion, electronics…" /></div>
+          <div><Label>Remix URL</Label><Input value={remix_url} onChange={(e) => setRemix(e.target.value)} placeholder="https://lovable.dev/projects/.../remix" /></div>
+          <div><Label>Client Patch Prompt</Label><Textarea rows={12} value={prompt} onChange={(e) => setPrompt(e.target.value)} className="font-mono text-xs" /></div>
+          <Button className="w-full" onClick={save}>Save changes</Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
