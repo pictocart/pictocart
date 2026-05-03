@@ -39,15 +39,34 @@ const Themes = () => {
   const installTheme = async (theme: ThemeMaster) => {
     if (!store) return;
     try {
+      // 1) Update active theme on the store immediately for UI feedback
       const newTheme = { theme_id: theme.theme_id, name: theme.theme_id };
-      const { error } = await supabase
+      const { error: upErr } = await supabase
         .from('stores')
         .update({ theme: newTheme as any })
         .eq('id', store.id);
-      if (error) throw error;
+      if (upErr) throw upErr;
       setStore({ ...store, theme: newTheme as any });
+
+      // 2) Enqueue a provisioning request via edge function
+      const { data, error } = await supabase.functions.invoke('provision-storefront', {
+        body: {
+          store_id: store.id,
+          theme_master_id: theme.id,
+          client_patch_payload: {
+            store_name: store.name,
+            slug: store.slug,
+            store_id: store.id,
+            logo_url: store.logo_url || '',
+            primary: (store.theme as any)?.primary_color || '#F97316',
+            accent: (store.theme as any)?.colors?.accent || '#0EA5E9',
+          },
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
       toast.success(`"${theme.name}" installed. Re-provisioning your storefront…`);
-      // TODO Phase 3: enqueue provision_request with theme_master_id
     } catch (e: any) {
       toast.error(e.message || 'Install failed');
     }
