@@ -72,7 +72,8 @@ const navTree: NavEntry[] = [
     icon: Sparkles,
     key: 'storefront',
     children: [
-      { label: 'Store Design', icon: Palette, path: '/store-design' },
+      { label: 'Themes', icon: Palette, path: '/themes' },
+      { label: 'Customise', icon: SettingsIcon, path: '/store-design' },
       { label: 'Analytics', icon: TrendingUp, path: '/analytics' },
     ],
   },
@@ -84,6 +85,7 @@ const navTree: NavEntry[] = [
       { label: 'Payments', icon: CreditCard, path: '/settings/payments' },
       { label: 'Shipping', icon: Truck, path: '/settings/shipping' },
       { label: 'Domain', icon: Globe, path: '/settings/domain' },
+      { label: 'Email Branding', icon: Mail, path: '/settings/email' },
       { label: 'Billing', icon: Crown, path: '/billing' },
     ],
   },

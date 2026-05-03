@@ -347,7 +347,7 @@ const Onboarding = () => {
       </div>
 
       {/* Footer navigation */}
-      {currentStep < 11 && (
+      {currentStep < TOTAL_STEPS && (
         <div className="border-t border-border/50 backdrop-blur-sm bg-background/80 sticky bottom-0">
           <div className="px-6 py-4 flex items-center justify-between max-w-3xl mx-auto w-full">
             <Button

@@ -100,7 +100,13 @@ const AdminStores = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => window.open(`/store/${store.slug}`, '_blank')}
+                      title="Open live store"
+                      onClick={() => {
+                        const url = (store as any).custom_domain
+                          ? `https://${(store as any).custom_domain}`
+                          : `https://${store.slug}.pictocart.in`;
+                        window.open(url, '_blank');
+                      }}
                     >
                       <ExternalLink className="h-4 w-4" />
                     </Button>
