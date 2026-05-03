@@ -1,27 +1,23 @@
 ---
 name: Subscription Billing System
-description: Razorpay-based platform subscription with Free/Premium plans, feature gating, and webhook handling
+description: 4-tier Razorpay subscription (Free/Starter/Growth/Scale), DB-driven plan_configs, feature gating, admin plan editor
 type: feature
 ---
 
-## Plans
-- **Free**: 10 products, 1 theme, COD only. No blog, coupons, analytics, SEO, custom domain, shipping, or Razorpay.
-- **Premium** (₹499/mo): Unlimited products/themes, all features unlocked.
+## Plans (DB-driven via `plan_configs` table)
+- **Free** ₹0 — 10 products, 1 theme, 3% commission, COD only
+- **Starter** ₹499 — 100 products, 3 themes, 2% commission, custom domain, payments, shipping, blog, coupons, analytics, SEO, branded emails
+- **Growth** ₹1499 — 1000 products, 10 themes, 1% commission, 14-day trial, premium themes, multi-domain
+- **Scale** ₹4999 — Unlimited, 0% commission, early access
 
-## Database
-- `subscriptions` table: store_id (unique), plan enum, status enum, razorpay_subscription_id, period dates
-- `subscription_events` table: billing history/audit log
-- Auto-creates free subscription on new store via trigger `handle_new_store_subscription`
+Admin can edit pricing, feature flags, Razorpay plan IDs at `/admin/plans`.
 
-## Feature Gating
-- `useSubscription` hook: returns plan, isPremium, canUse(feature), limits
-- `PremiumGate` component: wraps content with blur overlay + upgrade CTA
-- Applied to: CouponList, BlogPosts, StoreAnalytics, ProductForm (limit check)
+## Key files
+- `src/hooks/useSubscription.ts` — reads `plan_configs` + `subscriptions`, exposes `planConfig`, `canUse(feature)`, legacy `PLAN_LIMITS`
+- `src/pages/Billing.tsx` — 4-card plan picker + comparison table
+- `src/pages/admin/AdminPlans.tsx` — admin CRUD for plans
+- `supabase/functions/create-razorpay-subscription` — accepts `{store_id, plan}`, looks up `razorpay_plan_id` from plan_configs, supports trial via `start_at`
+- `supabase/functions/subscription-webhook` — resolves plan from notes or razorpay_plan_id, persists correct tier
 
-## Edge Functions
-- `subscription-webhook`: Handles Razorpay subscription events (activated, charged, cancelled, halted)
-- Webhook URL: `https://{project}.supabase.co/functions/v1/subscription-webhook`
-
-## Integration
-- Billing page at `/billing` with plan comparison and upgrade button
-- Sidebar entry with Crown icon
+## Razorpay plan IDs
+Set per-tier in Admin → Plans. Webhook resolves plan from `notes.plan` first, then falls back to `razorpay_plan_id` lookup.
