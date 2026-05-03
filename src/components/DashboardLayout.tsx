@@ -73,7 +73,7 @@ const navTree: NavEntry[] = [
     key: 'storefront',
     children: [
       { label: 'Themes', icon: Palette, path: '/themes' },
-      { label: 'Customise', icon: SettingsIcon, path: '/store-design' },
+      { label: 'Customise', icon: SettingsIcon, path: '/customise' },
       { label: 'Analytics', icon: TrendingUp, path: '/analytics' },
     ],
   },
@@ -95,7 +95,7 @@ const mobileBottomNav: NavLeaf[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Products', icon: Package, path: '/products' },
   { label: 'Orders', icon: ShoppingCart, path: '/orders' },
-  { label: 'Design', icon: Palette, path: '/store-design' },
+  { label: 'Design', icon: Palette, path: '/customise' },
   { label: 'Profile', icon: UserCircle, path: '/profile' },
 ];
 
