@@ -50,6 +50,8 @@ import Categories from "@/pages/Categories";
 import StorefrontBlog from "@/pages/storefront/StorefrontBlog";
 import StorefrontBlogPost from "@/pages/storefront/StorefrontBlogPost";
 import ThemePreview from "@/pages/ThemePreview";
+import Themes from "@/pages/Themes";
+import EmailBrandingSettings from "@/pages/EmailBrandingSettings";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import RefundPolicy from "@/pages/RefundPolicy";
@@ -231,6 +233,8 @@ const AppRoutes = () => {
             <Route path="/blog-posts/:id" element={<ProtectedRoute><DashboardLayout><BlogPostForm /></DashboardLayout></ProtectedRoute>} />
             <Route path="/subscribers" element={<ProtectedRoute><DashboardLayout><Subscribers /></DashboardLayout></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><DashboardLayout><StoreAnalytics /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/themes" element={<ProtectedRoute><DashboardLayout><Themes /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/settings/email" element={<ProtectedRoute><DashboardLayout><EmailBrandingSettings /></DashboardLayout></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><DashboardLayout><Billing /></DashboardLayout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><DashboardLayout><SellerProfile /></DashboardLayout></ProtectedRoute>} />
             {/* Admin Routes */}
