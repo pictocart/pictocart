@@ -1347,7 +1347,7 @@ export type Database = {
         | "cancelled"
         | "returned"
       payment_status: "pending" | "paid" | "failed" | "refunded" | "cod"
-      subscription_plan: "free" | "premium"
+      subscription_plan: "free" | "premium" | "starter" | "growth" | "scale"
       subscription_status:
         | "active"
         | "cancelled"
@@ -1493,7 +1493,7 @@ export const Constants = {
         "returned",
       ],
       payment_status: ["pending", "paid", "failed", "refunded", "cod"],
-      subscription_plan: ["free", "premium"],
+      subscription_plan: ["free", "premium", "starter", "growth", "scale"],
       subscription_status: [
         "active",
         "cancelled",
