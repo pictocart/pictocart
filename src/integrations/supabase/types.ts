@@ -566,14 +566,55 @@ export type Database = {
         }
         Relationships: []
       }
+      provision_job_logs: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          metadata: Json
+          request_id: string
+          status: string
+          step: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          metadata?: Json
+          request_id: string
+          status?: string
+          step: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          metadata?: Json
+          request_id?: string
+          status?: string
+          step?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provision_job_logs_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "provision_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provision_requests: {
         Row: {
+          attempts: number
           client_patch_payload: Json
           completed_at: string | null
           error: string | null
           id: string
+          last_attempt_at: string | null
           new_project_subdomain: string | null
           new_project_url: string | null
+          next_run_at: string
           notes: string | null
           queued_at: string
           rendered_patch_prompt: string | null
@@ -584,12 +625,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attempts?: number
           client_patch_payload?: Json
           completed_at?: string | null
           error?: string | null
           id?: string
+          last_attempt_at?: string | null
           new_project_subdomain?: string | null
           new_project_url?: string | null
+          next_run_at?: string
           notes?: string | null
           queued_at?: string
           rendered_patch_prompt?: string | null
@@ -600,12 +644,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attempts?: number
           client_patch_payload?: Json
           completed_at?: string | null
           error?: string | null
           id?: string
+          last_attempt_at?: string | null
           new_project_subdomain?: string | null
           new_project_url?: string | null
+          next_run_at?: string
           notes?: string | null
           queued_at?: string
           rendered_patch_prompt?: string | null
@@ -1036,11 +1083,13 @@ export type Database = {
       }
       theme_master_projects: {
         Row: {
+          category: string | null
           client_patch_prompt: string
           created_at: string
           description: string | null
           id: string
           is_active: boolean
+          is_default: boolean
           lovable_project_url: string | null
           name: string
           preview_image: string | null
@@ -1049,11 +1098,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           client_patch_prompt?: string
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          is_default?: boolean
           lovable_project_url?: string | null
           name: string
           preview_image?: string | null
@@ -1062,11 +1113,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           client_patch_prompt?: string
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          is_default?: boolean
           lovable_project_url?: string | null
           name?: string
           preview_image?: string | null
