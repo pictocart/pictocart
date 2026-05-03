@@ -435,8 +435,23 @@ const CreateRequestForm = ({
     onDone();
   };
 
+  const applyIndilipiPreset = () => {
+    const indilipi = stores.find((s) => s.slug === 'indilipi' || s.name?.toLowerCase().includes('indilipi'));
+    if (indilipi) setStoreId(indilipi.id);
+    setPrimary('#9A2A2A');
+    setAccent('#C9A227');
+    setTagline('Handcrafted ethnic luxury, delivered.');
+    const fashionTheme = themes.find((t) => t.is_active && t.category === 'fashion');
+    if (fashionTheme) setThemeId(fashionTheme.id);
+    toast.success(indilipi ? 'Indilipi preset applied' : 'Preset applied — pick the Indilipi store');
+  };
+
   return (
     <div className="space-y-4 mt-4">
+      <Button variant="outline" size="sm" onClick={applyIndilipiPreset} className="w-full">
+        ✨ Auto-fill for Indilipi (Fashion)
+      </Button>
+
       <div>
         <Label>Store</Label>
         <Select value={storeId} onValueChange={setStoreId}>
@@ -464,8 +479,32 @@ const CreateRequestForm = ({
         <div><Label>Accent color</Label><Input value={accent} onChange={(e) => setAccent(e.target.value)} /></div>
       </div>
       <div><Label>Tagline</Label><Input value={tagline} onChange={(e) => setTagline(e.target.value)} /></div>
-      <Button className="w-full" onClick={submit} disabled={submitting}>
-        {submitting ? 'Validating…' : 'Queue request'}
+
+      {storeId && (
+        <div className="rounded-md border p-3 text-xs space-y-1 bg-muted/30">
+          <div className="font-medium mb-1">Patch placeholders preview</div>
+          {REQUIRED_FIELDS.map((k) => {
+            const v = payload[k];
+            const ok = v !== undefined && v !== null && String(v).trim() !== '';
+            return (
+              <div key={k} className="flex justify-between gap-2">
+                <span className="text-muted-foreground">{k}</span>
+                <span className={ok ? 'text-foreground truncate max-w-[260px]' : 'text-destructive'}>
+                  {ok ? String(v) : 'missing'}
+                </span>
+              </div>
+            );
+          })}
+          {missing.length > 0 && (
+            <p className="text-destructive mt-2">
+              Fix these on the store record before queuing: {missing.join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+
+      <Button className="w-full" onClick={submit} disabled={submitting || missing.length > 0}>
+        {submitting ? 'Validating…' : missing.length > 0 ? `Fix ${missing.length} missing field(s)` : 'Queue request'}
       </Button>
     </div>
   );
