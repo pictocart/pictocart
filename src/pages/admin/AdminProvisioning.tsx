@@ -94,7 +94,11 @@ const AdminProvisioning = () => {
       const { error } = await supabase.from('provision_requests').update(patch).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['provision-requests'] }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['provision-requests'] });
+      if ((vars.patch as any).status === 'live') toast.success('Marked live');
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Update failed'),
   });
 
   const open = openId ? requestsQuery.data?.find((r) => r.id === openId) ?? null : null;
