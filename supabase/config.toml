@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.admin-cloudflare-action]
 verify_jwt = false
+
+[functions.get-storefront-bundle]
+verify_jwt = false
