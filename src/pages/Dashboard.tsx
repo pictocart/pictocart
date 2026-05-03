@@ -18,6 +18,7 @@ import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import RevenueChart from '@/components/dashboard/RevenueChart';
 import TopProducts from '@/components/dashboard/TopProducts';
 import RecentOrders from '@/components/dashboard/RecentOrders';
+import ProvisioningStatus from '@/components/dashboard/ProvisioningStatus';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -108,6 +109,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
+      <ProvisioningStatus />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
