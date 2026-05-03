@@ -81,17 +81,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resolve which plan this subscription belongs to from notes (preferred) or razorpay_plan_id
+    const planFromNotes = notes.plan;
+    let resolvedPlan: string | null = ['starter', 'growth', 'scale'].includes(planFromNotes)
+      ? planFromNotes
+      : null;
+    if (!resolvedPlan) {
+      const rzpPlanId = payload.subscription?.entity?.plan_id;
+      if (rzpPlanId) {
+        const { data: pc } = await supabase
+          .from('plan_configs').select('plan').eq('razorpay_plan_id', rzpPlanId).maybeSingle();
+        if (pc?.plan) resolvedPlan = pc.plan;
+      }
+    }
+    if (!resolvedPlan) resolvedPlan = 'starter';
+
     switch (event) {
       case 'subscription.activated': {
         const entity = payload.subscription.entity;
+        const status = entity.status === 'trialing' ? 'trialing' : 'active';
         await supabase.from('subscriptions').upsert({
           store_id: storeId,
-          plan: 'premium',
-          status: 'active',
+          plan: resolvedPlan,
+          status,
           razorpay_subscription_id: subscriptionId,
           razorpay_plan_id: entity.plan_id,
-          current_period_start: new Date(entity.current_start * 1000).toISOString(),
-          current_period_end: new Date(entity.current_end * 1000).toISOString(),
+          current_period_start: entity.current_start ? new Date(entity.current_start * 1000).toISOString() : null,
+          current_period_end: entity.current_end ? new Date(entity.current_end * 1000).toISOString() : null,
         }, { onConflict: 'store_id' });
         break;
       }
@@ -100,9 +116,10 @@ Deno.serve(async (req) => {
         const entity = payload.subscription.entity;
         await supabase.from('subscriptions').upsert({
           store_id: storeId,
-          plan: 'premium',
+          plan: resolvedPlan,
           status: 'active',
           razorpay_subscription_id: subscriptionId,
+          razorpay_plan_id: entity.plan_id,
           current_period_start: new Date(entity.current_start * 1000).toISOString(),
           current_period_end: new Date(entity.current_end * 1000).toISOString(),
         }, { onConflict: 'store_id' });

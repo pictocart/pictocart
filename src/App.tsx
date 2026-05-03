@@ -38,6 +38,7 @@ import AdminProfile from "@/pages/admin/AdminProfile";
 import AdminCloudflare from "@/pages/admin/AdminCloudflare";
 import AdminSecurity from "@/pages/admin/AdminSecurity";
 import AdminProvisioning from "@/pages/admin/AdminProvisioning";
+import AdminPlans from "@/pages/admin/AdminPlans";
 import SellerProfile from "@/pages/SellerProfile";
 import CustomerAuth from "@/pages/storefront/CustomerAuth";
 import CustomerAccount from "@/pages/storefront/CustomerAccount";
@@ -252,6 +253,7 @@ const AppRoutes = () => {
             <Route path="/admin/cloudflare" element={<AdminRoute><AdminLayout><AdminCloudflare /></AdminLayout></AdminRoute>} />
             <Route path="/admin/security" element={<AdminRoute><AdminLayout><AdminSecurity /></AdminLayout></AdminRoute>} />
             <Route path="/admin/provisioning" element={<AdminRoute><AdminLayout><AdminProvisioning /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/plans" element={<AdminRoute><AdminLayout><AdminPlans /></AdminLayout></AdminRoute>} />
             {/* Platform Legal Pages */}
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />

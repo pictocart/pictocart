@@ -462,6 +462,87 @@ export type Database = {
           },
         ]
       }
+      plan_configs: {
+        Row: {
+          analytics: boolean
+          blog: boolean
+          commission_percent: number
+          coupons: boolean
+          created_at: string
+          custom_domain: boolean
+          display_name: string
+          early_access: boolean
+          email_branding: boolean
+          id: string
+          is_active: boolean
+          multi_domain: boolean
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          premium_themes: boolean
+          price_inr: number
+          product_limit: number
+          razorpay_payments: boolean
+          razorpay_plan_id: string | null
+          seo: boolean
+          shipping: boolean
+          sort_order: number
+          theme_limit: number
+          trial_days: number
+          updated_at: string
+        }
+        Insert: {
+          analytics?: boolean
+          blog?: boolean
+          commission_percent?: number
+          coupons?: boolean
+          created_at?: string
+          custom_domain?: boolean
+          display_name: string
+          early_access?: boolean
+          email_branding?: boolean
+          id?: string
+          is_active?: boolean
+          multi_domain?: boolean
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          premium_themes?: boolean
+          price_inr?: number
+          product_limit?: number
+          razorpay_payments?: boolean
+          razorpay_plan_id?: string | null
+          seo?: boolean
+          shipping?: boolean
+          sort_order?: number
+          theme_limit?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Update: {
+          analytics?: boolean
+          blog?: boolean
+          commission_percent?: number
+          coupons?: boolean
+          created_at?: string
+          custom_domain?: boolean
+          display_name?: string
+          early_access?: boolean
+          email_branding?: boolean
+          id?: string
+          is_active?: boolean
+          multi_domain?: boolean
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          premium_themes?: boolean
+          price_inr?: number
+          product_limit?: number
+          razorpay_payments?: boolean
+          razorpay_plan_id?: string | null
+          seo?: boolean
+          shipping?: boolean
+          sort_order?: number
+          theme_limit?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           ai_generated_data: Json | null
@@ -1347,7 +1428,7 @@ export type Database = {
         | "cancelled"
         | "returned"
       payment_status: "pending" | "paid" | "failed" | "refunded" | "cod"
-      subscription_plan: "free" | "premium"
+      subscription_plan: "free" | "premium" | "starter" | "growth" | "scale"
       subscription_status:
         | "active"
         | "cancelled"
@@ -1493,7 +1574,7 @@ export const Constants = {
         "returned",
       ],
       payment_status: ["pending", "paid", "failed", "refunded", "cod"],
-      subscription_plan: ["free", "premium"],
+      subscription_plan: ["free", "premium", "starter", "growth", "scale"],
       subscription_status: [
         "active",
         "cancelled",

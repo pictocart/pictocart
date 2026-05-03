@@ -6,7 +6,6 @@ const corsHeaders = {
 }
 
 const RAZORPAY_KEY_ID = 'rzp_test_Se7Yf4ajKPSPlS'
-const RAZORPAY_PLAN_ID = 'plan_Se7h5qEQgrcbu0'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -37,9 +36,14 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub
 
-    const { store_id } = await req.json()
-    if (!store_id) {
-      return new Response(JSON.stringify({ error: 'store_id is required' }), {
+    const { store_id, plan } = await req.json()
+    if (!store_id || !plan) {
+      return new Response(JSON.stringify({ error: 'store_id and plan are required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    if (!['starter', 'growth', 'scale'].includes(plan)) {
+      return new Response(JSON.stringify({ error: 'Invalid plan' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -58,11 +62,34 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Lookup the Razorpay plan id from plan_configs
+    const { data: planConfig } = await admin
+      .from('plan_configs')
+      .select('razorpay_plan_id, trial_days, display_name, price_inr')
+      .eq('plan', plan)
+      .maybeSingle()
+
+    if (!planConfig?.razorpay_plan_id) {
+      return new Response(JSON.stringify({ error: `Razorpay plan id not configured for ${plan}. Set it in Admin → Plans.` }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET')
     if (!RAZORPAY_KEY_SECRET) {
       return new Response(JSON.stringify({ error: 'Razorpay secret not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    const subBody: Record<string, unknown> = {
+      plan_id: planConfig.razorpay_plan_id,
+      total_count: 120,
+      quantity: 1,
+      notes: { store_id, plan },
+    }
+    if (planConfig.trial_days && planConfig.trial_days > 0) {
+      subBody.start_at = Math.floor(Date.now() / 1000) + planConfig.trial_days * 86400
     }
 
     const res = await fetch('https://api.razorpay.com/v1/subscriptions', {
@@ -71,12 +98,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         Authorization: 'Basic ' + btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`),
       },
-      body: JSON.stringify({
-        plan_id: RAZORPAY_PLAN_ID,
-        total_count: 120,
-        quantity: 1,
-        notes: { store_id },
-      }),
+      body: JSON.stringify(subBody),
     })
 
     if (!res.ok) {

@@ -15,6 +15,7 @@ import {
   Zap,
   Lock,
   Rocket,
+  Crown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ const adminNavItems = [
   { label: 'Provisioning', icon: Rocket, path: '/admin/provisioning' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Themes', icon: Palette, path: '/admin/themes' },
+  { label: 'Plans', icon: Crown, path: '/admin/plans' },
   { label: 'Revenue', icon: IndianRupee, path: '/admin/revenue' },
   { label: 'Cloudflare', icon: Zap, path: '/admin/cloudflare' },
   { label: 'Security', icon: Lock, path: '/admin/security' },
