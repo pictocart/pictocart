@@ -566,6 +566,65 @@ export type Database = {
         }
         Relationships: []
       }
+      provision_requests: {
+        Row: {
+          client_patch_payload: Json
+          completed_at: string | null
+          error: string | null
+          id: string
+          new_project_subdomain: string | null
+          new_project_url: string | null
+          notes: string | null
+          queued_at: string
+          rendered_patch_prompt: string | null
+          started_at: string | null
+          status: string
+          store_id: string
+          theme_master_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_patch_payload?: Json
+          completed_at?: string | null
+          error?: string | null
+          id?: string
+          new_project_subdomain?: string | null
+          new_project_url?: string | null
+          notes?: string | null
+          queued_at?: string
+          rendered_patch_prompt?: string | null
+          started_at?: string | null
+          status?: string
+          store_id: string
+          theme_master_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_patch_payload?: Json
+          completed_at?: string | null
+          error?: string | null
+          id?: string
+          new_project_subdomain?: string | null
+          new_project_url?: string | null
+          notes?: string | null
+          queued_at?: string
+          rendered_patch_prompt?: string | null
+          started_at?: string | null
+          status?: string
+          store_id?: string
+          theme_master_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provision_requests_theme_master_id_fkey"
+            columns: ["theme_master_id"]
+            isOneToOne: false
+            referencedRelation: "theme_master_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           body: string | null
@@ -619,6 +678,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      store_content: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          section_key: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          section_key: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          section_key?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       store_email_domains: {
         Row: {
@@ -945,6 +1031,48 @@ export type Database = {
           id?: string
           image_url?: string
           section_type?: string
+        }
+        Relationships: []
+      }
+      theme_master_projects: {
+        Row: {
+          client_patch_prompt: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          lovable_project_url: string | null
+          name: string
+          preview_image: string | null
+          remix_url: string | null
+          theme_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_patch_prompt?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          lovable_project_url?: string | null
+          name: string
+          preview_image?: string | null
+          remix_url?: string | null
+          theme_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_patch_prompt?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          lovable_project_url?: string | null
+          name?: string
+          preview_image?: string | null
+          remix_url?: string | null
+          theme_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
