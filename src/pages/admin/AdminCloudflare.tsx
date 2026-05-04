@@ -71,9 +71,9 @@ const AdminCloudflare = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" /> Cloudflare Auto-Pilot
+            <Zap className="h-5 w-5 text-primary" /> Custom Domains
           </h1>
-          <p className="text-sm text-muted-foreground">Autonomous domain provisioning, monitoring & healing</p>
+          <p className="text-sm text-muted-foreground">Cross-store domain health, SSL provisioning & auto-healing</p>
         </div>
         <Button onClick={runAgentNow} disabled={bulkBusy}>
           {bulkBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}

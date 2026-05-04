@@ -12,10 +12,11 @@ import {
   Menu,
   IndianRupee,
   UserCircle,
-  Zap,
+  Globe,
   Lock,
   Rocket,
   Crown,
+  CheckSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -29,7 +30,8 @@ const adminNavItems = [
   { label: 'Themes', icon: Palette, path: '/admin/themes' },
   { label: 'Plans', icon: Crown, path: '/admin/plans' },
   { label: 'Revenue', icon: IndianRupee, path: '/admin/revenue' },
-  { label: 'Cloudflare', icon: Zap, path: '/admin/cloudflare' },
+  { label: 'Domains', icon: Globe, path: '/admin/cloudflare' },
+  { label: 'Launch QA', icon: CheckSquare, path: '/admin/launch' },
   { label: 'Security', icon: Lock, path: '/admin/security' },
   { label: 'Platform Settings', icon: Settings, path: '/admin/settings' },
 ];
