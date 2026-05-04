@@ -21,6 +21,7 @@ import RecentOrders from '@/components/dashboard/RecentOrders';
 import ProvisioningStatus from '@/components/dashboard/ProvisioningStatus';
 import WeeklyDigest from '@/components/dashboard/WeeklyDigest';
 import AbandonedCartBanner from '@/components/dashboard/AbandonedCartBanner';
+import { ThemeUpdateBanner } from '@/components/ThemeUpdateBanner';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -168,6 +169,9 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Theme update notification */}
+      <ThemeUpdateBanner />
 
       {/* Abandoned Cart Insight */}
       {store?.id && <AbandonedCartBanner storeId={store.id} />}

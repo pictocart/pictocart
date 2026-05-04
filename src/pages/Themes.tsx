@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ExternalLink, Check, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { THEME_TEMPLATES } from '@/lib/themes';
+import { ThemeUpdateBanner } from '@/components/ThemeUpdateBanner';
 
 interface ThemeMaster {
   id: string;
@@ -72,6 +73,8 @@ const Themes = () => {
           All themes are free for every Pic to Cart store. Switch any time — your products and content stay intact.
         </p>
       </div>
+
+      <ThemeUpdateBanner />
 
       {isLoading ? (
         <div className="flex justify-center py-20">
