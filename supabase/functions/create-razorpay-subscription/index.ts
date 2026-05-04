@@ -104,8 +104,8 @@ Deno.serve(async (req) => {
 
     if (!res.ok) {
       const errBody = await res.text()
-      console.error('Razorpay error:', errBody)
-      return new Response(JSON.stringify({ error: 'Failed to create subscription' }), {
+      console.error('Razorpay error:', errBody, 'key_id:', RAZORPAY_KEY_ID, 'plan_id:', planConfig.razorpay_plan_id)
+      return new Response(JSON.stringify({ error: 'Razorpay rejected the request', details: errBody }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
