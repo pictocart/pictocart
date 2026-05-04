@@ -18,6 +18,7 @@ import {
   Rocket,
   Crown,
   CheckSquare,
+  Bot,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ const adminNavItems = [
   { label: 'Provisioning', icon: Rocket, path: '/admin/provisioning' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Themes', icon: Palette, path: '/admin/themes' },
+  { label: 'Theme Agent', icon: Bot, path: '/admin/agent' },
   { label: 'Plans', icon: Crown, path: '/admin/plans' },
   { label: 'Revenue', icon: IndianRupee, path: '/admin/revenue' },
   { label: 'Credits Economy', icon: Sparkles, path: '/admin/credits-economy' },

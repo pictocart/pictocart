@@ -12,8 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, ExternalLink, Trash2, Pencil, Layers, IndianRupee, ImageIcon, Sparkles, Rocket } from 'lucide-react';
+import { Plus, ExternalLink, Trash2, Pencil, Layers, IndianRupee, ImageIcon, Sparkles, Rocket, TrendingDown, Calendar, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
+import ThemeCostGraph from '@/components/admin/ThemeCostGraph';
+import ThemePipeline from '@/components/admin/ThemePipeline';
+import ThemeDeliveriesInbox from '@/components/admin/ThemeDeliveriesInbox';
 
 const CATEGORIES = ['fashion', 'food', 'electronics', 'beauty', 'health', 'sports', 'home-decor', 'general'];
 
@@ -472,13 +475,19 @@ const AdminThemes = () => {
       </div>
 
       <Tabs defaultValue="masters">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="masters"><Layers className="mr-1 h-4 w-4" /> Master Projects</TabsTrigger>
+          <TabsTrigger value="deliveries"><Inbox className="mr-1 h-4 w-4" /> Deliveries</TabsTrigger>
+          <TabsTrigger value="pipeline"><Calendar className="mr-1 h-4 w-4" /> Pipeline</TabsTrigger>
           <TabsTrigger value="cost"><IndianRupee className="mr-1 h-4 w-4" /> Cost Matrix</TabsTrigger>
+          <TabsTrigger value="trend"><TrendingDown className="mr-1 h-4 w-4" /> Optimization</TabsTrigger>
           <TabsTrigger value="images"><ImageIcon className="mr-1 h-4 w-4" /> Image Pool</TabsTrigger>
         </TabsList>
         <TabsContent value="masters" className="mt-4"><MasterProjectsTab /></TabsContent>
+        <TabsContent value="deliveries" className="mt-4"><ThemeDeliveriesInbox /></TabsContent>
+        <TabsContent value="pipeline" className="mt-4"><ThemePipeline /></TabsContent>
         <TabsContent value="cost" className="mt-4"><CostMatrixTab /></TabsContent>
+        <TabsContent value="trend" className="mt-4"><ThemeCostGraph /></TabsContent>
         <TabsContent value="images" className="mt-4"><ImagePoolTab /></TabsContent>
       </Tabs>
     </div>

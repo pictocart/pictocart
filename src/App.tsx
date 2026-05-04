@@ -62,6 +62,7 @@ import RefundPolicy from "@/pages/RefundPolicy";
 import Billing from "@/pages/Billing";
 import Wallet from "@/pages/Wallet";
 import AdminCreditsEconomy from "@/pages/admin/AdminCreditsEconomy";
+import AdminAgent from "@/pages/admin/AdminAgent";
 import StorefrontPolicy from "@/pages/storefront/StorefrontPolicy";
 import CustomerWishlist from "@/pages/storefront/CustomerWishlist";
 import NotFound from "./pages/NotFound.tsx";
@@ -255,6 +256,7 @@ const AppRoutes = () => {
             <Route path="/admin/stores" element={<AdminRoute><AdminLayout><AdminStores /></AdminLayout></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute>} />
             <Route path="/admin/themes" element={<AdminRoute><AdminLayout><AdminThemes /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/agent" element={<AdminRoute><AdminLayout><AdminAgent /></AdminLayout></AdminRoute>} />
             <Route path="/admin/revenue" element={<AdminRoute><AdminLayout><AdminRevenue /></AdminLayout></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />
             <Route path="/admin/profile" element={<AdminRoute><AdminLayout><AdminProfile /></AdminLayout></AdminRoute>} />
