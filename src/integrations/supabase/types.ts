@@ -85,6 +85,51 @@ export type Database = {
           },
         ]
       }
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          order_id: string | null
+          path: string | null
+          product_id: string | null
+          referrer: string | null
+          session_id: string | null
+          store_id: string
+          user_id: string | null
+          value: number | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          order_id?: string | null
+          path?: string | null
+          product_id?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          store_id: string
+          user_id?: string | null
+          value?: number | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          order_id?: string | null
+          path?: string | null
+          product_id?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          store_id?: string
+          user_id?: string | null
+          value?: number | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           body: string | null
