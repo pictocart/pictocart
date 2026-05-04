@@ -54,6 +54,7 @@ import ThemePreview from "@/pages/ThemePreview";
 import Themes from "@/pages/Themes";
 import EmailBrandingSettings from "@/pages/EmailBrandingSettings";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import Unsubscribe from "@/pages/Unsubscribe";
 import TermsOfService from "@/pages/TermsOfService";
 import RefundPolicy from "@/pages/RefundPolicy";
 import Billing from "@/pages/Billing";
@@ -255,6 +256,7 @@ const AppRoutes = () => {
             <Route path="/admin/provisioning" element={<AdminRoute><AdminLayout><AdminProvisioning /></AdminLayout></AdminRoute>} />
             <Route path="/admin/plans" element={<AdminRoute><AdminLayout><AdminPlans /></AdminLayout></AdminRoute>} />
             {/* Platform Legal Pages */}
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
