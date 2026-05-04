@@ -3,6 +3,7 @@ import { generateDefaultSections } from '@/lib/defaultSections';
 import { useParams, Link } from 'react-router-dom';
 import { X, ArrowUp } from 'lucide-react';
 import { useStorefront } from '@/hooks/useStorefront';
+import { useStorefrontBundle } from '@/hooks/useStorefrontBundle';
 import { useProductReviews, getAverageRating } from '@/hooks/useReviews';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -13,6 +14,7 @@ import ProductShareButtons from '@/components/storefront/ProductShareButtons';
 import AnimatedSection from '@/components/storefront/AnimatedSection';
 import WishlistButton from '@/components/storefront/WishlistButton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
+import { THEMES, ThemeRenderer } from '@/themes';
 
 import SEOHead from '@/components/storefront/SEOHead';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
@@ -106,6 +108,12 @@ const Storefront = () => {
     : store.theme;
   const theme = resolveTheme(themeData);
   const { colors, fonts, borderRadius } = theme;
+
+  // If the resolved theme has a dedicated React theme component (bazaar, etc),
+  // render via ThemeRenderer using the storefront bundle. Falls back to the
+  // generic section renderer below when the theme_id isn't registered.
+  const resolvedThemeId = String((themeData as any)?.theme_id ?? (themeData as any)?.name ?? '');
+  const hasDedicatedTheme = resolvedThemeId in THEMES;
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
   const filtered = selectedCategory ? products.filter((p) => p.category === selectedCategory) : products;
   const settings = (store.settings || {}) as any;
