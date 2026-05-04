@@ -100,6 +100,7 @@ const AppRoutes = () => {
   return (
     <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route
