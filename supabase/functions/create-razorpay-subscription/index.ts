@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const RAZORPAY_KEY_ID = 'rzp_test_Se7Yf4ajKPSPlS'
+const FALLBACK_RAZORPAY_KEY_ID = 'rzp_test_SlF6JsCqM0XzQJ'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -75,8 +75,9 @@ Deno.serve(async (req) => {
       })
     }
 
+    const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID') || FALLBACK_RAZORPAY_KEY_ID
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET')
-    if (!RAZORPAY_KEY_SECRET) {
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
       return new Response(JSON.stringify({ error: 'Razorpay secret not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
