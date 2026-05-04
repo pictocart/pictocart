@@ -93,7 +93,11 @@ export const useCreateBlogPost = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['blog-posts', vars.store_id] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['blog-posts', vars.store_id] });
+      qc.invalidateQueries({ queryKey: ['published-blog-posts', vars.store_id] });
+      qc.invalidateQueries({ queryKey: ['storefront-bundle'] });
+    },
   });
 };
 
@@ -105,7 +109,12 @@ export const useUpdateBlogPost = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['blog-posts'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['blog-posts'] });
+      qc.invalidateQueries({ queryKey: ['published-blog-posts'] });
+      qc.invalidateQueries({ queryKey: ['storefront-bundle'] });
+      qc.invalidateQueries({ queryKey: ['blog-post-by-id'] });
+    },
   });
 };
 
@@ -116,6 +125,10 @@ export const useDeleteBlogPost = () => {
       const { error } = await supabase.from('blog_posts').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['blog-posts'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['blog-posts'] });
+      qc.invalidateQueries({ queryKey: ['published-blog-posts'] });
+      qc.invalidateQueries({ queryKey: ['storefront-bundle'] });
+    },
   });
 };
