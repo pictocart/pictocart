@@ -8,6 +8,7 @@ export interface BlogPost {
   slug: string;
   body: string;
   cover_image: string | null;
+  thumbnail_image: string | null;
   is_published: boolean;
   seo_title: string | null;
   seo_description: string | null;
