@@ -12,6 +12,7 @@ import NewsletterSection from '@/components/storefront/NewsletterSection';
 import ProductShareButtons from '@/components/storefront/ProductShareButtons';
 import AnimatedSection from '@/components/storefront/AnimatedSection';
 import WishlistButton from '@/components/storefront/WishlistButton';
+import { useTrackEvent } from '@/hooks/useTrackEvent';
 
 import SEOHead from '@/components/storefront/SEOHead';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
@@ -85,6 +86,10 @@ const Storefront = () => {
   const { user } = useCustomerAuth(slug || '');
   const { wishlistProductIds, toggle: toggleWishlist } = useWishlist(store?.id, user?.id);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const track = useTrackEvent();
+  useEffect(() => {
+    if (store?.id && !isOwnerPreview) track({ store_id: store.id, event_type: 'page_view' });
+  }, [store?.id, isOwnerPreview, track]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   if (error || !store) return (

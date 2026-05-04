@@ -13,6 +13,8 @@ import ProductAccordion from '@/components/storefront/ProductAccordion';
 import RelatedProducts from '@/components/storefront/RelatedProducts';
 import VariantSelector from '@/components/storefront/VariantSelector';
 import { useCart } from '@/hooks/useCart';
+import { useTrackEvent } from '@/hooks/useTrackEvent';
+import { useEffect } from 'react';
 import { useProductReviews, getAverageRating } from '@/hooks/useReviews';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -35,6 +37,12 @@ const StorefrontProduct = () => {
   const [imageZoom, setImageZoom] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const reviewsRef = useRef<HTMLDivElement>(null);
+  const track = useTrackEvent();
+  useEffect(() => {
+    if (store?.id && product?.id) {
+      track({ store_id: store.id, event_type: 'product_view', product_id: product.id, value: Number(product.price) });
+    }
+  }, [store?.id, product?.id, product?.price, track]);
 
   if (storeLoading || productLoading) {
     return (
@@ -78,6 +86,7 @@ const StorefrontProduct = () => {
       image: images[0] || null,
       variant: variantLabel || undefined,
     }, quantity);
+    track({ store_id: store.id, event_type: 'add_to_cart', product_id: product.id, value: Number(product.price) * quantity });
     setAdded(true);
     toast.success(`${product.title} added to cart`);
     setTimeout(() => setAdded(false), 2000);
@@ -92,6 +101,7 @@ const StorefrontProduct = () => {
       image: images[0] || null,
       variant: variantLabel || undefined,
     }, quantity);
+    track({ store_id: store.id, event_type: 'add_to_cart', product_id: product.id, value: Number(product.price) * quantity, metadata: { source: 'buy_now' } });
     navigate(`/store/${slug}/cart`);
   };
 
