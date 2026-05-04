@@ -7,6 +7,7 @@ import { THEME_TEMPLATES, type ThemeTemplate } from '@/lib/themes';
 import BottomNav from './BottomNav';
 import SearchOverlay from './SearchOverlay';
 import StorefrontFooter from './StorefrontFooter';
+import StorefrontAssistant from './StorefrontAssistant';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
 
 interface Props {
@@ -164,6 +165,14 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
       {searchOpen && (
         <SearchOverlay products={products} storeSlug={store.slug} colors={colors} fonts={fonts} borderRadius={theme.borderRadius} onClose={() => setSearchOpen(false)} />
       )}
+
+      <StorefrontAssistant
+        storeSlug={store.slug}
+        storeName={store.name}
+        colors={colors}
+        fonts={fonts}
+        borderRadius={theme.borderRadius}
+      />
     </div>
   );
 };
