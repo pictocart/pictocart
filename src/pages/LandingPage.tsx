@@ -219,6 +219,13 @@ const LandingPage = () => {
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showcaseIdx, setShowcaseIdx] = useState(0);
+  const howItWorksRef = useRef<HTMLElement>(null);
+
+  // Track scroll depth on the 7-step section
+  useEffect(() => {
+    if (!howItWorksRef.current) return;
+    return observeScrollDepth(howItWorksRef.current, 'how-it-works');
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
