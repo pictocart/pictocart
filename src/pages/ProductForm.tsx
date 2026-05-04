@@ -90,10 +90,11 @@ const ProductForm = () => {
     if (images.length === 0) { toast.error('Upload at least one image to generate with AI'); return; }
     setAiLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-product', {
-        body: { imageUrl: images[0], category: category || store?.category, storeName: store?.name, productType, productHint: productHint || undefined },
+      const { data, insufficient } = await aiCredits.invoke<{ product: any }>('generate-product', {
+        imageUrl: images[0], category: category || store?.category, storeName: store?.name, productType, productHint: productHint || undefined,
       });
-      if (error) throw error;
+      if (insufficient) { setRechargeOpen(true); return; }
+      if (!data) return;
       const p = data.product;
       if (p.title) setTitle(p.title);
       if (p.description) setDescription(p.description);
