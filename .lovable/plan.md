@@ -1,256 +1,252 @@
-# AI Credits Wallet & Smart Recharge — v2 (Admin-Controlled Economy)
+# Theme Research Agent + Pic To Cart Theme Pipeline
 
-A merchant-friendly AI Credits wallet — like Lovable's own — wired into every AI feature, recharged via Razorpay. **Every price, margin, bonus, and promo is editable by admin** without code changes. Plus a transparent savings dashboard and smart cache that quietly reduces our spend.
-
----
-
-## 1. Razorpay model — Hybrid (recommended)
-
-**4 fixed packages (default) + "Custom amount" option (min ₹99).**
-
-| Approach | Pros | Cons |
-|---|---|---|
-| **Fixed packages only** | Clear value tiers, easy bonus messaging, higher avg recharge, predictable margins | Less flexibility for cautious first-timers |
-| **Open recharge only** | Zero friction, pay-what-you-want | No anchoring, low avg ticket, hard to give bonus, messy invoicing |
-| **Hybrid (recommended)** | Anchors users via bonus credits, still allows ₹99 trial top-up, best conversion | Slightly more UI work |
-
-**Seed packs (admin can edit/add/remove anytime):**
-- **Starter** ₹99 → 1,000 credits
-- **Growth** ₹499 → 5,500 credits *(10% bonus, "Most Popular")*
-- **Pro** ₹1,499 → 18,000 credits *(20% bonus)*
-- **Scale** ₹4,999 → 65,000 credits *(30% bonus)*
-- **Custom** ₹99–₹50,000 → conversion rate set by admin
-
-Razorpay setup: reuse existing **Orders API** pattern (`create-razorpay-order` / `verify-razorpay-payment`). Use **platform** `RAZORPAY_KEY_ID/SECRET` (already in secrets) since this is platform revenue, not seller revenue. No subscription plans needed — one-time top-ups.
+A two-project system: an autonomous **Theme Research Agent** living in the `theme-master-bazaar` project that researches the web, plans a monthly theme calendar, generates themes with extreme token reuse, and pushes them to **Pic To Cart**, where merchants can deploy, customise deeply, and pay for premium themes — with full cost/revenue tracking.
 
 ---
 
-## 2. Admin Economy Console (the control panel you asked for)
+## Part A — Master Agent Prompt (paste into theme-master-bazaar)
 
-New page **`/admin/credits-economy`** (admin-only) — single source of truth for the entire credit economy. Zero-code adjustments.
+A single, copy-paste-ready prompt is delivered at the end of this plan. It instructs that project to:
 
-### 2a. Token margin & base pricing
-- **Base credit cost (₹/credit)** — what 1 credit costs us in AI gateway fees (e.g. ₹0.03)
-- **Margin multiplier** — global markup (e.g. 3.0×) → sell price = base × margin
-- **Custom-recharge rate** — credits per ₹1 for the open recharge slider
-- Live preview: "At 3× margin, ₹100 = X credits, gross margin Y%"
+1. Build a **Theme Research Agent** (Edge Function + admin chat UI) that scrapes/analyses Themeforest, TemplateMonster, CodeCanyon, Shopify Theme Store, Wix, Squarespace, WordPress.org and Webflow templates via Perplexity/Firecrawl + Lovable AI.
+2. Maintain a `theme_research_corpus` (categories, layouts, color trends, section archetypes, copy patterns) and a `theme_monthly_calendar` (planned releases per category per week).
+3. Generate themes via the existing two-tier optimisation (blueprint library + image pool + remix) and **publish them to Pic To Cart** via a signed REST endpoint (`POST /functions/v1/ingest-master-theme`).
+4. Provide an **Admin Chat Console** (`/admin/agent`) where the admin can:
+  - Type freely (`"Add WhatsApp Business chat widget UI to all fashion themes"`) → agent updates the relevant blueprint + creates a new section type + emits patches to existing themes.
+  - `@mention` a specific theme (`"@Dark Luxe make hero video-first"`) → patches only that theme's pages JSON.
+5. Stream a token-cost ledger to Pic To Cart after every generation.
 
-### 2b. Per-action pricing (table editor)
-For every AI action (product, blog, blog-image, theme-pack, section, email, assistant, engagement-report):
-- **Credits charged** (full)
-- **Credits on cache hit** (default 1)
-- **Manual cost ₹** (what a freelancer would charge — drives "you saved ₹X")
-- **Manual minutes** (drives "you saved Y minutes")
-- **Model** dropdown (gemini-2.5-flash / pro / flash-image / etc.)
-- **Active toggle**
-Bulk "Apply margin recalculation" button re-derives all credit prices from the new margin in one click.
+The two projects communicate using:
 
-### 2c. Packages (CRUD)
-Add/edit/remove any pack: name, price ₹, credits, bonus %, badge ("Most Popular"/"Best Value"), sort order, active toggle. Disable a pack without deleting.
-
-### 2d. Promotions & coupons
-A `credit_promos` table the admin manages:
-- **Promo code** (e.g. `LAUNCH50`) → +X% bonus credits or flat +N credits on next recharge
-- **Site-wide flash sale**: "+25% on all packs until Sun" — auto-applied, shown as a strike-through banner on the recharge sheet
-- **First-recharge bonus**: configurable % extra on a merchant's first ever top-up
-- **Tier-based loyalty**: after lifetime spend ≥ ₹X, all future recharges get +Y% credits forever
-- **Referral pairs**: configurable bonus for both parties when referee makes first recharge
-- Each promo: max uses, valid window, eligible packs, min recharge amount, active toggle
-
-### 2e. Free credits & grants
-- **Welcome grant** (₹ value, configurable; default 500 credits on first store publish)
-- **Onboarding milestone grants**: bonus credits for completing profile, adding 5 products, publishing first blog, etc. Each milestone editable.
-- **Manual grant tool**: admin search merchant → grant N credits with reason → logged in audit trail. Useful for support refunds.
-
-### 2f. Low-balance & auto-recharge thresholds
-Admin sets the global thresholds (200/50/0 by default). Merchant can override on their own wallet page within admin-set min/max.
-
-### 2g. Live economy dashboard
-At the top of the page:
-- Total credits issued / consumed / outstanding
-- 30d gateway cost vs 30d revenue → **realized margin %**
-- Cache hit-rate % (the lever that actually reduces our cost)
-- Top 10 spenders, top 10 actions by cost
-- Promo redemption funnel
-
-Everything here writes to a single `platform_settings` JSON row + dedicated tables; no edge function or hardcoded number ever stores a price.
+- **Outbound from bazaar → pictocart**: signed POST with `THEME_INGEST_SECRET` (HMAC).
+- **Inbound from pictocart → bazaar**: webhook (`/functions/v1/agent-webhook`) for admin commands originating in Pic To Cart's UI.
 
 ---
 
-## 3. Credit pricing per AI action (defaults — admin-editable)
+## Part B — Changes in Pic To Cart (this project)
 
-| Action | Model | Credits | Cache hit | Replaces |
-|---|---|---|---|---|
-| Product description from image | gemini-2.5-flash | 8 | 1 | 15 min copywriting (~₹150) |
-| Blog post (full) | gemini-2.5-pro | 60 | 5 | 2 hrs writer (~₹1,200) |
-| Blog cover + thumbnail | gemini-3-flash-image | 40 (20 each) | 2 | ₹500 designer |
-| Storefront assistant reply | gemini-3-flash | 2 | 0 (free) | 3 min support |
-| Theme pack generation | gemini-2.5-pro | 250 | 25 | ₹5,000 designer |
-| Section content | gemini-2.5-flash | 5 | 1 | 10 min |
-| Email template set | gemini-2.5-flash | 30 | 3 | 1 hr |
-| Engagement report | gemini-2.5-flash | 15 | 2 | — |
-
----
-
-## 4. Smart Cache — the cost-saver that "trains" us
-
-`ai_response_cache` keyed by `sha256(action + normalized_input)`:
-- **Product gen**: image bytes hash + category → variant photos reuse instantly.
-- **Section content**: (section_type + store_category + tone) → 80%+ reuse across stores.
-- **Storefront assistant**: (store_id + normalized_question) with 24h TTL → repeat FAQs free.
-- **Blog images**: (title + style brief) → identical retries free.
-
-**On hit:** charge cache-hit price (admin-set, default 1 credit), toast *"♻ Reused — saved X credits"*. Reduces our gateway spend AND delights merchants.
-Cache rows reused 3+ times get promoted to a **shared library** (admin-curated) — real usage becomes our training corpus.
-
----
-
-## 5. Savings & Transparency dashboard (`/wallet`)
-
-Compact widget on `/dashboard`, full page at `/wallet`:
-
-- **Big number 1: ₹X saved this month** = Σ (manual_cost − credit_cost_in_inr)
-- **Big number 2: Y hours saved** = Σ manual_minutes
-- **Big number 3: Z credits balance** + progress bar to next "low" threshold
-- **Sparkline**: daily credit burn (30d)
-- **Top 3 actions** with cost and saving per action
-- **"You'd have paid a freelancer ₹N"** comparison card (Indian rates, admin-configurable)
-- Full **ledger**: every debit/credit, action label, savings, Razorpay payment ID, downloadable GST invoice
-- **Pre-action confirmation modal** everywhere: *"This will use 8 credits (~₹0.80). A copywriter would charge ~₹150 and take 15 min. Continue?"* — with "don't ask again" toggle per action.
-
----
-
-## 6. Low-balance notifications (multi-channel, non-spammy)
-
-One-shot per threshold, reset on recharge:
-- **< 200**: yellow banner in dashboard + toast on next AI use
-- **< 50**: red banner + email via existing `send-transactional-email`
-- **0**: AI buttons disabled, inline "Recharge to continue" CTA opening Razorpay sheet
-- **Auto-recharge (opt-in)**: re-bills last pack via Razorpay token when balance < threshold. Off by default, clearly disclosed.
-
----
-
-## 7. Promotion ideas (subtle, layered, all admin-toggleable)
-
-You asked for more — here's the full menu, each one a feature flag in the admin console:
-
-1. **Welcome grant** — 500 free credits on first publish.
-2. **Inline savings chip** — *"♻ Save 15 min · 8 credits"* next to every AI button.
-3. **Monthly "AI Impact" email** — *"You saved ₹4,200 and 18 hours in October."* Shareable image card → organic referral.
-4. **Referral program** — refer a merchant, both get N credits on referee's first recharge.
-5. **Streak nudge** — used AI 5 days in a row → bonus credits + lightweight badge.
-6. **Flash sale banner** — admin schedules "+25% on all packs this weekend"; banner auto-appears on `/wallet`.
-7. **First-recharge bonus** — extra % on the very first top-up only.
-8. **Loyalty tier** — lifetime spend tiers (Bronze/Silver/Gold) unlock permanent bonus % on all future recharges.
-9. **"Unlock more" empty states** — out of credits → contextual modal showing 1-line value prop + recharge CTA.
-10. **Onboarding milestones** — small grants for completing profile, adding products, publishing blog, going live.
-11. **Birthday/anniversary credits** — auto-grant on store anniversary; emotional retention play.
-12. **Bulk-action discount** — generate 10+ products in one session → 10% off the batch.
-13. **Festival packs** — admin creates time-boxed "Diwali Pack: ₹999 → 12,000 credits" without touching standard packs.
-14. **"Saved you ₹X" weekly toast** — every Monday show last week's savings number.
-15. **Public leaderboard (opt-in)** — top merchants by AI usage, with consent. Social proof + competitive nudge.
-16. **Estimated savings on landing page** — *"PictoCart merchants saved ₹12L+ on copywriting last month"* — auto-aggregated from real ledger data.
-17. **Invoice with savings line** — every GST invoice shows "Estimated savings vs hiring help: ₹X" — accountant-friendly proof.
-18. **AI Coach widget** — when merchant has unused credits >7d, gentle nudge: *"You have 2,400 credits — try generating a blog post (60 credits) to drive traffic."*
-19. **Pause-mode credit** — if a merchant hasn't logged in 30d, send win-back email with bonus credits.
-20. **Studio mode** — opt-in: every AI generation is 50% off but goes to a "drafts" queue first (encourages volume, lowers our peak load).
-
-Rule of thumb: **only 1 promotional surface visible at a time** (one banner, one toast, one chip). Admin priority order is configurable so it never feels spammy.
-
----
-
-## 8. Database changes
+### B1. Database (new tables)
 
 ```sql
--- Wallet (1 row per store)
-ai_credit_wallets (store_id PK, balance int, lifetime_purchased int, lifetime_used int,
-                   lifetime_saved_inr numeric, lifetime_saved_minutes int,
-                   low_balance_notified_at, auto_recharge_enabled bool,
-                   auto_recharge_pack_id, loyalty_tier text, updated_at)
+-- Inbound theme deliveries from the bazaar agent
+create table public.master_theme_deliveries (
+  id uuid primary key default gen_random_uuid(),
+  master_id uuid references theme_master_projects(id) on delete cascade,
+  payload jsonb not null,            -- pages, theme_config, sections, images
+  generation_cost_inr numeric(10,4),
+  tokens_used int,
+  reused_components int default 0,
+  reused_images int default 0,
+  source_research jsonb,             -- which competitor patterns inspired it
+  status text default 'pending',     -- pending | published | rejected
+  delivered_at timestamptz default now()
+);
 
--- Every debit & credit
-ai_credit_transactions (id, store_id, type enum[debit|credit|bonus|refund|grant],
-                        action_key text, credits int, inr_value numeric,
-                        manual_cost_inr numeric, manual_minutes int,
-                        razorpay_order_id, razorpay_payment_id, cache_hit bool,
-                        promo_code text, granted_by_admin uuid,
-                        metadata jsonb, created_at)
+-- Token-saving timeline for the cost matrix graph
+create table public.theme_generation_metrics (
+  id uuid primary key default gen_random_uuid(),
+  theme_pack_id uuid references theme_packs(id) on delete cascade,
+  category text,
+  tokens_used int,
+  cost_inr numeric(10,4),
+  reuse_ratio numeric(5,2),          -- % of components/images reused
+  generated_at timestamptz default now()
+);
 
--- Admin-editable price book
-ai_action_costs (action_key PK, label, credits int, cache_hit_credits int,
-                 manual_cost_inr numeric, manual_minutes int, model text,
-                 is_active bool, updated_at)
+-- Monthly calendar mirrored from the agent
+create table public.theme_release_calendar (
+  id uuid primary key default gen_random_uuid(),
+  category text,
+  planned_for date,
+  status text default 'planned',     -- planned | generating | shipped
+  theme_pack_id uuid references theme_packs(id),
+  research_brief jsonb
+);
 
--- Razorpay packs (admin CRUD)
-ai_credit_packs (id PK, name, price_inr int, credits int, bonus_pct int,
-                 badge text, is_popular bool, sort_order, is_active,
-                 valid_from, valid_until)
+-- Admin chat log (shared with agent via webhook)
+create table public.agent_admin_messages (
+  id uuid primary key default gen_random_uuid(),
+  author text,                        -- 'admin' | 'agent'
+  scoped_theme_id uuid,               -- null = global
+  message text,
+  attachments jsonb,
+  created_at timestamptz default now()
+);
 
--- Promo codes & site-wide promos
-credit_promos (id PK, code text unique nullable, type enum[code|sitewide|first_recharge|loyalty|referral],
-               bonus_pct int, bonus_flat_credits int, max_uses int, used_count int,
-               min_recharge_inr int, eligible_pack_ids uuid[],
-               valid_from, valid_until, is_active, metadata jsonb)
-
-credit_promo_redemptions (id, promo_id, store_id, transaction_id, redeemed_at)
-
--- Onboarding milestone grants config
-credit_milestones (key PK, label, credits int, is_active)
-
--- Smart cache
-ai_response_cache (key text PK, action_key, response jsonb, hits int,
-                   created_at, expires_at)
-
--- Global economy settings (single JSON row)
-platform_credit_settings (id=1 PK, base_cost_per_credit_inr numeric,
-                          margin_multiplier numeric, custom_recharge_rate numeric,
-                          low_balance_thresholds int[], welcome_grant_credits int,
-                          updated_at, updated_by)
+-- Granular deployable feature flags per theme (drives Customise page)
+alter table theme_master_projects
+  add column features jsonb default '{}'::jsonb,   -- { whatsapp_chat: true, video_hero: false, ... }
+  add column customisable_slots jsonb default '[]'::jsonb; -- list of swappable hero/section slots
 ```
 
-All tables RLS: store owners read their own wallet/txns; admins manage everything. A `consume_credits(_store_id, _action_key, _cache_hit)` SECURITY DEFINER RPC atomically debits, ledgers, and returns the new balance — single source of truth used by every edge function.
+All tables get RLS: admin-only writes; `master_theme_deliveries` readable to admins; published rows surface to merchants via existing `theme_packs`.
+
+### B2. Edge Functions (new)
+
+- `ingest-master-theme` — HMAC-verified inbound from bazaar. Creates a `theme_packs` row (unpublished), records metrics, and notifies admin.
+- `agent-command-relay` — admin types in Pic To Cart's chat box → forwarded to bazaar's `agent-webhook`, response streamed back via SSE.
+- `theme-deploy-to-store` — merchant clicks "Use this theme": clones pages JSON into `stores.theme`, applies feature toggles, fires Razorpay order if premium.
+
+### B3. Admin pages
+
+- `**/admin/themes` → new tab "Cost Matrix"** already exists; extend with a Recharts line graph from `theme_generation_metrics` showing **declining tokens-per-theme over time** (proof of optimisation), plus per-category cost average and cumulative ₹ saved.
+- `**/admin/themes` → new tab "Pipeline"** — Kanban of `theme_release_calendar` (Planned / Generating / Shipped). Clicking a card opens delivery details.
+- `**/admin/agent**` — chat UI mirroring the bazaar agent. `@theme-name` autocomplete from `theme_master_projects`. Messages persist via `agent_admin_messages`; replies stream from relay function.
+- `**/admin/revenue` → add "Theme Earnings" card** — ₹ per theme = `(price × purchases) − ai_generation_cost`. Sortable table + sparkline.
+
+### B4. Merchant experience — deeper Customise page
+
+Replace the current limited Customise page with a **WordPress/Shopify-grade editor**:
+
+- **Section library drawer (left)** — drag any section (hero variants, product grids, testimonials, WhatsApp chat widget, video block, lookbook, FAQ, countdown, etc.) into the page. Sections come from the `customisable_slots` defined by the theme + a global library.
+- **Hero swap** — first slot is always "Hero". Merchant can switch between: image, image-carousel, video, product-spotlight, lookbook, full-bleed quote. Pulls from theme's `features.hero_variants`.
+- **Inline edit (right panel)** — every selected block exposes its props (text, image, CTA, colours, padding) through a generated form derived from the section's JSON schema.
+- **Add/remove freely** — sections are stored as an ordered array in `stores.theme.pages.home.sections`. No hard cap.
+- **Brand tokens panel** — colours, fonts, radius live-tweak (already partly present via ThemeTemplate overrides — extend to all theme tokens).
+- **"Reset to theme default"** button — restores the master theme's `pages` snapshot.
+- **Preview & Publish** — Preview iframe at `/{slug}?preview=1`; Publish writes to `stores.theme` and triggers cache bust.
+
+### B5. Pricing & revenue
+
+- Admin marks each delivered theme **Free / Premium** with price (₹0 / ₹299 / ₹499 / ₹999) directly from the Cost Matrix row.
+- Suggested price auto-computed: `max(299, round(generation_cost × margin_multiplier × 50))`.
+- `theme_purchases` already exists — extend Revenue page to plot earnings per theme alongside cost, surfacing **gross margin % per theme**.
 
 ---
 
-## 9. Edge function changes
+## Part C — Token-optimisation flywheel
 
-- **New** `wallet-create-recharge` — accepts pack_id (or custom amount + promo_code), validates promo, creates Razorpay Order, returns checkout payload.
-- **New** `wallet-verify-recharge` — HMAC verify (same as existing payment verify), credit wallet (with bonus + promo + first-recharge + loyalty), insert txn + redemption.
-- **New** `wallet-grant-credits` — admin-only, manual grant with reason.
-- **New** `wallet-low-balance-cron` — daily; sends emails at thresholds.
-- **Modify all generate-*** + `storefront-assistant`:
-  1. Read `ai_action_costs` for the action.
-  2. Compute cache key → check `ai_response_cache`.
-  3. Call `consume_credits` RPC; on insufficient balance return `402 { error: 'INSUFFICIENT_CREDITS' }`.
-  4. On miss: call AI, store cache row, return result + savings metadata.
+The agent enforces:
 
-Frontend: a small `useAICredits()` hook wraps every AI invocation — shows pre-confirm modal, handles 402 by opening recharge sheet, toasts savings on success.
+1. **Research first** — Perplexity/Firecrawl scrape → store distilled patterns in `theme_research_corpus` (free of large blobs; only structured insights).
+2. **Plan once a month** — single `gemini-2.5-pro` call (≈₹3) produces 30-day calendar with category, archetype, hero style.
+3. **Generate via blueprints** — for every planned theme, reuse `theme_section_blueprints` first; only call AI for the ~20% that's novel.
+4. **Image pool reuse** — only generate new images when pool < 3 for that `category+section_type`.
+5. **Remix path** — every 3rd theme is a remix (≈₹0.30) instead of a fresh build.
+6. **Metric recorded** — `theme_generation_metrics.reuse_ratio` proves the trend; the Cost Matrix graph visibly slopes down.
 
----
+Target curve shown to admin:
 
-## 10. UI surfaces (new files)
-
-- `src/pages/Wallet.tsx` — balance, savings, ledger, recharge button
-- `src/components/wallet/RechargeSheet.tsx` — pack picker + custom amount + promo code field + Razorpay checkout
-- `src/components/wallet/CreditBadge.tsx` — header chip showing balance, links to wallet
-- `src/components/wallet/AIActionConfirm.tsx` — reusable pre-action modal
-- `src/components/dashboard/SavingsWidget.tsx` — compact stat card
-- `src/hooks/useWallet.ts`, `src/hooks/useAICredits.ts`
-- **Admin:** `src/pages/admin/AdminCreditsEconomy.tsx` — full economy console (sections 2a–2g above), 5 tabs: **Pricing & Margin**, **Packages**, **Promotions**, **Grants & Milestones**, **Economy Insights**.
+```text
+Cost ₹
+ 18 |*
+ 12 | *
+  8 |   *
+  4 |      *  *
+  1 |           *  *  *  *  *  *
+    +--------------------------------> theme #
+```
 
 ---
 
-## 11. Rollout order
+## Part D — Admin chat protocol (shared schema)
 
-1. DB schema + seed packs/costs/settings + RPCs + admin console (no merchant-facing changes yet).
-2. Wallet page + recharge flow (Razorpay) + credit badge in dashboard header. Merchants can recharge before any gating.
-3. Wrap `generate-product` first (most-used) with credit gate + cache + savings tracking. Validate UX.
-4. Roll out to remaining 6 AI functions.
-5. Notifications cron + welcome grant + first-recharge bonus.
-6. Layer in promos (referral, loyalty, monthly impact email) one at a time, A/B'd.
+Message envelope sent both ways:
 
-Step 1 ships nothing visible to merchants — admin can configure the entire economy first. Step 2 unlocks recharge. Steps 3+ enable gating gradually so no one is surprised.
+```json
+{
+  "id": "uuid",
+  "scope": { "type": "global" | "theme", "theme_id": "..." },
+  "intent": "add_feature" | "edit_section" | "regenerate" | "ask",
+  "text": "Add WhatsApp Business chat to all fashion themes",
+  "attachments": []
+}
+```
+
+Agent response includes:
+
+```json
+{
+  "summary": "Added whatsapp_chat slot to 4 fashion themes; patches queued.",
+  "patches": [{ "theme_id": "...", "diff": {...} }],
+  "cost_inr": 0.42
+}
+```
+
+Patches land in Pic To Cart as new `theme_versions` rows, so merchants get the existing update banner.
 
 ---
 
-**Want me to proceed with steps 1–2 first?** That delivers: full schema + admin economy console + wallet page + Razorpay recharge — without yet enforcing credits on any AI action. You can configure pricing live, watch test recharges land, then we gate the AI features in step 3.
+## Part E — Rollout order (in this project)
+
+1. Migrations + RLS for the 4 new tables and 2 new columns.
+2. `ingest-master-theme` edge function + `THEME_INGEST_SECRET`.
+3. Cost Matrix graph + Pipeline tab on `/admin/themes`.
+4. `/admin/agent` chat UI + `agent-command-relay` function.
+5. Revenue tab "Theme Earnings" card.
+6. Customise page rebuild (section library, hero swap, inline edit, schema-driven props).
+7. `theme-deploy-to-store` for one-click activation, premium → Razorpay flow reusing existing wallet/payment infra.
+
+---
+
+## Part F — Master prompt (paste into theme-master-bazaar)
+
+```text
+You are taking over the project "theme-master-bazaar". Build an autonomous Theme Research Agent that designs and ships e-commerce themes to a sister project "Pic To Cart" (project id a3325225-6388-4957-8895-4bfad76eba30).
+
+GOAL
+Become the most cost-efficient theme factory in India. Every new theme must cost less than the previous average, by aggressively reusing components, blueprints, copy, and images you have produced before.
+
+WHAT TO BUILD
+
+1. Research layer
+   - Edge function `research-themes` using Perplexity (PERPLEXITY_API_KEY) + Lovable AI (google/gemini-2.5-flash) to scan: themeforest.net, codecanyon.net, templatemonster.com, themes.shopify.com, wix.com/website-template, squarespace.com/templates, wordpress.org/themes, webflow.com/templates.
+   - Persist structured insights only (no scraped HTML) to table `theme_research_corpus(category, archetype, color_palette, section_order, copy_motifs, source_url, captured_at)`.
+   - Run weekly via pg_cron.
+
+2. Planning layer
+   - Edge function `plan-monthly-calendar` runs on the 28th of each month. One gemini-2.5-pro call producing 30 entries: { date, category, archetype, hero_style, expected_cost_inr }. Write to `theme_release_calendar` and POST a copy to Pic To Cart `/functions/v1/ingest-calendar` (HMAC signed with THEME_INGEST_SECRET).
+
+3. Generation layer
+   - Reuse the existing two-tier prompting + blueprint library + image pool + remix function already in this project.
+   - After each generation, POST the full theme bundle (pages, theme_config, preview image, features map, customisable_slots, generation_cost, tokens, reuse_ratio, source_research) to Pic To Cart `/functions/v1/ingest-master-theme` (HMAC signed). Do not publish locally.
+   - Maintain `theme_generation_metrics` mirror locally.
+
+4. Admin chat agent
+   - Page `/agent` with a chat UI. Stream responses via Lovable AI Gateway with tool-calling.
+   - Tools the agent can call:
+     • `list_themes()` / `get_theme(id)`
+     • `patch_theme(theme_id, json_patch)` — writes a new `theme_versions` row + ships patch to Pic To Cart.
+     • `add_global_feature(name, schema, default_props)` — registers a new section type into the blueprint library and emits patches to all themes that opt in.
+     • `regenerate_theme(theme_id, hints)` — full rebuild via remix-theme.
+     • `query_research(category)` — summarises corpus.
+   - Parse `@theme-name` mentions in the user message; when present, scope every tool call to that theme.
+   - Persist every exchange in `agent_admin_messages` AND POST to Pic To Cart `/functions/v1/agent-mirror` so the admin can read the same thread there.
+   - Listen on `/functions/v1/agent-webhook` for admin messages originating in Pic To Cart and process them identically.
+
+5. Cost discipline
+   - Hard budget per theme: ₹3 by month 3. Reject generations exceeding it; instead, force a remix.
+   - Always record `tokens_used`, `reuse_ratio`, `cost_inr` and ship to Pic To Cart so the Cost Matrix graph slopes down visibly.
+
+6. Auth + secrets
+   - Use Lovable Cloud. Required secrets: PERPLEXITY_API_KEY, THEME_INGEST_SECRET, PICTOCART_BASE_URL=https://qxeyndsvkfsmkilkzmuc.supabase.co.
+   - All cross-project requests sign body with HMAC-SHA256 using THEME_INGEST_SECRET, header `x-agent-signature`.
+
+7. UI
+   - Minimal admin-only app: Dashboard (calendar + cost graph), Research Corpus browser, Themes list with Remix/Patch buttons, and the Agent chat at `/agent`.
+   - Use shadcn + Tailwind, dark cockpit aesthetic.
+
+DELIVERABLES
+- Migrations for: theme_research_corpus, theme_release_calendar, theme_generation_metrics, agent_admin_messages.
+- Edge functions: research-themes, plan-monthly-calendar, generate-and-ship-theme, agent-chat (SSE), agent-webhook, ingest-from-pictocart.
+- Cron jobs for research (weekly) and planning (monthly).
+- Admin pages: /, /research, /themes, /agent.
+- README explaining how Pic To Cart consumes the deliveries.
+
+CONSTRAINTS
+- Never call AI from the client.
+- Never store raw scraped HTML, only distilled JSON insights.
+- Every AI call logs to `ai_call_log(function, model, tokens, cost_inr, reuse_hit)`.
+- Default model: google/gemini-2.5-flash. Reasoning calls: google/gemini-2.5-pro. Cheap remixes: google/gemini-2.5-flash-lite.
+- Image generation: google/gemini-2.5-flash-image, batched in parallel groups of 3.
+
+Begin by setting up Lovable Cloud, creating the migrations, then scaffolding the agent chat page first so I can talk to you immediately. Confirm the plan, then build.
+```
+
+---
+
+## Open question before I build (Pic To Cart side)
+
+Should I **rebuild the Customise page from scratch** with the drag-and-drop section library described in B4 (richer, but ~1 day of work and replaces current Customise.tsx), or **layer the new capabilities onto the existing page** progressively (faster, but the editor will feel inconsistent for a release or two)? My recommendation is full rebuild — it's the centerpiece of the "Shopify-grade" promise.  
+  
+yes kindly rebuild it from scratch. 

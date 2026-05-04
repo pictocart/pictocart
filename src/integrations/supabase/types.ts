@@ -47,6 +47,47 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_admin_messages: {
+        Row: {
+          attachments: Json | null
+          author: string
+          cost_inr: number | null
+          created_at: string
+          id: string
+          intent: string | null
+          message: string
+          scoped_theme_id: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          author: string
+          cost_inr?: number | null
+          created_at?: string
+          id?: string
+          intent?: string | null
+          message: string
+          scoped_theme_id?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          author?: string
+          cost_inr?: number | null
+          created_at?: string
+          id?: string
+          intent?: string | null
+          message?: string
+          scoped_theme_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_admin_messages_scoped_theme_id_fkey"
+            columns: ["scoped_theme_id"]
+            isOneToOne: false
+            referencedRelation: "theme_master_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_incidents: {
         Row: {
           action: string
@@ -835,6 +876,75 @@ export type Database = {
           used_at?: string | null
         }
         Relationships: []
+      }
+      master_theme_deliveries: {
+        Row: {
+          category: string | null
+          delivered_at: string
+          generation_cost_inr: number | null
+          id: string
+          master_id: string | null
+          name: string
+          payload: Json
+          preview_image: string | null
+          reuse_ratio: number | null
+          reused_components: number | null
+          reused_images: number | null
+          source_research: Json | null
+          status: string
+          theme_pack_id: string | null
+          tokens_used: number | null
+        }
+        Insert: {
+          category?: string | null
+          delivered_at?: string
+          generation_cost_inr?: number | null
+          id?: string
+          master_id?: string | null
+          name: string
+          payload: Json
+          preview_image?: string | null
+          reuse_ratio?: number | null
+          reused_components?: number | null
+          reused_images?: number | null
+          source_research?: Json | null
+          status?: string
+          theme_pack_id?: string | null
+          tokens_used?: number | null
+        }
+        Update: {
+          category?: string | null
+          delivered_at?: string
+          generation_cost_inr?: number | null
+          id?: string
+          master_id?: string | null
+          name?: string
+          payload?: Json
+          preview_image?: string | null
+          reuse_ratio?: number | null
+          reused_components?: number | null
+          reused_images?: number | null
+          source_research?: Json | null
+          status?: string
+          theme_pack_id?: string | null
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "master_theme_deliveries_master_id_fkey"
+            columns: ["master_id"]
+            isOneToOne: false
+            referencedRelation: "theme_master_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_theme_deliveries_theme_pack_id_fkey"
+            columns: ["theme_pack_id"]
+            isOneToOne: false
+            referencedRelation: "theme_packs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       newsletter_subscribers: {
         Row: {
@@ -1693,6 +1803,54 @@ export type Database = {
         }
         Relationships: []
       }
+      theme_generation_metrics: {
+        Row: {
+          category: string | null
+          cost_inr: number | null
+          delivery_id: string | null
+          generated_at: string
+          id: string
+          reuse_ratio: number | null
+          theme_pack_id: string | null
+          tokens_used: number | null
+        }
+        Insert: {
+          category?: string | null
+          cost_inr?: number | null
+          delivery_id?: string | null
+          generated_at?: string
+          id?: string
+          reuse_ratio?: number | null
+          theme_pack_id?: string | null
+          tokens_used?: number | null
+        }
+        Update: {
+          category?: string | null
+          cost_inr?: number | null
+          delivery_id?: string | null
+          generated_at?: string
+          id?: string
+          reuse_ratio?: number | null
+          theme_pack_id?: string | null
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theme_generation_metrics_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "master_theme_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "theme_generation_metrics_theme_pack_id_fkey"
+            columns: ["theme_pack_id"]
+            isOneToOne: false
+            referencedRelation: "theme_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       theme_image_pool: {
         Row: {
           category: string
@@ -1723,7 +1881,9 @@ export type Database = {
           client_patch_prompt: string
           created_at: string
           current_version: string
+          customisable_slots: Json | null
           description: string | null
+          features: Json | null
           id: string
           is_active: boolean
           is_default: boolean
@@ -1740,7 +1900,9 @@ export type Database = {
           client_patch_prompt?: string
           created_at?: string
           current_version?: string
+          customisable_slots?: Json | null
           description?: string | null
+          features?: Json | null
           id?: string
           is_active?: boolean
           is_default?: boolean
@@ -1757,7 +1919,9 @@ export type Database = {
           client_patch_prompt?: string
           created_at?: string
           current_version?: string
+          customisable_slots?: Json | null
           description?: string | null
+          features?: Json | null
           id?: string
           is_active?: boolean
           is_default?: boolean
@@ -1854,6 +2018,53 @@ export type Database = {
           },
           {
             foreignKeyName: "theme_purchases_theme_pack_id_fkey"
+            columns: ["theme_pack_id"]
+            isOneToOne: false
+            referencedRelation: "theme_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      theme_release_calendar: {
+        Row: {
+          archetype: string | null
+          category: string
+          created_at: string
+          expected_cost_inr: number | null
+          hero_style: string | null
+          id: string
+          planned_for: string
+          research_brief: Json | null
+          status: string
+          theme_pack_id: string | null
+        }
+        Insert: {
+          archetype?: string | null
+          category: string
+          created_at?: string
+          expected_cost_inr?: number | null
+          hero_style?: string | null
+          id?: string
+          planned_for: string
+          research_brief?: Json | null
+          status?: string
+          theme_pack_id?: string | null
+        }
+        Update: {
+          archetype?: string | null
+          category?: string
+          created_at?: string
+          expected_cost_inr?: number | null
+          hero_style?: string | null
+          id?: string
+          planned_for?: string
+          research_brief?: Json | null
+          status?: string
+          theme_pack_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theme_release_calendar_theme_pack_id_fkey"
             columns: ["theme_pack_id"]
             isOneToOne: false
             referencedRelation: "theme_packs"
