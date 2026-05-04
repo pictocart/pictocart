@@ -236,10 +236,12 @@ const CostMatrixTab = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-theme-cost-matrix'],
     queryFn: async () => {
-      const [{ data: themes }, { data: stores }, { data: provReqs }] = await Promise.all([
+      const [{ data: themes }, { data: stores }, { data: provReqs }, { data: packs }, { data: purchases }] = await Promise.all([
         supabase.from('theme_master_projects').select('id, theme_id, name, category'),
         supabase.from('stores').select('id, theme'),
         supabase.from('provision_requests').select('theme_master_id, status'),
+        supabase.from('theme_packs').select('id, name, price, sales_count, ai_generation_cost'),
+        supabase.from('theme_purchases').select('id, theme_pack_id'),
       ]);
       const installs = new Map<string, number>();
       (stores || []).forEach((s: any) => {
@@ -250,16 +252,42 @@ const CostMatrixTab = () => {
       (provReqs || []).forEach((p: any) => {
         if (p.theme_master_id) provisions.set(p.theme_master_id, (provisions.get(p.theme_master_id) || 0) + 1);
       });
-      return (themes || []).map((t: any) => ({
-        ...t,
-        installs: installs.get(t.theme_id) || 0,
-        provisions: provisions.get(t.id) || 0,
-        // Placeholder until token-level cost is wired via Lovable AI Gateway
-        ai_cost_inr: 0,
-        revenue_inr: 0,
-      }));
+      // Match theme_master to theme_pack by case-insensitive name
+      const packByName = new Map<string, any>();
+      (packs || []).forEach((p: any) => packByName.set((p.name || '').toLowerCase().trim(), p));
+      const purchaseCount = new Map<string, number>();
+      (purchases || []).forEach((p: any) => purchaseCount.set(p.theme_pack_id, (purchaseCount.get(p.theme_pack_id) || 0) + 1));
+
+      const themeRows = (themes || []).map((t: any) => {
+        const pack = packByName.get((t.name || '').toLowerCase().trim());
+        const sales = pack ? Math.max(Number(pack.sales_count || 0), purchaseCount.get(pack.id) || 0) : 0;
+        const price = pack ? Number(pack.price || 0) : 0;
+        return {
+          ...t,
+          installs: installs.get(t.theme_id) || 0,
+          provisions: provisions.get(t.id) || 0,
+          ai_cost_inr: pack ? Number(pack.ai_generation_cost || 0) : 0,
+          revenue_inr: sales * price,
+          sales,
+          price,
+        };
+      });
+
+      const totals = themeRows.reduce(
+        (acc, r) => ({
+          ai: acc.ai + r.ai_cost_inr,
+          rev: acc.rev + r.revenue_inr,
+          installs: acc.installs + r.installs,
+        }),
+        { ai: 0, rev: 0, installs: 0 }
+      );
+
+      return { rows: themeRows, totals };
     },
   });
+
+  const rows = data?.rows || [];
+  const totals = data?.totals || { ai: 0, rev: 0, installs: 0 };
 
   return (
     <Card>
