@@ -110,6 +110,19 @@ const AdminLaunchChecklist = () => {
       out.push({ group: 'Legal', label: 'Privacy Policy & Terms published', status: 'warn', detail: 'Verify pictocart.in/legal pages render', href: '/legal/privacy' });
       out.push({ group: 'Marketing', label: 'Landing page CTA copy reviewed', status: 'warn', detail: 'Confirm pricing/CTA are current', href: '/' });
       out.push({ group: 'Support', label: 'Support email / help center reachable', status: 'warn', detail: 'Test support@pictocart.in inbox' });
+      out.push({
+        group: 'Auth',
+        label: 'Google OAuth consent screen branded "Pic to Cart"',
+        status: 'warn',
+        detail: 'Rename the OAuth client from "Instant Store AI" → "Pic to Cart" in Google Cloud Console / Lovable Cloud auth settings, and upload the Pic to Cart logo. Without this, signup shows "Grant permission to Instant Store AI".',
+      });
+      out.push({
+        group: 'Themes',
+        label: 'Storefronts render through the bazaar/marketplace theme components',
+        status: 'warn',
+        detail: 'Verify pictocart.in/store/fashion-street and /store/indilipi look identical to the Bazaar master.',
+        href: '/admin/themes',
+      });
 
       return out;
     },
