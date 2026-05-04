@@ -34,6 +34,7 @@ export interface StorefrontBundle {
     title: string;
     slug: string;
     cover_image: string | null;
+    thumbnail_image: string | null;
     seo_description: string | null;
     created_at: string;
   }>;

@@ -141,6 +141,7 @@ export type Database = {
           seo_title: string | null
           slug: string
           store_id: string
+          thumbnail_image: string | null
           title: string
           updated_at: string | null
         }
@@ -154,6 +155,7 @@ export type Database = {
           seo_title?: string | null
           slug: string
           store_id: string
+          thumbnail_image?: string | null
           title: string
           updated_at?: string | null
         }
@@ -167,6 +169,7 @@ export type Database = {
           seo_title?: string | null
           slug?: string
           store_id?: string
+          thumbnail_image?: string | null
           title?: string
           updated_at?: string | null
         }

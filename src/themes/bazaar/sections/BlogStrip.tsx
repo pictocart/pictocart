@@ -5,6 +5,7 @@ export interface BlogStripPost {
   title: string;
   slug: string;
   cover_image: string | null;
+  thumbnail_image?: string | null;
   seo_description: string | null;
   created_at: string;
 }
@@ -65,10 +66,10 @@ export const BazaarBlogStrip = ({ posts, storeSlug, basePath }: Props) => {
                 border: `1px solid ${tokens.colors.border}`,
               }}
             >
-              {post.cover_image ? (
+              {(post.thumbnail_image || post.cover_image) ? (
                 <div className="aspect-[4/3] overflow-hidden">
                   <img
-                    src={post.cover_image}
+                    src={post.thumbnail_image || post.cover_image || ''}
                     alt={post.title}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"

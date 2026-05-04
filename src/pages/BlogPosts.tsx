@@ -51,8 +51,8 @@ const BlogPosts = () => {
           {posts.map((post) => (
             <Card key={post.id}>
               <CardContent className="p-4 flex items-center gap-4">
-                {post.cover_image && (
-                  <img src={post.cover_image} alt="" className="h-16 w-24 rounded object-cover shrink-0" />
+                {(post.thumbnail_image || post.cover_image) && (
+                  <img src={post.thumbnail_image || post.cover_image || ''} alt="" className="h-16 w-24 rounded object-cover shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold truncate">{post.title}</h3>

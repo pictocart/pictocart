@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       supabase.from('categories').select('id, name, parent_id, sort_order').eq('store_id', storeId).order('sort_order'),
       supabase
         .from('blog_posts')
-        .select('id, title, slug, cover_image, seo_description, created_at')
+        .select('id, title, slug, cover_image, thumbnail_image, seo_description, created_at')
         .eq('store_id', storeId)
         .eq('is_published', true)
         .order('created_at', { ascending: false })

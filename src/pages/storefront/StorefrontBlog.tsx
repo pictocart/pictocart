@@ -36,9 +36,9 @@ const StorefrontBlog = () => {
                 className="group block overflow-hidden transition-shadow hover:shadow-lg"
                 style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}
               >
-                {post.cover_image && (
+                {(post.thumbnail_image || post.cover_image) && (
                   <div className="aspect-video overflow-hidden">
-                    <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                    <img src={post.thumbnail_image || post.cover_image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                   </div>
                 )}
                 <div className="p-4">

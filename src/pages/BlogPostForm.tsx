@@ -28,13 +28,16 @@ const BlogPostForm = () => {
   const [slug, setSlug] = useState('');
   const [body, setBody] = useState('');
   const [coverImage, setCoverImage] = useState('');
+  const [thumbnailImage, setThumbnailImage] = useState('');
   const [isPublished, setIsPublished] = useState(false);
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingField, setUploadingField] = useState<'cover' | 'thumbnail' | null>(null);
+  const coverGalleryRef = useRef<HTMLInputElement>(null);
+  const coverCameraRef = useRef<HTMLInputElement>(null);
+  const thumbGalleryRef = useRef<HTMLInputElement>(null);
+  const thumbCameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (existing) {
@@ -42,6 +45,7 @@ const BlogPostForm = () => {
       setSlug(existing.slug);
       setBody(existing.body || '');
       setCoverImage(existing.cover_image || '');
+      setThumbnailImage((existing as any).thumbnail_image || '');
       setIsPublished(existing.is_published);
       setSeoTitle(existing.seo_title || '');
       setSeoDescription(existing.seo_description || '');
@@ -73,12 +77,19 @@ const BlogPostForm = () => {
     setAiLoading(false);
   };
 
-  const handleCoverFile = async (file: File | null | undefined) => {
+  const handleImageFile = async (
+    file: File | null | undefined,
+    field: 'cover' | 'thumbnail'
+  ) => {
     if (!file) return;
     if (file.size > 30 * 1024 * 1024) { toast.error('Image must be under 30 MB'); return; }
-    setUploading(true);
+    setUploadingField(field);
     try {
-      const compressed = await compressImage(file, { maxWidth: 1600, maxHeight: 1600, maxSizeMB: 1.2 });
+      const compressed = await compressImage(file, {
+        maxWidth: field === 'thumbnail' ? 800 : 1600,
+        maxHeight: field === 'thumbnail' ? 800 : 1600,
+        maxSizeMB: field === 'thumbnail' ? 0.5 : 1.2,
+      });
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
       const path = `${user.id}/blog/${crypto.randomUUID()}.jpg`;
@@ -87,15 +98,16 @@ const BlogPostForm = () => {
         .upload(path, compressed, { contentType: compressed.type, upsert: false });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('store-assets').getPublicUrl(path);
-      setCoverImage(publicUrl);
-      toast.success('Cover image uploaded');
+      if (field === 'cover') setCoverImage(publicUrl); else setThumbnailImage(publicUrl);
+      toast.success(`${field === 'cover' ? 'Main image' : 'Thumbnail'} uploaded`);
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || 'Upload failed');
     } finally {
-      setUploading(false);
-      if (galleryInputRef.current) galleryInputRef.current.value = '';
-      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      setUploadingField(null);
+      [coverGalleryRef, coverCameraRef, thumbGalleryRef, thumbCameraRef].forEach(r => {
+        if (r.current) r.current.value = '';
+      });
     }
   };
 
@@ -104,6 +116,7 @@ const BlogPostForm = () => {
     const payload = {
       title, slug, body,
       cover_image: coverImage || null,
+      thumbnail_image: thumbnailImage || null,
       is_published: isPublished,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
@@ -168,73 +181,87 @@ const BlogPostForm = () => {
                 <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={16} placeholder="Write your blog post content..." className="font-mono text-sm" />
               </div>
 
-              {/* Cover image — upload + URL */}
-              <div className="space-y-2">
-                <Label>Cover Image</Label>
-                {coverImage ? (
-                  <div className="relative w-full overflow-hidden rounded-lg border bg-muted">
-                    <img src={coverImage} alt="Cover preview" className="w-full max-h-64 object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setCoverImage('')}
-                      className="absolute right-2 top-2 rounded-full bg-background/90 p-1.5 shadow hover:bg-background"
-                      aria-label="Remove cover"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+              {/* Image picker — reusable for both fields */}
+              {(['thumbnail', 'cover'] as const).map((field) => {
+                const value = field === 'cover' ? coverImage : thumbnailImage;
+                const setValue = field === 'cover' ? setCoverImage : setThumbnailImage;
+                const galleryRef = field === 'cover' ? coverGalleryRef : thumbGalleryRef;
+                const cameraRef = field === 'cover' ? coverCameraRef : thumbCameraRef;
+                const uploading = uploadingField === field;
+                const label = field === 'cover' ? 'Main Image (post hero)' : 'Thumbnail (blog listing)';
+                const hint = field === 'cover'
+                  ? 'Wide image shown at the top of the post. Recommended 1600×900.'
+                  : 'Square-ish image shown in the blog listing. Recommended 800×800. Falls back to main image if empty.';
+                return (
+                  <div key={field} className="space-y-2">
+                    <Label>{label}</Label>
+                    <p className="text-xs text-muted-foreground">{hint}</p>
+                    {value ? (
+                      <div className="relative w-full overflow-hidden rounded-lg border bg-muted">
+                        <img src={value} alt={`${label} preview`} className="w-full max-h-64 object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setValue('')}
+                          className="absolute right-2 top-2 rounded-full bg-background/90 p-1.5 shadow hover:bg-background"
+                          aria-label={`Remove ${label}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <label
+                          className={cn(
+                            'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-muted-foreground/25 py-6 transition-colors hover:border-primary/50 hover:bg-accent/50',
+                            uploading && 'pointer-events-none opacity-60'
+                          )}
+                        >
+                          {uploading ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          ) : (
+                            <>
+                              <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">Upload from device</span>
+                            </>
+                          )}
+                          <input
+                            ref={galleryRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleImageFile(e.target.files?.[0], field)}
+                            disabled={uploading}
+                          />
+                        </label>
+                        <label
+                          className={cn(
+                            'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-primary/30 bg-primary/5 py-6 transition-colors hover:bg-primary/10',
+                            uploading && 'pointer-events-none opacity-60'
+                          )}
+                        >
+                          <Camera className="h-5 w-5 text-primary" />
+                          <span className="text-xs font-medium text-primary">Use camera</span>
+                          <input
+                            ref={cameraRef}
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={(e) => handleImageFile(e.target.files?.[0], field)}
+                            disabled={uploading}
+                          />
+                        </label>
+                      </div>
+                    )}
+                    <Input
+                      value={value}
+                      onChange={(e) => setValue(e.target.value)}
+                      placeholder="…or paste an image URL"
+                      className="text-xs"
+                    />
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <label
-                      className={cn(
-                        'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-muted-foreground/25 py-6 transition-colors hover:border-primary/50 hover:bg-accent/50',
-                        uploading && 'pointer-events-none opacity-60'
-                      )}
-                    >
-                      {uploading ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                      ) : (
-                        <>
-                          <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">Upload from device</span>
-                        </>
-                      )}
-                      <input
-                        ref={galleryInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleCoverFile(e.target.files?.[0])}
-                        disabled={uploading}
-                      />
-                    </label>
-                    <label
-                      className={cn(
-                        'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-primary/30 bg-primary/5 py-6 transition-colors hover:bg-primary/10',
-                        uploading && 'pointer-events-none opacity-60'
-                      )}
-                    >
-                      <Camera className="h-5 w-5 text-primary" />
-                      <span className="text-xs font-medium text-primary">Use camera</span>
-                      <input
-                        ref={cameraInputRef}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        onChange={(e) => handleCoverFile(e.target.files?.[0])}
-                        disabled={uploading}
-                      />
-                    </label>
-                  </div>
-                )}
-                <Input
-                  value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  placeholder="…or paste an image URL"
-                  className="text-xs"
-                />
-              </div>
+                );
+              })}
 
               <div className="flex items-center gap-3 pt-2">
                 <Switch checked={isPublished} onCheckedChange={setIsPublished} />
