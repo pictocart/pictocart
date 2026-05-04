@@ -60,6 +60,8 @@ import Unsubscribe from "@/pages/Unsubscribe";
 import TermsOfService from "@/pages/TermsOfService";
 import RefundPolicy from "@/pages/RefundPolicy";
 import Billing from "@/pages/Billing";
+import Wallet from "@/pages/Wallet";
+import AdminCreditsEconomy from "@/pages/admin/AdminCreditsEconomy";
 import StorefrontPolicy from "@/pages/storefront/StorefrontPolicy";
 import CustomerWishlist from "@/pages/storefront/CustomerWishlist";
 import NotFound from "./pages/NotFound.tsx";
@@ -245,6 +247,8 @@ const AppRoutes = () => {
             <Route path="/themes" element={<ProtectedRoute><DashboardLayout><Themes /></DashboardLayout></ProtectedRoute>} />
             <Route path="/settings/email" element={<ProtectedRoute><DashboardLayout><EmailBrandingSettings /></DashboardLayout></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><DashboardLayout><Billing /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute><DashboardLayout><Wallet /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/admin/credits-economy" element={<AdminRoute><AdminLayout><AdminCreditsEconomy /></AdminLayout></AdminRoute>} />
             <Route path="/profile" element={<ProtectedRoute><DashboardLayout><SellerProfile /></DashboardLayout></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminLayout><AdminOverview /></AdminLayout></AdminRoute>} />

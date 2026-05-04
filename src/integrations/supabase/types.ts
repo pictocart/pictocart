@@ -85,6 +85,225 @@ export type Database = {
           },
         ]
       }
+      ai_action_costs: {
+        Row: {
+          action_key: string
+          cache_hit_credits: number
+          credits: number
+          is_active: boolean
+          label: string
+          manual_cost_inr: number
+          manual_minutes: number
+          model: string
+          updated_at: string
+        }
+        Insert: {
+          action_key: string
+          cache_hit_credits?: number
+          credits: number
+          is_active?: boolean
+          label: string
+          manual_cost_inr?: number
+          manual_minutes?: number
+          model?: string
+          updated_at?: string
+        }
+        Update: {
+          action_key?: string
+          cache_hit_credits?: number
+          credits?: number
+          is_active?: boolean
+          label?: string
+          manual_cost_inr?: number
+          manual_minutes?: number
+          model?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_credit_packs: {
+        Row: {
+          badge: string | null
+          bonus_pct: number
+          created_at: string
+          credits: number
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          name: string
+          price_inr: number
+          sort_order: number
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          badge?: string | null
+          bonus_pct?: number
+          created_at?: string
+          credits: number
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name: string
+          price_inr: number
+          sort_order?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          badge?: string | null
+          bonus_pct?: number
+          created_at?: string
+          credits?: number
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name?: string
+          price_inr?: number
+          sort_order?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      ai_credit_transactions: {
+        Row: {
+          action_key: string | null
+          cache_hit: boolean
+          created_at: string
+          credits: number
+          granted_by_admin: string | null
+          id: string
+          inr_value: number
+          manual_cost_inr: number
+          manual_minutes: number
+          metadata: Json
+          promo_code: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          reason: string | null
+          store_id: string
+          type: Database["public"]["Enums"]["credit_txn_type"]
+        }
+        Insert: {
+          action_key?: string | null
+          cache_hit?: boolean
+          created_at?: string
+          credits: number
+          granted_by_admin?: string | null
+          id?: string
+          inr_value?: number
+          manual_cost_inr?: number
+          manual_minutes?: number
+          metadata?: Json
+          promo_code?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          reason?: string | null
+          store_id: string
+          type: Database["public"]["Enums"]["credit_txn_type"]
+        }
+        Update: {
+          action_key?: string | null
+          cache_hit?: boolean
+          created_at?: string
+          credits?: number
+          granted_by_admin?: string | null
+          id?: string
+          inr_value?: number
+          manual_cost_inr?: number
+          manual_minutes?: number
+          metadata?: Json
+          promo_code?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          reason?: string | null
+          store_id?: string
+          type?: Database["public"]["Enums"]["credit_txn_type"]
+        }
+        Relationships: []
+      }
+      ai_credit_wallets: {
+        Row: {
+          auto_recharge_enabled: boolean
+          auto_recharge_pack_id: string | null
+          balance: number
+          created_at: string
+          lifetime_purchased: number
+          lifetime_saved_inr: number
+          lifetime_saved_minutes: number
+          lifetime_used: number
+          low_balance_notified_at: string | null
+          loyalty_tier: string
+          store_id: string
+          updated_at: string
+          welcome_grant_given: boolean
+          zero_balance_notified_at: string | null
+        }
+        Insert: {
+          auto_recharge_enabled?: boolean
+          auto_recharge_pack_id?: string | null
+          balance?: number
+          created_at?: string
+          lifetime_purchased?: number
+          lifetime_saved_inr?: number
+          lifetime_saved_minutes?: number
+          lifetime_used?: number
+          low_balance_notified_at?: string | null
+          loyalty_tier?: string
+          store_id: string
+          updated_at?: string
+          welcome_grant_given?: boolean
+          zero_balance_notified_at?: string | null
+        }
+        Update: {
+          auto_recharge_enabled?: boolean
+          auto_recharge_pack_id?: string | null
+          balance?: number
+          created_at?: string
+          lifetime_purchased?: number
+          lifetime_saved_inr?: number
+          lifetime_saved_minutes?: number
+          lifetime_used?: number
+          low_balance_notified_at?: string | null
+          loyalty_tier?: string
+          store_id?: string
+          updated_at?: string
+          welcome_grant_given?: boolean
+          zero_balance_notified_at?: string | null
+        }
+        Relationships: []
+      }
+      ai_response_cache: {
+        Row: {
+          action_key: string
+          created_at: string
+          expires_at: string | null
+          hits: number
+          key: string
+          response: Json
+        }
+        Insert: {
+          action_key: string
+          created_at?: string
+          expires_at?: string | null
+          hits?: number
+          key: string
+          response: Json
+        }
+        Update: {
+          action_key?: string
+          created_at?: string
+          expires_at?: string | null
+          hits?: number
+          key?: string
+          response?: Json
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -280,6 +499,132 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      credit_milestone_grants: {
+        Row: {
+          granted_at: string
+          id: string
+          milestone_key: string
+          store_id: string
+        }
+        Insert: {
+          granted_at?: string
+          id?: string
+          milestone_key: string
+          store_id: string
+        }
+        Update: {
+          granted_at?: string
+          id?: string
+          milestone_key?: string
+          store_id?: string
+        }
+        Relationships: []
+      }
+      credit_milestones: {
+        Row: {
+          credits: number
+          is_active: boolean
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          credits: number
+          is_active?: boolean
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          credits?: number
+          is_active?: boolean
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_promo_redemptions: {
+        Row: {
+          id: string
+          promo_id: string
+          redeemed_at: string
+          store_id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          id?: string
+          promo_id: string
+          redeemed_at?: string
+          store_id: string
+          transaction_id?: string | null
+        }
+        Update: {
+          id?: string
+          promo_id?: string
+          redeemed_at?: string
+          store_id?: string
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
+      credit_promos: {
+        Row: {
+          bonus_flat_credits: number
+          bonus_pct: number
+          code: string | null
+          created_at: string
+          description: string | null
+          eligible_pack_ids: string[]
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          metadata: Json
+          min_recharge_inr: number
+          type: Database["public"]["Enums"]["credit_promo_type"]
+          updated_at: string
+          used_count: number
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          bonus_flat_credits?: number
+          bonus_pct?: number
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          eligible_pack_ids?: string[]
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          metadata?: Json
+          min_recharge_inr?: number
+          type: Database["public"]["Enums"]["credit_promo_type"]
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          bonus_flat_credits?: number
+          bonus_pct?: number
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          eligible_pack_ids?: string[]
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          metadata?: Json
+          min_recharge_inr?: number
+          type?: Database["public"]["Enums"]["credit_promo_type"]
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
       }
       customers: {
         Row: {
@@ -675,6 +1020,51 @@ export type Database = {
           theme_limit?: number
           trial_days?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_credit_settings: {
+        Row: {
+          base_cost_per_credit_inr: number
+          critical_balance_threshold: number
+          custom_max_inr: number
+          custom_min_inr: number
+          custom_recharge_rate: number
+          freelancer_inr_per_hour: number
+          id: number
+          low_balance_threshold: number
+          margin_multiplier: number
+          updated_at: string
+          updated_by: string | null
+          welcome_grant_credits: number
+        }
+        Insert: {
+          base_cost_per_credit_inr?: number
+          critical_balance_threshold?: number
+          custom_max_inr?: number
+          custom_min_inr?: number
+          custom_recharge_rate?: number
+          freelancer_inr_per_hour?: number
+          id?: number
+          low_balance_threshold?: number
+          margin_multiplier?: number
+          updated_at?: string
+          updated_by?: string | null
+          welcome_grant_credits?: number
+        }
+        Update: {
+          base_cost_per_credit_inr?: number
+          critical_balance_threshold?: number
+          custom_max_inr?: number
+          custom_min_inr?: number
+          custom_recharge_rate?: number
+          freelancer_inr_per_hour?: number
+          id?: number
+          low_balance_threshold?: number
+          margin_multiplier?: number
+          updated_at?: string
+          updated_by?: string | null
+          welcome_grant_credits?: number
         }
         Relationships: []
       }
@@ -1640,6 +2030,25 @@ export type Database = {
         Args: { _retain_days?: number }
         Returns: number
       }
+      consume_credits: {
+        Args: { _action_key: string; _cache_hit?: boolean; _store_id: string }
+        Returns: number
+      }
+      credit_wallet: {
+        Args: {
+          _credits: number
+          _granted_by_admin?: string
+          _inr_value?: number
+          _metadata?: Json
+          _promo_code?: string
+          _razorpay_order_id?: string
+          _razorpay_payment_id?: string
+          _reason?: string
+          _store_id: string
+          _type: Database["public"]["Enums"]["credit_txn_type"]
+        }
+        Returns: number
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1688,6 +2097,13 @@ export type Database = {
     Enums: {
       app_role: "admin" | "seller" | "customer"
       coupon_type: "percentage" | "flat"
+      credit_promo_type:
+        | "code"
+        | "sitewide"
+        | "first_recharge"
+        | "loyalty"
+        | "referral"
+      credit_txn_type: "debit" | "credit" | "bonus" | "refund" | "grant"
       order_status:
         | "pending"
         | "confirmed"
@@ -1833,6 +2249,14 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "seller", "customer"],
       coupon_type: ["percentage", "flat"],
+      credit_promo_type: [
+        "code",
+        "sitewide",
+        "first_recharge",
+        "loyalty",
+        "referral",
+      ],
+      credit_txn_type: ["debit", "credit", "bonus", "refund", "grant"],
       order_status: [
         "pending",
         "confirmed",

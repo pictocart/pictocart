@@ -30,6 +30,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useEffect, useMemo, useState } from 'react';
+import CreditBadge from '@/components/wallet/CreditBadge';
 
 type NavLeaf = { label: string; icon: any; path: string };
 type NavGroup = { label: string; icon: any; key: string; children: NavLeaf[] };
@@ -87,6 +88,7 @@ const navTree: NavEntry[] = [
       { label: 'Domain', icon: Globe, path: '/settings/domain' },
       { label: 'Email Branding', icon: Mail, path: '/settings/email' },
       { label: 'Billing', icon: Crown, path: '/billing' },
+      { label: 'AI Wallet', icon: Sparkles, path: '/wallet' },
     ],
   },
 ];
@@ -286,6 +288,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex-1" />
+          <CreditBadge />
           <Link to="/profile">
             <Button variant="ghost" size="icon" className="rounded-full">
               <UserCircle className="h-5 w-5" />
