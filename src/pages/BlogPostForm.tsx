@@ -116,6 +116,7 @@ const BlogPostForm = () => {
     const payload = {
       title, slug, body,
       cover_image: coverImage || null,
+      thumbnail_image: thumbnailImage || null,
       is_published: isPublished,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
