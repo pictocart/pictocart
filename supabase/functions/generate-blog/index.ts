@@ -11,19 +11,27 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('Missing API key');
 
-    const prompt = `Write a blog post for an online store called "${store_name || 'My Store'}" in the ${category || 'general'} category.
+    const prompt = `You are a senior SEO content writer for an online store called "${store_name || 'My Store'}" (category: ${category || 'general'}).
 
-Topic: ${topic}
+Write a high-quality, SEO-optimized blog post on the topic: "${topic}".
 
-Write an engaging, SEO-friendly blog post of about 500-800 words. Include:
-- An engaging introduction
-- 3-4 main points with subheadings (use markdown ## for headings)
-- A conclusion with a call to action
-- Write in a friendly, conversational tone
+Requirements:
+- 700–1000 words, original, useful, written in a friendly conversational tone
+- Start with a strong hook in the first 2 sentences (no "In today's world…" filler)
+- Use markdown: one H1 (#) at the top, then H2 (##) and H3 (###) subheadings
+- Naturally include the primary keyword from the topic in: H1, first paragraph, at least one H2, and the conclusion (no keyword stuffing)
+- Include 4–6 H2 sections covering: intro, 2–3 substantive points, practical tips, and a conclusion with a soft call-to-action to shop the store
+- Use short paragraphs (2–4 sentences), bullet lists where helpful
+- Add an FAQ section at the end with 3 short Q&A pairs (### question style)
 
-Also provide a meta description (1-2 sentences, under 155 characters) for SEO.
+Also produce SEO metadata:
+- "seo_title": <= 60 chars, includes primary keyword, compelling
+- "seo_description": <= 155 chars, includes primary keyword, action-oriented
+- "tags": array of 4–6 lowercase keyword tags
+- "image_prompt": one vivid sentence describing the ideal hero image for this post (no text in image, photorealistic editorial style)
 
-Format your response as JSON: { "body": "...", "seo_description": "..." }`;
+Return ONLY valid JSON in this shape:
+{ "body": "...", "seo_title": "...", "seo_description": "...", "tags": ["..."], "image_prompt": "..." }`;
 
     const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
