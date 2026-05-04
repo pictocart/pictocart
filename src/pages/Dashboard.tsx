@@ -19,6 +19,8 @@ import RevenueChart from '@/components/dashboard/RevenueChart';
 import TopProducts from '@/components/dashboard/TopProducts';
 import RecentOrders from '@/components/dashboard/RecentOrders';
 import ProvisioningStatus from '@/components/dashboard/ProvisioningStatus';
+import WeeklyDigest from '@/components/dashboard/WeeklyDigest';
+import AbandonedCartBanner from '@/components/dashboard/AbandonedCartBanner';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -166,6 +168,12 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Abandoned Cart Insight */}
+      {store?.id && <AbandonedCartBanner storeId={store.id} />}
+
+      {/* Weekly Digest */}
+      {store?.id && <WeeklyDigest storeId={store.id} />}
 
       {/* Recent Orders */}
       {store?.id && <RecentOrders storeId={store.id} />}
