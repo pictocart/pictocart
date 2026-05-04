@@ -241,9 +241,22 @@ const BlogPostForm = () => {
                 const hint = field === 'cover'
                   ? 'Wide image shown at the top of the post. Recommended 1600×900.'
                   : 'Square-ish image shown in the blog listing. Recommended 800×800. Falls back to main image if empty.';
+                const aiBusy = aiImageField === field;
                 return (
                   <div key={field} className="space-y-2">
-                    <Label>{label}</Label>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label>{label}</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAIGenerateImage(field)}
+                        disabled={aiBusy || uploading}
+                      >
+                        {aiBusy ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1" />}
+                        {aiBusy ? 'Generating…' : 'Generate with AI'}
+                      </Button>
+                    </div>
                     <p className="text-xs text-muted-foreground">{hint}</p>
                     {value ? (
                       <div className="relative w-full overflow-hidden rounded-lg border bg-muted">
