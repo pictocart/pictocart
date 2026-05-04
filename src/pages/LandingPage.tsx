@@ -715,60 +715,115 @@ const LandingPage = () => {
             </div>
           </RevealSection>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Free */}
-            <RevealSection delay={0}>
-              <div className="rounded-3xl border border-slate-200 p-8 bg-white hover:shadow-lg transition-shadow">
-                <h3 className="text-xl font-bold text-slate-900 mb-1">Free</h3>
-                <p className="text-slate-400 text-sm mb-6">Everything you need to start selling</p>
-                <div className="mb-8">
-                  <span className="text-5xl font-extrabold text-slate-900">₹0</span>
-                  <span className="text-slate-400 ml-2">/forever</span>
+          <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
+            {[
+              {
+                name: 'Free',
+                tagline: 'Get your store online today',
+                price: '₹0',
+                period: '/forever',
+                commission: '3% platform commission',
+                cta: 'Get Started Free',
+                ctaVariant: 'outline' as const,
+                highlight: false,
+                features: [
+                  'Up to 10 products',
+                  '1 free theme',
+                  'AI product generation',
+                  'COD & UPI payments',
+                  'WhatsApp share + free subdomain',
+                  'Order management',
+                ],
+              },
+              {
+                name: 'Starter',
+                tagline: 'For sellers ready to grow',
+                price: '₹499',
+                period: '/month',
+                commission: '2% platform commission',
+                cta: 'Start with Starter',
+                ctaVariant: 'default' as const,
+                highlight: true,
+                features: [
+                  'Up to 100 products',
+                  '3 themes (Free + Premium)',
+                  'Custom domain + SSL',
+                  'Razorpay payouts to your bank',
+                  'Shipping (Delhivery)',
+                  'Blog, coupons & SEO tools',
+                  'Branded emails + Analytics',
+                ],
+              },
+              {
+                name: 'Growth',
+                tagline: 'For serious brands scaling fast',
+                price: '₹1,499',
+                period: '/month',
+                commission: '1% platform commission · 14-day trial',
+                cta: 'Try Growth Free',
+                ctaVariant: 'default' as const,
+                highlight: false,
+                features: [
+                  'Up to 1,000 products',
+                  '10 themes incl. all premium',
+                  'Multi-domain support',
+                  'Advanced analytics + AI insights',
+                  'Abandoned-cart recovery',
+                  'Priority support',
+                  'Everything in Starter',
+                ],
+              },
+            ].map((p, i) => (
+              <RevealSection key={p.name} delay={i * 120}>
+                <div
+                  className={`h-full rounded-3xl p-7 sm:p-8 transition-shadow flex flex-col relative ${
+                    p.highlight
+                      ? 'border-2 border-indigo-500 bg-gradient-to-b from-indigo-50/50 to-white shadow-xl shadow-indigo-500/10'
+                      : 'border border-slate-200 bg-white hover:shadow-lg'
+                  }`}
+                >
+                  {p.highlight && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-indigo-600 text-white text-xs font-bold whitespace-nowrap">
+                      Most Popular
+                    </div>
+                  )}
+                  <h3 className="text-xl font-bold text-slate-900 mb-1">{p.name}</h3>
+                  <p className="text-slate-400 text-sm mb-5">{p.tagline}</p>
+                  <div className="mb-3">
+                    <span className="text-4xl sm:text-5xl font-extrabold text-slate-900">{p.price}</span>
+                    <span className="text-slate-400 ml-2">{p.period}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-500 mb-6">{p.commission}</p>
+                  <ul className="space-y-2.5 mb-8 flex-1">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm text-slate-600">
+                        <Check className={`h-4 w-4 shrink-0 mt-0.5 ${p.highlight ? 'text-indigo-500' : 'text-emerald-500'}`} />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link to="/auth" className="block">
+                    <Button
+                      variant={p.ctaVariant}
+                      onClick={() => trackMarketing({ event: 'pricing_cta_click', section: 'pricing', label: p.name })}
+                      className={`w-full py-5 font-semibold min-h-[48px] ${
+                        p.highlight
+                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25'
+                          : p.ctaVariant === 'default'
+                            ? 'bg-slate-900 hover:bg-slate-800 text-white'
+                            : 'border-slate-200 hover:border-indigo-300'
+                      }`}
+                    >
+                      {p.cta} {p.highlight && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
+                  </Link>
                 </div>
-                <ul className="space-y-3 mb-8">
-                  {['Unlimited products', 'AI product generation', 'Basic themes', 'Order management', 'WhatsApp sharing', 'COD & UPI payments'].map(f => (
-                    <li key={f} className="flex items-center gap-3 text-sm text-slate-600">
-                      <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link to="/auth" className="block">
-                  <Button variant="outline" className="w-full py-5 font-semibold border-slate-200 hover:border-indigo-300">
-                    Get Started Free
-                  </Button>
-                </Link>
-              </div>
-            </RevealSection>
-
-            {/* Premium */}
-            <RevealSection delay={150}>
-              <div className="rounded-3xl border-2 border-indigo-500 p-8 bg-gradient-to-b from-indigo-50/50 to-white relative hover:shadow-xl transition-shadow">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-indigo-600 text-white text-xs font-bold">
-                  Most Popular
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-1">Premium</h3>
-                <p className="text-slate-400 text-sm mb-6">For serious sellers who want to grow fast</p>
-                <div className="mb-8">
-                  <span className="text-5xl font-extrabold text-slate-900">₹499</span>
-                  <span className="text-slate-400 ml-2">/month</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {['Everything in Free', 'Custom domain', 'Premium AI themes', 'Advanced analytics', 'Priority support', 'Blog & SEO tools', 'Shipping integration', 'Coupon management'].map(f => (
-                    <li key={f} className="flex items-center gap-3 text-sm text-slate-600">
-                      <Check className="h-4 w-4 text-indigo-500 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link to="/auth" className="block">
-                  <Button className="w-full py-5 font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25">
-                    Start Premium Trial <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </RevealSection>
+              </RevealSection>
+            ))}
           </div>
+          <p className="text-center text-sm text-slate-500 mt-8">
+            Need more? <Link to="/billing" className="font-semibold text-indigo-600 hover:underline">See our Scale plan (₹4,999, 0% commission)</Link>
+          </p>
         </div>
       </section>
 
