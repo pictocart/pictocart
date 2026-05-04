@@ -1,303 +1,43 @@
-# Pic to Cart — Market-Ready Product Plan
-
-## Part 1 — Business Analyst Lens
-
-### Market position
-
-**Pic to Cart = "Shopify for Indian micro-sellers"** with one differentiator no one else owns: **AI-generated, fully-built theme storefronts (not templates) running as standalone Lovable projects on the seller's own domain**, provisioned in minutes.
-
-### Target merchants (3 ICPs, in priority order)
-
-1. **Solo artisans & D2C creators** (Indilipi-style): handmade, sarees, jewelry, art, food. 1–50 SKUs. Low tech literacy. Need: WhatsApp-shareable, mobile-first, COD, low monthly cost.
-2. **Small retailers digitising** (kirana, boutiques, electronics resellers): existing offline business. Need: catalog + UPI + Delhivery + GST invoice.
-3. **Side-hustle / dropshippers**: testing a niche. Need: 5-min setup, switch theme often, cancel anytime.
-
-### Competitive moat vs Shopify / Dukaan / Shiprocket Social
-
-- **AI Theme Marketplace** with real, live, customisable storefronts (not screenshot previews).
-- **Free dev → pay only when live** (mirrors Shopify dev-store, but Indian price points: ₹0/₹499/₹1499).
-- **5-minute go-live** with mandatory steps reduced to 3–4.
-- **Built-in Delhivery + Razorpay + GST invoice + AI blog** — no plugins.
-
-### Pricing tiers (proposed)
-
-
-| Plan    | Price/mo | Commission | Domain         | Themes                   |
-| ------- | -------- | ---------- | -------------- | ------------------------ |
-| Free    | ₹0       | 3%         | subdomain only | 1 free theme             |
-| Starter | ₹499     | 2%         | custom domain  | all free + 1 premium     |
-| Growth  | ₹1,499   | 1%         | custom + email | all themes incl. premium |
-| Scale   | ₹4,999   | 0%         | multi-domain   | all + early access       |
-
-
----
-
-## Part 2 — Solution Architecture (the "what" we build)
-
-### Architecture model (locked)
-
-```text
-┌─────────────────────────────────────────────────────┐
-│ PIC TO CART COCKPIT (this project — pictocart.in)   │
-│ • Marketing site (/)                                │
-│ • Seller dashboard (/dashboard)                     │
-│ • Super Admin (/admin)                              │
-│ • Theme Marketplace (live previews open in new tab) │
-│ • Provisioning engine                               │
-└──────────────┬──────────────────────────────────────┘
-               │ provisions & manages
-               ▼
-┌─────────────────────────────────────────────────────┐
-│ PER-STORE LOVABLE PROJECTS (one per merchant)       │
-│ e.g. storefront-indilipi → indilipi.shop            │
-│ • Inherits chosen theme codebase                    │
-│ • Reads ALL data from cockpit Supabase              │
-│ • Merchant cannot edit code (but can configure)     │
-└─────────────────────────────────────────────────────┘
-```
-
-### Data flow (single source of truth)
-
-- **Cockpit Supabase** = master DB for stores, products, orders, customers, themes.
-- Each storefront project uses `cockpitClient.ts` (already built) to read live data.
-- Merchant edits in cockpit → instantly reflected on live storefront (no redeploy needed for content; theme code changes require provisioning patch).
-
----
-
-## Part 3 — End-to-End Merchant Journey
-
-### Phase 0: Sign-up (30 sec)
-
-Email/Google → land on **simplified onboarding**.
-
-### Phase 1: Mandatory Onboarding — reduced from 11 → **4 steps**
-
-
-| #   | Step                                                      | Why mandatory   |
-| --- | --------------------------------------------------------- | --------------- |
-| 1   | **Store Name + Slug**                                     | Identity        |
-| 2   | **Category** (drives default theme + sample products)     | Personalisation |
-| 3   | **Pick a Theme** from marketplace (free default selected) | Visual identity |
-| 4   | **Go Live** (publish on subdomain `name.pictocart.in`)    | Activation      |
-
-
-**Removed from onboarding** (moved to dashboard pop-ups / setup checklist):
-
-- Logo upload → dashboard "Brand Setup" card
-- Theme color picker → REMOVED entirely (theme defines its own palette)
-- Product Image / AI Magic / Store Info → dashboard "Add your first product" card
-- Payments → dashboard "Accept payments" card (COD on by default)
-- Email Branding → dashboard "Brand emails" card
-- Preview → not a step; live preview button always available
-
-### Phase 2: Dashboard Setup Checklist (Shopify-style)
-
-Top of dashboard shows a **5-card progress widget**:
-
-```
-☐ Add your logo          ☐ Add first product
-☐ Connect payments       ☐ Brand your emails
-☐ Connect custom domain
-```
-
-Each card opens a focused modal — no more wizard. Dismissible.
-
-### Phase 3: Daily operations (already built, keep as-is)
-
-Products, Orders, Coupons, Blog, Subscribers, SEO, Analytics, Categories.
-
-### Phase 4: Growth (custom domain, premium theme upgrade, plan upgrade)
-
-Triggered from **Billing** + **Settings → Domain**.
-
----
-
-## Part 4 — Sidebar Restructure (cleaner, market-standard)
-
-```text
-Home (Dashboard)
-─ Catalog
-   ├ Products
-   └ Categories
-─ Sales
-   ├ Orders
-   └ Coupons
-─ Marketing
-   ├ Blog Posts
-   ├ Subscribers
-   └ SEO
-─ Storefront
-   ├ Themes        ← NEW: marketplace + my active theme
-   ├ Customise     ← header/footer/homepage links + sections
-   └ Analytics
-─ Settings
-   ├ Payments
-   ├ Shipping
-   ├ Domain
-   ├ Email Branding   ← NEW (moved out of onboarding)
-   └ Billing
-My Profile / Sign Out
-```
-
-**Removed**: "Store Design" page → split into **Themes** (browse/install) and **Customise** (edit active theme's content).
-
----
-
-## Part 5 — Theme Marketplace Overhaul (the killer feature)
-
-### Current problems
-
-- `theme_packs` table contains JSON-only "themes" (just colors + section configs) → low quality previews.
-- Live preview is a tiny iframe inside a modal.
-- "Customise theme" lets users break the design.
-
-### New model
-
-- **Wipe `theme_packs**` of all existing JSON entries (keep table, repurpose).
-- Each theme = a row in `**theme_master_projects**` (already exists) pointing to a real Lovable project URL (e.g. `theme-master-bazaar`).
-- Marketplace card shows:
-  - High-quality screenshot
-  - **"Live Preview"** button → opens master project URL in **new tab** (full functional storefront)
-  - **"Install"** button → triggers provisioning to spin up merchant's storefront project from this master
-- **No live preview iframe inside cockpit.**
-
-### Customisation rules (Shopify-style)
-
-Merchant CAN edit:
-
-- Logo, store name, header links, footer links/columns
-- Homepage section ORDER + which sections show (toggle)
-- Section CONTENT (text, banner image, featured product list)
-- Newsletter on/off, blog on/off
-- (Categories drive the catalog navigation automatically)
-
-Merchant CANNOT edit:
-
-- Colors, fonts, spacing, layout (theme's design integrity)
-- Component structure
-- Code
-
-This is enforced by the schema of `store.settings.customisations` — a typed JSON with only the allowed keys.
-
-### Theme cost matrix (admin-only, in Super Admin)
-
-- Track AI generation cost per theme (already in `theme_packs.ai_generation_cost`).
-- New: **per-token cost in INR** pulled from Lovable AI Gateway billing for each `generate-theme-pack` invocation.
-- Profit/Loss = (sales_count × price) − ai_generation_cost.
-- Display in `/admin/themes` → cost matrix tab.
-
----
-
-## Part 6 — Admin Changes
-
-### `/admin/stores` fixes
-
-- Store row link currently → `/store/indilipi`. Change to:
-  - If `custom_domain` set → `https://{custom_domain}` (e.g. `https://indilipi.shop`)
-  - Else → `https://{slug}.pictocart.in`
-- Add a "View live" external-link icon (already partially there).
-
-### `/admin/themes` upgrade
-
-- Tabs: **Master Projects** | **Cost Matrix** | **Image Pool**
-- Master Projects: CRUD on `theme_master_projects` (URL, screenshot, category, default flag).
-- Cost Matrix: per-theme P&L + token usage.
-- Remove old "JSON theme pack" generation UI.
-
-### `/admin/cloudflare` → renamed **Domains**
-
-- Old Cloudflare-direct UI removed.
-- New: list active custom domains across all stores, health status, retry SSL.
-
-### `/admin/provisioning` (already exists)
-
-- Adapt to new flow: when merchant picks theme → enqueue a `provision_request` with `theme_master_id`.
-- Worker does: fork master project → set env (cockpit URL + anon key) → publish → connect subdomain → mark store `is_published`.
-
-### `/admin/revenue`
-
-- Add: subscription MRR, commission revenue, theme sales revenue, AI cost — net P&L.
-
----
-
-## Part 7 — Analytics (live data from indilipi.shop)
-
-- Storefronts already write orders/customers to **cockpit Supabase**.
-- `/analytics` page reads directly from `orders`, `customers`, `products` for the seller's `store_id`. No external integration needed — it's already one DB.
-- Add: traffic events table `storefront_events` (page_view, add_to_cart, checkout_start) → Edge Function `track-event` called from each storefront. Cockpit charts conversion funnel.
-
----
-
-## Part 8 — Phased Development Plan
-
-### Phase 1 — Foundation cleanup (week 1)
-
-1. Onboarding: collapse to 4 steps (StoreName, Category, Theme, Go Live).
-2. Dashboard: add **Setup Checklist** widget with 5 dismissible cards.
-3. Sidebar restructure: rename Store Design → split into Themes + Customise; add Email Branding under Settings.
-4. Admin Stores: fix live-link to use `custom_domain` or `{slug}.pictocart.in`.
-5. Wipe `theme_packs` rows; keep schema.
-
-### Phase 2 — Theme Marketplace v2 (week 2)
-
-1. Rewrite `Themes` page → cards from `theme_master_projects`, "Live Preview" → new tab, "Install" → provision.
-2. Lock down **Customise** page to schema-allowed fields only (header/footer/homepage links + section order + content).
-3. Remove color picker / font picker UI from merchant side.
-4. Admin Themes page: Master Projects CRUD + Cost Matrix tab.
-
-### Phase 3 — Provisioning automation (week 3)
-
-1. Hook "Install Theme" → creates `provision_request` row.
-2. Provisioning worker: cross-project copy theme code → set cockpit env → publish → bind subdomain.
-3. Status visible in merchant dashboard ("Your store is going live… 2 min remaining").
-4. Email merchant when live.
-
-### Phase 4 — Billing + Plans (week 4)
-
-1. Subscription tiers in DB (already partially there).
-2. Razorpay subscriptions for ₹499/₹1499/₹4999.
-3. Plan-gated features (custom domain = paid, premium themes = paid).
-4. Free trial: 14 days on Growth.
-
-### Phase 5 — Analytics + Conversion (week 5)
-
-1. `storefront_events` table + `track-event` edge function.
-2. Funnel chart on `/analytics`: views → cart → checkout → paid.
-3. Top products, traffic sources, device breakdown.
-
-### Phase 6 — Admin polish + launch readiness (week 6)
-
-1. Admin Revenue P&L dashboard.
-2. Admin Domains page (replaces Cloudflare).
-3. Cost matrix with token-level cost tracking via Lovable AI Gateway logs.
-4. End-to-end QA: signup → onboarding → install theme → add product → custom domain → first sale.
-
----
-
-## Part 9 — Concrete deletions
-
-- `src/components/onboarding/StepTheme.tsx` (color theme picker) — DELETE
-- `src/components/onboarding/StepUploadImage.tsx` — DELETE
-- `src/components/onboarding/StepAIGenerate.tsx` — DELETE
-- `src/components/onboarding/StepStorePreview.tsx` — DELETE
-- `src/components/onboarding/StepGoLive.tsx` — keep but trigger from dashboard
-- `src/components/store-design/ThemeMarketplace.tsx` (in-iframe preview) — REPLACE
-- All rows in `theme_packs` — TRUNCATE (admin migration)
-- `src/pages/admin/AdminCloudflare.tsx` — RENAME/REPURPOSE to AdminDomains
-
----
-
-## Open questions for you (answer before Phase 1 starts)
-
-1. **Pricing**: confirm ₹0 / ₹499 / ₹1499 / ₹4999 + commission tiers, or different numbers?  
-answer: Fine
-2. **Free plan**: should free stores get `{slug}.pictocart.in` only, or also allow custom domain?  
-answer: Fine
-3. **Theme install flow**: does picking a new theme on an existing live store **re-provision** (replace site, keep data) or do we lock theme after first install?  
-answer: Reprovision, (replace site, keep data) Increase the sale of themes.
-4. **Categories as theme inputs**: confirm sidebar/nav of the storefront should be auto-built from `categories` table (no manual nav editing needed)?  
-Answer: Yes   
-  
-Just one this which I think I need to confirm before going ahead. Like we have created theme-master-bazaar, if we can create all the the themes in 1 theme bundle project of lovable then it will be a less of admin caos. 
-
-Once you confirm, I'll start Phase 1 (onboarding collapse + sidebar + admin stores link fix + theme_packs wipe) in a single pass.  
+## Issues found
+
+1. **"Grant permission to Instant Store AI"** on the Google sign-in screen — this name is **not in the codebase**. It comes from the Google Cloud OAuth consent screen tied to the `lovable.dev` auth client. We can't change it from code; you have to rename the OAuth app to "Pic to Cart" in the Google Cloud Console (or in the Lovable Cloud auth provider settings).
+2. **Onboarding "Choose a theme"** uses the hardcoded `THEME_TEMPLATES` list (Minimal Light, Dark Luxe…) and marks 4 of them as **Premium ₹500**. This is the ₹500 paywall you saw.
+3. **In-app `/themes`** reads `theme_master_projects` (currently only **Bazaar — Ethnic Luxury** and **Marketplace**, both `lovable_project_url=NULL` and `preview_image=NULL`).
+4. **"Install" → "Edge Function returned a non-2xx"** — `provision-storefront` enqueues a `provision_requests` row that `provision-runner` then tries to remix via `remix_url`. Both rows have no `remix_url`, so the runner errors silently and the install never completes. Worse, the validator in `provision-storefront` requires `primary` + `accent` placeholders that aren't always in `store.theme`, so the call returns 422.
+5. **Indilipi vs Fashion Street**: `fashion-street` has `theme = {theme_id:"bazaar"}` and renders via the existing `Storefront.tsx` route with the bazaar palette/fonts. `indilipi` has the legacy `minimal-light` blob and never gets the bazaar look. There is real bazaar theme React code in `src/themes/bazaar/`, but `Storefront.tsx` never calls `ThemeRenderer` — so even Fashion Street is *not* actually using the bazaar theme components, just its colors.
+
+## Plan
+
+### A. Stop confusing the merchant during signup
+- Document a one-time action in the launch checklist: rename the Google OAuth client from "Instant Store AI" → "Pic to Cart" in Google Cloud Console (Lovable Cloud → Auth → Google provider). Add a checklist item in `AdminLaunchChecklist.tsx` so it isn't forgotten.
+- In `StepTheme.tsx` (onboarding), remove the ₹500 premium lock entirely. All themes shown during onboarding become free and selectable. The premium tier (if we keep it later) moves to the dashboard `/themes` page only.
+
+### B. Make `/themes` show our real theme catalog (free, working)
+- Migration: insert/update `theme_master_projects` rows for every theme we actually ship — `bazaar`, `marketplace`, plus the existing `THEME_TEMPLATES` IDs (`minimal-light`, `fresh-green`, `dark-luxe`, `neon-pop`, `pastel-dream`, `classic-serif`). Fill `preview_image` (generated thumbnails) and a usable `description`. Mark `bazaar` as `is_default=true` for Fashion category.
+- Rewrite `src/pages/Themes.tsx` to:
+  - Drop the "Install" → provision-runner path. **Installing a theme = updating `stores.theme = { theme_id, name }`** directly. No paid gating. No edge function call.
+  - Show Live Preview by opening `/store/{slug}?preview_theme={theme_id}` in a new tab so the merchant sees it on their own data.
+  - Show a clear "Active" badge for the theme currently set on the store.
+- Hide the broken provision-runner workflow from the merchant UI. Keep it intact under `/admin/provisioning` for the multi-project remix flow we'll revisit later.
+
+### C. Render the real bazaar/marketplace theme code on storefronts
+- Add a `src/themes/marketplace/` folder mirroring `src/themes/bazaar/` (Hero, ProductCard, USPStrip, tokens, index) so both registered themes render.
+- In `src/pages/Storefront.tsx`, when `store.theme.theme_id` matches a key in `THEMES` (`bazaar`, `marketplace`), render via `ThemeRenderer` using the existing `useStorefrontBundle` hook. Fall back to the current generic renderer for legacy theme IDs (`minimal-light`, `fresh-green`, …) so we don't break existing live stores.
+- Honor `?preview_theme=…` in `Storefront.tsx` so the Themes page preview link works without committing the change.
+
+### D. Make Indilipi look like the bazaar theme
+- One-off migration: `UPDATE stores SET theme = '{"theme_id":"bazaar","name":"bazaar"}'::jsonb WHERE slug = 'indilipi';` Once C is shipped, `pictocart.in/store/indilipi` will render through the bazaar theme components automatically — same as `fashion-street` will after the upgrade.
+- Add a "Reset to default theme" button on `/themes` so any merchant can do this themselves later.
+
+### E. QA
+- Manually verify on the preview: onboarding shows no ₹500 lock; `/themes` lists 8 themes, "Install" updates the store with no toast error; `/store/fashion-street` and `/store/indilipi` render with the bazaar layout; preview link opens a non-persisted preview.
+
+### Technical notes
+- Files to edit: `src/components/onboarding/StepTheme.tsx`, `src/pages/Themes.tsx`, `src/pages/Storefront.tsx`, `src/pages/admin/AdminLaunchChecklist.tsx`.
+- Files to add: `src/themes/marketplace/{index.tsx,Hero.tsx,ProductCard.tsx,tokens.ts}`, plus 8 generated thumbnail JPGs in `src/assets/theme-thumbs/`.
+- Migrations: upsert 8 `theme_master_projects` rows; update `indilipi` store's `theme` JSONB.
+- No changes needed to `provision-storefront` / `provision-runner` (left for the future automated multi-project flow).
+
+### Out of scope (flagging)
+- Renaming the OAuth consent screen — must be done by you in Google Cloud Console.
+- Building actually distinct visual designs for all 8 themes (this plan ships bazaar + marketplace as full theme components; the other 6 keep using the current generic Storefront renderer with their color/font tokens).
