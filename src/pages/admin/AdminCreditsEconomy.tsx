@@ -278,7 +278,7 @@ const PromosTab = () => {
     const code = prompt('Promo code (e.g. LAUNCH50)')?.toUpperCase().trim();
     if (!code) return;
     const { error } = await supabase.from('credit_promos').insert({
-      type: 'promo_code', code, bonus_pct: 25, is_active: true, min_recharge_inr: 0, eligible_pack_ids: [],
+      type: 'code', code, bonus_pct: 25, is_active: true, min_recharge_inr: 0, eligible_pack_ids: [],
     });
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ['admin-promos'] });
