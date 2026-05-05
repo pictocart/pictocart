@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import ThemeCostGraph from '@/components/admin/ThemeCostGraph';
 import ThemePipeline from '@/components/admin/ThemePipeline';
 import ThemeDeliveriesInbox from '@/components/admin/ThemeDeliveriesInbox';
+import ThemeMasterPipeline from '@/components/admin/ThemeMasterPipeline';
 
 const CATEGORIES = ['fashion', 'food', 'electronics', 'beauty', 'health', 'sports', 'home-decor', 'general'];
 
@@ -477,6 +478,7 @@ const AdminThemes = () => {
       <Tabs defaultValue="masters">
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="masters"><Layers className="mr-1 h-4 w-4" /> Master Projects</TabsTrigger>
+          <TabsTrigger value="generator"><Sparkles className="mr-1 h-4 w-4" /> Generator</TabsTrigger>
           <TabsTrigger value="deliveries"><Inbox className="mr-1 h-4 w-4" /> Deliveries</TabsTrigger>
           <TabsTrigger value="pipeline"><Calendar className="mr-1 h-4 w-4" /> Pipeline</TabsTrigger>
           <TabsTrigger value="cost"><IndianRupee className="mr-1 h-4 w-4" /> Cost Matrix</TabsTrigger>
@@ -484,6 +486,7 @@ const AdminThemes = () => {
           <TabsTrigger value="images"><ImageIcon className="mr-1 h-4 w-4" /> Image Pool</TabsTrigger>
         </TabsList>
         <TabsContent value="masters" className="mt-4"><MasterProjectsTab /></TabsContent>
+        <TabsContent value="generator" className="mt-4"><ThemeMasterPipeline /></TabsContent>
         <TabsContent value="deliveries" className="mt-4"><ThemeDeliveriesInbox /></TabsContent>
         <TabsContent value="pipeline" className="mt-4"><ThemePipeline /></TabsContent>
         <TabsContent value="cost" className="mt-4"><CostMatrixTab /></TabsContent>
