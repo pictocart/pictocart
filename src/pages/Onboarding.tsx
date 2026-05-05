@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, SkipForward, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { THEME_TEMPLATES } from '@/lib/themes';
+import { getReferralCode, clearReferralCookie } from '@/lib/referralCookie';
 
 import StepStoreName from '@/components/onboarding/StepStoreName';
 import StepCategory from '@/components/onboarding/StepCategory';
@@ -112,6 +113,7 @@ const Onboarding = () => {
         : { name: 'minimal-light', primary_color: '#F97316' };
 
       if (!store) {
+        const refCode = getReferralCode();
         const { data: newStore, error } = await supabase
           .from('stores')
           .insert({
@@ -123,6 +125,7 @@ const Onboarding = () => {
             logo_url: data.logoUrl || null,
             theme: themeData,
             onboarding_step: step,
+            referred_by_code: refCode,
             settings: {
               payments: data.paymentSettings,
               phone: data.storeInfo.phone || null,
@@ -132,7 +135,26 @@ const Onboarding = () => {
           })
           .select()
           .single();
-        if (!error && newStore) setStore(newStore as any);
+        if (!error && newStore) {
+          setStore(newStore as any);
+          // Create referral record (best-effort, non-blocking)
+          if (refCode) {
+            const { data: partner } = await supabase
+              .from('partners')
+              .select('id')
+              .eq('referral_code', refCode)
+              .maybeSingle();
+            if (partner) {
+              await supabase.from('partner_referrals').insert({
+                partner_id: partner.id,
+                store_id: (newStore as any).id,
+                referred_user_id: user.id,
+                status: 'signup',
+              });
+              clearReferralCookie();
+            }
+          }
+        }
       } else {
         const updates: any = { onboarding_step: step };
         if (data.storeName) updates.name = data.storeName;
