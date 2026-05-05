@@ -62,7 +62,7 @@ const WalletCard = () => {
                       : 'from-primary to-amber-500'
                 )}
               >
-                {animBalance.toLocaleString('en-IN')}
+                {Math.round(animBalance).toLocaleString('en-IN')}
               </span>
               <span className="text-xs font-medium text-muted-foreground">credits</span>
             </div>
@@ -89,7 +89,7 @@ const WalletCard = () => {
               <TrendingUp className="h-3 w-3" /> Saved
             </div>
             <div className="text-lg font-bold text-emerald-600 tabular-nums">
-              ₹{animInr.toLocaleString('en-IN')}
+              ₹{Math.round(animInr).toLocaleString('en-IN')}
             </div>
           </div>
           <div>
