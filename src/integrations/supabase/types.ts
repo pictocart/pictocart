@@ -86,85 +86,6 @@ export type Database = {
         }
         Relationships: []
       }
-      agent_admin_messages: {
-        Row: {
-          attachments: Json | null
-          author: string
-          cost_inr: number | null
-          created_at: string
-          id: string
-          intent: string | null
-          message: string
-          scoped_theme_id: string | null
-        }
-        Insert: {
-          attachments?: Json | null
-          author: string
-          cost_inr?: number | null
-          created_at?: string
-          id?: string
-          intent?: string | null
-          message: string
-          scoped_theme_id?: string | null
-        }
-        Update: {
-          attachments?: Json | null
-          author?: string
-          cost_inr?: number | null
-          created_at?: string
-          id?: string
-          intent?: string | null
-          message?: string
-          scoped_theme_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_admin_messages_scoped_theme_id_fkey"
-            columns: ["scoped_theme_id"]
-            isOneToOne: false
-            referencedRelation: "theme_master_projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      agent_incidents: {
-        Row: {
-          action: string
-          created_at: string
-          details: Json | null
-          domain: string | null
-          id: string
-          severity: string
-          store_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string
-          details?: Json | null
-          domain?: string | null
-          id?: string
-          severity?: string
-          store_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string
-          details?: Json | null
-          domain?: string | null
-          id?: string
-          severity?: string
-          store_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_incidents_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ai_action_costs: {
         Row: {
           action_key: string
@@ -878,50 +799,6 @@ export type Database = {
           },
         ]
       }
-      domain_health_log: {
-        Row: {
-          checked_at: string
-          domain: string
-          error_message: string | null
-          http_code: number | null
-          id: string
-          response_ms: number | null
-          ssl_valid: boolean | null
-          status: string
-          store_id: string
-        }
-        Insert: {
-          checked_at?: string
-          domain: string
-          error_message?: string | null
-          http_code?: number | null
-          id?: string
-          response_ms?: number | null
-          ssl_valid?: boolean | null
-          status: string
-          store_id: string
-        }
-        Update: {
-          checked_at?: string
-          domain?: string
-          error_message?: string | null
-          http_code?: number | null
-          id?: string
-          response_ms?: number | null
-          ssl_valid?: boolean | null
-          status?: string
-          store_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "domain_health_log_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1565,6 +1442,7 @@ export type Database = {
           notes: string | null
           queued_at: string
           rendered_patch_prompt: string | null
+          requested_domain: string | null
           started_at: string | null
           status: string
           store_id: string
@@ -1584,6 +1462,7 @@ export type Database = {
           notes?: string | null
           queued_at?: string
           rendered_patch_prompt?: string | null
+          requested_domain?: string | null
           started_at?: string | null
           status?: string
           store_id: string
@@ -1603,6 +1482,7 @@ export type Database = {
           notes?: string | null
           queued_at?: string
           rendered_patch_prompt?: string | null
+          requested_domain?: string | null
           started_at?: string | null
           status?: string
           store_id?: string
@@ -1869,30 +1749,18 @@ export type Database = {
         Row: {
           banner_url: string | null
           category: string | null
-          cloudflare_hostname_id: string | null
-          consecutive_failures: number
           created_at: string
           custom_domain: string | null
           description: string | null
-          domain_state: string | null
-          domain_strategy: string | null
           downtime_notified_at: string | null
-          downtime_started_at: string | null
           id: string
           installed_theme_version: string | null
           is_published: boolean | null
-          last_health_check_at: string | null
           logo_url: string | null
           name: string
-          ns_provider: string | null
           onboarding_step: number | null
           settings: Json | null
           slug: string
-          ssl_last_checked_at: string | null
-          ssl_status: string | null
-          ssl_validation_name: string | null
-          ssl_validation_value: string | null
-          state_entered_at: string | null
           theme: Json | null
           theme_update_dismissed_version: string | null
           updated_at: string
@@ -1901,30 +1769,18 @@ export type Database = {
         Insert: {
           banner_url?: string | null
           category?: string | null
-          cloudflare_hostname_id?: string | null
-          consecutive_failures?: number
           created_at?: string
           custom_domain?: string | null
           description?: string | null
-          domain_state?: string | null
-          domain_strategy?: string | null
           downtime_notified_at?: string | null
-          downtime_started_at?: string | null
           id?: string
           installed_theme_version?: string | null
           is_published?: boolean | null
-          last_health_check_at?: string | null
           logo_url?: string | null
           name: string
-          ns_provider?: string | null
           onboarding_step?: number | null
           settings?: Json | null
           slug: string
-          ssl_last_checked_at?: string | null
-          ssl_status?: string | null
-          ssl_validation_name?: string | null
-          ssl_validation_value?: string | null
-          state_entered_at?: string | null
           theme?: Json | null
           theme_update_dismissed_version?: string | null
           updated_at?: string
@@ -1933,30 +1789,18 @@ export type Database = {
         Update: {
           banner_url?: string | null
           category?: string | null
-          cloudflare_hostname_id?: string | null
-          consecutive_failures?: number
           created_at?: string
           custom_domain?: string | null
           description?: string | null
-          domain_state?: string | null
-          domain_strategy?: string | null
           downtime_notified_at?: string | null
-          downtime_started_at?: string | null
           id?: string
           installed_theme_version?: string | null
           is_published?: boolean | null
-          last_health_check_at?: string | null
           logo_url?: string | null
           name?: string
-          ns_provider?: string | null
           onboarding_step?: number | null
           settings?: Json | null
           slug?: string
-          ssl_last_checked_at?: string | null
-          ssl_status?: string | null
-          ssl_validation_name?: string | null
-          ssl_validation_value?: string | null
-          state_entered_at?: string | null
           theme?: Json | null
           theme_update_dismissed_version?: string | null
           updated_at?: string
@@ -2510,10 +2354,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_domain_health_log: {
-        Args: { _retain_days?: number }
-        Returns: number
-      }
       consume_credits: {
         Args: { _action_key: string; _cache_hit?: boolean; _store_id: string }
         Returns: number
@@ -2540,14 +2380,6 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
-      }
-      get_domain_health_summary: {
-        Args: { _since: string }
-        Returns: {
-          store_id: string
-          total: number
-          up: number
-        }[]
       }
       has_role: {
         Args: {

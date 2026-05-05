@@ -41,6 +41,7 @@ interface ProvisionRequest {
   attempts?: number;
   error?: string | null;
   completed_at?: string | null;
+  requested_domain?: string | null;
 }
 
 interface JobLog {
@@ -309,10 +310,29 @@ const AdminProvisioning = () => {
                 <Button variant="outline" className="flex-1 gap-2 min-w-[140px]" onClick={() => setLogsId(open.id)}>
                   <ListTree className="h-4 w-4" /> View Logs
                 </Button>
-                <Button className="flex-1 gap-2 min-w-[140px]" onClick={() => updateStatus.mutate({
-                  id: open.id, patch: { status: 'live', completed_at: new Date().toISOString() },
-                })}>
-                  <Rocket className="h-4 w-4" /> Mark Live
+                <Button className="flex-1 gap-2 min-w-[140px]" onClick={async () => {
+                  updateStatus.mutate({ id: open.id, patch: { status: 'live', completed_at: new Date().toISOString() } });
+                  try {
+                    const payload = open.client_patch_payload as any;
+                    const email = payload?.user_email;
+                    if (email) {
+                      await supabase.functions.invoke('send-transactional-email', {
+                        body: {
+                          templateName: 'provision-live',
+                          recipientEmail: email,
+                          idempotencyKey: `provision-live-${open.id}`,
+                          templateData: {
+                            storeName: openStore?.name,
+                            domain: open.requested_domain ?? openStore?.custom_domain,
+                            projectUrl: open.new_project_url,
+                          },
+                        },
+                      });
+                      toast.success('Customer notified by email');
+                    }
+                  } catch (e) { /* best effort */ }
+                }}>
+                  <Rocket className="h-4 w-4" /> Mark Live & Notify
                 </Button>
                 {open.status !== 'live' && open.status !== 'failed' && (
                   <Button
