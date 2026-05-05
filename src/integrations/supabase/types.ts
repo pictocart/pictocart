@@ -2067,6 +2067,36 @@ export type Database = {
         }
         Relationships: []
       }
+      theme_master_metrics: {
+        Row: {
+          image_count: number
+          pictocart_response: Json | null
+          reuse_hits: number
+          shipped_to_pictocart: boolean
+          theme_id: string
+          total_cost_inr: number
+          updated_at: string
+        }
+        Insert: {
+          image_count?: number
+          pictocart_response?: Json | null
+          reuse_hits?: number
+          shipped_to_pictocart?: boolean
+          theme_id: string
+          total_cost_inr?: number
+          updated_at?: string
+        }
+        Update: {
+          image_count?: number
+          pictocart_response?: Json | null
+          reuse_hits?: number
+          shipped_to_pictocart?: boolean
+          theme_id?: string
+          total_cost_inr?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       theme_master_projects: {
         Row: {
           category: string | null
@@ -2124,6 +2154,30 @@ export type Database = {
           remix_url?: string | null
           theme_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      theme_master_versions: {
+        Row: {
+          created_at: string
+          files_manifest: Json
+          id: string
+          theme_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          files_manifest?: Json
+          id?: string
+          theme_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          files_manifest?: Json
+          id?: string
+          theme_id?: string
+          version?: number
         }
         Relationships: []
       }
@@ -2227,7 +2281,9 @@ export type Database = {
           id: string
           planned_for: string
           research_brief: Json | null
+          slot_date: string | null
           status: string
+          theme_brief: Json | null
           theme_pack_id: string | null
         }
         Insert: {
@@ -2239,7 +2295,9 @@ export type Database = {
           id?: string
           planned_for: string
           research_brief?: Json | null
+          slot_date?: string | null
           status?: string
+          theme_brief?: Json | null
           theme_pack_id?: string | null
         }
         Update: {
@@ -2251,7 +2309,9 @@ export type Database = {
           id?: string
           planned_for?: string
           research_brief?: Json | null
+          slot_date?: string | null
           status?: string
+          theme_brief?: Json | null
           theme_pack_id?: string | null
         }
         Relationships: [

@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     const feedback: string = body.feedback ?? "";
     if (!themeId || !feedback) return json({ ok: false, error: "theme_id and feedback required" }, 400);
 
-    const { data: latest } = await supabase.from("theme_versions").select("version, files_manifest").eq("theme_id", themeId).order("version", { ascending: false }).limit(1).maybeSingle();
+    const { data: latest } = await supabase.from("theme_master_versions").select("version, files_manifest").eq("theme_id", themeId).order("version", { ascending: false }).limit(1).maybeSingle();
     if (!latest) return json({ ok: false, error: "theme not found" }, 404);
 
     const manifest = latest.files_manifest as any;
@@ -72,7 +72,7 @@ Return JSON only, no prose, no markdown fences.`;
       footer: newDna.footer,
     };
     const nextVersion = (latest.version ?? 0) + 1;
-    await supabase.from("theme_versions").insert({ theme_id: themeId, version: nextVersion, files_manifest: newManifest, notes: feedback.slice(0, 500) });
+    await supabase.from("theme_master_versions").insert({ theme_id: themeId, version: nextVersion, files_manifest: { ...newManifest, refine_notes: feedback.slice(0, 500) } });
     return json({ ok: true, theme_id: themeId, version: nextVersion, cost_inr: cost });
   } catch (e) {
     console.error("refine-theme", e);

@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     if (action === "regenerate_theme") {
       const themeId = body.theme_id;
       if (!themeId) return json({ ok: false, error: "theme_id required" }, 400);
-      const { data: latest } = await supabase.from("theme_versions").select("files_manifest").eq("theme_id", themeId).order("version", { ascending: false }).limit(1).maybeSingle();
+      const { data: latest } = await supabase.from("theme_master_versions").select("files_manifest").eq("theme_id", themeId).order("version", { ascending: false }).limit(1).maybeSingle();
       const brief = body.brief ?? (latest?.files_manifest as any)?.dna ?? {};
       const r = await fetch(`${BASE}/generate-and-ship-theme`, { method: "POST", headers: AUTH, body: JSON.stringify({ theme_id: themeId, brief: { name: brief.name, category: brief.category ?? "general", vibe: brief.vibe } }) });
       return json(await r.json());

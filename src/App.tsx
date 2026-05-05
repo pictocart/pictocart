@@ -62,6 +62,7 @@ const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
 const AdminStores = lazy(() => import("@/pages/admin/AdminStores"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminThemes = lazy(() => import("@/pages/admin/AdminThemes"));
+const AdminThemeMasterPreview = lazy(() => import("@/pages/admin/AdminThemeMasterPreview"));
 const AdminRevenue = lazy(() => import("@/pages/admin/AdminRevenue"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminProfile = lazy(() => import("@/pages/admin/AdminProfile"));
@@ -266,6 +267,7 @@ const AppRoutes = () => {
             <Route path="/admin/stores" element={<AdminRoute><AdminLayout><AdminStores /></AdminLayout></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute>} />
             <Route path="/admin/themes" element={<AdminRoute><AdminLayout><AdminThemes /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
             
             <Route path="/admin/revenue" element={<AdminRoute><AdminLayout><AdminRevenue /></AdminLayout></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />

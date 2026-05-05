@@ -170,8 +170,8 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
       density: layout.density ?? "balanced",
     };
 
-    const { count } = await supabase.from("theme_versions").select("id", { count: "exact", head: true }).eq("theme_id", themeId);
-    await supabase.from("theme_versions").insert({ theme_id: themeId, version: (count ?? 0) + 1, files_manifest: manifest });
+    const { count } = await supabase.from("theme_master_versions").select("id", { count: "exact", head: true }).eq("theme_id", themeId);
+    await supabase.from("theme_master_versions").insert({ theme_id: themeId, version: (count ?? 0) + 1, files_manifest: manifest });
 
     // Auto-publish to merchant marketplace as a theme_master_projects entry.
     // The renderer (/admin/themes/preview/:themeId) acts as the live preview URL.
@@ -188,11 +188,12 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
     }, { onConflict: "theme_id" });
 
     const totalCost = Number(((dnaRes.cost ?? 0) + imageCostTotal).toFixed(4));
-    await supabase.from("theme_generation_metrics").insert({
+    await supabase.from("theme_master_metrics").upsert({
       theme_id: themeId, total_cost_inr: totalCost, image_count: imageCount,
-      ai_calls_count: 1 + imgPrompts.length, reuse_hits: 0, total_time_ms: Date.now() - t0,
-      shipped_to_pictocart: true, pictocart_response: { status: 200, body: "auto-published in-project" },
-    });
+      reuse_hits: 0, shipped_to_pictocart: true,
+      pictocart_response: { status: 200, body: "auto-published in-project" },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "theme_id" });
 
     if (body.calendar_id) {
       await supabase.from("theme_release_calendar").update({ status: "shipped" }).eq("id", body.calendar_id);
