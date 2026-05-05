@@ -318,6 +318,32 @@ const MasterProjectsTab = () => {
                   </div>
                   <Badge variant="outline" className="text-[10px] shrink-0">v{t.current_version}</Badge>
                 </div>
+                <div className="flex items-baseline gap-2">
+                  {Number(t.price ?? 0) === 0 ? (
+                    <span className="text-sm font-semibold text-emerald-600">Free</span>
+                  ) : (
+                    <>
+                      <span className="text-sm font-bold">₹{Number(t.price).toLocaleString('en-IN')}</span>
+                      {t.compare_at_price && Number(t.compare_at_price) > Number(t.price) && (
+                        <>
+                          <span className="text-[11px] text-muted-foreground line-through">
+                            ₹{Number(t.compare_at_price).toLocaleString('en-IN')}
+                          </span>
+                          <Badge className="bg-emerald-500 text-white border-0 text-[10px]">
+                            {Math.round((1 - Number(t.price) / Number(t.compare_at_price)) * 100)}% OFF
+                          </Badge>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+                <label className="flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded bg-muted/40">
+                  <span className="text-muted-foreground">{t.is_active ? 'Published' : 'Unpublished'}</span>
+                  <Switch
+                    checked={t.is_active}
+                    onCheckedChange={(v) => togglePublish.mutate({ id: t.id, is_active: v })}
+                  />
+                </label>
                 {t.description && <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>}
                 <div className="mt-auto flex gap-1.5 pt-2">
                   {t.lovable_project_url && (
