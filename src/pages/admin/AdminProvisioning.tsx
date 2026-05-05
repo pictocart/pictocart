@@ -152,6 +152,8 @@ const AdminProvisioning = () => {
         </Button>
       </div>
 
+      <ProvisioningBudgetPanel />
+
       <Card className="overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
