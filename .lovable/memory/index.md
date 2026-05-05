@@ -35,3 +35,4 @@
 - [Animation System](mem://tech/animation-system) — useAnimateOnScroll hook, CSS transitions, intersection observer
 - [White-Label Emails](mem://features/white-label-emails) — AI-generated branded email templates per store
 - [Email Sender Identity](mem://features/email-sender-identity) — Resend multi-domain API for custom sender addresses
+- [Partner Program](mem://features/partner-program) — Phase 6 freelancer/agency referrals, ?ref= cookie, /partners + /admin/partners
