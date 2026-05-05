@@ -41,6 +41,7 @@ interface ProvisionRequest {
   attempts?: number;
   error?: string | null;
   completed_at?: string | null;
+  requested_domain?: string | null;
 }
 
 interface JobLog {
