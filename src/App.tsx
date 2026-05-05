@@ -73,6 +73,7 @@ const AdminLaunchChecklist = lazy(() => import("@/pages/admin/AdminLaunchCheckli
 const AdminCreditsEconomy = lazy(() => import("@/pages/admin/AdminCreditsEconomy"));
 const AdminAgent = lazy(() => import("@/pages/admin/AdminAgent"));
 const AdminHealth = lazy(() => import("@/pages/admin/AdminHealth"));
+const AdminDisputes = lazy(() => import("@/pages/admin/AdminDisputes"));
 const Help = lazy(() => import("@/pages/Help"));
 
 
@@ -275,6 +276,7 @@ const AppRoutes = () => {
             <Route path="/admin/plans" element={<AdminRoute><AdminLayout><AdminPlans /></AdminLayout></AdminRoute>} />
             <Route path="/admin/launch" element={<AdminRoute><AdminLayout><AdminLaunchChecklist /></AdminLayout></AdminRoute>} />
             <Route path="/admin/health" element={<AdminRoute><AdminLayout><AdminHealth /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/disputes" element={<AdminRoute><AdminLayout><AdminDisputes /></AdminLayout></AdminRoute>} />
             {/* Help Center */}
             <Route path="/help" element={<Help />} />
             <Route path="/help/:slug" element={<Help />} />

@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { PrivacyControls } from '@/components/profile/PrivacyControls';
 import {
   User,
   Mail,
@@ -323,23 +324,7 @@ const SellerProfile = () => {
         </CardContent>
       </Card>
 
-      {/* Danger Zone */}
-      <Card className="border-destructive/30">
-        <CardHeader>
-          <CardTitle className="text-base text-destructive flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Danger Zone
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            Deleting your account is permanent and cannot be undone. All your store data, products, and orders will be lost.
-          </p>
-          <Button variant="destructive" size="sm" disabled>
-            Delete Account (Coming Soon)
-          </Button>
-        </CardContent>
-      </Card>
+      <PrivacyControls />
     </div>
   );
 };

@@ -20,6 +20,7 @@ import {
   CheckSquare,
   Bot,
   Activity,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -38,6 +39,7 @@ const adminNavItems = [
   { label: 'Domains', icon: Globe, path: '/admin/cloudflare' },
   { label: 'Launch QA', icon: CheckSquare, path: '/admin/launch' },
   { label: 'Health', icon: Activity, path: '/admin/health' },
+  { label: 'Disputes', icon: ShieldAlert, path: '/admin/disputes' },
   { label: 'Security', icon: Lock, path: '/admin/security' },
   { label: 'Platform Settings', icon: Settings, path: '/admin/settings' },
 ];
