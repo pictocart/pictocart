@@ -75,6 +75,9 @@ const AdminCreditsEconomy = lazy(() => import("@/pages/admin/AdminCreditsEconomy
 
 const AdminHealth = lazy(() => import("@/pages/admin/AdminHealth"));
 const AdminDisputes = lazy(() => import("@/pages/admin/AdminDisputes"));
+const AdminPartners = lazy(() => import("@/pages/admin/AdminPartners"));
+const PartnersSignup = lazy(() => import("@/pages/PartnersSignup"));
+const PartnersDashboard = lazy(() => import("@/pages/PartnersDashboard"));
 const Help = lazy(() => import("@/pages/Help"));
 
 
@@ -279,6 +282,11 @@ const AppRoutes = () => {
             <Route path="/admin/launch" element={<AdminRoute><AdminLayout><AdminLaunchChecklist /></AdminLayout></AdminRoute>} />
             <Route path="/admin/health" element={<AdminRoute><AdminLayout><AdminHealth /></AdminLayout></AdminRoute>} />
             <Route path="/admin/disputes" element={<AdminRoute><AdminLayout><AdminDisputes /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/partners" element={<AdminRoute><AdminLayout><AdminPartners /></AdminLayout></AdminRoute>} />
+            {/* Partner program (public signup + partner-only dashboard) */}
+            <Route path="/partners" element={<PartnersSignup />} />
+            <Route path="/partners/signup" element={<PartnersSignup />} />
+            <Route path="/partners/dashboard" element={<PartnersDashboard />} />
             {/* Help Center */}
             <Route path="/help" element={<Help />} />
             <Route path="/help/:slug" element={<Help />} />
