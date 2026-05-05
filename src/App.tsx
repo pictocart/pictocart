@@ -65,13 +65,13 @@ const AdminThemes = lazy(() => import("@/pages/admin/AdminThemes"));
 const AdminRevenue = lazy(() => import("@/pages/admin/AdminRevenue"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminProfile = lazy(() => import("@/pages/admin/AdminProfile"));
-const AdminCloudflare = lazy(() => import("@/pages/admin/AdminCloudflare"));
+
 const AdminSecurity = lazy(() => import("@/pages/admin/AdminSecurity"));
 const AdminProvisioning = lazy(() => import("@/pages/admin/AdminProvisioning"));
 const AdminPlans = lazy(() => import("@/pages/admin/AdminPlans"));
 const AdminLaunchChecklist = lazy(() => import("@/pages/admin/AdminLaunchChecklist"));
 const AdminCreditsEconomy = lazy(() => import("@/pages/admin/AdminCreditsEconomy"));
-const AdminAgent = lazy(() => import("@/pages/admin/AdminAgent"));
+
 const AdminHealth = lazy(() => import("@/pages/admin/AdminHealth"));
 const AdminDisputes = lazy(() => import("@/pages/admin/AdminDisputes"));
 const Help = lazy(() => import("@/pages/Help"));
@@ -266,11 +266,11 @@ const AppRoutes = () => {
             <Route path="/admin/stores" element={<AdminRoute><AdminLayout><AdminStores /></AdminLayout></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute>} />
             <Route path="/admin/themes" element={<AdminRoute><AdminLayout><AdminThemes /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/agent" element={<AdminRoute><AdminLayout><AdminAgent /></AdminLayout></AdminRoute>} />
+            
             <Route path="/admin/revenue" element={<AdminRoute><AdminLayout><AdminRevenue /></AdminLayout></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />
             <Route path="/admin/profile" element={<AdminRoute><AdminLayout><AdminProfile /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/cloudflare" element={<AdminRoute><AdminLayout><AdminCloudflare /></AdminLayout></AdminRoute>} />
+            
             <Route path="/admin/security" element={<AdminRoute><AdminLayout><AdminSecurity /></AdminLayout></AdminRoute>} />
             <Route path="/admin/provisioning" element={<AdminRoute><AdminLayout><AdminProvisioning /></AdminLayout></AdminRoute>} />
             <Route path="/admin/plans" element={<AdminRoute><AdminLayout><AdminPlans /></AdminLayout></AdminRoute>} />

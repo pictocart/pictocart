@@ -27,7 +27,7 @@ const AdminLaunchChecklist = () => {
         supabase.from('theme_master_projects').select('id, is_active, lovable_project_url'),
         supabase.from('orders').select('id, payment_status').limit(500),
         supabase.from('subscriptions').select('id, status').eq('status', 'active'),
-        supabase.from('stores').select('id, custom_domain, ssl_status, domain_state').not('custom_domain', 'is', null),
+        supabase.from('stores').select('id, custom_domain').not('custom_domain', 'is', null),
         supabase.from('store_email_domains').select('id, status').limit(1),
       ]);
 
@@ -89,13 +89,12 @@ const AdminLaunchChecklist = () => {
       });
 
       const customDomains = domains.data || [];
-      const healthy = customDomains.filter((d: any) => d.ssl_status === 'active' && d.domain_state === 'healthy').length;
       out.push({
         group: 'Domains',
-        label: 'Custom domains healthy',
-        status: customDomains.length === 0 ? 'warn' : healthy === customDomains.length ? 'pass' : 'fail',
-        detail: customDomains.length === 0 ? 'No merchants on custom domains yet' : `${healthy}/${customDomains.length} domains healthy`,
-        href: '/admin/cloudflare',
+        label: 'Custom domains provisioned',
+        status: customDomains.length === 0 ? 'warn' : 'pass',
+        detail: `${customDomains.length} merchants on custom domains`,
+        href: '/admin/provisioning',
       });
 
       const emailDom = emailDomain.data?.[0];
