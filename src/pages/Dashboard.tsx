@@ -22,6 +22,7 @@ import ProvisioningStatus from '@/components/dashboard/ProvisioningStatus';
 import WeeklyDigest from '@/components/dashboard/WeeklyDigest';
 import AbandonedCartBanner from '@/components/dashboard/AbandonedCartBanner';
 import { ThemeUpdateBanner } from '@/components/ThemeUpdateBanner';
+import WalletCard from '@/components/dashboard/WalletCard';
 
 const Dashboard = () => {
   const { user } = useAuth();
