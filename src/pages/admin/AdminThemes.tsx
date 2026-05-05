@@ -36,6 +36,8 @@ interface ThemeMaster {
   current_version: string;
   latest_changelog: string | null;
   created_at: string;
+  price: number;
+  compare_at_price: number | null;
 }
 
 const PublishVersionDialog = ({ theme, open, onOpenChange }: { theme: ThemeMaster; open: boolean; onOpenChange: (o: boolean) => void }) => {
