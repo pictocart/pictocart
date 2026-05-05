@@ -1388,6 +1388,48 @@ export type Database = {
           },
         ]
       }
+      provisioning_budget: {
+        Row: {
+          current_day_spent_inr: number
+          current_hour_spent_inr: number
+          daily_inr_cap: number
+          day_window_started_at: string
+          hour_window_started_at: string
+          hourly_inr_cap: number
+          id: number
+          is_enabled: boolean
+          paused_until: string | null
+          per_job_inr_estimate: number
+          updated_at: string
+        }
+        Insert: {
+          current_day_spent_inr?: number
+          current_hour_spent_inr?: number
+          daily_inr_cap?: number
+          day_window_started_at?: string
+          hour_window_started_at?: string
+          hourly_inr_cap?: number
+          id?: number
+          is_enabled?: boolean
+          paused_until?: string | null
+          per_job_inr_estimate?: number
+          updated_at?: string
+        }
+        Update: {
+          current_day_spent_inr?: number
+          current_hour_spent_inr?: number
+          daily_inr_cap?: number
+          day_window_started_at?: string
+          hour_window_started_at?: string
+          hourly_inr_cap?: number
+          id?: number
+          is_enabled?: boolean
+          paused_until?: string | null
+          per_job_inr_estimate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           body: string | null

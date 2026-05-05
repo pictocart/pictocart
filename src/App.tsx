@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,65 +9,69 @@ import { StoreProvider } from "@/contexts/StoreContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/DashboardLayout";
 import LandingPage from "@/pages/LandingPage";
-import HowItWorks from "@/pages/HowItWorks";
 import Dashboard from "@/pages/Dashboard";
 import ProductList from "@/pages/ProductList";
-import ProductForm from "@/pages/ProductForm";
 import OrderList from "@/pages/OrderList";
 import OrderDetail from "@/pages/OrderDetail";
-import Customise from "@/pages/Customise";
-import PaymentSettings from "@/pages/PaymentSettings";
-import ShippingSettings from "@/pages/ShippingSettings";
-import DomainSettings from "@/pages/DomainSettings";
-import CouponList from "@/pages/CouponList";
-import SEOSettings from "@/pages/SEOSettings";
-import Onboarding from "@/pages/Onboarding";
 import Auth from "@/pages/Auth";
-import ResetPassword from "@/pages/ResetPassword";
 import Storefront from "@/pages/Storefront";
 import StorefrontProduct from "@/pages/StorefrontProduct";
 import StorefrontCart from "@/pages/StorefrontCart";
 import StorefrontCheckout from "@/pages/StorefrontCheckout";
 import AdminRoute from "@/components/AdminRoute";
 import AdminLayout from "@/components/AdminLayout";
-import AdminOverview from "@/pages/admin/AdminOverview";
-import AdminStores from "@/pages/admin/AdminStores";
-import AdminUsers from "@/pages/admin/AdminUsers";
-import AdminThemes from "@/pages/admin/AdminThemes";
-import AdminRevenue from "@/pages/admin/AdminRevenue";
-import AdminSettings from "@/pages/admin/AdminSettings";
-import AdminProfile from "@/pages/admin/AdminProfile";
-import AdminCloudflare from "@/pages/admin/AdminCloudflare";
-import AdminSecurity from "@/pages/admin/AdminSecurity";
-import AdminProvisioning from "@/pages/admin/AdminProvisioning";
-import AdminPlans from "@/pages/admin/AdminPlans";
-import AdminLaunchChecklist from "@/pages/admin/AdminLaunchChecklist";
-import SellerProfile from "@/pages/SellerProfile";
-import CustomerAuth from "@/pages/storefront/CustomerAuth";
-import CustomerAccount from "@/pages/storefront/CustomerAccount";
 import CustomerRoute from "@/components/storefront/CustomerRoute";
-import BlogPosts from "@/pages/BlogPosts";
-import BlogPostForm from "@/pages/BlogPostForm";
-import Subscribers from "@/pages/Subscribers";
-import StoreAnalytics from "@/pages/StoreAnalytics";
-import Categories from "@/pages/Categories";
-import StorefrontBlog from "@/pages/storefront/StorefrontBlog";
-import StorefrontBlogPost from "@/pages/storefront/StorefrontBlogPost";
-import ThemePreview from "@/pages/ThemePreview";
-import Themes from "@/pages/Themes";
-import EmailBrandingSettings from "@/pages/EmailBrandingSettings";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
-import Unsubscribe from "@/pages/Unsubscribe";
-import TermsOfService from "@/pages/TermsOfService";
-import RefundPolicy from "@/pages/RefundPolicy";
-import Billing from "@/pages/Billing";
-import Wallet from "@/pages/Wallet";
-import AdminCreditsEconomy from "@/pages/admin/AdminCreditsEconomy";
-import AdminAgent from "@/pages/admin/AdminAgent";
-import StorefrontPolicy from "@/pages/storefront/StorefrontPolicy";
-import CustomerWishlist from "@/pages/storefront/CustomerWishlist";
 import NotFound from "./pages/NotFound.tsx";
 import { useStoreByHost, isPlatformHost } from "@/hooks/useStoreByHost";
+
+// Lazy-load heavy / less-frequent pages to shrink initial bundle.
+const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
+const ProductForm = lazy(() => import("@/pages/ProductForm"));
+const Customise = lazy(() => import("@/pages/Customise"));
+const PaymentSettings = lazy(() => import("@/pages/PaymentSettings"));
+const ShippingSettings = lazy(() => import("@/pages/ShippingSettings"));
+const DomainSettings = lazy(() => import("@/pages/DomainSettings"));
+const CouponList = lazy(() => import("@/pages/CouponList"));
+const SEOSettings = lazy(() => import("@/pages/SEOSettings"));
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const SellerProfile = lazy(() => import("@/pages/SellerProfile"));
+const BlogPosts = lazy(() => import("@/pages/BlogPosts"));
+const BlogPostForm = lazy(() => import("@/pages/BlogPostForm"));
+const Subscribers = lazy(() => import("@/pages/Subscribers"));
+const StoreAnalytics = lazy(() => import("@/pages/StoreAnalytics"));
+const Categories = lazy(() => import("@/pages/Categories"));
+const Themes = lazy(() => import("@/pages/Themes"));
+const ThemePreview = lazy(() => import("@/pages/ThemePreview"));
+const EmailBrandingSettings = lazy(() => import("@/pages/EmailBrandingSettings"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
+const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
+const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
+const Billing = lazy(() => import("@/pages/Billing"));
+const Wallet = lazy(() => import("@/pages/Wallet"));
+const CustomerAuth = lazy(() => import("@/pages/storefront/CustomerAuth"));
+const CustomerAccount = lazy(() => import("@/pages/storefront/CustomerAccount"));
+const CustomerWishlist = lazy(() => import("@/pages/storefront/CustomerWishlist"));
+const StorefrontBlog = lazy(() => import("@/pages/storefront/StorefrontBlog"));
+const StorefrontBlogPost = lazy(() => import("@/pages/storefront/StorefrontBlogPost"));
+const StorefrontPolicy = lazy(() => import("@/pages/storefront/StorefrontPolicy"));
+// Admin (rare access — always lazy)
+const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
+const AdminStores = lazy(() => import("@/pages/admin/AdminStores"));
+const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
+const AdminThemes = lazy(() => import("@/pages/admin/AdminThemes"));
+const AdminRevenue = lazy(() => import("@/pages/admin/AdminRevenue"));
+const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
+const AdminProfile = lazy(() => import("@/pages/admin/AdminProfile"));
+const AdminCloudflare = lazy(() => import("@/pages/admin/AdminCloudflare"));
+const AdminSecurity = lazy(() => import("@/pages/admin/AdminSecurity"));
+const AdminProvisioning = lazy(() => import("@/pages/admin/AdminProvisioning"));
+const AdminPlans = lazy(() => import("@/pages/admin/AdminPlans"));
+const AdminLaunchChecklist = lazy(() => import("@/pages/admin/AdminLaunchChecklist"));
+const AdminCreditsEconomy = lazy(() => import("@/pages/admin/AdminCreditsEconomy"));
+const AdminAgent = lazy(() => import("@/pages/admin/AdminAgent"));
+
 
 const queryClient = new QueryClient();
 
@@ -101,6 +106,7 @@ const AppRoutes = () => {
   }
 
   return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Loading…</div>}>
     <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
@@ -284,6 +290,7 @@ const AppRoutes = () => {
             <Route path="/store/:slug/:policyType" element={<StorefrontPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+    </Suspense>
   );
 };
 

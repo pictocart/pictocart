@@ -32,6 +32,45 @@ serve(async (req) => {
 
   try {
     const now = new Date();
+
+    // ---- Budget guard ----
+    const { data: budget } = await admin.from("provisioning_budget").select("*").eq("id", 1).maybeSingle();
+    if (budget) {
+      if (!budget.is_enabled) {
+        return new Response(JSON.stringify({ skipped: "runner disabled" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (budget.paused_until && new Date(budget.paused_until) > now) {
+        return new Response(JSON.stringify({ skipped: "paused", paused_until: budget.paused_until }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Roll windows
+      const hourStart = new Date(budget.hour_window_started_at);
+      const dayStart = new Date(budget.day_window_started_at);
+      const patch: Record<string, unknown> = {};
+      if (now.getTime() - hourStart.getTime() > 3_600_000) {
+        patch.current_hour_spent_inr = 0;
+        patch.hour_window_started_at = now.toISOString();
+        budget.current_hour_spent_inr = 0;
+      }
+      if (now.getTime() - dayStart.getTime() > 86_400_000) {
+        patch.current_day_spent_inr = 0;
+        patch.day_window_started_at = now.toISOString();
+        budget.current_day_spent_inr = 0;
+      }
+      if (Object.keys(patch).length) await admin.from("provisioning_budget").update(patch).eq("id", 1);
+
+      if (Number(budget.current_hour_spent_inr) >= Number(budget.hourly_inr_cap) ||
+          Number(budget.current_day_spent_inr) >= Number(budget.daily_inr_cap)) {
+        return new Response(JSON.stringify({
+          skipped: "budget cap reached",
+          hour: budget.current_hour_spent_inr, day: budget.current_day_spent_inr,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     const { data: jobs, error } = await admin
       .from("provision_requests")
       .select("*")
@@ -39,8 +78,11 @@ serve(async (req) => {
       .lte("next_run_at", now.toISOString())
       .lt("attempts", MAX_ATTEMPTS)
       .order("next_run_at", { ascending: true })
-      .limit(10);
+      .limit(5);
     if (error) throw error;
+
+    const perJob = Number(budget?.per_job_inr_estimate ?? 0);
+    let spentThisTick = 0;
 
     const results: Array<Record<string, unknown>> = [];
 
@@ -120,7 +162,14 @@ serve(async (req) => {
           await log(job.id, "domain_pending", "ok", "Patch applied, awaiting domain connection");
         }
 
+        spentThisTick += perJob;
         results.push({ id: job.id, ok: true });
+
+        // Stop early if budget exhausted mid-tick
+        if (budget && (
+          Number(budget.current_hour_spent_inr) + spentThisTick >= Number(budget.hourly_inr_cap) ||
+          Number(budget.current_day_spent_inr) + spentThisTick >= Number(budget.daily_inr_cap)
+        )) break;
       } catch (stepErr) {
         const msg = stepErr instanceof Error ? stepErr.message : "Unknown";
         const failed = attempts >= MAX_ATTEMPTS;
@@ -136,7 +185,15 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ processed: results.length, results }), {
+    if (budget && spentThisTick > 0) {
+      await admin.from("provisioning_budget").update({
+        current_hour_spent_inr: Number(budget.current_hour_spent_inr) + spentThisTick,
+        current_day_spent_inr: Number(budget.current_day_spent_inr) + spentThisTick,
+        updated_at: now.toISOString(),
+      }).eq("id", 1);
+    }
+
+    return new Response(JSON.stringify({ processed: results.length, spent_inr: spentThisTick, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

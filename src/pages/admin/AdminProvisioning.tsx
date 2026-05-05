@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Copy, ExternalLink, Plus, Rocket, ListTree, Pencil, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProvisioningBudgetPanel } from '@/components/admin/ProvisioningBudgetPanel';
 
 interface ThemeMaster {
   id: string;
@@ -150,6 +151,8 @@ const AdminProvisioning = () => {
           <Plus className="h-4 w-4" /> New request
         </Button>
       </div>
+
+      <ProvisioningBudgetPanel />
 
       <Card className="overflow-hidden">
         <table className="w-full text-sm">
