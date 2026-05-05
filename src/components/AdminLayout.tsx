@@ -19,6 +19,7 @@ import {
   Crown,
   CheckSquare,
   Bot,
+  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,7 @@ const adminNavItems = [
   { label: 'Credits Economy', icon: Sparkles, path: '/admin/credits-economy' },
   { label: 'Domains', icon: Globe, path: '/admin/cloudflare' },
   { label: 'Launch QA', icon: CheckSquare, path: '/admin/launch' },
+  { label: 'Health', icon: Activity, path: '/admin/health' },
   { label: 'Security', icon: Lock, path: '/admin/security' },
   { label: 'Platform Settings', icon: Settings, path: '/admin/settings' },
 ];

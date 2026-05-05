@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useEffect, useMemo, useState } from 'react';
 import CreditBadge from '@/components/wallet/CreditBadge';
+import { HelpLauncher } from '@/components/HelpLauncher';
 
 type NavLeaf = { label: string; icon: any; path: string };
 type NavGroup = { label: string; icon: any; key: string; children: NavLeaf[] };
@@ -298,6 +299,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Page content */}
         <div className="p-4 md:p-6">{children}</div>
+        <HelpLauncher />
       </main>
 
       {/* Mobile bottom nav */}

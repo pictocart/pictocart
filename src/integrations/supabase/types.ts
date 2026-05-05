@@ -485,6 +485,48 @@ export type Database = {
           },
         ]
       }
+      client_error_logs: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          message: string
+          metadata: Json
+          path: string | null
+          stack: string | null
+          store_id: string | null
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          metadata?: Json
+          path?: string | null
+          stack?: string | null
+          store_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json
+          path?: string | null
+          stack?: string | null
+          store_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       coupons: {
         Row: {
           code: string
@@ -874,6 +916,42 @@ export type Database = {
           id?: string
           token?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      help_articles: {
+        Row: {
+          body_md: string
+          category: string
+          created_at: string
+          id: string
+          is_published: boolean
+          slug: string
+          sort: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body_md?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          slug: string
+          sort?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body_md?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          slug?: string
+          sort?: number
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }

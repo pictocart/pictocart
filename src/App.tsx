@@ -21,6 +21,7 @@ import StorefrontCheckout from "@/pages/StorefrontCheckout";
 import AdminRoute from "@/components/AdminRoute";
 import AdminLayout from "@/components/AdminLayout";
 import CustomerRoute from "@/components/storefront/CustomerRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import NotFound from "./pages/NotFound.tsx";
 import { useStoreByHost, isPlatformHost } from "@/hooks/useStoreByHost";
 
@@ -71,6 +72,8 @@ const AdminPlans = lazy(() => import("@/pages/admin/AdminPlans"));
 const AdminLaunchChecklist = lazy(() => import("@/pages/admin/AdminLaunchChecklist"));
 const AdminCreditsEconomy = lazy(() => import("@/pages/admin/AdminCreditsEconomy"));
 const AdminAgent = lazy(() => import("@/pages/admin/AdminAgent"));
+const AdminHealth = lazy(() => import("@/pages/admin/AdminHealth"));
+const Help = lazy(() => import("@/pages/Help"));
 
 
 const queryClient = new QueryClient();
@@ -271,6 +274,10 @@ const AppRoutes = () => {
             <Route path="/admin/provisioning" element={<AdminRoute><AdminLayout><AdminProvisioning /></AdminLayout></AdminRoute>} />
             <Route path="/admin/plans" element={<AdminRoute><AdminLayout><AdminPlans /></AdminLayout></AdminRoute>} />
             <Route path="/admin/launch" element={<AdminRoute><AdminLayout><AdminLaunchChecklist /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/health" element={<AdminRoute><AdminLayout><AdminHealth /></AdminLayout></AdminRoute>} />
+            {/* Help Center */}
+            <Route path="/help" element={<Help />} />
+            <Route path="/help/:slug" element={<Help />} />
             {/* Platform Legal Pages */}
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -302,7 +309,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <StoreProvider>
-            <AppRoutes />
+            <ErrorBoundary>
+              <AppRoutes />
+            </ErrorBoundary>
           </StoreProvider>
         </AuthProvider>
       </BrowserRouter>
