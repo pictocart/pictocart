@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Copy, ExternalLink, Plus, Rocket, ListTree, Pencil, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, Plus, Rocket, ListTree, Pencil, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ThemeMaster {
