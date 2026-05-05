@@ -36,6 +36,8 @@ interface ThemeMaster {
   current_version: string;
   latest_changelog: string | null;
   created_at: string;
+  price: number;
+  compare_at_price: number | null;
 }
 
 const PublishVersionDialog = ({ theme, open, onOpenChange }: { theme: ThemeMaster; open: boolean; onOpenChange: (o: boolean) => void }) => {
@@ -107,6 +109,8 @@ const emptyTheme: Partial<ThemeMaster> = {
   client_patch_prompt: '',
   is_active: true,
   is_default: false,
+  price: 0,
+  compare_at_price: null,
 };
 
 const ThemeMasterForm = ({ initial, onClose }: { initial: Partial<ThemeMaster>; onClose: () => void }) => {
@@ -127,6 +131,10 @@ const ThemeMasterForm = ({ initial, onClose }: { initial: Partial<ThemeMaster>; 
         client_patch_prompt: form.client_patch_prompt || '',
         is_active: form.is_active ?? true,
         is_default: form.is_default ?? false,
+        price: Number(form.price ?? 0) || 0,
+        compare_at_price: form.compare_at_price != null && form.compare_at_price !== ('' as any)
+          ? Number(form.compare_at_price)
+          : null,
       };
       if (!payload.theme_id || !payload.name) throw new Error('theme_id and name are required');
       if (isEdit) {
@@ -188,6 +196,33 @@ const ThemeMasterForm = ({ initial, onClose }: { initial: Partial<ThemeMaster>; 
         <Label className="text-xs">Client Patch Prompt (sent to provisioning worker)</Label>
         <Textarea value={form.client_patch_prompt || ''} onChange={(e) => setForm({ ...form, client_patch_prompt: e.target.value })} className="h-20 font-mono text-xs" />
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Price (₹) — set 0 for free</Label>
+          <Input
+            type="number"
+            min={0}
+            value={form.price ?? 0}
+            onChange={(e) => setForm({ ...form, price: e.target.value === '' ? 0 : Number(e.target.value) })}
+            placeholder="499"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Compare-at price (₹) — strikethrough for discount</Label>
+          <Input
+            type="number"
+            min={0}
+            value={form.compare_at_price ?? ''}
+            onChange={(e) => setForm({ ...form, compare_at_price: e.target.value === '' ? null : Number(e.target.value) as any })}
+            placeholder="999"
+          />
+        </div>
+      </div>
+      {form.compare_at_price && Number(form.compare_at_price) > Number(form.price ?? 0) && (
+        <p className="text-[11px] text-emerald-600">
+          Discount: {Math.round((1 - Number(form.price ?? 0) / Number(form.compare_at_price)) * 100)}% off
+        </p>
+      )}
       <div className="flex items-center gap-6 pt-2">
         <label className="flex items-center gap-2 text-xs">
           <Switch checked={form.is_active ?? true} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
@@ -226,6 +261,18 @@ const MasterProjectsTab = () => {
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Theme deleted'); qc.invalidateQueries({ queryKey: ['admin-theme-masters'] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const togglePublish = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase.from('theme_master_projects').update({ is_active }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.is_active ? 'Theme published — visible to merchants' : 'Theme unpublished');
+      qc.invalidateQueries({ queryKey: ['admin-theme-masters'] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -271,6 +318,32 @@ const MasterProjectsTab = () => {
                   </div>
                   <Badge variant="outline" className="text-[10px] shrink-0">v{t.current_version}</Badge>
                 </div>
+                <div className="flex items-baseline gap-2">
+                  {Number(t.price ?? 0) === 0 ? (
+                    <span className="text-sm font-semibold text-emerald-600">Free</span>
+                  ) : (
+                    <>
+                      <span className="text-sm font-bold">₹{Number(t.price).toLocaleString('en-IN')}</span>
+                      {t.compare_at_price && Number(t.compare_at_price) > Number(t.price) && (
+                        <>
+                          <span className="text-[11px] text-muted-foreground line-through">
+                            ₹{Number(t.compare_at_price).toLocaleString('en-IN')}
+                          </span>
+                          <Badge className="bg-emerald-500 text-white border-0 text-[10px]">
+                            {Math.round((1 - Number(t.price) / Number(t.compare_at_price)) * 100)}% OFF
+                          </Badge>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+                <label className="flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded bg-muted/40">
+                  <span className="text-muted-foreground">{t.is_active ? 'Published' : 'Unpublished'}</span>
+                  <Switch
+                    checked={t.is_active}
+                    onCheckedChange={(v) => togglePublish.mutate({ id: t.id, is_active: v })}
+                  />
+                </label>
                 {t.description && <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>}
                 <div className="mt-auto flex gap-1.5 pt-2">
                   {t.lovable_project_url && (

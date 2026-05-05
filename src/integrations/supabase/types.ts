@@ -2101,6 +2101,7 @@ export type Database = {
         Row: {
           category: string | null
           client_patch_prompt: string
+          compare_at_price: number | null
           created_at: string
           current_version: string
           customisable_slots: Json | null
@@ -2113,6 +2114,7 @@ export type Database = {
           lovable_project_url: string | null
           name: string
           preview_image: string | null
+          price: number
           remix_url: string | null
           theme_id: string
           updated_at: string
@@ -2120,6 +2122,7 @@ export type Database = {
         Insert: {
           category?: string | null
           client_patch_prompt?: string
+          compare_at_price?: number | null
           created_at?: string
           current_version?: string
           customisable_slots?: Json | null
@@ -2132,6 +2135,7 @@ export type Database = {
           lovable_project_url?: string | null
           name: string
           preview_image?: string | null
+          price?: number
           remix_url?: string | null
           theme_id: string
           updated_at?: string
@@ -2139,6 +2143,7 @@ export type Database = {
         Update: {
           category?: string | null
           client_patch_prompt?: string
+          compare_at_price?: number | null
           created_at?: string
           current_version?: string
           customisable_slots?: Json | null
@@ -2151,6 +2156,7 @@ export type Database = {
           lovable_project_url?: string | null
           name?: string
           preview_image?: string | null
+          price?: number
           remix_url?: string | null
           theme_id?: string
           updated_at?: string
