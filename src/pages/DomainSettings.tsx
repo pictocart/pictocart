@@ -79,6 +79,7 @@ function EmailDomainSection({ store }: { store: any }) {
   const handleSetupEmailDomain = async () => {
     if (!emailDomain.trim() || !store) return;
     setLoading(true);
+    setPlanLimitError(null);
     try {
       const { data, error } = await supabase.functions.invoke('manage-email-domain', {
         body: {
@@ -88,7 +89,17 @@ function EmailDomainSection({ store }: { store: any }) {
           sender_prefix: senderPrefix,
         },
       });
-      if (error) throw new Error((data as any)?.error || error.message || 'Setup failed');
+      const payload = (data as any) || {};
+      if (payload?.code === 'plan_limit' || error) {
+        const msg = payload?.error || (error as any)?.message || 'Setup failed';
+        if (payload?.code === 'plan_limit') {
+          setPlanLimitError(msg);
+          toast.error('White-label email is awaiting platform upgrade');
+          setLoading(false);
+          return;
+        }
+        throw new Error(msg);
+      }
 
       const { data: updated } = await supabase
         .from('store_email_domains')
