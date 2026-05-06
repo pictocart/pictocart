@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
         .createUser({
           email: alias,
           password,
-          email_confirm: false,
+          email_confirm: true, // alias is non-deliverable; real-email verification is handled separately
           user_metadata: {
             is_customer: true,
             store_slug: storeSlug,
