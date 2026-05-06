@@ -81,7 +81,20 @@ export const useCustomerAuth = (storeSlug: string) => {
     };
   }, [storeSlug]);
 
+  // If a seller (or customer of a different store) is currently signed in,
+  // sign them out before attempting a customer auth on this storefront so
+  // their session doesn't get silently overwritten or block the new login.
+  const clearForeignSession = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const u = session?.user;
+    if (!u) return;
+    if (!isStoreCustomer(u)) {
+      await supabase.auth.signOut();
+    }
+  };
+
   const signInWithEmail = async (email: string, password: string) => {
+    await clearForeignSession();
     const { data, error } = await supabase.auth.signInWithPassword({
       email: getTenantEmail(email),
       password,
@@ -90,6 +103,7 @@ export const useCustomerAuth = (storeSlug: string) => {
   };
 
   const signUpWithEmail = async (email: string, password: string, fullName: string) => {
+    await clearForeignSession();
     const realEmail = normalizeEmail(email);
     const { data, error } = await supabase.auth.signUp({
       email: getTenantEmail(realEmail),
