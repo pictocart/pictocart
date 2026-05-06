@@ -40,6 +40,7 @@ const SellerProfile = lazy(() => import("@/pages/SellerProfile"));
 const BlogPosts = lazy(() => import("@/pages/BlogPosts"));
 const BlogPostForm = lazy(() => import("@/pages/BlogPostForm"));
 const Subscribers = lazy(() => import("@/pages/Subscribers"));
+const Customers = lazy(() => import("@/pages/Customers"));
 const StoreAnalytics = lazy(() => import("@/pages/StoreAnalytics"));
 const Categories = lazy(() => import("@/pages/Categories"));
 const Themes = lazy(() => import("@/pages/Themes"));
@@ -258,6 +259,7 @@ const AppRoutes = () => {
             <Route path="/blog-posts/new" element={<ProtectedRoute><DashboardLayout><BlogPostForm /></DashboardLayout></ProtectedRoute>} />
             <Route path="/blog-posts/:id" element={<ProtectedRoute><DashboardLayout><BlogPostForm /></DashboardLayout></ProtectedRoute>} />
             <Route path="/subscribers" element={<ProtectedRoute><DashboardLayout><Subscribers /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute><DashboardLayout><Customers /></DashboardLayout></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><DashboardLayout><StoreAnalytics /></DashboardLayout></ProtectedRoute>} />
             <Route path="/themes" element={<ProtectedRoute><DashboardLayout><Themes /></DashboardLayout></ProtectedRoute>} />
             <Route path="/settings/email" element={<ProtectedRoute><DashboardLayout><EmailBrandingSettings /></DashboardLayout></ProtectedRoute>} />
