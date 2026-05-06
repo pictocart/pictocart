@@ -5,6 +5,8 @@ project_id = "qxeyndsvkfsmkilkzmuc"
     verify_jwt = false
   [functions.auth-email-hook]
     verify_jwt = false
+  [functions.customer-auth]
+    verify_jwt = false
   [functions.check-custom-hostname]
     verify_jwt = false
   [functions.check-dns-records]

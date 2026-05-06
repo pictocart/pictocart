@@ -2,28 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
-// Tenant alias domain — non-deliverable. Real emails are sent via
-// auth-email-hook which reads `customer_email` from user metadata.
-// We use a non-gmail domain so Supabase's address normalization
-// (gmail strips dots and `+tags`) cannot collide accounts across stores.
 const TENANT_DOMAIN = 'customers.pictocart.in';
 
 export const useCustomerAuth = (storeSlug: string) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const normalizeEmail = (value: string) => value.trim().toLowerCase();
-
-  const getTenantEmail = (value: string) => {
-    const normalized = normalizeEmail(value);
-    if (!storeSlug) return normalized;
-    // Encode the real email into a unique local-part. The result is a
-    // valid RFC-5321 address, deterministic, and unique per (email, store).
-    const localPart = normalized
-      .replace('@', '-at-')
-      .replace(/[^a-z0-9.\-_]/g, '-');
-    return `${localPart}@${storeSlug}.${TENANT_DOMAIN}`;
-  };
 
   const isStoreCustomer = (candidate: User | null) => {
     if (!candidate?.user_metadata?.is_customer || !storeSlug) return false;
@@ -47,32 +30,16 @@ export const useCustomerAuth = (storeSlug: string) => {
         setLoading(false);
         return;
       }
-      const { data: store } = await supabase.from('stores').select('id').eq('slug', storeSlug).maybeSingle();
-      if (!active || !store?.id) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('user_id')
-        .eq('user_id', sessionUser.id)
-        .eq('store_id', store.id)
-        .maybeSingle();
-      if (active) {
-        setUser(customer ? sessionUser : null);
-        setLoading(false);
-      }
+      // Session belongs to a different store / a seller — not this storefront's user.
+      setUser(null);
+      setLoading(false);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const sessionUser = session?.user ?? null;
-      void setScopedUser(sessionUser);
+      void setScopedUser(session?.user ?? null);
     });
-
     supabase.auth.getSession().then(({ data: { session } }) => {
-      const sessionUser = session?.user ?? null;
-      void setScopedUser(sessionUser);
+      void setScopedUser(session?.user ?? null);
     });
 
     return () => {
@@ -81,44 +48,75 @@ export const useCustomerAuth = (storeSlug: string) => {
     };
   }, [storeSlug]);
 
-  // If a seller (or customer of a different store) is currently signed in,
-  // sign them out before attempting a customer auth on this storefront so
-  // their session doesn't get silently overwritten or block the new login.
+  // If a foreign session (seller / other-store customer) is present, sign it out
+  // before establishing a new customer session in this browser.
   const clearForeignSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const u = session?.user;
-    if (!u) return;
-    if (!isStoreCustomer(u)) {
-      await supabase.auth.signOut();
-    }
+    if (u && !isStoreCustomer(u)) await supabase.auth.signOut();
   };
 
-  const signInWithEmail = async (email: string, password: string) => {
-    await clearForeignSession();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: getTenantEmail(email),
-      password,
+  const invokeCustomerAuth = async (body: Record<string, unknown>) => {
+    return await supabase.functions.invoke('customer-auth', {
+      body: { storeSlug, ...body },
     });
-    return { data, error };
+  };
+
+  const applySession = async (session: any) => {
+    if (!session?.access_token || !session?.refresh_token) return;
+    await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
   };
 
   const signUpWithEmail = async (email: string, password: string, fullName: string) => {
     await clearForeignSession();
-    const realEmail = normalizeEmail(email);
-    const { data, error } = await supabase.auth.signUp({
-      email: getTenantEmail(realEmail),
+    const { data, error } = await invokeCustomerAuth({
+      action: 'signup',
+      email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          is_customer: true,
-          store_slug: storeSlug,
-          customer_email: realEmail,
-        },
-        emailRedirectTo: `${window.location.origin}/store/${storeSlug}/account`,
-      },
+      fullName,
+      redirectTo: `${window.location.origin}/store/${storeSlug}/account`,
     });
-    return { data, error };
+    if (error) return { data: null, error };
+    if (data?.error) {
+      const msg = data.error === 'already_registered_for_this_store'
+        ? 'An account with this email already exists for this store. Try signing in.'
+        : data.error === 'password_too_short'
+          ? 'Password must be at least 6 characters.'
+          : 'Sign-up failed. Please try again.';
+      return { data: null, error: { message: msg } };
+    }
+    if (data?.session) await applySession(data.session);
+    return { data, error: null };
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    await clearForeignSession();
+    const { data, error } = await invokeCustomerAuth({
+      action: 'signin',
+      email,
+      password,
+    });
+    if (error) return { data: null, error };
+    if (data?.error) {
+      const msg = data.error === 'invalid_credentials'
+        ? 'Invalid email or password for this store.'
+        : 'Sign-in failed. Please try again.';
+      return { data: null, error: { message: msg } };
+    }
+    if (data?.session) await applySession(data.session);
+    return { data, error: null };
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    const { error } = await invokeCustomerAuth({
+      action: 'request_password_reset',
+      email,
+      redirectTo: `${window.location.origin}/store/${storeSlug}/account`,
+    });
+    return { error };
   };
 
   const signInWithOtp = async (phone: string) => {
@@ -135,5 +133,14 @@ export const useCustomerAuth = (storeSlug: string) => {
     await supabase.auth.signOut();
   };
 
-  return { user, loading, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signOut };
+  return {
+    user,
+    loading,
+    signInWithEmail,
+    signUpWithEmail,
+    requestPasswordReset,
+    signInWithOtp,
+    verifyOtp,
+    signOut,
+  };
 };
