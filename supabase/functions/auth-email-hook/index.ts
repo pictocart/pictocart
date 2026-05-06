@@ -305,7 +305,9 @@ async function handleWebhook(req: Request): Promise<Response> {
   // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
   // payload.type is the hook event type ("auth")
   const emailType = payload.data.action_type
-  console.log('Received auth event', { emailType, email: payload.data.email, run_id })
+  const recipientEmail = getCustomerRecipientEmail(payload.data)
+  const storeSlug = getStoreSlugFromPayload(payload.data)
+  console.log('Received auth event', { emailType, email: payload.data.email, recipientEmail, storeSlug, run_id })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {
@@ -320,7 +322,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   const templateProps = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
-    recipient: payload.data.email,
+    recipient: recipientEmail,
     confirmationUrl: payload.data.url,
     token: payload.data.token,
     email: payload.data.email,
@@ -341,11 +343,11 @@ async function handleWebhook(req: Request): Promise<Response> {
   )
 
   const messageId = crypto.randomUUID()
-  const storeSender = await getVerifiedStoreSender(supabase, payload.data.url)
+  const storeSender = await getVerifiedStoreSender(supabase, payload.data.url, storeSlug)
 
   if (storeSender) {
     const sent = await sendViaStoreDomain(
-      payload.data.email,
+      recipientEmail,
       storeSender.from,
       EMAIL_SUBJECTS[emailType] || 'Notification',
       html,
@@ -355,7 +357,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     await supabase.from('email_send_log').insert({
       message_id: messageId,
       template_name: emailType,
-      recipient_email: payload.data.email,
+      recipient_email: recipientEmail,
       status: sent ? 'sent' : 'failed',
       error_message: sent ? null : 'Failed to send through store sender domain',
     })
@@ -367,7 +369,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       })
     }
 
-    console.log('Auth email sent via store domain', { emailType, email: payload.data.email, run_id })
+    console.log('Auth email sent via store domain', { emailType, email: recipientEmail, storeSlug, run_id })
     return new Response(JSON.stringify({ success: true, sent: true }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
