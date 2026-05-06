@@ -55,9 +55,24 @@ async function handleAdd(data: z.infer<typeof AddSchema>) {
 
   const resendData = await res.json();
   if (!res.ok) {
-    // Surface the human-readable Resend message rather than the raw payload
-    const msg = resendData?.message || `Provider error [${res.status}]`;
-    throw new Error(msg);
+    const rawMsg = resendData?.message || `Provider error [${res.status}]`;
+    // Detect Resend free-tier "only 1 domain allowed" / Pro-required errors
+    const lower = rawMsg.toLowerCase();
+    const isPlanLimit =
+      lower.includes('upgrade') ||
+      lower.includes('pro plan') ||
+      lower.includes('only allowed') ||
+      lower.includes('domain limit') ||
+      lower.includes('maximum number of domains');
+    if (isPlanLimit) {
+      const err: any = new Error(
+        'White-label email is not available yet — the platform email plan needs to be upgraded. Once upgraded, click "Set Up Email Domain" again and it will work instantly.'
+      );
+      err.code = 'plan_limit';
+      err.status = 402;
+      throw err;
+    }
+    throw new Error(rawMsg);
   }
 
   // Extract DNS records from Resend response
