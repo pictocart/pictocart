@@ -110,6 +110,13 @@ const CustomerAuth = () => {
 
   const handleGoogleSignIn = async () => {
     setSubmitting(true);
+    // Clear any seller (or other-store customer) session in this browser so the
+    // OAuth callback doesn't reuse it as a customer of this store.
+    const { data: { session } } = await supabase.auth.getSession();
+    const u = session?.user;
+    if (u && (!u.user_metadata?.is_customer || u.user_metadata?.store_slug !== slug)) {
+      await supabase.auth.signOut();
+    }
     const result = await lovable.auth.signInWithOAuth('google', {
       redirect_uri: `${window.location.origin}/store/${slug}`,
     });
