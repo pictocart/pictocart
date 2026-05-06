@@ -56,6 +56,7 @@ function EmailDomainSection({ store }: { store: any }) {
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
+  const [planLimitError, setPlanLimitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!store?.id) return;
@@ -78,6 +79,7 @@ function EmailDomainSection({ store }: { store: any }) {
   const handleSetupEmailDomain = async () => {
     if (!emailDomain.trim() || !store) return;
     setLoading(true);
+    setPlanLimitError(null);
     try {
       const { data, error } = await supabase.functions.invoke('manage-email-domain', {
         body: {
@@ -87,7 +89,17 @@ function EmailDomainSection({ store }: { store: any }) {
           sender_prefix: senderPrefix,
         },
       });
-      if (error) throw new Error((data as any)?.error || error.message || 'Setup failed');
+      const payload = (data as any) || {};
+      if (payload?.code === 'plan_limit' || error) {
+        const msg = payload?.error || (error as any)?.message || 'Setup failed';
+        if (payload?.code === 'plan_limit') {
+          setPlanLimitError(msg);
+          toast.error('White-label email is awaiting platform upgrade');
+          setLoading(false);
+          return;
+        }
+        throw new Error(msg);
+      }
 
       const { data: updated } = await supabase
         .from('store_email_domains')
@@ -172,6 +184,14 @@ function EmailDomainSection({ store }: { store: any }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {planLimitError && (
+            <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+              <p className="font-medium mb-1">⏳ Awaiting platform email upgrade</p>
+              <p className="text-xs">
+                Your domain details are saved below. The moment our team upgrades the email service, click <strong>Set Up Email Domain</strong> again and verification will work instantly — no other action needed from you.
+              </p>
+            </div>
+          )}
           {!emailConfig ? (
             <>
               <div className="space-y-2">
