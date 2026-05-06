@@ -55,7 +55,9 @@ async function handleAdd(data: z.infer<typeof AddSchema>) {
 
   const resendData = await res.json();
   if (!res.ok) {
-    throw new Error(`Resend domain registration failed [${res.status}]: ${JSON.stringify(resendData)}`);
+    // Surface the human-readable Resend message rather than the raw payload
+    const msg = resendData?.message || `Provider error [${res.status}]`;
+    throw new Error(msg);
   }
 
   // Extract DNS records from Resend response
