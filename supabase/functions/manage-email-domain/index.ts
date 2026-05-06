@@ -219,8 +219,9 @@ Deno.serve(async (req) => {
     });
   } catch (err: any) {
     console.error('manage-email-domain error:', err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    const status = err?.status === 402 ? 402 : 500;
+    return new Response(JSON.stringify({ error: err.message, code: err?.code }), {
+      status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
