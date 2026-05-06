@@ -1,184 +1,73 @@
+## Why the bug keeps coming back
 
-# Pic To Cart — Phase 2 Roadmap
+Auth logs at the time of the user's last signup show Supabase rejecting `/signup` with `actor_id = 530f2120…` — the **existing seller user**. That means the request body still contained the raw `antarikshhindec@gmail.com`, not the tenant alias. The client-side rewrite in `useCustomerAuth.getTenantEmail` only works when `storeSlug` is truthy at call time, and any other path that calls `supabase.auth.signUp` with the raw email (Google OAuth, leftover code, stale bundle on the published build, password reset, etc.) breaks tenancy. We need authority on the server, not in React.
 
-Phase 1 (Provisioning + Themes cleanup) is shipped. This is the next 4 phases, sequenced by **revenue impact** and **build complexity**.
+## Plan
 
----
+### 1. Server-authoritative customer auth (Edge Function)
 
-## Phase order & rationale
+Create `supabase/functions/customer-auth/index.ts` that owns every customer auth action and is the **only** path the storefront uses. It uses the service-role admin API.
 
-```text
-Phase 6  Freelancer / Commission Program   (2-3 days)  ← cheapest, viral growth
-Phase 7  Social Media Toolkit              (3-4 days)  ← lifts every existing seller
-Phase 8  Solution Partners (Agencies)      (4-5 days)  ← B2B revenue, builds on Phase 6
-Phase 9  Dropshipping Marketplace          (1-2 weeks) ← biggest, last
+Actions:
+- `signup { storeSlug, email, password, fullName, phone? }` — looks up `store_id` by slug, computes deterministic alias `${sha1(email)}@${storeSlug}.customers.pictocart.in`, calls `auth.admin.createUser({ email: alias, password, email_confirm: false, user_metadata: { is_customer: true, store_slug, customer_email: email, full_name } })`, then enqueues the verification email via the existing `auth-email-hook` flow (or sends via `send-transactional-email`). Returns `{ ok }` or `{ error: 'already_registered_for_this_store' }`.
+- `signin { storeSlug, email, password }` — computes the same alias, returns the password-grant tokens by calling `/token?grant_type=password` with the alias. Frontend calls `supabase.auth.setSession(tokens)`.
+- `request_password_reset { storeSlug, email }` — uses admin API to generate a recovery link for the alias and emails it to the real `customer_email`.
+
+Why this fixes everything:
+- The raw gmail address is **never** sent to `auth.users`, so seller accounts can never collide with customer accounts.
+- Same `(email, store)` always produces the same alias, so signup/signin work across sessions.
+- Different stores produce different aliases, so the same email can register on N stores independently.
+- Google OAuth is intentionally **not** routed through this function — see step 2.
+
+### 2. Disable Google OAuth on storefront customer auth
+
+Google sign-in returns the user's real gmail and creates a single global Supabase user — fundamentally incompatible with per-store tenancy. Remove the "Continue with Google" button on `CustomerAuth.tsx` (and the OAuth handler). Email/password + phone OTP only. Add a small note: "Use email & password — Google sign-in is reserved for store owners on pictocart.in."
+
+### 3. Replace client logic in `useCustomerAuth.ts`
+
+- Drop `getTenantEmail`, `clearForeignSession`, and the direct `supabase.auth.signUp/signInWithPassword` calls.
+- `signUpWithEmail`, `signInWithEmail`, `requestPasswordReset` become thin wrappers that `supabase.functions.invoke('customer-auth', …)` and call `supabase.auth.setSession` on the returned tokens for sign-in.
+- Keep `setScopedUser` / `isStoreCustomer` so the page only treats the session as logged-in when metadata matches the current store.
+
+### 4. Migration: lock tenancy at the DB layer
+
+New migration:
+- Add `CHECK` (via trigger, not constraint) on `auth.users` insert: if `raw_user_meta_data->>'is_customer' = 'true'`, the row's `email` MUST match `…@<store_slug>.customers.pictocart.in` and `store_slug` metadata must be present. Sellers who somehow flip the flag client-side cannot bypass it.
+- Backfill: any existing `auth.users` row where `email` is a `…customers.pictocart.in` alias but no `customers` row exists → re-create the missing `customers` row from metadata (heals the two orphans noted last loop).
+
+### 5. Throwaway test storefront
+
+Create a published store via migration so the user can verify same-email-across-tenants without standing up DNS:
+- `slug = 'qa-test-store'`, `name = 'QA Test Store'`, `is_published = true`, `user_id` = the user's seller user_id, default theme, no products needed for auth tests.
+- Reachable at `https://store-on-tips.lovable.app/store/qa-test-store/account/auth`.
+- A second one `slug = 'qa-test-store-2'` for the cross-tenant test.
+
+### 6. End-to-end verification (executed automatically with the browser tool)
+
+After deploy:
+
+```
+T1  Sign up email=qa1@example.com on /store/indilipi/account/auth         → expect ok
+T2  Sign up SAME email on /store/qa-test-store/account/auth                → expect ok (separate user)
+T3  Sign in T1 credentials on /store/qa-test-store/account/auth            → expect FAIL (different store)
+T4  Sign in T1 credentials on /store/indilipi/account/auth                 → expect ok
+T5  Sign up antarikshhindec@gmail.com on indilipi (the seller's email)     → expect ok
+T6  /admin/users — antarikshhindec stays Seller only, NOT customer         → expect ok
+T7  /customers (Indilipi dashboard) — antarikshhindec appears as customer  → expect ok
+T8  Sign in to pictocart.in seller dashboard with same Google account      → expect ok, no interference
+T9  Sign up qa1@example.com again on indilipi                              → expect "already registered for this store"
 ```
 
-Reason: Phase 6 + 7 boost current sellers immediately. Phase 8 is a natural extension of Phase 6. Phase 9 is a separate product surface and warrants its own focus block.
+Each result reported back to the user. If any test fails, fix and re-run before declaring done.
 
----
+### 7. Memory updates
 
-## Phase 6 — Freelancer / Commission Program
+Update `mem://features/customer-accounts` to record: customer auth lives in the `customer-auth` edge function with deterministic per-store email aliasing; storefronts must never call `supabase.auth.signUp` directly; Google OAuth is disabled on storefronts.
 
-**Goal:** Let store-builders, designers, and influencers sign up, get a referral link, and earn recurring commission on every seller they bring in.
+### Files
 
-### Schema
-- `partners` (id, user_id, type='freelancer', referral_code unique, name, upi_id, pan, kyc_status, payout_email)
-- `partner_referrals` (id, partner_id, store_id, signed_up_at, first_paid_at, status)
-- `partner_commissions` (id, partner_id, referral_id, period_month, base_amount, commission_amount, status: pending/paid/clawback)
-- `partner_payouts` (id, partner_id, amount, period, utr, paid_at)
-- Add `referred_by_code` to `stores`
-
-### Commission model (proposed default — confirm later)
-- **20% of seller's monthly subscription for first 12 months**
-- Excludes free plan; clawback if seller refunds within 30 days
-- Cron job runs on the 1st of each month → computes commissions, marks `pending`
-- Admin clicks "Mark Paid" + UTR → status=paid
-
-### UI
-- `/partners/signup` — public landing + form
-- `/partners/dashboard` — referral link, click stats, signups, MRR contribution, pending payout, history
-- `/admin/partners` — approve KYC, view all partners, trigger payout run, override commission
-
-### Acceptance
-- Anyone hitting `?ref=CODE` on landing page → cookie persists 30 days → applied at signup
-- Partner sees commission accrue in near real-time
-- Admin can pay out and mark UTR
-
----
-
-## Phase 7 — Social Media Toolkit
-
-**Goal:** Help sellers get traffic without leaving the dashboard.
-
-### Tier A — ship first (3 days)
-- **One-click share kit per product**: WhatsApp message, IG story image (auto-generated 1080x1920), FB post, X post — all with deep link back to product.
-- **WhatsApp catalog export**: generate `.csv` and one-tap share to WA Business catalog.
-- **Auto-generated marketing creatives**: Gemini generates 5 caption variants + creates a square promo image with product photo + price + brand colors.
-- **UTM tracker**: every share link auto-tagged; `/dashboard/marketing` shows clicks per channel per product.
-- **Schema**: `marketing_share_links` (id, store_id, product_id, channel, utm, clicks, created_at)
-
-### Tier B — defer to Phase 7.5
-Meta Graph API auto-posting + post scheduler. Heavy build (OAuth, queue, retry, Meta review). Park until Tier A shows traction.
-
-### UI
-- New seller-side page `/dashboard/marketing` with tabs: Share Kit · Creatives · Performance
-- Per-product "Share" button injected on `ProductList` and `StorefrontProduct`
-
-### Acceptance
-- Generate creative for any product in <5s
-- Click on shared link in WhatsApp opens product page and increments counter
-
----
-
-## Phase 8 — Solution Partners (Agencies)
-
-**Goal:** Let an agency manage 10–500 client stores from one login with revenue share + white-label storefront for their brand.
-
-### Schema (extends Phase 6 partners)
-- `partners.type = 'agency'` (reuse table)
-- `agency_clients` (agency_id, store_id, role: owner/manager, added_at)
-- `agencies` extras: logo_url, brand_color, support_email, custom_subdomain (e.g. acme.partners.pictocart.in)
-- `agency_payouts` rolls up commissions across all clients
-
-### Permissions
-- Agency staff can sign in and switch between client stores via a "Client switcher" header dropdown
-- New role `agency_admin` in `user_roles` (already-existing pattern)
-- RLS: `agency_admin` can read/write any store in their `agency_clients` map
-
-### Commission
-- 30% recurring of every client's subscription (higher than freelancer to incentivize agency model)
-- Optional: agencies can mark up themes/services and bill clients via wallet credits (revisit later)
-
-### UI
-- `/agency` — agency dashboard: client list, MRR, churn risk, pending tasks per client
-- `/agency/clients/new` — onboard new client (creates store + invites owner email)
-- `/admin/partners` gets a tab to manage agencies separately
-
-### Acceptance
-- Agency can add a new client store in <60s
-- Agency dashboard shows aggregate revenue across all clients
-- Clients still see their own store with no agency branding (unless white-label flag enabled)
-
----
-
-## Phase 9 — Dropshipping Marketplace
-
-**Goal:** Suppliers list inventory; sellers import in one click; orders auto-route to supplier; supplier ships; platform settles.
-
-### Roles
-- **Supplier**: lists products, sets cost price, manages inventory + dispatch
-- **Seller**: imports supplier product to own store at retail price (margin = retail − cost)
-- **Customer**: buys as usual; doesn't see supplier
-- **Platform**: takes commission, splits payout, mediates disputes
-
-### Schema
-- `suppliers` (id, user_id, business_name, gstin, kyc, payout_bank, rating)
-- `supplier_products` (id, supplier_id, title, description, images, cost_price, mrp, stock, hsn, weight, ship_from_pincode, category, status)
-- `dropship_listings` (id, store_id, supplier_product_id, retail_price, custom_title, custom_images, is_active)
-- `orders` extension: `fulfilled_by_supplier_id`, `supplier_payout_amount`, `supplier_status`
-- `supplier_payouts` (id, supplier_id, period, amount, utr, paid_at)
-
-### Order flow
-```text
-Customer pays seller (Razorpay)
-  -> Order created with fulfilled_by_supplier_id
-  -> Supplier notified (email + dashboard)
-  -> Supplier dispatches via Delhivery (uses platform Delhivery account)
-  -> AWB updates flow back; customer notified
-  -> On delivery: settlement runs
-        cost_price -> supplier
-        platform_commission -> platform
-        margin - commission -> seller wallet
-```
-
-### UI
-- `/suppliers/signup` + `/suppliers/dashboard` (mirrors seller dashboard)
-- New seller page `/dashboard/dropship/marketplace` — browse supplier catalog, "Import" button
-- Imported items appear in Products list with a "Dropship" badge
-- Admin: `/admin/dropship` — approve suppliers, monitor SLA, dispute panel
-
-### Acceptance
-- Seller imports a product in 1 click; appears in their store
-- Customer order auto-creates a supplier dispatch task
-- Settlement splits money correctly across 3 parties
-
-### Hard parts to flag now
-- KYC + bank verification for suppliers (use Cashfree Payouts or Razorpay X)
-- Inventory sync if supplier sells on multiple seller stores (atomic decrement)
-- Returns/RTO routing to supplier address, not seller
-- Margin protection: prevent two sellers from racing prices to zero
-
----
-
-## Cross-cutting infrastructure (build once, reused by all phases)
-
-1. **Wallet & payout engine** — already partially exists (`wallet`, `wallet_transactions`). Extend to support: partner payouts, supplier payouts, agency settlements. Use Razorpay X or Cashfree Payouts for UPI/NEFT.
-2. **Role & permission expansion** — current `user_roles` enum (`admin`, `user`) needs: `freelancer`, `agency_admin`, `agency_staff`, `supplier`. Single migration adds all four.
-3. **Notification templates** — reuse `send-transactional-email`; add templates for: partner-signup, partner-payout, supplier-new-order, supplier-payout, agency-client-added.
-4. **Attribution cookie** — single utility for `?ref=` and `?utm_*` so Phases 6, 7, 8 share the same tracking.
-
----
-
-## Memory updates after approval
-
-Save these so future sessions don't lose context:
-- `mem://business/phase2-roadmap` — this whole document, summarised
-- `mem://features/partner-program` — once Phase 6 ships
-- `mem://features/social-toolkit` — once Phase 7 ships
-- `mem://features/agency-portal` — once Phase 8 ships
-- `mem://features/dropshipping` — once Phase 9 ships
-- Update `mem://index.md` Core to mention "Multi-role platform: sellers, freelancers, agencies, suppliers"
-
----
-
-## Suggested next action
-
-Approve this plan, then we start **Phase 6 (Freelancer / Commission Program)** — smallest, fastest to validate, and creates a growth flywheel before bigger phases.
-
-Open decisions to confirm before Phase 6 starts:
-1. Commission %: 20% of subscription for 12 months — yes / change?
-2. Min payout threshold: ₹500 — yes / change?
-3. KYC: PAN + UPI only at signup; bank details on first payout — yes / change?
-
-Reply "go ahead with defaults" or send your changes.
+- New: `supabase/functions/customer-auth/index.ts`
+- New: SQL migration (tenancy guard trigger + backfill + 2 test stores)
+- Edit: `src/hooks/useCustomerAuth.ts` (use edge function, drop client aliasing)
+- Edit: `src/pages/storefront/CustomerAuth.tsx` (remove Google button, wire reset, keep UI)
+- Edit: `mem://features/customer-accounts`
