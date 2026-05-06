@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
+// Tenant alias domain — non-deliverable. Real emails are sent via
+// auth-email-hook which reads `customer_email` from user metadata.
+// We use a non-gmail domain so Supabase's address normalization
+// (gmail strips dots and `+tags`) cannot collide accounts across stores.
+const TENANT_DOMAIN = 'customers.pictocart.in';
+
 export const useCustomerAuth = (storeSlug: string) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -10,9 +16,13 @@ export const useCustomerAuth = (storeSlug: string) => {
 
   const getTenantEmail = (value: string) => {
     const normalized = normalizeEmail(value);
-    const [localPart, domain] = normalized.split('@');
-    if (!localPart || !domain || !storeSlug) return normalized;
-    return `${localPart}+${storeSlug}@${domain}`;
+    if (!storeSlug) return normalized;
+    // Encode the real email into a unique local-part. The result is a
+    // valid RFC-5321 address, deterministic, and unique per (email, store).
+    const localPart = normalized
+      .replace('@', '-at-')
+      .replace(/[^a-z0-9.\-_]/g, '-');
+    return `${localPart}@${storeSlug}.${TENANT_DOMAIN}`;
   };
 
   useEffect(() => {
@@ -30,7 +40,10 @@ export const useCustomerAuth = (storeSlug: string) => {
   }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email: getTenantEmail(email), password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: getTenantEmail(email),
+      password,
+    });
     return { data, error };
   };
 
@@ -40,7 +53,12 @@ export const useCustomerAuth = (storeSlug: string) => {
       email: getTenantEmail(realEmail),
       password,
       options: {
-        data: { full_name: fullName, is_customer: true, store_slug: storeSlug, customer_email: realEmail },
+        data: {
+          full_name: fullName,
+          is_customer: true,
+          store_slug: storeSlug,
+          customer_email: realEmail,
+        },
         emailRedirectTo: `${window.location.origin}/store/${storeSlug}/account`,
       },
     });
