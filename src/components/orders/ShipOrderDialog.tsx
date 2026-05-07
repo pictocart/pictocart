@@ -94,7 +94,10 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
         return;
       }
 
-      toast.success(`Shipment created! AWB: ${data.waybill}`);
+      // Persist provider choice on the order so the tracking call later uses the right proxy
+      await supabase.from('orders').update({ courier_provider: provider } as any).eq('id', order.id);
+
+      toast.success(`Shipment created via ${provider}! AWB: ${data.waybill}`);
       onShipped(data.waybill);
       onOpenChange(false);
     } catch (err) {
