@@ -358,6 +358,7 @@ const StorefrontCheckout = () => {
     }
 
     if (form.paymentMethod === 'cod') {
+      if (codBlockedReason) { toast.error(codBlockedReason); return; }
       handleCODOrder();
     } else {
       handleRazorpayPayment();
