@@ -167,16 +167,57 @@ Deno.serve(async (req) => {
 
     if (action === "request_password_reset") {
       const redirectTo = String(payload?.redirectTo || "");
-      const { error } = await admin.auth.admin.generateLink({
-        type: "recovery",
-        email: alias,
-        options: redirectTo ? { redirectTo } : undefined,
+
+      // Look up the aliased user to recover the customer's REAL email address.
+      // (auth.users only has the synthetic alias.)
+      const { data: userList } = await admin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1,
       });
-      if (error) {
-        console.error("generateLink (recovery) failed", error);
-        // Don't leak which addresses exist.
+      // Use getUserByEmail-style lookup via admin API (filtering not exposed; use RPC fallback).
+      // Easiest: query auth.users via service role through SQL.
+      const { data: rows } = await admin
+        .from("auth_users_view" as any)
+        .select("id, email, raw_user_meta_data")
+        .eq("email", alias)
+        .maybeSingle()
+        .then((r) => r, () => ({ data: null }));
+
+      // Fallback: derive real email from request payload (we already have it).
+      const realEmail = email;
+
+      // Generate the recovery link WITHOUT sending Supabase's default email.
+      const { data: linkData, error: linkErr } = await admin.auth.admin
+        .generateLink({
+          type: "recovery",
+          email: alias,
+          options: redirectTo ? { redirectTo } : undefined,
+        });
+
+      if (linkErr || !linkData?.properties?.action_link) {
+        console.warn("generateLink (recovery) failed", linkErr);
+        // Don't leak whether the email exists.
         return json({ ok: true });
       }
+
+      // Send branded reset email to the customer's REAL inbox via the
+      // transactional email pipeline.
+      const sendRes = await admin.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "customer-password-reset",
+          recipientEmail: realEmail,
+          idempotencyKey: `customer-pw-reset-${storeSlug}-${realEmail}-${Date.now()}`,
+          senderName: store.name,
+          templateData: {
+            storeName: store.name,
+            resetUrl: linkData.properties.action_link,
+          },
+        },
+      });
+      if (sendRes.error) {
+        console.error("send reset email failed", sendRes.error);
+      }
+
       return json({ ok: true });
     }
 
