@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
   let idempotencyKey: string
   let messageId: string
   let templateData: Record<string, any> = {}
+  let senderName: string | undefined
   try {
     const body = await req.json()
     templateName = body.templateName || body.template_name
@@ -68,6 +69,10 @@ Deno.serve(async (req) => {
     idempotencyKey = body.idempotencyKey || body.idempotency_key || messageId
     if (body.templateData && typeof body.templateData === 'object') {
       templateData = body.templateData
+    }
+    if (typeof body.senderName === 'string' && body.senderName.trim()) {
+      // sanitize: strip CR/LF + angle brackets to prevent header injection
+      senderName = body.senderName.replace(/[\r\n<>"]/g, '').trim().slice(0, 80)
     }
   } catch {
     return new Response(
