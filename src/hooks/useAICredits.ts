@@ -41,11 +41,23 @@ export const useAICredits = (opts?: { onInsufficient?: () => void }) => {
         body: { ...body, store_id: store.id },
       });
 
-      if (error || data?.error) {
-        const msg = data?.error || error?.message || 'AI request failed';
+      // Edge function returned non-2xx (e.g. 402 INSUFFICIENT_CREDITS).
+      // supabase-js exposes the response on error.context — parse it.
+      let parsedErr: any = null;
+      if (error && (error as any).context?.json) {
+        try { parsedErr = await (error as any).context.json(); } catch { /* ignore */ }
+      } else if (error && (error as any).context instanceof Response) {
+        try { parsedErr = await (error as any).context.clone().json(); } catch { /* ignore */ }
+      }
+
+      if (error || data?.error || parsedErr?.error) {
+        const msg = parsedErr?.error || data?.error || error?.message || 'AI request failed';
         const insufficient = msg === 'INSUFFICIENT_CREDITS';
         if (insufficient) {
-          toast.error('Out of AI credits — top up to continue');
+          toast.error('Out of AI credits — please recharge your wallet to continue', {
+            description: 'Tap "Top up" to add credits.',
+            action: { label: 'Top up', onClick: () => opts?.onInsufficient?.() },
+          });
           opts?.onInsufficient?.();
         } else {
           toast.error(msg);

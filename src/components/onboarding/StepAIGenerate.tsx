@@ -37,12 +37,16 @@ const StepAIGenerate = ({ data, setData, storeId }: Props) => {
         },
       });
 
-      if (error) throw error;
-      if (result?.error === 'INSUFFICIENT_CREDITS') {
-        toast.error('Out of AI credits. Top up from Wallet to continue.');
+      let parsedErr: any = null;
+      if (error && (error as any).context?.clone) {
+        try { parsedErr = await (error as any).context.clone().json(); } catch { /* ignore */ }
+      }
+      const errMsg = parsedErr?.error || result?.error || error?.message;
+      if (errMsg === 'INSUFFICIENT_CREDITS') {
+        toast.error('You need credits in your wallet to generate. Please recharge.');
         throw new Error('INSUFFICIENT_CREDITS');
       }
-      if (result?.error) throw new Error(result.error);
+      if (errMsg) throw new Error(errMsg);
 
       if (result?.product) {
         setData((d) => ({ ...d, aiProduct: result.product }));
@@ -50,7 +54,9 @@ const StepAIGenerate = ({ data, setData, storeId }: Props) => {
       }
     } catch (e: any) {
       console.error('AI generation error:', e);
-      toast.error('AI generation failed. Please fill in manually.');
+      if (e?.message !== 'INSUFFICIENT_CREDITS') {
+        toast.error('AI generation failed. Please fill in manually.');
+      }
       setData((d) => ({
         ...d,
         aiProduct: {
