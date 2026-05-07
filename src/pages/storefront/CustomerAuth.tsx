@@ -241,8 +241,55 @@ const CustomerAuth = () => {
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                   {mode === 'signup' ? 'Create Account' : 'Sign In'}
                 </button>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => setMode('forgot')}
+                    className="w-full text-center text-xs opacity-60 hover:opacity-100 transition-opacity -mt-1"
+                  >
+                    Forgot password?
+                  </button>
+                )}
               </form>
             </>
+          )}
+
+          {/* Forgot password */}
+          {mode === 'forgot' && (
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              <p className="text-sm text-center opacity-70">
+                Enter your email and we'll send you a reset link.
+              </p>
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 text-sm border"
+                style={inputStyle}
+                required
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
+                style={{
+                  backgroundColor: colors.primary,
+                  color: '#fff',
+                  borderRadius: `${borderRadius / 2}px`,
+                }}
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Send reset link
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="w-full text-center text-xs opacity-60 hover:opacity-100"
+              >
+                Back to sign in
+              </button>
+            </form>
           )}
 
           {/* OTP */}
