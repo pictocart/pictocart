@@ -40,11 +40,16 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     setLoading(true);
+    // Use order+limit instead of .maybeSingle() so a user who somehow ended up
+    // with more than one store row (test fixtures, race during onboarding,
+    // legacy data) still loads their original store instead of being bounced
+    // back to /onboarding.
     const { data, error } = await supabase
       .from('stores')
       .select('*')
       .eq('user_id', user.id)
-      .maybeSingle();
+      .order('created_at', { ascending: true })
+      .limit(1);
 
     if (error) {
       console.error('[StoreContext] fetch error:', error);
@@ -52,7 +57,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-    setStore((data as Store) ?? null);
+    setStore(((data as Store[] | null)?.[0]) ?? null);
     setLoading(false);
   }, [user]);
 
