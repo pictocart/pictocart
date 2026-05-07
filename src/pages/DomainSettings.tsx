@@ -460,6 +460,19 @@ const DomainSettings = () => {
                 Status: <span className="font-mono">{request?.status}</span>
               </p>
             </div>
+          ) : !canUseCustomDomain ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-amber-900">
+                <Sparkles className="h-5 w-5" />
+                <p className="text-sm font-medium">Custom domain is a paid plan feature</p>
+              </div>
+              <p className="text-xs text-amber-800">
+                Upgrade to a plan that includes custom domains to connect your own brand URL.
+              </p>
+              <Button size="sm" onClick={() => (window.location.href = '/billing')}>
+                View Plans
+              </Button>
+            </div>
           ) : (
             <>
               <div className="space-y-2">
