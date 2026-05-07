@@ -23,26 +23,42 @@ const CouponList = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({
     code: generateCode(),
-    type: 'percentage' as 'percentage' | 'flat',
+    type: 'percentage' as 'percentage' | 'flat' | 'bogo' | 'tiered',
     value: 10,
     min_order_amount: 0,
     max_uses: '',
     expires_at: '',
+    auto_apply: false,
+    bogo_buy_qty: 1,
+    bogo_get_qty: 1,
+    bogo_get_discount_pct: 100,
+    tiers: [
+      { min_subtotal: 1000, type: 'flat' as 'flat' | 'percentage', value: 100 },
+      { min_subtotal: 2500, type: 'flat' as 'flat' | 'percentage', value: 300 },
+    ],
+    description: '',
   });
 
   const handleCreate = async () => {
     if (!form.code.trim()) { toast.error('Code is required'); return; }
-    if (form.value <= 0) { toast.error('Value must be greater than 0'); return; }
+    if ((form.type === 'percentage' || form.type === 'flat') && form.value <= 0) {
+      toast.error('Value must be greater than 0'); return;
+    }
     await createCoupon.mutateAsync({
       code: form.code,
       type: form.type,
-      value: form.value,
+      value: form.type === 'percentage' || form.type === 'flat' ? form.value : 0,
       min_order_amount: form.min_order_amount,
       max_uses: form.max_uses ? Number(form.max_uses) : null,
       expires_at: form.expires_at || null,
+      auto_apply: form.auto_apply,
+      description: form.description || null,
+      bogo_buy_qty: form.type === 'bogo' ? form.bogo_buy_qty : null,
+      bogo_get_qty: form.type === 'bogo' ? form.bogo_get_qty : null,
+      bogo_get_discount_pct: form.type === 'bogo' ? form.bogo_get_discount_pct : null,
+      tiers: form.type === 'tiered' ? form.tiers : null,
     });
     setDialogOpen(false);
-    setForm({ code: generateCode(), type: 'percentage', value: 10, min_order_amount: 0, max_uses: '', expires_at: '' });
   };
 
   const copyCode = (code: string) => {
