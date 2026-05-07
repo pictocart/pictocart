@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ShipOrderDialog from '@/components/orders/ShipOrderDialog';
+import RefundPanel from '@/components/orders/RefundPanel';
 import type { Json } from '@/integrations/supabase/types';
 
 interface OrderItem {
