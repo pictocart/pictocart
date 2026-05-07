@@ -51,6 +51,7 @@ export interface OnboardingData {
   };
   emailTemplatesGenerated: boolean;
   slugAvailable: boolean;
+  fssaiNumber?: string;
 }
 
 const defaultData: OnboardingData = {
@@ -67,6 +68,7 @@ const defaultData: OnboardingData = {
   paymentSettings: { cod: true, upi: false, razorpay: false },
   emailTemplatesGenerated: false,
   slugAvailable: false,
+  fssaiNumber: '',
 };
 
 const Onboarding = () => {
