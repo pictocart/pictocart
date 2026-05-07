@@ -1067,6 +1067,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          amount_refunded: number
           created_at: string
           customer_address: Json | null
           customer_email: string | null
@@ -1079,6 +1080,8 @@ export type Database = {
           order_number: string
           payment_method: string | null
           payment_status: Database["public"]["Enums"]["payment_status"] | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
           shipping: number | null
           status: Database["public"]["Enums"]["order_status"] | null
           store_id: string
@@ -1089,6 +1092,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amount_refunded?: number
           created_at?: string
           customer_address?: Json | null
           customer_email?: string | null
@@ -1101,6 +1105,8 @@ export type Database = {
           order_number: string
           payment_method?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
           shipping?: number | null
           status?: Database["public"]["Enums"]["order_status"] | null
           store_id: string
@@ -1111,6 +1117,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amount_refunded?: number
           created_at?: string
           customer_address?: Json | null
           customer_email?: string | null
@@ -1123,6 +1130,8 @@ export type Database = {
           order_number?: string
           payment_method?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
           shipping?: number | null
           status?: Database["public"]["Enums"]["order_status"] | null
           store_id?: string
@@ -1337,6 +1346,63 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_events: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          order_id: string | null
+          payload: Json
+          processed_at: string
+          provider: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          store_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          order_id?: string | null
+          payload?: Json
+          processed_at?: string
+          provider?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          store_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          order_id?: string | null
+          payload?: Json
+          processed_at?: string
+          provider?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_configs: {
         Row: {
@@ -1781,6 +1847,72 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          error_message: string | null
+          id: string
+          initiated_by: string | null
+          notes: Json | null
+          order_id: string
+          razorpay_payment_id: string
+          razorpay_refund_id: string | null
+          reason: string | null
+          speed: string
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          initiated_by?: string | null
+          notes?: Json | null
+          order_id: string
+          razorpay_payment_id: string
+          razorpay_refund_id?: string | null
+          reason?: string | null
+          speed?: string
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          initiated_by?: string | null
+          notes?: Json | null
+          order_id?: string
+          razorpay_payment_id?: string
+          razorpay_refund_id?: string | null
+          reason?: string | null
+          speed?: string
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       research_jobs: {
         Row: {
