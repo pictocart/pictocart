@@ -10,7 +10,7 @@
 //   { action: "request_password_reset", storeSlug, email, redirectTo? }
 //
 // Returns sign-in/up tokens that the browser passes to supabase.auth.setSession.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
