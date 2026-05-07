@@ -570,8 +570,13 @@ export type Database = {
       }
       coupons: {
         Row: {
+          auto_apply: boolean
+          bogo_buy_qty: number | null
+          bogo_get_discount_pct: number | null
+          bogo_get_qty: number | null
           code: string
           created_at: string
+          description: string | null
           expires_at: string | null
           id: string
           is_active: boolean
@@ -579,14 +584,20 @@ export type Database = {
           min_order_amount: number | null
           starts_at: string | null
           store_id: string
+          tiers: Json | null
           type: Database["public"]["Enums"]["coupon_type"]
           updated_at: string
           used_count: number
           value: number
         }
         Insert: {
+          auto_apply?: boolean
+          bogo_buy_qty?: number | null
+          bogo_get_discount_pct?: number | null
+          bogo_get_qty?: number | null
           code: string
           created_at?: string
+          description?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean
@@ -594,14 +605,20 @@ export type Database = {
           min_order_amount?: number | null
           starts_at?: string | null
           store_id: string
+          tiers?: Json | null
           type?: Database["public"]["Enums"]["coupon_type"]
           updated_at?: string
           used_count?: number
           value?: number
         }
         Update: {
+          auto_apply?: boolean
+          bogo_buy_qty?: number | null
+          bogo_get_discount_pct?: number | null
+          bogo_get_qty?: number | null
           code?: string
           created_at?: string
+          description?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean
@@ -609,6 +626,7 @@ export type Database = {
           min_order_amount?: number | null
           starts_at?: string | null
           store_id?: string
+          tiers?: Json | null
           type?: Database["public"]["Enums"]["coupon_type"]
           updated_at?: string
           used_count?: number
@@ -3206,7 +3224,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "seller" | "customer" | "freelancer"
-      coupon_type: "percentage" | "flat"
+      coupon_type: "percentage" | "flat" | "bogo" | "tiered"
       credit_promo_type:
         | "code"
         | "sitewide"
@@ -3358,7 +3376,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "seller", "customer", "freelancer"],
-      coupon_type: ["percentage", "flat"],
+      coupon_type: ["percentage", "flat", "bogo", "tiered"],
       credit_promo_type: [
         "code",
         "sitewide",

@@ -5,7 +5,7 @@ interface SEOHeadProps {
   description?: string;
   ogImage?: string;
   url?: string;
-  type?: 'website' | 'product';
+  type?: 'website' | 'product' | 'article';
   product?: {
     price: number;
     currency?: string;
@@ -13,10 +13,24 @@ interface SEOHeadProps {
     brand?: string;
     images?: string[];
     sku?: string;
+    rating?: { value: number; count: number };
   };
+  breadcrumbs?: { name: string; url: string }[];
+  organization?: { name: string; url: string; logo?: string };
+  canonical?: string;
 }
 
-const SEOHead = ({ title, description, ogImage, url, type = 'website', product }: SEOHeadProps) => {
+const SEOHead = ({
+  title,
+  description,
+  ogImage,
+  url,
+  type = 'website',
+  product,
+  breadcrumbs,
+  organization,
+  canonical,
+}: SEOHeadProps) => {
   useEffect(() => {
     document.title = title;
 
@@ -36,7 +50,7 @@ const SEOHead = ({ title, description, ogImage, url, type = 'website', product }
       setMeta('og:description', description, true);
     }
     setMeta('og:title', title, true);
-    setMeta('og:type', type === 'product' ? 'product' : 'website', true);
+    setMeta('og:type', type === 'product' ? 'product' : type === 'article' ? 'article' : 'website', true);
     if (ogImage) {
       const absoluteOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
       setMeta('og:image', absoluteOgImage, true);
@@ -57,18 +71,23 @@ const SEOHead = ({ title, description, ogImage, url, type = 'website', product }
       setMeta('twitter:image', absoluteOgImage);
     }
 
-    // JSON-LD structured data
-    let scriptEl = document.getElementById('json-ld-seo') as HTMLScriptElement;
-    if (!scriptEl) {
-      scriptEl = document.createElement('script');
-      scriptEl.id = 'json-ld-seo';
-      scriptEl.type = 'application/ld+json';
-      document.head.appendChild(scriptEl);
+    // Canonical link
+    const canonicalHref = canonical
+      ? (canonical.startsWith('http') ? canonical : `${window.location.origin}${canonical}`)
+      : window.location.href.split('?')[0].split('#')[0];
+    let canonEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonEl) {
+      canonEl = document.createElement('link');
+      canonEl.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonEl);
     }
+    canonEl.setAttribute('href', canonicalHref);
+
+    // Build JSON-LD graph (multiple entities)
+    const graph: any[] = [];
 
     if (type === 'product' && product) {
-      scriptEl.textContent = JSON.stringify({
-        '@context': 'https://schema.org',
+      const p: any = {
         '@type': 'Product',
         name: title,
         description,
@@ -80,24 +99,61 @@ const SEOHead = ({ title, description, ogImage, url, type = 'website', product }
           price: product.price,
           priceCurrency: product.currency || 'INR',
           availability: product.availability || 'https://schema.org/InStock',
+          ...(url ? { url: url.startsWith('http') ? url : `${window.location.origin}${url}` } : {}),
         },
-      });
+      };
+      if (product.rating && product.rating.count > 0) {
+        p.aggregateRating = {
+          '@type': 'AggregateRating',
+          ratingValue: product.rating.value,
+          reviewCount: product.rating.count,
+        };
+      }
+      graph.push(p);
     } else {
-      scriptEl.textContent = JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'WebSite',
+      graph.push({
+        '@type': type === 'article' ? 'Article' : 'WebSite',
         name: title,
         ...(description ? { description } : {}),
-        ...(url ? { url } : {}),
+        ...(url ? { url: url.startsWith('http') ? url : `${window.location.origin}${url}` } : {}),
       });
     }
 
+    if (organization) {
+      graph.push({
+        '@type': 'Organization',
+        name: organization.name,
+        url: organization.url,
+        ...(organization.logo ? { logo: organization.logo } : {}),
+      });
+    }
+
+    if (breadcrumbs?.length) {
+      graph.push({
+        '@type': 'BreadcrumbList',
+        itemListElement: breadcrumbs.map((b, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: b.name,
+          item: b.url.startsWith('http') ? b.url : `${window.location.origin}${b.url}`,
+        })),
+      });
+    }
+
+    let scriptEl = document.getElementById('json-ld-seo') as HTMLScriptElement;
+    if (!scriptEl) {
+      scriptEl = document.createElement('script');
+      scriptEl.id = 'json-ld-seo';
+      scriptEl.type = 'application/ld+json';
+      document.head.appendChild(scriptEl);
+    }
+    scriptEl.textContent = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
+
     return () => {
-      // Cleanup JSON-LD on unmount
       const el = document.getElementById('json-ld-seo');
       if (el) el.remove();
     };
-  }, [title, description, ogImage, url, type, product]);
+  }, [title, description, ogImage, url, type, product, breadcrumbs, organization, canonical]);
 
   return null;
 };

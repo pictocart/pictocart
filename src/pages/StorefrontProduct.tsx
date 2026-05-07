@@ -127,7 +127,21 @@ const StorefrontProduct = () => {
           sku: product.sku || undefined,
           images: images.length ? images : undefined,
           brand: store.name,
+          availability: (product.inventory_count ?? 1) > 0
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+          ...(count > 0 ? { rating: { value: Number(average.toFixed(2)), count } } : {}),
         }}
+        organization={{
+          name: store.name,
+          url: `${window.location.origin}/store/${slug}`,
+          logo: store.logo_url || undefined,
+        }}
+        breadcrumbs={[
+          { name: 'Home', url: `/store/${slug}` },
+          ...(product.category ? [{ name: product.category, url: `/store/${slug}?category=${encodeURIComponent(product.category)}` }] : []),
+          { name: product.title, url: `/store/${slug}/product/${productId}` },
+        ]}
       />
       <div className="max-w-6xl mx-auto px-4 py-4 md:py-8">
         {/* Breadcrumb */}

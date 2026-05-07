@@ -40,7 +40,7 @@ const StorefrontCheckout = () => {
   const [razorpayAvailable, setRazorpayAvailable] = useState(false);
   const [codRules, setCodRules] = useState<any | null>(null);
   const [priorOrders, setPriorOrders] = useState<number>(0);
-  const { validateCoupon, incrementUsage } = useValidateCoupon();
+  const { validateCoupon, incrementUsage, findBestAutoCoupon } = useValidateCoupon();
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
@@ -49,8 +49,19 @@ const StorefrontCheckout = () => {
     if (store?.id && items.length > 0) {
       track({ store_id: store.id, event_type: 'checkout_start', value: totalPrice, metadata: { item_count: items.length } });
     }
+    // Auto-apply best coupon (only if user hasn't applied one manually)
+    (async () => {
+      if (!store?.id || items.length === 0 || appliedCoupon) return;
+      const cartLines = items.map((i) => ({ productId: i.productId, price: i.price, quantity: i.quantity }));
+      const best = await findBestAutoCoupon(store.id, totalPrice, cartLines);
+      if (best) {
+        setAppliedCoupon({ id: best.coupon.id, code: best.coupon.code, discount: best.discount });
+        setCouponCode(best.coupon.code);
+        toast.success(`Auto-applied "${best.coupon.code}" — you save ₹${Math.round(best.discount).toLocaleString('en-IN')}`);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store?.id]);
+  }, [store?.id, items.length, totalPrice]);
 
   const [form, setForm] = useState({
     name: '',
@@ -141,7 +152,8 @@ const StorefrontCheckout = () => {
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
-    const result = await validateCoupon(store.id, couponCode, totalPrice);
+    const cartLines = items.map((i) => ({ productId: i.productId, price: i.price, quantity: i.quantity }));
+    const result = await validateCoupon(store.id, couponCode, totalPrice, cartLines);
     if (result.valid && result.coupon) {
       setAppliedCoupon({ id: result.coupon.id, code: result.coupon.code, discount: result.discount! });
       toast.success(`Coupon applied! You save ₹${result.discount!.toLocaleString('en-IN')}`);

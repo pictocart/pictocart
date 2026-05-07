@@ -31,3 +31,7 @@ project_id = "qxeyndsvkfsmkilkzmuc"
     verify_jwt = false
   [functions.razorpay-refund]
     verify_jwt = true
+  [functions.store-robots]
+    verify_jwt = false
+  [functions.store-sitemap]
+    verify_jwt = false
