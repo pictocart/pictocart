@@ -26,6 +26,7 @@ interface CustomerAddress {
 const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOrderDialogProps) => {
   const [weight, setWeight] = useState('500');
   const [shipping, setShipping] = useState(false);
+  const [provider, setProvider] = useState<'delhivery' | 'shiprocket'>('delhivery');
 
   const settings = store.settings as any;
   const shippingConfig = settings?.shipping;
@@ -49,8 +50,9 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
       const accessToken = sessionData.session?.access_token;
 
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const fnName = provider === 'shiprocket' ? 'shiprocket-proxy' : 'delhivery-proxy';
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/delhivery-proxy`,
+        `https://${projectId}.supabase.co/functions/v1/${fnName}`,
         {
           method: 'POST',
           headers: {
@@ -92,7 +94,10 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
         return;
       }
 
-      toast.success(`Shipment created! AWB: ${data.waybill}`);
+      // Persist provider choice on the order so the tracking call later uses the right proxy
+      await supabase.from('orders').update({ courier_provider: provider } as any).eq('id', order.id);
+
+      toast.success(`Shipment created via ${provider}! AWB: ${data.waybill}`);
       onShipped(data.waybill);
       onOpenChange(false);
     } catch (err) {
@@ -126,7 +131,7 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
             <Truck className="h-5 w-5" /> Ship Order #{order.order_number}
           </DialogTitle>
           <DialogDescription>
-            Create a Delhivery shipment and get an AWB tracking number
+            Create a shipment with your preferred courier and get an AWB tracking number
           </DialogDescription>
         </DialogHeader>
 
@@ -136,6 +141,29 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
             <p><strong>Phone:</strong> {order.customer_phone}</p>
             <p><strong>Payment:</strong> {order.payment_method?.toUpperCase() || 'N/A'}</p>
             <p><strong>Total:</strong> ₹{order.total?.toLocaleString('en-IN')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Courier</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['delhivery', 'shiprocket'] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProvider(p)}
+                  className={`rounded-md border px-3 py-2 text-sm font-medium capitalize transition ${
+                    provider === p ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            {provider === 'shiprocket' && (
+              <p className="text-xs text-muted-foreground">
+                Make sure your Shiprocket email + password are saved under Settings → Shipping.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

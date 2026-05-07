@@ -18,10 +18,12 @@ export const useProductReviews = (productId: string) => {
   return useQuery({
     queryKey: ['reviews', productId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const sb = supabase as any;
+      const { data, error } = await sb
         .from('reviews')
         .select('*')
         .eq('product_id', productId)
+        .eq('moderation_status', 'approved')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []) as Review[];
@@ -53,7 +55,8 @@ export const useSubmitReview = () => {
         return items.some((item: any) => item.product_id === review.product_id);
       });
 
-      const { data, error } = await supabase.from('reviews').insert({
+      const sb = supabase as any;
+      const { data, error } = await sb.from('reviews').insert({
         store_id: review.store_id,
         product_id: review.product_id,
         user_id: review.user_id,
@@ -61,6 +64,7 @@ export const useSubmitReview = () => {
         title: review.title || null,
         body: review.body || null,
         is_verified_purchase: isVerified,
+        moderation_status: 'pending',
       }).select().single();
 
       if (error) throw error;

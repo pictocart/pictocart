@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, MapPin, Phone, Mail, Package, Truck, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, MapPin, Phone, Mail, Package, Truck, Loader2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -141,10 +141,31 @@ const OrderDetail = () => {
             <h1 className="text-xl font-bold tracking-tight">Order #{order.order_number}</h1>
             <p className="text-sm text-muted-foreground">
               {format(new Date(order.created_at), 'dd MMM yyyy, hh:mm a')}
+              {(order as any).invoice_number && (
+                <span className="ml-2 font-mono text-xs">· {(order as any).invoice_number}</span>
+              )}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {!(order as any).invoice_number && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const { data, error } = await (supabase as any).rpc('next_invoice_number', {
+                  _store_id: order.store_id,
+                  _prefix: 'INV',
+                });
+                if (error) { toast.error(error.message); return; }
+                await supabase.from('orders').update({ invoice_number: data } as any).eq('id', order.id);
+                toast.success(`Invoice ${data} generated`);
+                refetch();
+              }}
+            >
+              <FileText className="h-4 w-4 mr-1" /> Generate Invoice #
+            </Button>
+          )}
           {!order.tracking_number && store && (
             <Button variant="outline" size="sm" onClick={() => setShipDialogOpen(true)}>
               <Truck className="h-4 w-4 mr-1" /> Ship Order

@@ -1012,6 +1012,30 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_counters: {
+        Row: {
+          fiscal_year: string
+          last_number: number
+          prefix: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          fiscal_year: string
+          last_number?: number
+          prefix?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          fiscal_year?: string
+          last_number?: number
+          prefix?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       low_balance_alerts: {
         Row: {
           balance_at_alert: number
@@ -1137,6 +1161,8 @@ export type Database = {
       orders: {
         Row: {
           amount_refunded: number
+          courier_provider: string | null
+          courier_response: Json | null
           created_at: string
           customer_address: Json | null
           customer_email: string | null
@@ -1144,6 +1170,7 @@ export type Database = {
           customer_phone: string | null
           customer_user_id: string | null
           id: string
+          invoice_number: string | null
           items: Json
           notes: string | null
           order_number: string
@@ -1162,6 +1189,8 @@ export type Database = {
         }
         Insert: {
           amount_refunded?: number
+          courier_provider?: string | null
+          courier_response?: Json | null
           created_at?: string
           customer_address?: Json | null
           customer_email?: string | null
@@ -1169,6 +1198,7 @@ export type Database = {
           customer_phone?: string | null
           customer_user_id?: string | null
           id?: string
+          invoice_number?: string | null
           items?: Json
           notes?: string | null
           order_number: string
@@ -1187,6 +1217,8 @@ export type Database = {
         }
         Update: {
           amount_refunded?: number
+          courier_provider?: string | null
+          courier_response?: Json | null
           created_at?: string
           customer_address?: Json | null
           customer_email?: string | null
@@ -1194,6 +1226,7 @@ export type Database = {
           customer_phone?: string | null
           customer_user_id?: string | null
           id?: string
+          invoice_number?: string | null
           items?: Json
           notes?: string | null
           order_number?: string
@@ -2022,6 +2055,54 @@ export type Database = {
         }
         Relationships: []
       }
+      returns: {
+        Row: {
+          created_at: string
+          customer_notes: string | null
+          customer_user_id: string | null
+          id: string
+          items: Json
+          order_id: string
+          reason: string
+          refund_amount: number
+          refund_id: string | null
+          seller_notes: string | null
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_notes?: string | null
+          customer_user_id?: string | null
+          id?: string
+          items?: Json
+          order_id: string
+          reason: string
+          refund_amount?: number
+          refund_id?: string | null
+          seller_notes?: string | null
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_notes?: string | null
+          customer_user_id?: string | null
+          id?: string
+          items?: Json
+          order_id?: string
+          reason?: string
+          refund_amount?: number
+          refund_id?: string | null
+          seller_notes?: string | null
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           body: string | null
@@ -2029,6 +2110,10 @@ export type Database = {
           id: string
           images: string[] | null
           is_verified_purchase: boolean | null
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_status: string
           product_id: string
           rating: number
           store_id: string
@@ -2041,6 +2126,10 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_verified_purchase?: boolean | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_status?: string
           product_id: string
           rating: number
           store_id: string
@@ -2053,6 +2142,10 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_verified_purchase?: boolean | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_status?: string
           product_id?: string
           rating?: number
           store_id?: string
@@ -2237,9 +2330,14 @@ export type Database = {
           created_at: string
           delhivery_api_token: string | null
           delhivery_test_mode: boolean | null
+          preferred_courier: string | null
           razorpay_key_id: string | null
           razorpay_key_secret: string | null
           razorpay_test_mode: boolean | null
+          shiprocket_email: string | null
+          shiprocket_password: string | null
+          shiprocket_token: string | null
+          shiprocket_token_expires_at: string | null
           store_id: string
           updated_at: string
         }
@@ -2247,9 +2345,14 @@ export type Database = {
           created_at?: string
           delhivery_api_token?: string | null
           delhivery_test_mode?: boolean | null
+          preferred_courier?: string | null
           razorpay_key_id?: string | null
           razorpay_key_secret?: string | null
           razorpay_test_mode?: boolean | null
+          shiprocket_email?: string | null
+          shiprocket_password?: string | null
+          shiprocket_token?: string | null
+          shiprocket_token_expires_at?: string | null
           store_id: string
           updated_at?: string
         }
@@ -2257,9 +2360,14 @@ export type Database = {
           created_at?: string
           delhivery_api_token?: string | null
           delhivery_test_mode?: boolean | null
+          preferred_courier?: string | null
           razorpay_key_id?: string | null
           razorpay_key_secret?: string | null
           razorpay_test_mode?: boolean | null
+          shiprocket_email?: string | null
+          shiprocket_password?: string | null
+          shiprocket_token?: string | null
+          shiprocket_token_expires_at?: string | null
           store_id?: string
           updated_at?: string
         }
@@ -3082,6 +3190,10 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      next_invoice_number: {
+        Args: { _prefix?: string; _store_id: string }
+        Returns: string
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
