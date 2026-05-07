@@ -388,6 +388,14 @@ const OrderDetail = () => {
                   );
                 })()}
               </div>
+              <RefundPanel
+                orderId={order.id}
+                total={Number(order.total ?? 0)}
+                amountRefunded={Number((order as any).amount_refunded ?? 0)}
+                hasRazorpayPayment={Boolean((order as any).razorpay_payment_id)}
+                paymentStatus={order.payment_status}
+                onRefunded={() => refetch()}
+              />
             </CardContent>
           </Card>
 
