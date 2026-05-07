@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
+import PicToCartLogo from '@/components/PicToCartLogo';
 import themeFashion from '@/assets/theme-fashion.jpg';
 import themeFood from '@/assets/theme-food.jpg';
 import themeElectronics from '@/assets/theme-electronics.jpg';
