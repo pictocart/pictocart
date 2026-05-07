@@ -217,6 +217,16 @@ const AppRoutes = () => {
               }
             />
             <Route
+              path="/settings/cod"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <CodSettings />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/settings/shipping"
               element={
                 <ProtectedRoute>
