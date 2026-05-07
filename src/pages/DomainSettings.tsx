@@ -287,6 +287,8 @@ function EmailDomainSection({ store }: { store: any }) {
 const DomainSettings = () => {
   const { store, refetchStore } = useStore();
   const { user } = useAuth();
+  const { canUse } = useSubscription();
+  const canUseCustomDomain = canUse('customDomain');
   const [domain, setDomain] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [request, setRequest] = useState<ProvisionRequestRow | null>(null);
