@@ -1,0 +1,1 @@
+DELETE FROM public.stores WHERE id IN ('a8cd7267-f870-43e0-9501-e004e9be7a0f','28c641dd-fb72-4222-9150-f8e7336e3a36') AND user_id = '8cd4e055-b538-4c9d-943c-56ac3f9240fb';
