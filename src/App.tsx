@@ -27,6 +27,7 @@ import { useStoreByHost, isPlatformHost } from "@/hooks/useStoreByHost";
 
 // Lazy-load heavy / less-frequent pages to shrink initial bundle.
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
+const Investors = lazy(() => import("@/pages/Investors"));
 const ProductForm = lazy(() => import("@/pages/ProductForm"));
 const Customise = lazy(() => import("@/pages/Customise"));
 const PaymentSettings = lazy(() => import("@/pages/PaymentSettings"));
