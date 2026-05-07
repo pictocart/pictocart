@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Shirt, UtensilsCrossed, Cpu, Gem, Sparkles, ShoppingBasket, MoreHorizontal } from 'lucide-react';
+import { Shirt, UtensilsCrossed, Cpu, Gem, Sparkles, ShoppingBasket, MoreHorizontal, Receipt } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { OnboardingData } from '@/pages/Onboarding';
 
 interface Props {
@@ -18,9 +20,13 @@ const categories = [
   { id: 'other', label: 'Other', desc: 'Something unique', icon: MoreHorizontal, gradient: 'from-gray-500/10 to-gray-500/5', iconColor: 'text-gray-600', ring: 'ring-gray-500/30' },
 ];
 
+const FOOD_LIKE = new Set(['food', 'grocery']);
+
 const StepCategory = ({ data, setData }: Props) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setTimeout(() => setMounted(true), 100); }, []);
+
+  const showFssai = FOOD_LIKE.has(data.category);
 
   return (
     <div className={`space-y-8 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -59,6 +65,28 @@ const StepCategory = ({ data, setData }: Props) => {
           </button>
         ))}
       </div>
+
+      {showFssai && (
+        <div className="max-w-md mx-auto rounded-2xl border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <Label htmlFor="fssai-real" className="flex items-center gap-2 text-sm font-medium mb-1.5">
+            <Receipt className="h-4 w-4 text-amber-600" />
+            FSSAI License Number
+            <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="fssai-real"
+            placeholder="14-digit FSSAI number"
+            value={data.fssaiNumber || ''}
+            onChange={(e) => setData((d) => ({ ...d, fssaiNumber: e.target.value.replace(/[^0-9]/g, '').slice(0, 14) }))}
+            className="h-11 font-mono"
+            maxLength={14}
+            inputMode="numeric"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            Required by FSSAI (Food Safety and Standards Authority of India) for selling food online. You can add this later from Settings.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

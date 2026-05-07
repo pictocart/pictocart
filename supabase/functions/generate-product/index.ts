@@ -100,7 +100,7 @@ Return a single JSON object with these fields:
 - highlights: Array of 4-6 short bullet selling points (each under 12 words)
 - product_type: ONE of: physical, digital, food, fashion, electronics, beauty, handmade, service
 - metadata: Object with type-specific fields. Fill ALL applicable keys for the chosen product_type. Use these exact keys:
-   • food: ingredients, nutritional_info, shelf_life, allergens, fssai_license
+   • food: ingredients, nutritional_info, shelf_life, allergens
    • fashion: material, care_instructions, fit_type (Slim Fit | Regular Fit | Loose Fit | Oversized), gender (Men | Women | Unisex | Kids | Boys | Girls)
    • electronics: warranty_period, model_number, power_rating, connectivity
    • beauty: ingredients, skin_type (All Skin Types | Oily | Dry | Combination | Sensitive | Normal), usage_instructions, expiry_date
@@ -110,8 +110,8 @@ Return a single JSON object with these fields:
    • physical: (no extra metadata required, return {})
 
 Rules:
-- For fssai_license / model_number / download_link / expiry_date that you cannot determine from an image, write "To be added" (so the seller knows to fill it).
-- Never write "N/A" or empty strings.
+- Do NOT fabricate regulatory identifiers (FSSAI license number, model number, download_link, expiry_date) — omit those keys entirely if not visually obvious. The seller will fill them.
+- Never write "N/A" or empty strings for the descriptive fields above.
 - Respond ONLY with the JSON object, no markdown fences, no commentary.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

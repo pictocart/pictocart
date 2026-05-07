@@ -5,11 +5,14 @@ import {
   Rocket, TrendingUp, Globe, Users, Sparkles, Target, IndianRupee,
   ShoppingBag, Brain, Zap, ChevronLeft, ChevronRight, Store, Award,
   BarChart3, PieChart, LineChart, Building2, Trophy, Coins, Clock,
-  CheckCircle2, ArrowRight, Mail, Phone, Crown, Shield, Layers,
+  CheckCircle2, ArrowRight, Mail, Phone, Crown, Shield, Layers, Download, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import SEOHead from "@/components/storefront/SEOHead";
+import PicToCartLogo from "@/components/PicToCartLogo";
+import { downloadBusinessPlanPDF } from "@/lib/businessPlanPdf";
+import { toast } from "sonner";
 
 /* ---------- Slide shell ---------- */
 const Slide = ({
@@ -54,13 +57,16 @@ const SlideCover = () => (
       <Badge className="bg-violet-500/20 text-violet-200 border-violet-400/30 mb-6 w-fit animate-fade-in">
         <Sparkles className="h-3 w-3 mr-1" /> INVESTOR PITCH · SEED ROUND 2026
       </Badge>
-      <h1 className="text-5xl md:text-8xl font-black mb-4 leading-[1.05] tracking-tight"
-          style={{ animation: "fade-up 0.8s ease-out both" }}>
-        Pic to Cart
-      </h1>
+      <div className="flex items-center gap-4 mb-6" style={{ animation: "fade-up 0.8s ease-out both" }}>
+        <PicToCartLogo size={88} />
+        <div>
+          <h1 className="text-5xl md:text-7xl font-black leading-[1.05] tracking-tight">Pic to Cart</h1>
+          <p className="text-xs md:text-sm text-violet-300/80 mt-1 tracking-widest uppercase">Snap · Generate · Sell</p>
+        </div>
+      </div>
       <p className="text-2xl md:text-4xl font-light text-violet-200 mb-8 max-w-3xl"
          style={{ animation: "fade-up 0.8s ease-out 0.2s both" }}>
-        India's <span className="font-bold text-white">AI-native</span> e-commerce OS for the next <span className="font-bold text-white">100 million</span> small sellers.
+        India's <span className="font-bold text-white">AI-native (Artificial Intelligence-native)</span> e-commerce <span className="font-bold text-white">OS (Operating System)</span> for the next <span className="font-bold text-white">100 million</span> small sellers.
       </p>
       <div className="flex flex-wrap gap-3 mb-10" style={{ animation: "fade-up 0.8s ease-out 0.4s both" }}>
         {["Shopify-grade", "5-min Setup", "AI-Generated Stores", "Made in India"].map((t, i) => (
@@ -68,7 +74,7 @@ const SlideCover = () => (
         ))}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-auto" style={{ animation: "fade-up 0.8s ease-out 0.6s both" }}>
-        <Stat value="₹3.5 Cr" label="Funding Ask" icon={IndianRupee} />
+        <Stat value="₹3.5 Cr" label="Funding Ask (Crore)" icon={IndianRupee} />
         <Stat value="24 mo" label="To Global" icon={Globe} />
         <Stat value="1,800+" label="Hours Built" icon={Clock} />
         <Stat value="65+" label="Live Features" icon={Layers} />
@@ -81,7 +87,7 @@ const SlideProblem = () => (
   <Slide bg="bg-gradient-to-br from-rose-950 via-slate-950 to-orange-950">
     <Badge className="bg-rose-500/20 text-rose-200 border-rose-400/30 mb-4">01 · THE PROBLEM</Badge>
     <h2 className="text-4xl md:text-6xl font-black mb-6">
-      63 million Indian MSMEs.<br/>
+      63 million Indian MSMEs (Micro, Small & Medium Enterprises).<br/>
       <span className="text-rose-300">Less than 5% sell online.</span>
     </h2>
     <p className="text-xl text-white/70 max-w-3xl mb-10">
@@ -89,9 +95,9 @@ const SlideProblem = () => (
     </p>
     <div className="grid md:grid-cols-3 gap-5">
       {[
-        { t: "Shopify", p: "₹2,000+/mo · English-first · Built for global SMBs, not Bharat", c: "from-emerald-500/20 to-emerald-700/10" },
+        { t: "Shopify", p: "₹2,000+/mo · English-first · Built for global SMBs (Small & Medium Businesses), not Bharat", c: "from-emerald-500/20 to-emerald-700/10" },
         { t: "Marketplaces", p: "20-30% commission · No brand · No customer data", c: "from-amber-500/20 to-orange-700/10" },
-        { t: "DIY/WhatsApp", p: "No payments · No tracking · Lost orders · Zero analytics", c: "from-rose-500/20 to-pink-700/10" },
+        { t: "DIY (Do-It-Yourself) / WhatsApp", p: "No payments · No tracking · Lost orders · Zero analytics", c: "from-rose-500/20 to-pink-700/10" },
       ].map((x, i) => (
         <div key={i} className={`rounded-2xl p-6 bg-gradient-to-br ${x.c} border border-white/10 hover:scale-105 transition-transform`}
              style={{ animation: `fade-up 0.6s ease-out ${0.2 + i*0.1}s both` }}>
@@ -117,9 +123,9 @@ const SlideSolution = () => (
     </p>
     <div className="grid md:grid-cols-2 gap-6">
       {[
-        { i: Brain, t: "AI Generates Everything", p: "Product descriptions, store policies, themes, SEO meta, blog posts, email templates — all powered by Gemini 2.5." },
-        { i: Zap, t: "5-min Onboarding", p: "7-step wizard. Pick category → upload photo → AI fills name, price, variants, ingredients, warranty, FSSAI. Done." },
-        { i: ShoppingBag, t: "30-sec Checkout", p: "Razorpay + COD, pincode-aware shipping (Delhivery), one-page checkout, persistent cart, customer accounts." },
+        { i: Brain, t: "AI Generates Everything", p: "Product descriptions, store policies, themes, SEO (Search Engine Optimization) meta, blog posts, email templates — all powered by Google Gemini 2.5." },
+        { i: Zap, t: "5-min Onboarding", p: "4-step wizard. Pick category → upload photo → AI fills name, price, variants, ingredients, warranty. Done." },
+        { i: ShoppingBag, t: "30-sec Checkout", p: "Razorpay + COD (Cash on Delivery), pincode-aware shipping (Delhivery), one-page checkout, persistent cart, customer accounts." },
         { i: Crown, t: "Premium Themes", p: "30+ AI-generated themes. Custom domains. White-label emails. Launch a brand, not a listing." },
       ].map((f, i) => (
         <div key={i} className="rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 p-6 hover:border-emerald-400/40 transition-all"
@@ -173,9 +179,9 @@ const SlideMarket = () => (
     <h2 className="text-4xl md:text-6xl font-black mb-10">A ₹2,00,000 Cr opportunity.</h2>
     <div className="grid md:grid-cols-3 gap-6 mb-10">
       {[
-        { v: "$350B", l: "TAM · Indian e-commerce by 2030", c: "from-amber-500 to-orange-500" },
-        { v: "$45B", l: "SAM · SMB SaaS commerce in India", c: "from-orange-500 to-rose-500" },
-        { v: "$2.4B", l: "SOM · Reachable in 24 months", c: "from-rose-500 to-pink-500" },
+        { v: "$350B", l: "TAM (Total Addressable Market) · Indian e-commerce by 2030", c: "from-amber-500 to-orange-500" },
+        { v: "$45B", l: "SAM (Serviceable Addressable Market) · SMB SaaS commerce in India", c: "from-orange-500 to-rose-500" },
+        { v: "$2.4B", l: "SOM (Serviceable Obtainable Market) · Reachable in 24 months", c: "from-rose-500 to-pink-500" },
       ].map((x, i) => (
         <div key={i} className="rounded-2xl p-8 bg-white/5 border border-white/10 hover:scale-105 transition-transform"
              style={{ animation: `fade-up 0.6s ease-out ${0.2 + i*0.15}s both` }}>
@@ -187,11 +193,11 @@ const SlideMarket = () => (
     <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-400/20 p-6">
       <h3 className="text-xl font-bold mb-3 flex items-center gap-2"><TrendingUp className="h-5 w-5 text-amber-300" /> The wave we're riding</h3>
       <ul className="grid md:grid-cols-2 gap-2 text-sm text-white/80">
-        <li>• 63M MSMEs · Govt push for digital Bharat</li>
-        <li>• UPI: 14B+ monthly transactions</li>
+        <li>• 63M MSMEs (Micro, Small & Medium Enterprises) · Govt push for digital Bharat</li>
+        <li>• UPI (Unified Payments Interface): 14B+ monthly transactions</li>
         <li>• Tier 2/3 e-commerce growing 4x faster than metro</li>
-        <li>• ONDC unbundling marketplace monopoly</li>
-        <li>• Gen-AI making custom software 100x cheaper</li>
+        <li>• ONDC (Open Network for Digital Commerce) unbundling marketplace monopolies</li>
+        <li>• Gen-AI (Generative Artificial Intelligence) making custom software 100x cheaper</li>
         <li>• Vernacular smartphone users: 700M+</li>
       </ul>
     </div>
@@ -205,11 +211,11 @@ const SlideRevenue = () => (
     <p className="text-xl text-white/70 mb-10">A SaaS base, marketplace economics, and AI credits — compounding ARPU.</p>
     <div className="grid md:grid-cols-2 gap-4">
       {[
-        { t: "Subscriptions", p: "Free / Starter ₹499 / Growth ₹1,499 / Scale ₹4,999 per month", v: "₹500 ARPU" },
-        { t: "Platform Commission", p: "1-3% on every GMV transaction (tiered by plan)", v: "₹150/seller/mo" },
-        { t: "Premium Themes", p: "₹500-2,000 one-time per AI-designed theme", v: "₹300/seller LTV" },
+        { t: "Subscriptions", p: "Free / Starter ₹499 / Growth ₹1,499 / Scale ₹4,999 per month", v: "₹500 ARPU (Average Revenue Per User)" },
+        { t: "Platform Commission", p: "1-3% on every GMV (Gross Merchandise Value) transaction (tiered by plan)", v: "₹150/seller/mo" },
+        { t: "Premium Themes", p: "₹500-2,000 one-time per AI-designed theme", v: "₹300/seller LTV (Lifetime Value)" },
         { t: "AI Credits Wallet", p: "Pay-per-use generation (descriptions, images, blogs, themes)", v: "₹200/seller/mo" },
-        { t: "Custom Domains", p: "₹999/year domain + DNS management upsell", v: "₹999 ARR" },
+        { t: "Custom Domains", p: "₹999/year domain + DNS (Domain Name System) management upsell", v: "₹999 ARR (Annual Recurring Revenue)" },
         { t: "Payments Float", p: "Razorpay revenue share + branded checkout fees", v: "0.3% GMV" },
         { t: "Shipping Margin", p: "Delhivery / Shiprocket aggregator markup", v: "₹15/order" },
         { t: "Partner Network", p: "Agency commissions, theme marketplace 30% cut", v: "₹50K/agency" },
@@ -233,7 +239,7 @@ const SlideAsk = () => (
     <h2 className="text-4xl md:text-7xl font-black mb-4">
       <span className="bg-gradient-to-r from-emerald-300 to-indigo-300 bg-clip-text text-transparent">₹3.5 Crore</span> Seed
     </h2>
-    <p className="text-xl text-white/70 mb-10">For 12% equity · 18-month runway · Path to Series A at ₹50 Cr valuation</p>
+    <p className="text-xl text-white/70 mb-10">For 12% equity · 18-month runway · Path to Series A at ₹50 Cr (Crore) valuation</p>
     <div className="grid md:grid-cols-2 gap-6 mb-8">
       <div className="rounded-2xl bg-white/5 border border-white/10 p-6">
         <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><PieChart className="h-6 w-6 text-emerald-300" /> Use of Funds</h3>
@@ -241,7 +247,7 @@ const SlideAsk = () => (
           {[
             { l: "Marketing & Performance Ads", v: 40, c: "bg-emerald-500" },
             { l: "Sales & Onboarding Team (12 hires)", v: 25, c: "bg-indigo-500" },
-            { l: "Product & AI R&D", v: 15, c: "bg-violet-500" },
+            { l: "Product & AI R&D (Research and Development)", v: 15, c: "bg-violet-500" },
             { l: "Infrastructure & AI Credits", v: 10, c: "bg-fuchsia-500" },
             { l: "Operations & Compliance", v: 10, c: "bg-amber-500" },
           ].map((x, i) => (
@@ -260,8 +266,8 @@ const SlideAsk = () => (
           {[
             { l: "Active Sellers", v: "50,000" },
             { l: "Paid Sellers (15% conv)", v: "7,500" },
-            { l: "MRR", v: "₹65 Lakh" },
-            { l: "Annual GMV through platform", v: "₹120 Cr" },
+            { l: "MRR (Monthly Recurring Revenue)", v: "₹65 Lakh" },
+            { l: "Annual GMV (Gross Merchandise Value)", v: "₹120 Cr" },
             { l: "Platform Revenue Run-rate", v: "₹12 Cr" },
             { l: "Gross Margin", v: "78%" },
           ].map((x, i) => (
@@ -276,17 +282,35 @@ const SlideAsk = () => (
   </Slide>
 );
 
-const SlideRoadmap = () => (
+const SlideRoadmap = () => {
+  const handleDownload = async () => {
+    try {
+      toast.loading("Generating your Business Plan PDF…", { id: "biz-plan" });
+      await downloadBusinessPlanPDF();
+      toast.success("Business Plan downloaded!", { id: "biz-plan" });
+    } catch (e) {
+      toast.error("Could not generate PDF. Please retry.", { id: "biz-plan" });
+    }
+  };
+  return (
   <Slide bg="bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-950">
     <Badge className="bg-blue-500/20 text-blue-200 border-blue-400/30 mb-4">07 · 24-MONTH ROADMAP</Badge>
     <h2 className="text-4xl md:text-6xl font-black mb-4">India today. <span className="text-blue-300">Global tomorrow.</span></h2>
-    <p className="text-xl text-white/70 mb-10">From Tier-2 India to MENA, SEA, and LATAM in 24 months.</p>
+    <p className="text-xl text-white/70 mb-6">From Tier-2 India to MENA (Middle East & North Africa), SEA (South-East Asia), and LATAM (Latin America) in 24 months.</p>
+    <button
+      onClick={handleDownload}
+      className="group inline-flex items-center gap-3 mb-8 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 px-6 py-3 text-white font-semibold shadow-2xl shadow-fuchsia-500/30 transition-all hover:scale-[1.02]"
+    >
+      <FileText className="h-5 w-5" />
+      <span>Download Full Business Plan & 24-Month Roadmap (PDF)</span>
+      <Download className="h-4 w-4 group-hover:translate-y-0.5 transition-transform" />
+    </button>
     <div className="space-y-4">
       {[
-        { q: "Q1-Q2 2026", t: "Bharat Push", p: "Vernacular UI (Hindi, Tamil, Telugu, Marathi). 10K active sellers. Launch ONDC bridge.", c: "from-orange-500 to-amber-500" },
-        { q: "Q3-Q4 2026", t: "Scale & Polish", p: "WhatsApp Commerce. Mobile app (PWA → native). Loyalty + abandoned cart. 50K sellers, ₹65L MRR.", c: "from-emerald-500 to-teal-500" },
-        { q: "Q1-Q2 2027", t: "MENA & SEA", p: "Multi-currency, multi-language storefront. UAE, Saudi, Singapore, Indonesia launch. Stripe + local PG.", c: "from-violet-500 to-fuchsia-500" },
-        { q: "Q3-Q4 2027", t: "Global SaaS", p: "LATAM + Africa. Series A. 250K sellers globally. ₹6 Cr+ MRR. Path to IPO.", c: "from-indigo-500 to-blue-500" },
+        { q: "Q1-Q2 2026", t: "Bharat Push", p: "Vernacular UI (User Interface) in Hindi, Tamil, Telugu, Marathi. 10K active sellers. Launch ONDC (Open Network for Digital Commerce) bridge.", c: "from-orange-500 to-amber-500" },
+        { q: "Q3-Q4 2026", t: "Scale & Polish", p: "WhatsApp Commerce. Mobile app (PWA – Progressive Web App – → native). Loyalty + abandoned cart. 50K sellers, ₹65L MRR (Monthly Recurring Revenue).", c: "from-emerald-500 to-teal-500" },
+        { q: "Q1-Q2 2027", t: "MENA & SEA", p: "Multi-currency, multi-language storefront. UAE, KSA (Kingdom of Saudi Arabia), Singapore, Indonesia launch. Stripe + local PG (Payment Gateway).", c: "from-violet-500 to-fuchsia-500" },
+        { q: "Q3-Q4 2027", t: "Global SaaS (Software-as-a-Service)", p: "LATAM + Africa. Series A. 250K sellers globally. ₹6 Cr+ MRR. Path to IPO (Initial Public Offering).", c: "from-indigo-500 to-blue-500" },
       ].map((x, i) => (
         <div key={i} className="flex items-start gap-4 rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition-colors"
              style={{ animation: `slide-in-left 0.6s ease-out ${0.2 + i*0.15}s both` }}>
@@ -302,7 +326,8 @@ const SlideRoadmap = () => (
       ))}
     </div>
   </Slide>
-);
+  );
+};
 
 const SlideCustomer = () => (
   <Slide bg="bg-gradient-to-br from-pink-950 via-slate-950 to-rose-950">
@@ -312,8 +337,8 @@ const SlideCustomer = () => (
       {[
         { i: Clock, t: "5x Faster Setup", p: "Setup in minutes, not weeks. AI fills every field." },
         { i: Coins, t: "10x Cheaper", p: "₹499/mo vs ₹2,500+ on Shopify. 0% commission on Scale plan." },
-        { i: Brain, t: "AI Co-Pilot", p: "Descriptions, blog, marketing copy, SEO — written for you." },
-        { i: Shield, t: "Made for Bharat", p: "GST invoices, FSSAI fields, COD, Delhivery — out of the box." },
+        { i: Brain, t: "AI Co-Pilot", p: "Descriptions, blog, marketing copy, SEO (Search Engine Optimization) — written for you." },
+        { i: Shield, t: "Made for Bharat", p: "GST (Goods & Services Tax) invoices, COD (Cash on Delivery), Delhivery — out of the box." },
         { i: Crown, t: "Own Your Brand", p: "Custom domain. Branded emails. Full customer data." },
         { i: TrendingUp, t: "Built to Convert", p: "30+ themes, abandoned cart, coupons, reviews, loyalty." },
       ].map((x, i) => (
@@ -397,9 +422,7 @@ const Investors = () => {
       <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-white">
-            <div className="h-7 w-7 rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-              <Store className="h-4 w-4" />
-            </div>
+            <PicToCartLogo size={28} />
             <span className="font-bold">Pic to Cart</span>
             <Badge className="bg-violet-500/20 text-violet-200 border-violet-400/30 ml-2 hidden sm:inline-flex">Investor Deck</Badge>
           </Link>

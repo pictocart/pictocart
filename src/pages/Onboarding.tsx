@@ -51,6 +51,7 @@ export interface OnboardingData {
   };
   emailTemplatesGenerated: boolean;
   slugAvailable: boolean;
+  fssaiNumber?: string;
 }
 
 const defaultData: OnboardingData = {
@@ -67,6 +68,7 @@ const defaultData: OnboardingData = {
   paymentSettings: { cod: true, upi: false, razorpay: false },
   emailTemplatesGenerated: false,
   slugAvailable: false,
+  fssaiNumber: '',
 };
 
 const Onboarding = () => {
@@ -131,6 +133,7 @@ const Onboarding = () => {
               phone: data.storeInfo.phone || null,
               city: data.storeInfo.city || null,
               gst: data.storeInfo.gst || null,
+              fssai: data.fssaiNumber || null,
             },
           })
           .select()
@@ -168,6 +171,7 @@ const Onboarding = () => {
           phone: data.storeInfo.phone || null,
           city: data.storeInfo.city || null,
           gst: data.storeInfo.gst || null,
+          fssai: data.fssaiNumber || ((store.settings as any)?.fssai ?? null),
         };
 
         const { data: updated, error } = await supabase

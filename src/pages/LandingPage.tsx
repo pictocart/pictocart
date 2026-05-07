@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
+import PicToCartLogo from '@/components/PicToCartLogo';
 import themeFashion from '@/assets/theme-fashion.jpg';
 import themeFood from '@/assets/theme-food.jpg';
 import themeElectronics from '@/assets/theme-electronics.jpg';
@@ -268,14 +269,8 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                <Store className="h-5 w-5 text-white" />
-              </div>
-              <span className={`font-extrabold text-lg tracking-tight ${scrolled ? 'text-slate-900' : 'text-white'}`}>
-                Pic to Cart
-              </span>
-            </div>
+            <PicToCartLogo size={40} withWordmark wordmarkClassName={`text-lg ${scrolled ? 'text-slate-900' : 'text-white'}`} />
+
 
             {/* Desktop Links */}
             <div className="hidden md:flex items-center gap-8">
@@ -940,12 +935,7 @@ const LandingPage = () => {
           </div>
 
           <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-                <Store className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-bold text-white">Pic to Cart</span>
-            </div>
+            <PicToCartLogo size={36} withWordmark wordmarkClassName="text-white" />
             <p className="text-sm">© {new Date().getFullYear()} Pic to Cart. All rights reserved.</p>
             <div className="flex items-center gap-4">
               {[Instagram, Twitter, Facebook, Youtube].map((Icon, i) => (
