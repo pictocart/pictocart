@@ -89,7 +89,7 @@ const Subscribers = () => {
   };
 
   return (
-    <PremiumGate feature="newsletter" fallbackMessage="Upgrade to Premium to send newsletter campaigns to your subscribers.">
+    <PremiumGate feature="blog" fallbackMessage="Upgrade to Premium to send newsletter campaigns to your subscribers.">
     <div className="space-y-6 pb-20 md:pb-0">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Newsletter</h1>
