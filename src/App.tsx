@@ -53,6 +53,7 @@ const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
 const Billing = lazy(() => import("@/pages/Billing"));
 const Wallet = lazy(() => import("@/pages/Wallet"));
 const CustomerAuth = lazy(() => import("@/pages/storefront/CustomerAuth"));
+const CustomerResetPassword = lazy(() => import("@/pages/storefront/CustomerResetPassword"));
 const CustomerAccount = lazy(() => import("@/pages/storefront/CustomerAccount"));
 const CustomerWishlist = lazy(() => import("@/pages/storefront/CustomerWishlist"));
 const StorefrontBlog = lazy(() => import("@/pages/storefront/StorefrontBlog"));
