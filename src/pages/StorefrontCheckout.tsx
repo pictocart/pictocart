@@ -38,6 +38,8 @@ const StorefrontCheckout = () => {
   const [placing, setPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
   const [razorpayAvailable, setRazorpayAvailable] = useState(false);
+  const [codRules, setCodRules] = useState<any | null>(null);
+  const [priorOrders, setPriorOrders] = useState<number>(0);
   const { validateCoupon, incrementUsage } = useValidateCoupon();
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
