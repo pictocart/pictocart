@@ -5,14 +5,12 @@ import {
   Rocket, TrendingUp, Globe, Users, Sparkles, Target, IndianRupee,
   ShoppingBag, Brain, Zap, ChevronLeft, ChevronRight, Store, Award,
   BarChart3, PieChart, LineChart, Building2, Trophy, Coins, Clock,
-  CheckCircle2, ArrowRight, Mail, Phone, Crown, Shield, Layers, Download, FileText,
+  CheckCircle2, ArrowRight, Mail, Phone, Crown, Shield, Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import SEOHead from "@/components/storefront/SEOHead";
 import PicToCartLogo from "@/components/PicToCartLogo";
-import { downloadBusinessPlanPDF } from "@/lib/businessPlanPdf";
-import { toast } from "sonner";
 
 /* ---------- Slide shell ---------- */
 const Slide = ({
