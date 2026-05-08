@@ -283,28 +283,11 @@ const SlideAsk = () => (
 );
 
 const SlideRoadmap = () => {
-  const handleDownload = async () => {
-    try {
-      toast.loading("Generating your Business Plan PDF…", { id: "biz-plan" });
-      await downloadBusinessPlanPDF();
-      toast.success("Business Plan downloaded!", { id: "biz-plan" });
-    } catch (e) {
-      toast.error("Could not generate PDF. Please retry.", { id: "biz-plan" });
-    }
-  };
   return (
   <Slide bg="bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-950">
     <Badge className="bg-blue-500/20 text-blue-200 border-blue-400/30 mb-4">07 · 24-MONTH ROADMAP</Badge>
     <h2 className="text-4xl md:text-6xl font-black mb-4">India today. <span className="text-blue-300">Global tomorrow.</span></h2>
-    <p className="text-xl text-white/70 mb-6">From Tier-2 India to MENA (Middle East & North Africa), SEA (South-East Asia), and LATAM (Latin America) in 24 months.</p>
-    <button
-      onClick={handleDownload}
-      className="group inline-flex items-center gap-3 mb-8 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 px-6 py-3 text-white font-semibold shadow-2xl shadow-fuchsia-500/30 transition-all hover:scale-[1.02]"
-    >
-      <FileText className="h-5 w-5" />
-      <span>Download Full Business Plan & 24-Month Roadmap (PDF)</span>
-      <Download className="h-4 w-4 group-hover:translate-y-0.5 transition-transform" />
-    </button>
+    <p className="text-xl text-white/70 mb-8">From Tier-2 India to MENA (Middle East & North Africa), SEA (South-East Asia), and LATAM (Latin America) in 24 months.</p>
     <div className="space-y-4">
       {[
         { q: "Q1-Q2 2026", t: "Bharat Push", p: "Vernacular UI (User Interface) in Hindi, Tamil, Telugu, Marathi. 10K active sellers. Launch ONDC (Open Network for Digital Commerce) bridge.", c: "from-orange-500 to-amber-500" },
