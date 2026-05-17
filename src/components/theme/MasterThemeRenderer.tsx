@@ -240,8 +240,173 @@ function Section({ s, dna, storeSlug }: any) {
         ))}
       </section>
     );
+    case "signup":
+    case "signin":
+    case "forgot_password":
+    case "reset_password": return <AuthForm p={p} dna={dna} variant={s.type} storeSlug={storeSlug} />;
+    case "line_items":     return <LineItems dna={dna} storeSlug={storeSlug} />;
+    case "cart_summary":   return <CartSummary p={p} dna={dna} storeSlug={storeSlug} />;
+    case "checkout_stepper": return <CheckoutStepper p={p} dna={dna} />;
+    case "journal_strip":  return <JournalStrip p={p} dna={dna} storeSlug={storeSlug} />;
+    case "journal_list":   return <JournalList p={p} dna={dna} storeSlug={storeSlug} />;
+    case "account_panel":  return <AccountPanel p={p} dna={dna} storeSlug={storeSlug} />;
+    case "contact_form":   return <ContactForm p={p} dna={dna} />;
+    case "product_detail": return <ProductDetailStub p={p} dna={dna} />;
     default: return null;
   }
+}
+
+function pad(cls = "max-w-3xl mx-auto px-6 py-16") { return cls; }
+
+function AuthForm({ p, dna, variant, storeSlug }: any) {
+  const links: Record<string, { label: string; to: string }[]> = {
+    signin:   [{ label: "Forgot password?", to: storeSlug ? `/store/${storeSlug}/auth/forgot` : "#" }, { label: "Create account", to: storeSlug ? `/store/${storeSlug}/auth/signup` : "#" }],
+    signup:   [{ label: "Already have an account? Sign in", to: storeSlug ? `/store/${storeSlug}/auth/signin` : "#" }],
+    forgot_password: [{ label: "Back to sign in", to: storeSlug ? `/store/${storeSlug}/auth/signin` : "#" }],
+    reset_password:  [],
+  };
+  return (
+    <section className={pad()}>
+      <h1 className="text-3xl mb-6" style={{ fontFamily: "var(--hf)" }}>{p.title}</h1>
+      <form className="space-y-3">
+        {variant !== "reset_password" && <input type="email" placeholder="Email" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />}
+        {(variant === "signin" || variant === "signup" || variant === "reset_password") && <input type="password" placeholder={variant === "reset_password" ? "New password" : "Password"} className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />}
+        {variant === "signup" && <input placeholder="Full name" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />}
+        <button type="button" className="w-full px-5 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta}</button>
+      </form>
+      <div className="mt-5 flex flex-col gap-2 text-sm">
+        {(links[variant] ?? []).map((l, i) => <Link key={i} to={l.to} style={{ color: dna.palette?.accent }}>{l.label}</Link>)}
+      </div>
+    </section>
+  );
+}
+
+function LineItems({ dna, storeSlug }: any) {
+  const { items } = useCart(storeSlug || "");
+  if (!items?.length) return <section className={pad()}><p style={{ color: dna.palette?.muted }}>Your cart is empty.</p></section>;
+  return (
+    <section className="max-w-3xl mx-auto px-6 py-12">
+      <ul className="divide-y" style={{ borderColor: dna.palette?.border }}>
+        {items.map((it: any, i: number) => (
+          <li key={i} className="flex gap-4 py-4 items-center">
+            {it.image && <img src={it.image} className="w-16 h-16 object-cover" style={{ borderRadius: "var(--r)" }} />}
+            <div className="flex-1">
+              <div className="text-sm font-medium">{it.title}</div>
+              <div className="text-xs" style={{ color: dna.palette?.muted }}>Qty {it.quantity}</div>
+            </div>
+            <div className="text-sm">₹{(it.price * it.quantity).toLocaleString("en-IN")}</div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function CartSummary({ p, dna, storeSlug }: any) {
+  const { totalPrice, totalItems } = useCart(storeSlug || "");
+  return (
+    <section className="max-w-3xl mx-auto px-6 pb-16">
+      <div className="p-6 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.surface }}>
+        <div className="flex justify-between text-sm mb-2"><span>Items</span><span>{totalItems}</span></div>
+        <div className="flex justify-between text-base font-medium mb-4"><span>Total</span><span>₹{totalPrice.toLocaleString("en-IN")}</span></div>
+        <Link to={storeSlug ? `/store/${storeSlug}/checkout` : "#"} className="block text-center w-full px-5 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta || "Checkout"}</Link>
+      </div>
+    </section>
+  );
+}
+
+function CheckoutStepper({ p, dna }: any) {
+  const steps: string[] = p.steps ?? ["address", "shipping", "payment", "review"];
+  return (
+    <section className="max-w-3xl mx-auto px-6 py-12">
+      <ol className="flex gap-2 mb-8">
+        {steps.map((st, i) => (
+          <li key={i} className="flex-1 text-center text-xs uppercase tracking-wider py-2 border-b-2" style={{ borderColor: i === 0 ? dna.palette?.accent : dna.palette?.border, color: i === 0 ? dna.palette?.fg : dna.palette?.muted }}>{st}</li>
+        ))}
+      </ol>
+      <p style={{ color: dna.palette?.muted }} className="text-sm">Checkout content is wired to your existing checkout flow.</p>
+    </section>
+  );
+}
+
+function JournalStrip({ p, dna, storeSlug }: any) {
+  return (
+    <section className="max-w-6xl mx-auto px-6 py-16">
+      <div className="flex items-end justify-between mb-8">
+        <h2 className="text-3xl" style={{ fontFamily: "var(--hf)" }}>{p.title || "Journal"}</h2>
+        {storeSlug && <Link to={`/store/${storeSlug}/journal`} className="text-sm" style={{ color: dna.palette?.accent }}>Read all →</Link>}
+      </div>
+      <div className="grid md:grid-cols-3 gap-6">
+        {Array.from({ length: p.limit || 3 }).map((_, i) => (
+          <div key={i} className="aspect-[4/3] flex items-end p-4" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
+            <span className="text-xs" style={{ color: dna.palette?.muted }}>Post placeholder</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function JournalList({ p, dna, storeSlug }: any) {
+  return (
+    <section className="max-w-5xl mx-auto px-6 py-12">
+      <div className="grid md:grid-cols-2 gap-6">
+        {Array.from({ length: p.limit || 6 }).map((_, i) => (
+          <Link key={i} to={storeSlug ? `/store/${storeSlug}/journal/post-${i}` : "#"} className="block p-6 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+            <div className="text-xs uppercase tracking-wider mb-2" style={{ color: dna.palette?.accent }}>Story</div>
+            <div className="text-lg" style={{ fontFamily: "var(--hf)" }}>Journal post placeholder</div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AccountPanel({ p, dna, storeSlug }: any) {
+  const tabs: string[] = p.tabs ?? ["orders", "addresses", "wishlist", "profile"];
+  return (
+    <section className="max-w-5xl mx-auto px-6 py-12 grid md:grid-cols-[200px,1fr] gap-8">
+      <nav className="space-y-2 text-sm">
+        {tabs.map((t, i) => (
+          <Link key={t} to={storeSlug ? `/store/${storeSlug}/account/${t}` : "#"} className="block px-3 py-2 capitalize" style={{ background: i === 0 ? dna.palette?.surface : "transparent", borderRadius: "var(--r)" }}>{t}</Link>
+        ))}
+      </nav>
+      <div className="p-6 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+        <p style={{ color: dna.palette?.muted }}>Account content connects to your customer profile data.</p>
+      </div>
+    </section>
+  );
+}
+
+function ContactForm({ p, dna }: any) {
+  return (
+    <section className={pad()}>
+      <div className="text-sm mb-6" style={{ color: dna.palette?.muted }}>{p.email} · {p.phone}</div>
+      <form className="space-y-3">
+        <input placeholder="Your name" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />
+        <input type="email" placeholder="Email" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />
+        <textarea rows={5} placeholder="Message" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />
+        <button type="button" className="px-5 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Send message</button>
+      </form>
+    </section>
+  );
+}
+
+function ProductDetailStub({ p, dna }: any) {
+  const pr = p.product ?? {};
+  return (
+    <section className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-12">
+      <div className="aspect-square overflow-hidden" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
+        {p.image && <img src={p.image} className="w-full h-full object-cover" />}
+      </div>
+      <div>
+        <h1 className="text-4xl mb-4" style={{ fontFamily: "var(--hf)" }}>{pr.name}</h1>
+        <div className="text-2xl mb-6">₹{pr.price}</div>
+        <p className="mb-8 text-sm leading-relaxed" style={{ color: dna.palette?.muted }}>{pr.description || "Product details render here when wired to your catalog."}</p>
+        <button className="px-6 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Add to cart</button>
+      </div>
+    </section>
+  );
 }
 
 function Hero({ p, dna, storeSlug }: any) {
