@@ -23,7 +23,25 @@ const ICONS: Record<string, any> = {
 };
 
 type Manifest = any;
-type Overrides = { sections?: Record<string | number, any>; brand_name?: string } | undefined;
+type HeaderOv = {
+  logo_url?: string;
+  show_name?: boolean;
+  brand_name?: string;
+  nav_links?: Array<{ label: string; page: string }>;
+};
+type FooterOv = {
+  tagline?: string;
+  show_powered_by?: boolean;
+  social?: { instagram?: string; facebook?: string; twitter?: string; youtube?: string };
+  columns?: Array<{ title: string; links: Array<{ label: string; href: string; page?: string }> }>;
+};
+type Overrides = {
+  sections?: Record<string | number, any>;
+  brand_name?: string;
+  header?: HeaderOv;
+  footer?: FooterOv;
+  pages?: Record<string, { sections?: Record<string | number, any> }>;
+} | undefined;
 
 function loadFont(family: string) {
   if (!family) return;
