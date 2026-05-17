@@ -35,112 +35,92 @@ Deno.serve(async (req) => {
       ? `After publishing, point ${store.custom_domain} (and www.${store.custom_domain}) to this Lovable project via DNS, then add it as a custom domain in project settings.`
       : `After publishing, optionally attach a custom domain in project settings.`;
 
-    const prompt = `You are building the live storefront for "${store.name}" (slug: ${store.slug}).
+    const publicSite = Deno.env.get("PUBLIC_SITE_URL") || "https://pictocart.in";
+    const storefrontUrl = `${publicSite}/s/${store.slug}`;
 
-This project is a *dumb renderer*. ALL theme layout, copy, images, products, blog posts, customer accounts, cart, checkout, and authentication come from a Pictocart-managed Supabase backend. Do not hardcode any theme content. Every render must call \`get-storefront-bundle\` and pass through the shared renderer.
+    const prompt = `You are building the live storefront shell for "${store.name}" (slug: ${store.slug}).
 
-# Required setup
+This project is a thin custom-domain host for a Pictocart storefront. The actual storefront — theme, products, cart, checkout, customer accounts, blog — is already fully rendered and maintained at ${storefrontUrl}. This project's only job is to surface that storefront under the merchant's own domain.
 
-1. Stack: React + Vite + TypeScript + Tailwind + Shadcn UI + React Router + @tanstack/react-query + @supabase/supabase-js. Mobile-first.
+# STACK — DO NOT ASK, JUST DO
 
-2. Add these env values to \`.env\` (already public, safe to commit):
-   VITE_SUPABASE_URL=${SUPABASE_URL}
-   VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}
-   VITE_STORE_ID=${store.id}
-   VITE_STORE_SLUG=${store.slug}
+Use **React 18 + Vite + TypeScript + Tailwind + React Router DOM v6**. This is the Lovable default. If the starter template uses TanStack Start, file-based routing, Next.js, or any other framework, **remove it** and switch to plain Vite + React Router DOM. Do not ask the user which stack to use — the answer is always Vite + React Router DOM.
 
-3. Create \`src/integrations/supabase/client.ts\`:
-\`\`\`ts
-import { createClient } from '@supabase/supabase-js';
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
-);
-\`\`\`
+Do **NOT** ask the user to paste any files from another project. Everything you need is in this prompt.
 
-4. Create \`src/hooks/useStorefrontBundle.ts\` that invokes the edge function \`get-storefront-bundle\` with \`{ slug: import.meta.env.VITE_STORE_SLUG }\` and returns \`{ store, theme, theme_manifest, products, categories, blog_recent, content }\`. Cache for 60 seconds via React Query.
+# Implementation
 
-5. Copy these files VERBATIM from the Pictocart source (ask the user to paste them or fetch from the Pictocart GitHub):
-   - \`src/components/theme/MasterThemeRenderer.tsx\`  (the entire file)
-   - \`src/hooks/useThemeManifest.ts\`
-   - \`src/hooks/useCart.ts\`
-   - \`src/hooks/useStorefrontBundle.ts\`
-   - \`src/components/storefront/SEOHead.tsx\`
-
-6. Router config in \`src/App.tsx\`:
-\`\`\`tsx
-import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useStorefrontBundle } from './hooks/useStorefrontBundle';
-import { useThemeManifest } from './hooks/useThemeManifest';
-import MasterThemeRenderer from './components/theme/MasterThemeRenderer';
-
-const qc = new QueryClient();
-const SLUG = import.meta.env.VITE_STORE_SLUG;
-
-function Page({ page }: { page: string }) {
-  const { data: bundle, isLoading } = useStorefrontBundle({ slug: SLUG });
-  const themeId = bundle?.theme?.theme_id;
-  const { data: manifest } = useThemeManifest(themeId);
-  if (isLoading || !bundle || !manifest) return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
-  return (
-    <MasterThemeRenderer
-      manifest={manifest}
-      page={page}
-      overrides={(bundle.store.settings as any)?.theme_overrides}
-      storeSlug={SLUG}
-      products={bundle.products.featured as any}
-    />
-  );
-}
-
-export default function App() {
-  return (
-    <QueryClientProvider client={qc}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Page page="home" />} />
-          <Route path="/shop" element={<Page page="shop" />} />
-          <Route path="/product/:id" element={<Page page="product" />} />
-          <Route path="/cart" element={<Page page="cart" />} />
-          <Route path="/checkout" element={<Page page="checkout" />} />
-          <Route path="/journal" element={<Page page="journal" />} />
-          <Route path="/journal/:slug" element={<Page page="journal" />} />
-          <Route path="/about" element={<Page page="about" />} />
-          <Route path="/contact" element={<Page page="contact" />} />
-          <Route path="/account/*" element={<Page page="account" />} />
-          <Route path="/auth/*" element={<Page page="auth" />} />
-          <Route path="*" element={<Page page="home" />} />
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
-  );
-}
-\`\`\`
-
-7. \`index.html\` head:
+1. \`index.html\` head:
 \`\`\`html
 <title>${store.name}</title>
-<meta name="description" content="${store.name} storefront" />
+<meta name="description" content="${store.name} — shop online" />
 <link rel="icon" href="${store.logo_url ?? "/favicon.ico"}" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 \`\`\`
 
-8. Tailwind: enable JIT, add no custom theme colors — the renderer reads colors from the manifest via CSS variables.
+2. \`src/App.tsx\` — a single component that proxies every path to the Pictocart-hosted storefront via a full-viewport iframe, syncing the URL so deep-links and back/forward work:
 
-# Important rules
+\`\`\`tsx
+import { useEffect, useRef } from "react";
 
-- NEVER hardcode product, page, theme, or copy data. Everything comes from \`get-storefront-bundle\` and \`theme_master_versions.files_manifest\`.
-- NEVER add new section types in this project. New section types belong in Pictocart's \`MasterThemeRenderer\`.
-- This project is one-time provisioning. After publishing, every change a merchant makes in Pictocart's Customise screen (or any theme update Pictocart pushes) shows up here automatically on next page load.
+const STOREFRONT_BASE = "${storefrontUrl}";
+
+export default function App() {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (typeof e.data !== "object" || !e.data) return;
+      if (e.data.type === "pictocart:navigate" && typeof e.data.path === "string") {
+        const next = e.data.path;
+        if (window.location.pathname + window.location.search !== next) {
+          window.history.pushState({}, "", next);
+        }
+      }
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+
+  const initialPath = window.location.pathname + window.location.search;
+  const src = STOREFRONT_BASE + (initialPath === "/" ? "" : initialPath);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      src={src}
+      title="${store.name}"
+      style={{ border: 0, width: "100vw", height: "100vh", display: "block" }}
+      allow="payment; clipboard-write; geolocation"
+    />
+  );
+}
+\`\`\`
+
+3. \`src/main.tsx\`:
+\`\`\`tsx
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App";
+import "./index.css";
+createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
+\`\`\`
+
+4. \`src/index.css\`: just \`html, body, #root { margin: 0; height: 100%; }\` plus Tailwind base/components/utilities.
+
+5. Remove any starter sample pages, routes folders, or extra components — keep only \`App.tsx\`, \`main.tsx\`, \`index.css\`, \`index.html\`.
+
+# Rules
+
+- Do **not** add @supabase/supabase-js, react-router-dom routes, theme renderers, or business logic here. The Pictocart storefront handles all of that already.
+- Do **not** ask the user for file contents, API keys, or stack choices.
 - ${domainNote}
-- Supabase endpoint: ${supabaseHost}
 
 # Acceptance test
 
-Visit /, /shop, /journal, /about, /contact, /cart — each must render the correct manifest page with the merchant's branding (logo, name, palette). No "loading old then new" flash.
+Visiting / shows the ${store.name} storefront. Clicking around inside the storefront updates correctly. Refreshing on /shop or /product/anything still loads the right page.
 
-When all of the above is done, publish the project.`;
+When done, publish the project.`;
 
     return json({ ok: true, store, prompt });
   } catch (e) {
