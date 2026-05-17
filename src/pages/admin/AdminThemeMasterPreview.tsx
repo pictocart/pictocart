@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import ThemeRenderer from "@/components/admin/ThemeRenderer";
+import MasterThemeRenderer from "@/components/theme/MasterThemeRenderer";
 
 export default function AdminThemePreview() {
   const { themeId } = useParams();
