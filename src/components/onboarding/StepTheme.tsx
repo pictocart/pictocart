@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import { Check, Palette, Loader2, Sparkles, Flame } from 'lucide-react';
+import { Check, Palette, Loader2, Sparkles, Flame, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { OnboardingData } from '@/pages/Onboarding';
 
@@ -98,45 +98,54 @@ const Section = ({ title, icon, children }: { title: string; icon: React.ReactNo
     <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
       {icon} {title}
     </div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">{children}</div>
   </div>
 );
 
 const ThemeCard = ({ theme, selected, onClick }: { theme: ThemeMaster; selected: boolean; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
+  <div
     className={cn(
-      'relative rounded-2xl border-2 overflow-hidden text-left transition-all duration-300 hover:-translate-y-0.5 group',
+      'relative rounded-2xl border-2 overflow-hidden transition-all duration-300 hover:-translate-y-0.5 group bg-card',
       selected
         ? 'border-primary shadow-lg shadow-primary/10 ring-2 ring-primary/15'
-        : 'border-border hover:border-primary/40 hover:shadow-md bg-card'
+        : 'border-border hover:border-primary/40 hover:shadow-md'
     )}
   >
-    <div className="aspect-[4/3] bg-muted overflow-hidden">
-      {theme.preview_image ? (
-        <img src={theme.preview_image} alt={theme.name} className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
-      ) : (
-        <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-          <Palette className="h-8 w-8 opacity-40" />
-        </div>
-      )}
-    </div>
-    <div className="p-3">
-      <p className="text-sm font-bold leading-tight">{theme.name}</p>
-      {theme.category && (
-        <Badge variant="secondary" className="mt-1 text-[10px] capitalize">{theme.category}</Badge>
-      )}
-      {theme.description && (
-        <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5">{theme.description}</p>
-      )}
-    </div>
+    <button type="button" onClick={onClick} className="block w-full text-left">
+      <div className="aspect-[4/3] bg-muted overflow-hidden">
+        {theme.preview_image ? (
+          <img src={theme.preview_image} alt={theme.name} className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+            <Palette className="h-8 w-8 opacity-40" />
+          </div>
+        )}
+      </div>
+      <div className="p-3">
+        <p className="text-sm font-bold leading-tight">{theme.name}</p>
+        {theme.category && (
+          <Badge variant="secondary" className="mt-1 text-[10px] capitalize">{theme.category}</Badge>
+        )}
+        {theme.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5">{theme.description}</p>
+        )}
+      </div>
+    </button>
+    <a
+      href={`/admin/themes/preview-live/${theme.theme_id}`}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="absolute bottom-2 right-2 inline-flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-full bg-background/90 backdrop-blur border border-border shadow-sm hover:bg-background hover:border-primary/40 transition"
+    >
+      <Eye className="h-3 w-3" /> Live preview
+    </a>
     {selected && (
       <div className="absolute top-2 right-2 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
         <Check className="h-4 w-4 text-primary-foreground" strokeWidth={3} />
       </div>
     )}
-  </button>
+  </div>
 );
 
 export default StepTheme;
