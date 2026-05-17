@@ -247,7 +247,7 @@ function Section({ s, dna, storeSlug }: any) {
 function Hero({ p, dna, storeSlug }: any) {
   const v = p.style ?? "centered";
   const headingFont = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 } as React.CSSProperties;
-  const shopHref = storeSlug ? `/store/${storeSlug}#products` : "#products";
+  const shopHref = storeSlug ? `/store/${storeSlug}/shop` : "#products";
   const Btns = (
     <div className="mt-8 flex gap-3 flex-wrap">
       <a href={shopHref} className="px-7 py-3 text-sm font-medium inline-block" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta}</a>
