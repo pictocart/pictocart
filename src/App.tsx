@@ -337,6 +337,10 @@ const AppRoutes = () => {
             {/* Public Storefront Routes */}
             <Route path="/store/preview-theme" element={<ThemePreview />} />
             <Route path="/store/:slug" element={<Storefront />} />
+            <Route path="/store/:slug/shop" element={<Storefront page="shop" />} />
+            <Route path="/store/:slug/collections" element={<Storefront page="shop" />} />
+            <Route path="/store/:slug/about" element={<Storefront page="about" />} />
+            <Route path="/store/:slug/contact" element={<Storefront page="contact" />} />
             <Route path="/store/:slug/product/:productId" element={<StorefrontProduct />} />
             <Route path="/store/:slug/cart" element={<StorefrontCart />} />
             <Route path="/store/:slug/checkout" element={<StorefrontCheckout />} />
