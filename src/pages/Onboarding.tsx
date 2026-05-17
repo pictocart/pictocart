@@ -60,7 +60,7 @@ const defaultData: OnboardingData = {
   description: '',
   category: '',
   logoUrl: '',
-  selectedThemeId: 'minimal-light',
+  selectedThemeId: '',
   productImageUrl: '',
   productImageFile: null,
   aiProduct: null,
@@ -88,7 +88,13 @@ const Onboarding = () => {
     if (hasResumed.current || !store) return;
     hasResumed.current = true;
     if (store.onboarding_step !== null && store.onboarding_step < TOTAL_STEPS) {
-      setCurrentStep(store.onboarding_step + 1);
+      // Resume to saved step, but never skip past a step whose data is missing.
+      // Without this guard, a stale onboarding_step can land users on Theme
+      // even though they never picked a Category.
+      let resumeStep = store.onboarding_step + 1;
+      if (!store.category && resumeStep > 2) resumeStep = 2;
+      if (!store.name && resumeStep > 1) resumeStep = 1;
+      setCurrentStep(resumeStep);
       setData((d) => ({
         ...d,
         storeName: store.name || '',
@@ -96,7 +102,7 @@ const Onboarding = () => {
         category: store.category || '',
         description: store.description || '',
         logoUrl: store.logo_url || '',
-        selectedThemeId: (store.theme as any)?.name || 'minimal-light',
+        selectedThemeId: (store.theme as any)?.theme_id || (store.theme as any)?.name || '',
       }));
     } else if (store.onboarding_step !== null && store.onboarding_step >= TOTAL_STEPS) {
       navigate('/dashboard', { replace: true });
@@ -109,10 +115,13 @@ const Onboarding = () => {
     if (!user) return;
     setSaving(true);
     try {
-      const selectedTheme = THEME_TEMPLATES.find((t) => t.id === data.selectedThemeId);
-      const themeData = selectedTheme
-        ? { name: selectedTheme.id, primary_color: selectedTheme.colors.primary, ...selectedTheme.colors, fonts: selectedTheme.fonts }
-        : { name: 'minimal-light', primary_color: '#F97316' };
+      const selectedTemplate = THEME_TEMPLATES.find((t) => t.id === data.selectedThemeId);
+      const isMaster = data.selectedThemeId?.startsWith('theme-');
+      const themeData: any = isMaster
+        ? { theme_id: data.selectedThemeId, name: data.selectedThemeId, manifest_ref: data.selectedThemeId }
+        : selectedTemplate
+        ? { theme_id: selectedTemplate.id, name: selectedTemplate.id, primary_color: selectedTemplate.colors.primary, ...selectedTemplate.colors, fonts: selectedTemplate.fonts }
+        : { theme_id: 'minimal-light', name: 'minimal-light', primary_color: '#F97316' };
 
       if (!store) {
         const refCode = getReferralCode();
@@ -237,6 +246,16 @@ const Onboarding = () => {
       case 4: return <StepGoLive data={data} store={store} onFinish={async () => {
         await saveStep(TOTAL_STEPS);
         if (store) {
+          // If a master theme (theme-xxxx) was chosen, seed its manifest into
+          // store.theme + theme_overrides so the customiser has defaults to edit.
+          if (data.selectedThemeId?.startsWith('theme-')) {
+            try {
+              const { applyMasterTheme } = await import('@/lib/applyMasterTheme');
+              await applyMasterTheme(store.id, data.selectedThemeId, (store.settings as any) || {});
+            } catch (e) {
+              console.error('Failed to apply master theme on finish:', e);
+            }
+          }
           if (data.aiProduct && data.aiProduct.title) {
             try {
               await supabase.from('products').insert({

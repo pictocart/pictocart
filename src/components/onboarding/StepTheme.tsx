@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import { THEME_TEMPLATES, type ThemeTemplate } from '@/lib/themes';
-import { Check, Crown, Palette } from 'lucide-react';
+import { Check, Palette, Loader2, Sparkles, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { OnboardingData } from '@/pages/Onboarding';
 
@@ -10,16 +11,44 @@ interface Props {
   setData: React.Dispatch<React.SetStateAction<OnboardingData>>;
 }
 
+interface ThemeMaster {
+  id: string;
+  theme_id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  preview_image: string | null;
+  is_default: boolean;
+  created_at: string;
+}
+
 const StepTheme = ({ data, setData }: Props) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setTimeout(() => setMounted(true), 100); }, []);
 
-  // All themes are free during onboarding. Premium tier moves to dashboard.
-  const allThemes = THEME_TEMPLATES;
+  const { data: themes = [], isLoading } = useQuery({
+    queryKey: ['onboarding-theme-masters'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('theme_master_projects')
+        .select('id, theme_id, name, description, category, preview_image, is_default, created_at')
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as ThemeMaster[];
+    },
+  });
 
-  const selectTheme = (theme: ThemeTemplate) => {
-    setData((d) => ({ ...d, selectedThemeId: theme.id }));
-  };
+  // Auto-pick the first (trending/default) theme so Continue isn't blocked.
+  useEffect(() => {
+    if (!data.selectedThemeId && themes.length > 0) {
+      setData((d) => ({ ...d, selectedThemeId: themes[0].theme_id }));
+    }
+  }, [themes, data.selectedThemeId, setData]);
+
+  const trending = themes.filter((t) => t.is_default);
+  const latest = themes.filter((t) => !t.is_default);
 
   return (
     <div className={`space-y-8 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -29,84 +58,83 @@ const StepTheme = ({ data, setData }: Props) => {
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Choose a theme</h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Pick a look for your store. You can change or upgrade anytime from the dashboard.
+          Pick a starting look. New themes are added to the marketplace regularly — you can switch anytime.
         </p>
       </div>
 
-      {/* All themes — free during onboarding */}
-      <div className="space-y-3">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">All Themes (Free)</p>
-        <div className="grid grid-cols-2 gap-4">
-          {allThemes.map((theme, i) => (
-            <ThemeCard
-              key={theme.id}
-              theme={theme}
-              selected={data.selectedThemeId === theme.id}
-              onClick={() => selectTheme(theme)}
-              delay={i * 80}
-            />
-          ))}
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-        <p className="text-xs text-center text-muted-foreground">
-          You can switch themes any time from the dashboard.
-        </p>
-      </div>
+      ) : themes.length === 0 ? (
+        <div className="text-center py-16 text-sm text-muted-foreground border border-dashed rounded-2xl">
+          <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          No themes available yet. Please check back shortly.
+        </div>
+      ) : (
+        <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6 -mr-2">
+          {trending.length > 0 && (
+            <Section title="Trending" icon={<Flame className="h-3.5 w-3.5" />}>
+              {trending.map((t) => (
+                <ThemeCard key={t.id} theme={t} selected={data.selectedThemeId === t.theme_id} onClick={() => setData((d) => ({ ...d, selectedThemeId: t.theme_id }))} />
+              ))}
+            </Section>
+          )}
+          {latest.length > 0 && (
+            <Section title="Latest" icon={<Sparkles className="h-3.5 w-3.5" />}>
+              {latest.map((t) => (
+                <ThemeCard key={t.id} theme={t} selected={data.selectedThemeId === t.theme_id} onClick={() => setData((d) => ({ ...d, selectedThemeId: t.theme_id }))} />
+              ))}
+            </Section>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
-const ThemeCard = ({
-  theme,
-  selected,
-  onClick,
-  locked,
-  delay = 0,
-}: {
-  theme: ThemeTemplate;
-  selected: boolean;
-  onClick: () => void;
-  locked?: boolean;
-  delay?: number;
-}) => (
+const Section = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
+  <div className="space-y-3">
+    <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      {icon} {title}
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
+  </div>
+);
+
+const ThemeCard = ({ theme, selected, onClick }: { theme: ThemeMaster; selected: boolean; onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
-    disabled={locked}
     className={cn(
-      'relative rounded-2xl border-2 p-4 text-left transition-all duration-300 hover:-translate-y-0.5',
+      'relative rounded-2xl border-2 overflow-hidden text-left transition-all duration-300 hover:-translate-y-0.5 group',
       selected
-        ? 'border-primary bg-accent shadow-lg shadow-primary/10 ring-2 ring-primary/15'
-        : locked
-        ? 'border-border opacity-50 cursor-not-allowed'
+        ? 'border-primary shadow-lg shadow-primary/10 ring-2 ring-primary/15'
         : 'border-border hover:border-primary/40 hover:shadow-md bg-card'
     )}
   >
-    {/* Color swatches */}
-    <div className="flex gap-1.5 mb-3">
-      {[theme.colors.primary, theme.colors.secondary, theme.colors.accent, theme.colors.background].map(
-        (color, i) => (
-          <div
-            key={i}
-            className="h-6 w-6 rounded-lg border border-border/50 shadow-sm"
-            style={{ backgroundColor: color }}
-          />
-        )
+    <div className="aspect-[4/3] bg-muted overflow-hidden">
+      {theme.preview_image ? (
+        <img src={theme.preview_image} alt={theme.name} className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
+      ) : (
+        <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+          <Palette className="h-8 w-8 opacity-40" />
+        </div>
       )}
     </div>
-
-    <p className="text-sm font-bold">{theme.name}</p>
-    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{theme.description}</p>
-
+    <div className="p-3">
+      <p className="text-sm font-bold leading-tight">{theme.name}</p>
+      {theme.category && (
+        <Badge variant="secondary" className="mt-1 text-[10px] capitalize">{theme.category}</Badge>
+      )}
+      {theme.description && (
+        <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5">{theme.description}</p>
+      )}
+    </div>
     {selected && (
-      <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-        <Check className="h-3.5 w-3.5 text-primary-foreground" strokeWidth={3} />
+      <div className="absolute top-2 right-2 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+        <Check className="h-4 w-4 text-primary-foreground" strokeWidth={3} />
       </div>
-    )}
-
-    {locked && (
-      <Badge variant="secondary" className="absolute top-3 right-3 text-[10px] gap-0.5 shadow-sm">
-        <Crown className="h-2.5 w-2.5" /> ₹{theme.price}
-      </Badge>
     )}
   </button>
 );
