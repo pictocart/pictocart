@@ -41,11 +41,13 @@ interface Props {
   page?: string;
   overrides?: Overrides;
   storeSlug?: string;
+  /** When set (preview mode), in-theme menu clicks call this instead of routing. */
+  onNavigate?: (page: string) => void;
   /** Real catalog products to splice into product_grid sections. */
   products?: Array<{ id: string; title: string; price: number; compare_at_price?: number | null; images?: string[] | null }>;
 }
 
-export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, products }: Props) {
+export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, onNavigate, products }: Props) {
   const dna = manifest?.dna ?? {};
   const palette = dna.palette ?? {};
   const fonts = dna.fonts ?? {};
