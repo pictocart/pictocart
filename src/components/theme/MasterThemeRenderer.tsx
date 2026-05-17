@@ -95,7 +95,18 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           mergedProps.items = productItemsForOverride;
           productSectionInjected = true;
         }
-        return <Section key={i} s={{ ...s, props: mergedProps }} dna={dna} storeSlug={storeSlug} />;
+        const anchorMap: Record<string, string> = {
+          product_grid: "products", trending: "products",
+          category_grid: "categories",
+          story: "about",
+          newsletter: "contact",
+        };
+        const anchorId = anchorMap[s.type];
+        return (
+          <div key={i} id={anchorId} style={{ scrollMarginTop: 80 }}>
+            <Section s={{ ...s, props: mergedProps }} dna={dna} storeSlug={storeSlug} />
+          </div>
+        );
       })}
       <Footer footer={manifest?.footer} dna={dna} brandName={brandName} />
     </div>
