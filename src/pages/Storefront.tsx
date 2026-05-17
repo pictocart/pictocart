@@ -15,6 +15,8 @@ import AnimatedSection from '@/components/storefront/AnimatedSection';
 import WishlistButton from '@/components/storefront/WishlistButton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { THEMES, ThemeRenderer } from '@/themes';
+import MasterThemeRenderer from '@/components/theme/MasterThemeRenderer';
+import { useThemeManifest } from '@/hooks/useThemeManifest';
 
 import SEOHead from '@/components/storefront/SEOHead';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
@@ -114,6 +116,7 @@ const Storefront = () => {
   // generic section renderer below when the theme_id isn't registered.
   const resolvedThemeId = String((themeData as any)?.theme_id ?? (themeData as any)?.name ?? '');
   const hasDedicatedTheme = resolvedThemeId in THEMES;
+  const isMasterTheme = resolvedThemeId.startsWith('theme-');
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
   const filtered = selectedCategory ? products.filter((p) => p.category === selectedCategory) : products;
   const settings = (store.settings || {}) as any;
@@ -379,6 +382,11 @@ const Storefront = () => {
         return null;
     }
   };
+
+  // Master theme (AI-generated) — render manifest with Customise overrides applied.
+  if (isMasterTheme) {
+    return <MasterThemeView slug={slug || ''} themeId={resolvedThemeId} seo={seo} store={store} products={products} />;
+  }
 
   // Dedicated React theme path (bazaar, etc) — short-circuit and render via ThemeRenderer.
   if (hasDedicatedTheme) {
