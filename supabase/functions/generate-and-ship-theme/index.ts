@@ -144,7 +144,7 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
       hero: { type: "hero", props: { ...dna.hero, image: heroUrl, style: layout.hero_style } },
       usp_strip: { type: "usp_strip", props: { items: dna.usps } },
       category_grid: { type: "category_grid", props: { title: "Shop by category", items: dna.categories, style: layout.category_style } },
-      trending: { type: "trending", props: { title: "Trending now", items: dna.products, style: layout.product_style } },
+      trending: { type: "product_grid", props: { title: "Trending now", items: dna.products, style: layout.product_style } },
       story: { type: "story", props: { ...dna.story, image: heroUrl } },
       testimonials: { type: "testimonials", props: { items: dna.testimonials } },
       newsletter: { type: "newsletter", props: dna.newsletter },
