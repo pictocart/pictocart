@@ -15,6 +15,8 @@ import AnimatedSection from '@/components/storefront/AnimatedSection';
 import WishlistButton from '@/components/storefront/WishlistButton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { THEMES, ThemeRenderer } from '@/themes';
+import MasterThemeRenderer from '@/components/theme/MasterThemeRenderer';
+import { useThemeManifest } from '@/hooks/useThemeManifest';
 
 import SEOHead from '@/components/storefront/SEOHead';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
@@ -114,6 +116,7 @@ const Storefront = () => {
   // generic section renderer below when the theme_id isn't registered.
   const resolvedThemeId = String((themeData as any)?.theme_id ?? (themeData as any)?.name ?? '');
   const hasDedicatedTheme = resolvedThemeId in THEMES;
+  const isMasterTheme = resolvedThemeId.startsWith('theme-');
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
   const filtered = selectedCategory ? products.filter((p) => p.category === selectedCategory) : products;
   const settings = (store.settings || {}) as any;
@@ -380,6 +383,11 @@ const Storefront = () => {
     }
   };
 
+  // Master theme (AI-generated) — render manifest with Customise overrides applied.
+  if (isMasterTheme) {
+    return <MasterThemeView slug={slug || ''} themeId={resolvedThemeId} seo={seo} store={store} products={products} />;
+  }
+
   // Dedicated React theme path (bazaar, etc) — short-circuit and render via ThemeRenderer.
   if (hasDedicatedTheme) {
     return <DedicatedThemeView slug={slug || ''} themeId={resolvedThemeId} seo={seo} store={store} />;
@@ -458,6 +466,43 @@ const DedicatedThemeView = ({ slug, themeId, seo, store }: { slug: string; theme
         url={`${window.location.origin}/store/${slug}`}
       />
       <ThemeRenderer themeId={themeId} bundle={bundle} />
+    </>
+  );
+};
+
+/**
+ * Renders an AI-generated master theme (theme-xxxxxx). Pulls manifest from
+ * theme_master_versions and overlays per-section edits from
+ * store.settings.theme_overrides.
+ */
+const MasterThemeView = ({ slug, themeId, seo, store, products }: { slug: string; themeId: string; seo: any; store: any; products: any[] }) => {
+  const { data: manifest, isLoading } = useThemeManifest(themeId);
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+  if (!manifest) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-2 p-8 text-center">
+        <h2 className="text-lg font-semibold">Theme not found</h2>
+        <p className="text-sm text-muted-foreground">The theme assigned to this store ({themeId}) hasn't been published yet.</p>
+      </div>
+    );
+  }
+  const overrides = (store.settings as any)?.theme_overrides;
+  return (
+    <>
+      <SEOHead
+        title={seo.meta_title || store.name}
+        description={seo.meta_description || store.description || `Shop at ${store.name}`}
+        ogImage={seo.og_image || store.banner_url || undefined}
+        url={`${window.location.origin}/store/${slug}`}
+      />
+      <MasterThemeRenderer
+        manifest={manifest}
+        overrides={{ ...overrides, brand_name: overrides?.brand_name || store.name }}
+        storeSlug={slug}
+        products={products}
+      />
     </>
   );
 };

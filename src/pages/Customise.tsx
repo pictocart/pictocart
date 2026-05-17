@@ -4,13 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 import HomepageBuilder, { type HomepageSection } from '@/components/store-design/HomepageBuilder';
 import HeaderEditor, { DEFAULT_HEADER, type HeaderConfig } from '@/components/store-design/HeaderEditor';
 import FooterEditor, { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
+import ThemeSectionsEditor from '@/components/store-design/ThemeSectionsEditor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { LayoutDashboard, PanelTop, PanelBottom, ToggleLeft, Lock, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, PanelTop, PanelBottom, ToggleLeft, Lock, ExternalLink, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Customise = () => {
@@ -22,6 +23,7 @@ const Customise = () => {
   const [headerConfig, setHeaderConfig] = useState<HeaderConfig>({ ...DEFAULT_HEADER, ...(settings.header || {}) });
   const [footerConfig, setFooterConfig] = useState<FooterConfig>({ ...DEFAULT_FOOTER, ...(settings.footer || {}) });
   const [showAllProductsGrid, setShowAllProductsGrid] = useState<boolean>(settings.show_all_products_grid !== false);
+  const [themeOverrides, setThemeOverrides] = useState<any>(settings.theme_overrides || {});
   const [features, setFeatures] = useState({
     blog: settings.features?.blog !== false,
     newsletter: settings.features?.newsletter !== false,
@@ -37,6 +39,7 @@ const Customise = () => {
     setHeaderConfig({ ...DEFAULT_HEADER, ...(s.header || {}) });
     setFooterConfig({ ...DEFAULT_FOOTER, ...(s.footer || {}) });
     setShowAllProductsGrid(s.show_all_products_grid !== false);
+    setThemeOverrides(s.theme_overrides || {});
     setFeatures({
       blog: s.features?.blog !== false,
       newsletter: s.features?.newsletter !== false,
@@ -55,6 +58,7 @@ const Customise = () => {
       header: headerConfig,
       footer: footerConfig,
       show_all_products_grid: showAllProductsGrid,
+      theme_overrides: themeOverrides,
       features,
     };
     const { error } = await supabase.from('stores').update({ settings: newSettings }).eq('id', store.id);
@@ -68,6 +72,7 @@ const Customise = () => {
   };
 
   const activeThemeName = (store?.theme as any)?.theme_id || (store?.theme as any)?.name || 'minimal-light';
+  const isMasterTheme = activeThemeName.startsWith('theme-');
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -95,13 +100,25 @@ const Customise = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="homepage">
+      <Tabs defaultValue={isMasterTheme ? 'theme' : 'homepage'}>
         <TabsList className="flex flex-wrap h-auto gap-1">
+          {isMasterTheme && <TabsTrigger value="theme"><Sparkles className="mr-1 h-3.5 w-3.5" /> Theme Sections</TabsTrigger>}
           <TabsTrigger value="homepage"><LayoutDashboard className="mr-1 h-3.5 w-3.5" /> Homepage</TabsTrigger>
           <TabsTrigger value="header"><PanelTop className="mr-1 h-3.5 w-3.5" /> Header</TabsTrigger>
           <TabsTrigger value="footer"><PanelBottom className="mr-1 h-3.5 w-3.5" /> Footer</TabsTrigger>
           <TabsTrigger value="features"><ToggleLeft className="mr-1 h-3.5 w-3.5" /> Features</TabsTrigger>
         </TabsList>
+
+        {isMasterTheme && store && (
+          <TabsContent value="theme" className="space-y-4">
+            <ThemeSectionsEditor
+              themeId={activeThemeName}
+              storeId={store.id}
+              overrides={themeOverrides}
+              onChange={setThemeOverrides}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="homepage" className="space-y-4">
           <Card>

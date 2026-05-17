@@ -1,186 +1,100 @@
-# Pictocart — Completion Roadmap (Web Platform)
 
-Below is an honest audit of every feature area against the original scope, marked with current completion %. Anything <100% has a concrete completion plan. The native mobile app is excluded (handed to Emergent).
+# Fix theme mismatch & unify the theme pipeline
 
----
+## The root cause (current flow)
 
-## Completion Scorecard
+There are **two completely different renderers** reading from **two different schemas**:
 
-| # | Area | Status | % |
-|---|---|---|---|
-| 1 | Seller onboarding (7-step) | Done | 100 |
-| 2 | Product CRUD + variants + images | Done | 100 |
-| 3 | Storefront rendering + themes | Done | 100 |
-| 4 | Customer auth (per-store tenancy) | Done | 100 |
-| 5 | Cart + one-page checkout | Done | 100 |
-| 6 | **Razorpay payments** | Live keys path works; webhook + refund flow partial | **80** |
-| 7 | **COD with risk controls** | Toggle works; no fraud guardrails | **70** |
-| 8 | **Order management + invoices** | Detail + PDF done; bulk ops + returns missing | **75** |
-| 9 | **Shipping (Delhivery)** | AWB + tracking done; pickup scheduling + multi-courier missing | **70** |
-| 10 | **Coupons & discounts** | Done; no auto-apply / BOGO / tiered | **85** |
-| 11 | **Reviews & ratings** | Done; no moderation queue / reply | **80** |
-| 12 | **Customer notifications (email)** | Order + shipping emails live; abandoned cart + win-back missing | **75** |
-| 13 | **Push notifications (web/PWA)** | Token table + edge fn ready; UI subscribe + send pipeline missing | **40** |
-| 14 | **WhatsApp / SMS notifications** | Not started | **10** |
-| 15 | **SEO** | SEOHead + sitemap basic; structured data partial, no robots per-store | **70** |
-| 16 | **Marketing (blog, newsletter)** | Done; no campaign send tool | **80** |
-| 17 | **Custom domains** | DNS verify works; SSL auto-renew telemetry missing | **85** |
-| 18 | **Wallet & billing** | Manual recharge UI; Razorpay top-up + invoices for credits missing | **65** |
-| 19 | **Subscription / Plans** | Schema + admin page; checkout + entitlement gates partial | **55** |
-| 20 | **Super Admin panel** | Most pages done; disputes + payouts incomplete | **80** |
-| 21 | **Partner program** | Signup + dashboard; payout flow + commission ledger missing | **60** |
-| 22 | **Theme marketplace** | AI generation + purchase done; preview-before-buy partial | **85** |
-| 23 | **AI engagement / health** | Score live; weekly digest email missing | **75** |
-| 24 | **Analytics (seller)** | Revenue chart + funnel; cohort + LTV missing | **70** |
-| 25 | **Customer accounts** | Auth, addresses, orders, wishlist | 100 |
-| 26 | **Legal / compliance** | Policies generated; GST invoice numbering + audit log missing | **80** |
-| 27 | **PWA / install** | Manifest + bottom nav; offline cache + install prompt missing | **70** |
-| 28 | **Performance / Lighthouse** | Acceptable; no image CDN, no route preload | **75** |
-| 29 | **Error monitoring & logs** | Edge fn logs only; no Sentry-style client capture | **40** |
-| 30 | **Test coverage** | Vitest scaffold + 1 example; no E2E | **15** |
+```text
+                    ┌──────────────────────────────────────┐
+THEME GENERATION →  │ theme_master_versions.files_manifest │ (rich: dna, pages[].sections[])
+                    └──────────────┬───────────────────────┘
+                                   │
+                ┌──────────────────┴──────────────────┐
+                ▼                                     ▼
+   /admin/themes/preview/:id              /store/:slug  (live)
+   ThemeRenderer (manifest-driven)        Storefront.tsx (legacy)
+   Reads: manifest.pages.home.sections    Reads: store.settings.homepage_sections
+   Hero: split / fullscreen_image / …     Hero: one hard-coded centered slider
+   Header: classic/centered_logo/bold     Header: StorefrontLayout (single style)
+   Result: SS #1 — Heritage layout         Result: SS #2 — generic banner slider
+```
 
-Native mobile (Emergent) — **out of scope** for this plan.
+Plus a third problem: **Indilipi.shop is published from a separate Lovable project** that has its own copy of `Storefront.tsx`. Even if we fix this repo, that project keeps showing the old UI until it is synced.
 
----
+So three gaps to close:
+1. Live `/store/:slug` ignores the rich manifest and uses only the legacy section schema.
+2. Theme images (hero, story, category tiles) live in the manifest but are never copied to `store.settings` where Customise edits.
+3. The Indilipi project is a fork — it doesn't auto-receive theme code changes.
 
-## Completion Plan (grouped by sprint, ~1–2 weeks each)
+## Target flow
 
-### Sprint A — Money & Trust (highest revenue impact)
+```text
+theme_master_versions.files_manifest  ← single source of truth for layout + defaults
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+   Admin preview   Apply theme   Live storefront
+                   to store      (/store/:slug)
+                       │              │
+                       ▼              ▼
+            store.theme.manifest_ref  + store.settings.theme_overrides
+                                     │
+                                     ▼
+                          MasterThemeRenderer
+              (renders manifest, overlays Customise edits)
+```
 
-**A1. Razorpay completion (#6) → 100%**
-- `razorpay-webhook` edge function: verify HMAC, mark order `paid`, idempotency table `payment_events`.
-- Refund UI on OrderDetail → `razorpay-refund` edge fn (full + partial).
-- Failed-payment retry email.
+## Plan
 
-**A2. COD risk controls (#7) → 100%**
-- Per-store COD rules: max order value, pincode allowlist, min orders before COD.
-- Phone OTP verify before placing COD order (reuse Supabase phone OTP).
-- Auto-cancel after N undelivered COD attempts.
+### 1. Shared `MasterThemeRenderer` (refactor)
+Promote `src/components/admin/ThemeRenderer.tsx` → `src/components/theme/MasterThemeRenderer.tsx`. Accept `{ manifest, overrides, products, store, page }`. Image fields and copy read `overrides.sections[id].image` first, then fall back to manifest defaults. Cart/nav links wire to real storefront routes.
 
-**A3. Wallet recharge via Razorpay (#18) → 100%**
-- `wallet-recharge-create-order` + `wallet-recharge-verify` edge fns.
-- GST tax invoice PDF for each top-up.
-- Low-balance email at <100 credits.
+### 2. Live `/store/:slug` uses the master renderer
+In `Storefront.tsx`, when `store.theme.manifest_ref` (or theme id starting with `theme-`) exists:
+- Fetch the manifest from `theme_master_versions` (cached via React Query).
+- Render `<MasterThemeRenderer manifest overrides={settings.theme_overrides} products store />`.
+- Skip the legacy `homepage_sections` path entirely for these themes.
+Legacy themes (`bazaar`, `minimal-light`, …) keep current behaviour.
 
-**A4. Subscription checkout (#19) → 100%**
-- Razorpay subscription plans (Free / Pro ₹499 / Business ₹1499).
-- Edge fn `subscription-webhook` updates `subscriptions` table.
-- Entitlement gates: products>30, themes>1, custom domain → require Pro.
+### 3. "Install theme" pipeline (Themes page + DB seed)
+New helper `applyMasterTheme(storeId, themeId)`:
+- Loads latest `files_manifest`.
+- Writes `store.theme = { theme_id, manifest_ref: themeId, version, primary_color, fonts, … }`.
+- Seeds `store.settings.theme_overrides` with the manifest's hero image, kicker, title, sub, CTA, and each section's images — so Customise sees them as **uploaded assets** the user can delete/replace.
+- For Indilipi specifically: run this once via SQL update so `/store/indilipi` immediately shows the Heritage theme.
 
----
+### 4. Customise → Theme blocks
+In `src/pages/Customise.tsx`, when the store uses a master theme:
+- Render an editable card per manifest section (Hero, Story, Category tiles, …).
+- For each, expose image, kicker, title, sub, CTA fields, bound to `settings.theme_overrides.sections[id]`.
+- Image fields show the seeded theme image first; Delete reverts to empty (or to uploaded banner). Upload replaces.
+- "Reset to theme default" button per field.
 
-### Sprint B — Operations (orders, shipping, returns)
+### 5. Sync the Indilipi project
+Indilipi.shop currently renders from a remixed Pictocart codebase. Options (pick one when implementing):
+- **a. Same backend, one codebase**: point `indilipi.shop` DNS to the Pictocart deployment with the existing custom-domain resolver (`useStoreByHost`) — no second project needed. Recommended; removes drift permanently.
+- **b. Keep separate project**: republish Indilipi from a fresh remix after this change lands. Manual, must repeat on every theme update.
 
-**B1. Orders polish (#8) → 100%**
-- Bulk actions: mark fulfilled, print labels, export CSV.
-- Returns/RMA flow: customer requests → seller approves → refund.
-- Sequential GST-compliant invoice numbering (per FY, per store).
+We recommend (a) — that's the entire point of Pictocart's multi-tenant model.
 
-**B2. Shipping expansion (#9) → 100%**
-- Delhivery pickup scheduling endpoint.
-- Add Shiprocket as 2nd courier (rate compare in ShipOrderDialog).
-- Tracking webhook → auto-update order status + customer email.
+### 6. Future themes
+All new themes generated by the AI pipeline already produce a `files_manifest` with the same shape, so step 2 covers them automatically — no per-theme React code needed. The existing `src/themes/bazaar` stays as a legacy hand-coded theme; new ones are 100% manifest-driven.
 
-**B3. Reviews moderation (#11) → 100%**
-- Admin queue: hide / approve / reply.
-- Auto-flag profanity (Lovable AI).
-- "Verified Purchase" already done; add reply thread.
+## Files to change
 
----
+- `src/components/admin/ThemeRenderer.tsx` → move/refactor to `src/components/theme/MasterThemeRenderer.tsx` (add overrides + product wiring).
+- `src/pages/admin/AdminThemeMasterPreview.tsx` — import from new path.
+- `src/pages/Storefront.tsx` — branch on `manifest_ref`, render master renderer.
+- `src/pages/Themes.tsx` + `src/pages/admin/AdminThemes.tsx` — "Apply to my store" button calls `applyMasterTheme`.
+- `src/lib/applyMasterTheme.ts` (new) — install helper.
+- `src/pages/Customise.tsx` + new `src/components/store-design/ThemeSectionsEditor.tsx` — per-section editors driven by manifest schema.
+- DB migration: none required (uses existing `store.theme` jsonb + `store.settings.theme_overrides`).
+- One-off SQL: seed `theme_overrides` and `theme.manifest_ref = 'theme-edc8a5d1'` for Indilipi.
+- Domain: point `indilipi.shop` to Pictocart custom-domain handler (if going with option 5a).
 
-### Sprint C — Growth (notifications, marketing)
+## Outcome
 
-**C1. Notifications expansion (#12, #13, #14) → 100%**
-- Web push: VAPID keys, `useWebPush` hook, subscribe button in customer account; reuse `seller_push_tokens` pattern for `customer_push_tokens`.
-- Abandoned cart job: cron edge fn every 1h, email + push after 3h, 24h, 72h.
-- WhatsApp via Interakt/Gupshup (seller-provided API key) — reuse send-transactional-email pattern.
-- SMS fallback via MSG91 for OTP + order updates.
-
-**C2. Coupons advanced (#10) → 100%**
-- Auto-apply best coupon at checkout.
-- BOGO (buy X get Y) rule type.
-- Tiered (₹500 off above ₹2000).
-
-**C3. SEO finishing (#15) → 100%**
-- Per-store `robots.txt` edge fn.
-- JSON-LD: Product, BreadcrumbList, Organization, AggregateRating.
-- Sitemap split: products/blog/static, gzip.
-
-**C4. Newsletter campaigns (#16) → 100%**
-- Compose UI in `/subscribers`, AI subject suggestions.
-- Send via Resend batches; open/click tracking via redirect proxy.
-
----
-
-### Sprint D — Platform health
-
-**D1. Custom domain SSL telemetry (#17) → 100%**
-- Cron checks cert expiry per domain → email seller 14d before.
-
-**D2. Super Admin disputes & payouts (#20) → 100%**
-- Disputes inbox (Razorpay disputes API webhook).
-- Monthly payout ledger per seller (commission deducted, GST report).
-
-**D3. Partner payout (#21) → 100%**
-- Commission ledger table, monthly payout button (manual UPI), CSV export for accountant.
-
-**D4. Theme marketplace preview (#22) → 100%**
-- Live preview iframe with seller's products before purchase.
-
-**D5. AI weekly digest (#23) → 100%**
-- Cron Sunday 8am: generate digest email per seller (sales, top product, AI tips).
-
-**D6. Analytics depth (#24) → 100%**
-- Cohort retention chart, customer LTV, repeat-rate widget on Dashboard.
-
----
-
-### Sprint E — Quality, performance, compliance
-
-**E1. PWA polish (#27) → 100%**
-- Workbox runtime cache (storefront product pages, images).
-- A2HS prompt with custom UI.
-- Offline fallback page.
-
-**E2. Performance (#28) → 100%**
-- Cloudflare Image Resizing in front of Supabase Storage.
-- Route-level `React.lazy` for admin + storefront chunks.
-- Preload hero image + LCP font.
-
-**E3. Error monitoring (#29) → 100%**
-- Lightweight client logger → `client_errors` table (already partially in `errorReporter.ts`); add severity, dedupe, admin viewer.
-- Optional Sentry connector (keep ours as default to avoid extra cost).
-
-**E4. Test coverage (#30) → 70%**
-- Playwright E2E: signup → onboarding → publish → place order → fulfil.
-- Vitest: hooks (useCart, useCustomerAuth, useCoupons), edge fn pure helpers.
-- Target 70% — full 100% is overkill for current stage.
-
-**E5. GST + audit (#26) → 100%**
-- Sequential invoice numbering with FY reset.
-- Audit log: who changed price/stock/order, IP, timestamp.
-
----
-
-## Technical Notes (for engineers)
-
-- All new edge fns: `verify_jwt = true` except webhooks (`razorpay-webhook`, `delhivery-webhook`, `subscription-webhook`).
-- New tables: `payment_events`, `customer_push_tokens`, `web_push_subscriptions`, `cod_rules`, `returns`, `invoice_counters`, `audit_log`, `partner_commission_ledger`, `disputes`, `client_errors`, `whatsapp_settings`.
-- All tables require RLS — store-scoped `has_store_access(store_id)` helper already exists.
-- Cron jobs via `pg_cron` + Supabase Edge: abandoned cart, weekly digest, SSL check, low-balance.
-- Reuse existing Resend multi-domain sender for all new emails.
-- No new third-party dependencies for V1 except Razorpay subscription SDK (already loaded) and `web-push` (npm) for VAPID.
-
----
-
-## Estimated effort
-
-- Sprint A: 5–7 days
-- Sprint B: 5–7 days
-- Sprint C: 7–10 days
-- Sprint D: 5–7 days
-- Sprint E: 7–10 days
-
-**Total: ~5–6 weeks of focused build to take the web platform from current ~75% to 100%.**
-
-Approve and I'll start with **Sprint A1 (Razorpay webhook + refunds)** since that unblocks real revenue.
+- `/store/indilipi` renders the exact Heritage layout from SS #1, with the saree image as the seeded hero (deletable in Customise).
+- Every future AI-generated theme works on every store with zero per-theme code.
+- One renderer, one source of truth, no more drift between admin preview and live store.

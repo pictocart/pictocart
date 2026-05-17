@@ -49,13 +49,23 @@ const Themes = () => {
   const installTheme = async (theme: ThemeMaster) => {
     if (!store) return;
     try {
-      const newTheme = { theme_id: theme.theme_id, name: theme.theme_id };
-      const { error } = await supabase
-        .from('stores')
-        .update({ theme: newTheme as any })
-        .eq('id', store.id);
-      if (error) throw error;
-      setStore({ ...store, theme: newTheme as any });
+      if (theme.theme_id.startsWith('theme-')) {
+        const { applyMasterTheme } = await import('@/lib/applyMasterTheme');
+        const { theme: newTheme, settings: newSettings } = await applyMasterTheme(
+          store.id,
+          theme.theme_id,
+          store.settings || {}
+        );
+        setStore({ ...store, theme: newTheme as any, settings: newSettings as any });
+      } else {
+        const newTheme = { theme_id: theme.theme_id, name: theme.theme_id };
+        const { error } = await supabase
+          .from('stores')
+          .update({ theme: newTheme as any })
+          .eq('id', store.id);
+        if (error) throw error;
+        setStore({ ...store, theme: newTheme as any });
+      }
       toast.success(`"${theme.name}" is now your active theme.`);
     } catch (e: any) {
       toast.error(e.message || 'Could not switch theme');
