@@ -72,7 +72,10 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   };
 
   const sections = manifest?.pages?.[page]?.sections ?? [];
-  const sectionOverrides = overrides?.sections ?? {};
+  // New shape: overrides.pages[page].sections[idx]. Legacy: overrides.sections[idx] (home-only).
+  const sectionOverrides: Record<string, any> =
+    (overrides as any)?.pages?.[page]?.sections ??
+    (page === "home" ? (overrides as any)?.sections ?? {} : {});
 
   // Inject real products into the first product/trending section if products were supplied.
   const productItemsForOverride = products && products.length > 0
