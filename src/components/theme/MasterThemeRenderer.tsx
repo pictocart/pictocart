@@ -95,7 +95,18 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           mergedProps.items = productItemsForOverride;
           productSectionInjected = true;
         }
-        return <Section key={i} s={{ ...s, props: mergedProps }} dna={dna} storeSlug={storeSlug} />;
+        const anchorMap: Record<string, string> = {
+          product_grid: "products", trending: "products",
+          category_grid: "categories",
+          story: "about",
+          newsletter: "contact",
+        };
+        const anchorId = anchorMap[s.type];
+        return (
+          <div key={i} id={anchorId} style={{ scrollMarginTop: 80 }}>
+            <Section s={{ ...s, props: mergedProps }} dna={dna} storeSlug={storeSlug} />
+          </div>
+        );
       })}
       <Footer footer={manifest?.footer} dna={dna} brandName={brandName} />
     </div>
@@ -103,7 +114,14 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
 }
 
 function Header({ dna, brandName, variant = "classic", storeSlug }: any) {
-  const links = ["Shop", "Collections", "About", "Journal", "Contact"];
+  const base = storeSlug ? `/store/${storeSlug}` : "";
+  const links: Array<{ label: string; to: string }> = [
+    { label: "Shop", to: `${base}#products` },
+    { label: "Collections", to: `${base}#categories` },
+    { label: "About", to: `${base}#about` },
+    { label: "Journal", to: `${base}/blog` },
+    { label: "Contact", to: `${base}#contact` },
+  ];
   const { totalItems } = useCart(storeSlug || "");
   const wrap = "sticky top-0 z-10 border-b backdrop-blur";
   const bg = { background: `${dna.palette?.bg}ee`, borderColor: dna.palette?.border };
@@ -118,6 +136,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug }: any) {
   ) : (
     <button className="text-sm px-4 py-2" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Cart · 0</button>
   );
+  const renderLink = (l: { label: string; to: string }, cls: string) =>
+    storeSlug
+      ? <Link key={l.label} to={l.to} className={cls} style={{ opacity: 0.85 }}>{l.label}</Link>
+      : <span key={l.label} className={cls} style={{ opacity: 0.85 }}>{l.label}</span>;
 
   if (variant === "centered_logo") {
     return (
@@ -125,7 +147,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug }: any) {
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col items-center gap-2">
           {Brand}
           <nav className="flex gap-6 text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>
-            {links.map(l => <a key={l}>{l}</a>)}
+            {links.map(l => renderLink(l, "hover:opacity-100 transition"))}
           </nav>
         </div>
       </header>
@@ -136,7 +158,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug }: any) {
       <div className={`max-w-6xl mx-auto px-6 ${variant === "minimal_thin" ? "h-12" : "h-16"} flex items-center justify-between`}>
         {Brand}
         <nav className="hidden md:flex gap-6 text-sm" style={{ color: dna.palette?.muted }}>
-          {links.map(l => <a key={l} style={{ opacity: 0.85 }}>{l}</a>)}
+          {links.map(l => renderLink(l, "hover:opacity-100 transition"))}
         </nav>
         {CartBtn}
       </div>
