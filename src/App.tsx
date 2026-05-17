@@ -57,6 +57,7 @@ const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
 const Billing = lazy(() => import("@/pages/Billing"));
 const Wallet = lazy(() => import("@/pages/Wallet"));
 const Returns = lazy(() => import("@/pages/Returns"));
+const Policies = lazy(() => import("@/pages/Policies"));
 const ReviewsModeration = lazy(() => import("@/pages/ReviewsModeration"));
 const CustomerAuth = lazy(() => import("@/pages/storefront/CustomerAuth"));
 const CustomerResetPassword = lazy(() => import("@/pages/storefront/CustomerResetPassword"));
@@ -314,6 +315,7 @@ const AppRoutes = () => {
             <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
             <Route path="/admin/themes/preview-live/:themeId" element={<AdminThemeLivePreview />} />
             <Route path="/customise/legacy" element={<ProtectedRoute><DashboardLayout><CustomiseLegacy /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/policies" element={<ProtectedRoute><DashboardLayout><Policies /></DashboardLayout></ProtectedRoute>} />
             
             <Route path="/admin/revenue" element={<AdminRoute><AdminLayout><AdminRevenue /></AdminLayout></AdminRoute>} />
             <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />

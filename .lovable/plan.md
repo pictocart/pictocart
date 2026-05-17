@@ -1,141 +1,76 @@
-# Fresh start: Themes, Customiser, Provisioning — done right
+# Scope
 
-We stop patching. We define one contract that Pictocart (control plane) and every merchant Lovable project (render plane) both obey, then rebuild Indilipi against it.
+Five connected features. To keep the change set reviewable and avoid mid-flight context loss, I'll ship in **two turns**. This plan covers both.
 
-## 0. Clean slate (one-time)
+---
 
-- Delete seller `contact.indilipi@gmail.com` and the `indilipi-shop` Lovable project (you do this manually).
-- In Pictocart DB: delete all rows from `theme_master_versions`, `theme_master_projects`, `provision_requests`, `provision_job_logs`, and clear `stores.theme` / `stores.settings.theme_overrides` for any test stores.
-- Keep `themes/bazaar` legacy folder untouched — it's a safety net, never shown to merchants.
+## Turn 1 — Customiser editing + policy pages (the "Google won't index us" fixes)
 
-## 1. The contract (single source of truth)
+### 1. Footer is clickable on storefront + preview
+- Audit `MasterThemeRenderer` `<Footer>` — wrap link columns in `<Link>` (storefront) / `<button onClick={onNavigate}>` (preview). Currently they render as static text.
+- Verify each manifest footer link routes to `/store/:slug/{shop|about|contact|privacy|terms|returns|shipping}`.
 
-```text
-Pictocart DB
-└── theme_master_versions.files_manifest   ← THE theme (layout + defaults)
-       │   { dna, pages: { home, shop, product, cart, checkout,
-       │                   journal, about, contact, auth, account },
-       │     sections: [...], i18n, assets[] }
-       │
-stores.theme.manifest_ref ──► points to a theme_id
-stores.settings.theme_overrides ──► merchant edits (copy, images, colors, order)
-```
+### 2. Header section in Customiser
+- Add a virtual "Header" entry at the top of the sections list (not a manifest section — a synthetic one).
+- Inspector fields:
+  - Logo upload (replaces brand text when present)
+  - "Show store name" toggle
+  - Custom brand name override
+  - Nav link CRUD (label + target page)
+- Stored at `overrides.header = { logo_url, show_name, brand_name, nav_links[] }`.
+- `MasterThemeRenderer <Header>` reads these.
 
-Rules:
+### 3. Footer section in Customiser
+- Same pattern — synthetic "Footer" entry.
+- Inspector fields:
+  - About column text
+  - Social links (IG/FB/X/YT)
+  - Custom link CRUD
+  - Show/hide "Powered by"
+- Stored at `overrides.footer`.
 
-- Theme code lives **only** in the manifest. No per-theme React files.
-- Merchant edits live **only** in `theme_overrides`. Never mutate the manifest.
-- Same manifest → many merchants. Each merchant's overrides are independent.
-- If a merchant needs custom code beyond the customiser, we **fork the manifest** for them (new `theme_id` derived from base), not edit code. (IN THEIR INDIVIDUAL PROJECT)
+### 4. Trust strip CRUD (`usp_strip`)
+- Inspector for `usp_strip` shows the `items[]` array with add / remove / reorder.
+- Each item: icon picker (truck, shield, refresh, headphones, lock, tag, gift, sparkles), title, sub.
+- Generic `items[]` editor that the CustomiserV2 inspector renders when `items` is in the section's props (also benefits testimonials, categories later).
 
-## 2. Theme spec (every new theme MUST produce all of these)
+### 5. Policy / static pages with AI generator
+- Six pages: Privacy Policy, Terms of Service, Refund Policy, Shipping Policy, About Us, Contact.
+- Already partially exist as `PrivacyPolicy.tsx`, `TermsOfService.tsx`, `RefundPolicy.tsx`, `Returns.tsx` — wire them to read from `store.settings.policies.{privacy|terms|refund|shipping|about|contact}` and render rich text.
+- New dashboard page `/policies` (Marketing or Settings group): edit any policy, with two modes:
+  - Manual rich-text editor
+  - **"Generate all with AI"** — takes inputs (company legal name, state, country, email, phone, GST, address), calls a new edge function `generate-store-policies`, fills all six fields via Lovable AI Gateway (Gemini Flash, JSON schema), saves to `store.settings.policies`.
+- Footer policy links auto-show once filled.
 
-A theme is "marketplace-ready" only if its manifest contains every page below, fully wired:
+---
 
+## Turn 2 — Testimonials + Google Reviews premium (follow-up message)
 
-| Page             | Sections (minimum)                                                                                                                        |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth`           | signup, signin, forgot-password, reset-password                                                                                           |
-| `home`           | header, LOGO AND SHOP NAME, hero, USP strip, featured categories, featured products, story/about-strip, journal strip, newsletter, footer |
-| `shop`           | header, filters sidebar, product grid, pagination, footer                                                                                 |
-| `product`        | header, gallery, info, variants, add-to-cart, accordion, reviews, related, footer                                                         |
-| `cart`           | header, line items, summary, checkout CTA, footer                                                                                         |
-| `checkout`       | address, shipping, payment, review                                                                                                        |
-| `journal` (blog) | header, post grid, post detail, footer                                                                                                    |
-| `about`          | header, story, team/values, footer                                                                                                        |
-| `contact`        | header, form, map/info, footer                                                                                                            |
-| `account`        | orders, addresses, wishlist, profile                                                                                                      |
+### 6. Testimonials manager (Marketing)
+- Table `store_testimonials` (name, photo_url, quote, rating, is_published, sort_order).
+- `/marketing/testimonials` page with CRUD + photo upload to `store-assets`.
+- Storefront `testimonials` section reads from this table (falls back to manifest defaults if empty).
 
+### 7. Google Reviews — premium ₹1499 one-time
+- Sold via existing premium-gate pattern (`PremiumGate`).
+- New table `store_google_reviews_connections` (place_id, last_synced_at, cached_reviews JSONB, paid_at).
+- Edge function `sync-google-reviews` fetches Google Places Details API every 24h. **Requires** `GOOGLE_PLACES_API_KEY` secret.
+- Setup wizard: paste Google Maps business URL → we extract place_id → preview → "Unlock for ₹1499" → Razorpay → start syncing.
+- Renders as a new section variant `google_reviews` on storefront.
 
-Every section declares: `id`, `type`, `props` (editable defaults), `editable: [field names exposed to customiser]`, `required: bool`, `removable: bool`.
+---
 
-The AI theme-generation pipeline (`generate-theme-master` edge fn) is updated so it **refuses to publish** a manifest missing any required page/section. This is the gate.
+## Technical details
 
-## 3. MasterThemeRenderer (the only renderer)
+- **Database migrations needed (turn 1)**: none — policies live in `stores.settings` JSONB.
+- **Database migrations needed (turn 2)**: `store_testimonials`, `store_google_reviews_connections`, plus RLS.
+- **Edge functions**: `generate-store-policies` (turn 1), `sync-google-reviews` (turn 2).
+- **Secret needed (turn 2 only)**: `GOOGLE_PLACES_API_KEY` — I'll request it when we get there.
+- **Customiser data shape change**: introduces `overrides.header` and `overrides.footer` namespaces alongside existing `overrides.pages[page].sections[idx]`. Backward compatible — existing stores keep working.
+- **Provisioning**: nothing to update — these are all data + renderer changes consumed by the same shell that already exists.
 
-One component renders any manifest page:
+---
 
-- `<MasterThemeRenderer manifest overrides products store page route />`
-- Has a `<SectionRegistry>` mapping `section.type → React component` (Hero, ProductGrid, Story, JournalStrip, AuthForm, CheckoutStepper, etc.).
-- New themes never need new code as long as they reuse registered types. New section types = one PR to the registry, instantly available to all themes.
-- Renders header nav from `manifest.navigation` → real routes (`/shop`, `/journal`, `/about`, `/contact`, `/account`).
+## What I'll do right now if you approve
 
-Storefront.tsx becomes ~40 lines: fetch bundle → pick page from URL → render `<MasterThemeRenderer>`. No legacy `homepage_sections` path. No "loading old site first then new site" — that flash is gone because there is only one renderer.
-
-## 4. Customiser (Shopify-grade UX)
-
-Rebuild `/customise` as a 3-pane editor driven entirely by the manifest:
-
-```text
-┌────────────┬─────────────────────────┬────────────┐
-│  Pages     │   Live Preview (iframe) │  Inspector │
-│  ▸ Home    │   /store/<slug>?preview │  Section   │
-│  ▸ Shop    │                         │  fields:   │
-│  ▸ Product │                         │  - text    │
-│  ▸ Journal │                         │  - image   │
-│  ▸ About   │                         │  - color   │
-│  ▸ Contact │                         │  - toggle  │
-│  ▸ Account │                         │  - reorder │
-└────────────┴─────────────────────────┴────────────┘
-```
-
-- Left pane: page list + sections of selected page (drag to reorder if `removable`).
-- Middle: live iframe of the storefront with `?preview=overrides-draft` so edits show instantly without saving.
-- Right: auto-generated form from the section's `editable` schema. Every field has "Reset to theme default".
-- Global tab: brand name, logo, palette overrides, font overrides, favicon, social links.
-- Save → writes `stores.settings.theme_overrides` (debounced). Publish → bumps `theme_overrides.version`.
-- "Request custom change" button → opens a ticket (admin sees in `/admin/theme-requests`); admin can fork manifest for that merchant.
-
-## 5. Provisioning — the one-shot prompt
-
-Goal: paste **one prompt** into a new Lovable project and the merchant site is live, auto-synced, forever.
-
-`provision-storefront` edge fn returns a prebuilt prompt blob containing:
-
-1. Supabase URL + anon key (already public) + the merchant's `store_id` and `slug`.
-2. The exact file list to create: `src/App.tsx`, `Storefront.tsx`, `MasterThemeRenderer.tsx`, `SectionRegistry/*`, `useStorefrontBundle.ts`, `useThemeManifest.ts`, supporting hooks/components.
-3. The router config with all routes (`/`, `/shop`, `/product/:id`, `/cart`, `/checkout`, `/journal`, `/journal/:slug`, `/about`, `/contact`, `/account/*`, `/auth/*`).
-4. `index.html` SEO + manifest + favicon wiring.
-5. Instruction to call `get-storefront-bundle` on load — no hardcoded theme, no hardcoded copy.
-6. Publish + custom-domain instructions.
-
-The merchant project becomes a **dumb shell**. Every theme change, every Customiser edit, every product update flows through Supabase → bundle → renderer with zero re-provisioning.
-
-Admin UI: `/admin/provisioning/:storeId` shows a "Copy prompt" button → copies the full prompt to clipboard, ready to paste into a fresh Lovable project.
-
-## 6. Theme rename & branding per merchant
-
-On `applyMasterTheme(storeId, themeId)`:
-
-- Seed `theme_overrides.brand_name = store.name`.
-- Seed `theme_overrides.logo_url = store.logo_url`.
-- Seed `theme_overrides.palette` with theme defaults but mark editable.
-- Renderer always reads brand/logo from overrides first → same theme, different brand per merchant automatically.
-
-## 7. Indilipi test plan (after the above ships)
-
-1. Generate one new theme via admin (category: ethnic/handloom) → verify manifest passes the page/section gate.
-2. Create fresh seller account for Indilipi.
-3. Apply theme → check `/customise` lets you edit every page.
-4. Click "Copy provisioning prompt" → paste into a new Lovable project → publish → point `indilipi.shop` DNS.
-5. Verify: edit hero text in Pictocart Customiser → refresh indilipi.shop → change is live, no redeploy.
-6. Only after Indilipi is perfect do we generate themes for other categories.
-
-## What we build, in order
-
-1. **DB cleanup** (delete themes/versions/provision rows).
-2. **Manifest schema v2** + validator in `generate-theme-master` (reject incomplete themes).
-3. **SectionRegistry** + expanded `MasterThemeRenderer` covering all page types.
-4. **Storefront.tsx** rewrite (thin shell, all routes manifest-driven).
-5. **Customiser v2** (3-pane, live preview, per-section forms, reset-to-default).
-6. **Provisioning prompt generator** + admin "Copy prompt" UI.
-7. **applyMasterTheme** seeding brand/logo/palette into overrides.
-8. **One new Heritage theme** generated end-to-end for Indilipi as the acceptance test.
-
-## Open questions before we start coding
-
-- Do you want the merchant's Lovable project to be **fully auto-created** by us via the Lovable API, or stay manual ("copy prompt → paste in new project")? Manual is simpler and matches what you described.
-- For "request custom change" tickets, should the admin fork at the manifest level (new theme_id) or at the overrides level (free-form JSON patch)? Manifest fork is cleaner long-term.
-- Journal = blog (existing `blog_posts` table) — confirm we reuse it rather than introduce a new content type.
-
-Answer those three and I'll start with step 1.
+Just **Turn 1**. Then I'll message you to confirm before starting Turn 2 (testimonials + Google Reviews, which needs the Google API key).

@@ -81,6 +81,7 @@ const navTree: NavEntry[] = [
     children: [
       { label: 'Themes', icon: Palette, path: '/themes' },
       { label: 'Customise', icon: SettingsIcon, path: '/customise' },
+      { label: 'Policies & Pages', icon: FileText, path: '/policies' },
       { label: 'Analytics', icon: TrendingUp, path: '/analytics' },
     ],
   },

@@ -23,7 +23,25 @@ const ICONS: Record<string, any> = {
 };
 
 type Manifest = any;
-type Overrides = { sections?: Record<string | number, any>; brand_name?: string } | undefined;
+type HeaderOv = {
+  logo_url?: string;
+  show_name?: boolean;
+  brand_name?: string;
+  nav_links?: Array<{ label: string; page: string }>;
+};
+type FooterOv = {
+  tagline?: string;
+  show_powered_by?: boolean;
+  social?: { instagram?: string; facebook?: string; twitter?: string; youtube?: string };
+  columns?: Array<{ title: string; links: Array<{ label: string; href: string; page?: string }> }>;
+};
+type Overrides = {
+  sections?: Record<string | number, any>;
+  brand_name?: string;
+  header?: HeaderOv;
+  footer?: FooterOv;
+  pages?: Record<string, { sections?: Record<string | number, any> }>;
+} | undefined;
 
 function loadFont(family: string) {
   if (!family) return;
@@ -90,7 +108,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
 
   return (
     <div style={style} className="min-h-screen">
-      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} />
+      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={overrides?.header} />
       {sections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
@@ -113,30 +131,48 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           </div>
         );
       })}
-      <Footer footer={manifest?.footer} dna={dna} brandName={brandName} />
+      <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
     </div>
   );
 }
 
-function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate }: any) {
+function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, headerOv }: any) {
   const base = storeSlug ? `/store/${storeSlug}` : "";
-  const links: Array<{ label: string; to: string; page: string }> = [
-    { label: "Shop", to: `${base}/shop`, page: "shop" },
-    { label: "Collections", to: `${base}/shop`, page: "shop" },
-    { label: "About", to: `${base}/about`, page: "about" },
-    { label: "Journal", to: `${base}/blog`, page: "journal" },
-    { label: "Contact", to: `${base}/contact`, page: "contact" },
+  const ov: HeaderOv = headerOv || {};
+  const effectiveBrand = ov.brand_name || brandName;
+  const showName = ov.show_name !== false; // default true
+  const logoUrl = ov.logo_url || "";
+  const defaultLinks: Array<{ label: string; page: string }> = [
+    { label: "Shop", page: "shop" },
+    { label: "Collections", page: "shop" },
+    { label: "About", page: "about" },
+    { label: "Journal", page: "journal" },
+    { label: "Contact", page: "contact" },
   ];
+  const pageToPath: Record<string, string> = {
+    home: "", shop: "/shop", collections: "/shop", about: "/about", contact: "/contact",
+    journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
+  };
+  const links = (ov.nav_links && ov.nav_links.length > 0 ? ov.nav_links : defaultLinks)
+    .map((l) => ({ label: l.label, page: l.page, to: `${base}${pageToPath[l.page] ?? `/${l.page}`}` }));
+
   const { totalItems } = useCart(storeSlug || "");
   const wrap = "sticky top-0 z-10 border-b backdrop-blur";
   const bg = { background: `${dna.palette?.bg}ee`, borderColor: dna.palette?.border };
   const brandSize = variant === "bold_serif" ? 32 : variant === "minimal_thin" ? 16 : 22;
   const brandStyle: React.CSSProperties = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700, fontSize: brandSize, color: dna.palette?.fg, cursor: (storeSlug || onNavigate) ? "pointer" : "default" };
+  const BrandInner = (
+    <span className="inline-flex items-center gap-2">
+      {logoUrl && <img src={logoUrl} alt={effectiveBrand} style={{ height: brandSize + 8, maxHeight: 48, width: "auto", objectFit: "contain" }} />}
+      {showName && <span style={brandStyle}>{effectiveBrand}</span>}
+      {!showName && !logoUrl && <span style={brandStyle}>{effectiveBrand}</span>}
+    </span>
+  );
   const Brand = storeSlug
-    ? <Link to={`/store/${storeSlug}`} style={brandStyle}>{brandName}</Link>
+    ? <Link to={`/store/${storeSlug}`}>{BrandInner}</Link>
     : onNavigate
-      ? <button onClick={() => onNavigate("home")} style={brandStyle}>{brandName}</button>
-      : <div style={brandStyle}>{brandName}</div>;
+      ? <button onClick={() => onNavigate("home")} style={{ background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>{BrandInner}</button>
+      : <div>{BrandInner}</div>;
   const CartBtn = storeSlug ? (
     <Link to={`/store/${storeSlug}/cart`} className="text-sm px-4 py-2 inline-flex items-center gap-2" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>
       <ShoppingBag className="h-4 w-4" /> Cart · {totalItems}
@@ -663,24 +699,113 @@ function ProductBlock({ p, dna, storeSlug }: any) {
   );
 }
 
-function Footer({ footer, dna, brandName }: any) {
-  if (!footer) return null;
+function Footer({ footer, dna, brandName, storeSlug, onNavigate, footerOv }: any) {
+  const ov: FooterOv = footerOv || {};
+  const base = storeSlug ? `/store/${storeSlug}` : "";
+  const pageToPath: Record<string, string> = {
+    home: "", shop: "/shop", collections: "/shop", about: "/about", contact: "/contact",
+    journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
+    privacy: "/privacy-policy", terms: "/terms", refund: "/refund-policy",
+    return: "/return-policy", shipping: "/shipping-policy",
+  };
+
+  // Build merged columns: footerOv.columns overrides; else manifest footer.columns (legacy
+  // shape: links as string[] — convert to {label, href}); else sensible defaults.
+  const defaultColumns: FooterOv["columns"] = [
+    { title: "Shop", links: [
+      { label: "All products", href: "", page: "shop" },
+      { label: "Cart",         href: "", page: "cart" },
+      { label: "My account",   href: "", page: "account" },
+    ]},
+    { title: "About", links: [
+      { label: "About us",     href: "", page: "about" },
+      { label: "Journal",      href: "", page: "blog" },
+      { label: "Contact",      href: "", page: "contact" },
+    ]},
+    { title: "Policies", links: [
+      { label: "Privacy Policy",  href: "", page: "privacy" },
+      { label: "Terms of Service", href: "", page: "terms" },
+      { label: "Refund Policy",   href: "", page: "refund" },
+      { label: "Shipping Policy", href: "", page: "shipping" },
+    ]},
+  ];
+
+  let columns = ov.columns;
+  if (!columns || columns.length === 0) {
+    if (footer?.columns?.length) {
+      columns = footer.columns.map((c: any) => ({
+        title: c.title,
+        links: (c.links ?? []).map((l: any) =>
+          typeof l === "string"
+            ? { label: l, href: "", page: guessPage(l) }
+            : { label: l.label ?? String(l), href: l.href ?? "", page: l.page ?? guessPage(l.label ?? "") }
+        ),
+      }));
+    } else {
+      columns = defaultColumns;
+    }
+  }
+
+  const tagline = ov.tagline ?? footer?.tagline ?? "";
+  const renderLink = (l: { label: string; href: string; page?: string }, idx: number) => {
+    const to = l.href || (l.page ? `${base}${pageToPath[l.page] ?? `/${l.page}`}` : "");
+    const cls = "hover:opacity-100 transition";
+    const style = { opacity: 0.75 } as React.CSSProperties;
+    if (storeSlug && to) return <Link key={idx} to={to} className={cls} style={style}>{l.label}</Link>;
+    if (onNavigate && l.page) return <button key={idx} onClick={() => onNavigate!(l.page!)} className={cls} style={{ ...style, background: "transparent", border: 0, padding: 0, cursor: "pointer", color: "inherit", textAlign: "left" }}>{l.label}</button>;
+    return <span key={idx} className={cls} style={style}>{l.label}</span>;
+  };
+
+  const social = ov.social || {};
+  const showPoweredBy = ov.show_powered_by !== false;
+
   return (
     <footer className="border-t mt-12" style={{ borderColor: dna.palette?.border, background: dna.palette?.surface }}>
       <div className="max-w-6xl mx-auto px-6 py-12 grid md:grid-cols-4 gap-8 text-sm">
         <div>
           <div className="text-lg mb-2" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{brandName}</div>
-          <p style={{ color: dna.palette?.muted }}>{footer.tagline}</p>
+          {tagline && <p style={{ color: dna.palette?.muted }}>{tagline}</p>}
+          {(social.instagram || social.facebook || social.twitter || social.youtube) && (
+            <div className="mt-3 flex gap-3 text-xs" style={{ color: dna.palette?.muted }}>
+              {social.instagram && <a href={social.instagram} target="_blank" rel="noreferrer" className="hover:underline">Instagram</a>}
+              {social.facebook  && <a href={social.facebook}  target="_blank" rel="noreferrer" className="hover:underline">Facebook</a>}
+              {social.twitter   && <a href={social.twitter}   target="_blank" rel="noreferrer" className="hover:underline">Twitter</a>}
+              {social.youtube   && <a href={social.youtube}   target="_blank" rel="noreferrer" className="hover:underline">YouTube</a>}
+            </div>
+          )}
         </div>
-        {(footer.columns ?? []).map((c: any, i: number) => (
+        {columns.map((c, i) => (
           <div key={i}>
             <div className="font-medium mb-3">{c.title}</div>
-            <ul className="space-y-2" style={{ color: dna.palette?.muted }}>
-              {(c.links ?? []).map((l: string, j: number) => <li key={j}>{l}</li>)}
+            <ul className="space-y-2 flex flex-col" style={{ color: dna.palette?.muted }}>
+              {(c.links ?? []).map((l, j) => <li key={j}>{renderLink(l, j)}</li>)}
             </ul>
           </div>
         ))}
       </div>
+      {showPoweredBy && (
+        <div className="border-t" style={{ borderColor: dna.palette?.border }}>
+          <div className="max-w-6xl mx-auto px-6 py-4 text-[11px] flex flex-wrap justify-between gap-2" style={{ color: dna.palette?.muted }}>
+            <span>© {new Date().getFullYear()} {brandName}. All rights reserved.</span>
+            <span>Powered by <a href="https://pictocart.in" target="_blank" rel="noreferrer" className="hover:underline">Pic to Cart</a></span>
+          </div>
+        </div>
+      )}
     </footer>
   );
+}
+
+function guessPage(label: string): string {
+  const l = label.toLowerCase();
+  if (l.includes("privacy"))  return "privacy";
+  if (l.includes("term"))     return "terms";
+  if (l.includes("refund") || l.includes("return")) return "refund";
+  if (l.includes("ship"))     return "shipping";
+  if (l.includes("about"))    return "about";
+  if (l.includes("contact"))  return "contact";
+  if (l.includes("blog") || l.includes("journal")) return "blog";
+  if (l.includes("shop") || l.includes("product")) return "shop";
+  if (l.includes("cart"))     return "cart";
+  if (l.includes("account"))  return "account";
+  return "home";
 }
