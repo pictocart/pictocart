@@ -39,6 +39,7 @@ const Customise = () => {
     setHeaderConfig({ ...DEFAULT_HEADER, ...(s.header || {}) });
     setFooterConfig({ ...DEFAULT_FOOTER, ...(s.footer || {}) });
     setShowAllProductsGrid(s.show_all_products_grid !== false);
+    setThemeOverrides(s.theme_overrides || {});
     setFeatures({
       blog: s.features?.blog !== false,
       newsletter: s.features?.newsletter !== false,
@@ -57,6 +58,7 @@ const Customise = () => {
       header: headerConfig,
       footer: footerConfig,
       show_all_products_grid: showAllProductsGrid,
+      theme_overrides: themeOverrides,
       features,
     };
     const { error } = await supabase.from('stores').update({ settings: newSettings }).eq('id', store.id);
@@ -70,6 +72,7 @@ const Customise = () => {
   };
 
   const activeThemeName = (store?.theme as any)?.theme_id || (store?.theme as any)?.name || 'minimal-light';
+  const isMasterTheme = activeThemeName.startsWith('theme-');
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
