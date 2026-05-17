@@ -136,25 +136,43 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   );
 }
 
-function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate }: any) {
+function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, headerOv }: any) {
   const base = storeSlug ? `/store/${storeSlug}` : "";
-  const links: Array<{ label: string; to: string; page: string }> = [
-    { label: "Shop", to: `${base}/shop`, page: "shop" },
-    { label: "Collections", to: `${base}/shop`, page: "shop" },
-    { label: "About", to: `${base}/about`, page: "about" },
-    { label: "Journal", to: `${base}/blog`, page: "journal" },
-    { label: "Contact", to: `${base}/contact`, page: "contact" },
+  const ov: HeaderOv = headerOv || {};
+  const effectiveBrand = ov.brand_name || brandName;
+  const showName = ov.show_name !== false; // default true
+  const logoUrl = ov.logo_url || "";
+  const defaultLinks: Array<{ label: string; page: string }> = [
+    { label: "Shop", page: "shop" },
+    { label: "Collections", page: "shop" },
+    { label: "About", page: "about" },
+    { label: "Journal", page: "journal" },
+    { label: "Contact", page: "contact" },
   ];
+  const pageToPath: Record<string, string> = {
+    home: "", shop: "/shop", collections: "/shop", about: "/about", contact: "/contact",
+    journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
+  };
+  const links = (ov.nav_links && ov.nav_links.length > 0 ? ov.nav_links : defaultLinks)
+    .map((l) => ({ label: l.label, page: l.page, to: `${base}${pageToPath[l.page] ?? `/${l.page}`}` }));
+
   const { totalItems } = useCart(storeSlug || "");
   const wrap = "sticky top-0 z-10 border-b backdrop-blur";
   const bg = { background: `${dna.palette?.bg}ee`, borderColor: dna.palette?.border };
   const brandSize = variant === "bold_serif" ? 32 : variant === "minimal_thin" ? 16 : 22;
   const brandStyle: React.CSSProperties = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700, fontSize: brandSize, color: dna.palette?.fg, cursor: (storeSlug || onNavigate) ? "pointer" : "default" };
+  const BrandInner = (
+    <span className="inline-flex items-center gap-2">
+      {logoUrl && <img src={logoUrl} alt={effectiveBrand} style={{ height: brandSize + 8, maxHeight: 48, width: "auto", objectFit: "contain" }} />}
+      {showName && <span style={brandStyle}>{effectiveBrand}</span>}
+      {!showName && !logoUrl && <span style={brandStyle}>{effectiveBrand}</span>}
+    </span>
+  );
   const Brand = storeSlug
-    ? <Link to={`/store/${storeSlug}`} style={brandStyle}>{brandName}</Link>
+    ? <Link to={`/store/${storeSlug}`}>{BrandInner}</Link>
     : onNavigate
-      ? <button onClick={() => onNavigate("home")} style={brandStyle}>{brandName}</button>
-      : <div style={brandStyle}>{brandName}</div>;
+      ? <button onClick={() => onNavigate("home")} style={{ background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>{BrandInner}</button>
+      : <div>{BrandInner}</div>;
   const CartBtn = storeSlug ? (
     <Link to={`/store/${storeSlug}/cart`} className="text-sm px-4 py-2 inline-flex items-center gap-2" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>
       <ShoppingBag className="h-4 w-4" /> Cart · {totalItems}
