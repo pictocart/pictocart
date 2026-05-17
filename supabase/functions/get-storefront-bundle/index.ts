@@ -90,8 +90,22 @@ Deno.serve(async (req) => {
       if (ts > contentVersion) contentVersion = ts;
     }
 
-    const theme = store.theme ?? {};
-    const themeId = (theme as Record<string, unknown>).theme_id || (theme as Record<string, unknown>).name || 'minimal-light';
+    const theme = (store.theme ?? {}) as Record<string, unknown>;
+    const themeId = (theme.theme_id || theme.name || 'minimal-light') as string;
+    const manifestRef = (theme.manifest_ref as string | undefined) || (typeof themeId === 'string' && themeId.startsWith('theme-') ? themeId : undefined);
+
+    // Fetch master-theme manifest (single source of truth for layout + defaults)
+    let themeManifest: unknown = null;
+    if (manifestRef) {
+      const { data: ver } = await supabase
+        .from('theme_master_versions')
+        .select('files_manifest, version')
+        .eq('theme_id', manifestRef)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      themeManifest = ver?.files_manifest ?? null;
+    }
 
     const bundle = {
       store: {
