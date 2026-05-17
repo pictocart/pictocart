@@ -108,7 +108,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
 
   return (
     <div style={style} className="min-h-screen">
-      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} />
+      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={overrides?.header} />
       {sections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
@@ -131,7 +131,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           </div>
         );
       })}
-      <Footer footer={manifest?.footer} dna={dna} brandName={brandName} />
+      <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
     </div>
   );
 }
