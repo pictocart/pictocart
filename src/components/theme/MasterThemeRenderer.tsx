@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Manifest-driven theme renderer. Single source of truth for both the
@@ -253,19 +254,8 @@ function Section({ s, dna, storeSlug }: any) {
         </div>
       </section>
     );
-    case "testimonials": return (
-      <section className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid md:grid-cols-3 gap-6">
-          {(p.items ?? []).map((t: any, i: number) => (
-            <div key={i} className="p-6" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", border: `1px solid ${dna.palette?.border}` }}>
-              <div className="flex gap-1 mb-3">{[...Array(5)].map((_, k) => <Star key={k} className="h-4 w-4 fill-current" style={{ color: dna.palette?.accent }} />)}</div>
-              <p className="text-sm mb-4 leading-relaxed">"{t.quote}"</p>
-              <div className="text-xs" style={{ color: dna.palette?.muted }}>— {t.author}, {t.location}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
+    case "testimonials": return <TestimonialsBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "google_reviews": return <GoogleReviewsBlock p={p} dna={dna} storeSlug={storeSlug} />
     case "newsletter": return (
       <section className="py-20 text-center" style={{ background: dna.palette?.primary, color: dna.palette?.primary_fg }}>
         <div className="max-w-xl mx-auto px-6">
@@ -808,4 +798,130 @@ function guessPage(label: string): string {
   if (l.includes("cart"))     return "cart";
   if (l.includes("account"))  return "account";
   return "home";
+}
+
+/**
+ * Testimonials block — uses props.items if provided (manifest/overrides),
+ * otherwise auto-loads merchant-managed testimonials from store_testimonials.
+ */
+function TestimonialsBlock({ p, dna, storeSlug }: any) {
+  const [dbItems, setDbItems] = useState<any[]>([]);
+  useEffect(() => {
+    if (!storeSlug || (p.items && p.items.length)) return;
+    (async () => {
+      const { data: store } = await supabase.from("stores").select("id").eq("slug", storeSlug).maybeSingle();
+      if (!store?.id) return;
+      const { data } = await supabase
+        .from("store_testimonials")
+        .select("customer_name, customer_role, content, rating, photo_url")
+        .eq("store_id", store.id)
+        .order("display_order", { ascending: true });
+      setDbItems(data || []);
+    })();
+  }, [storeSlug, p.items]);
+
+  const items =
+    (p.items && p.items.length ? p.items : dbItems).map((t: any) => ({
+      quote: t.quote ?? t.content,
+      author: t.author ?? t.customer_name,
+      location: t.location ?? t.customer_role ?? "",
+      photo: t.photo_url,
+      rating: t.rating ?? 5,
+    }));
+
+  if (!items.length) return null;
+
+  return (
+    <section className="max-w-6xl mx-auto px-6 py-20">
+      {p.title && <h2 className="text-3xl mb-8 text-center" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>}
+      <div className="grid md:grid-cols-3 gap-6">
+        {items.map((t: any, i: number) => (
+          <div key={i} className="p-6" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", border: `1px solid ${dna.palette?.border}` }}>
+            <div className="flex gap-1 mb-3">
+              {[...Array(t.rating || 5)].map((_, k) => <Star key={k} className="h-4 w-4 fill-current" style={{ color: dna.palette?.accent }} />)}
+            </div>
+            <p className="text-sm mb-4 leading-relaxed">"{t.quote}"</p>
+            <div className="flex items-center gap-3">
+              {t.photo && <img src={t.photo} className="h-9 w-9 rounded-full object-cover" />}
+              <div className="text-xs" style={{ color: dna.palette?.muted }}>
+                <div className="font-medium" style={{ color: dna.palette?.fg }}>{t.author}</div>
+                {t.location && <div>{t.location}</div>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Google Reviews block — only renders if store has an active paid connection.
+ */
+function GoogleReviewsBlock({ p, dna, storeSlug }: any) {
+  const [data, setData] = useState<{ conn: any; reviews: any[] } | null>(null);
+  useEffect(() => {
+    if (!storeSlug) return;
+    (async () => {
+      const { data: store } = await supabase.from("stores").select("id").eq("slug", storeSlug).maybeSingle();
+      if (!store?.id) return;
+      const { data: conn } = await supabase
+        .from("store_google_reviews_connections")
+        .select("*").eq("store_id", store.id).eq("is_active", true).eq("is_paid", true).maybeSingle();
+      if (!conn) return;
+      const { data: reviews } = await supabase
+        .from("store_google_reviews_cache")
+        .select("*").eq("store_id", store.id).order("time_unix", { ascending: false }).limit(6);
+      setData({ conn, reviews: reviews || [] });
+    })();
+  }, [storeSlug]);
+
+  if (!data) return null;
+  const { conn, reviews } = data;
+  if (!reviews.length) return null;
+
+  return (
+    <section className="max-w-6xl mx-auto px-6 py-20">
+      <div className="flex items-center justify-center gap-3 mb-3">
+        <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h5.9c-.3 1.4-1 2.6-2.2 3.4v2.8h3.6c2.1-2 3.3-4.9 3.3-8.2z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.8c-1 .7-2.3 1.1-3.7 1.1-2.8 0-5.3-1.9-6.1-4.5H2v2.8C3.9 20.5 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.9 14.2c-.2-.7-.4-1.4-.4-2.2s.1-1.5.4-2.2V7H2c-.8 1.5-1.2 3.2-1.2 5s.4 3.5 1.2 5l3.9-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .5 4.1 1.6l3.1-3.1C17.4 2.1 14.9 1 12 1 7.7 1 3.9 3.5 2 7l3.9 2.8C6.7 7.3 9.2 5.4 12 5.4z"/></svg>
+        <span className="text-sm font-semibold" style={{ color: dna.palette?.muted }}>From Google Reviews</span>
+      </div>
+      <div className="text-center mb-8">
+        <h2 className="text-3xl" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title || "What our customers say"}</h2>
+        {conn.average_rating != null && (
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="text-2xl font-bold">{Number(conn.average_rating).toFixed(1)}</span>
+            <div className="flex">{[...Array(5)].map((_, k) => <Star key={k} className={`h-4 w-4 ${k < Math.round(conn.average_rating) ? "fill-amber-400 text-amber-400" : "text-gray-300"}`} />)}</div>
+            <span className="text-sm" style={{ color: dna.palette?.muted }}>({conn.total_reviews} reviews)</span>
+          </div>
+        )}
+      </div>
+      <div className="grid md:grid-cols-3 gap-6">
+        {reviews.map((r) => (
+          <div key={r.id} className="p-6" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", border: `1px solid ${dna.palette?.border}` }}>
+            <div className="flex items-center gap-3 mb-3">
+              {r.author_photo_url ? (
+                <img src={r.author_photo_url} className="h-10 w-10 rounded-full object-cover" />
+              ) : (
+                <div className="h-10 w-10 rounded-full flex items-center justify-center font-semibold" style={{ background: dna.palette?.bg }}>{r.author_name?.charAt(0)}</div>
+              )}
+              <div>
+                <div className="text-sm font-medium">{r.author_name}</div>
+                <div className="text-xs" style={{ color: dna.palette?.muted }}>{r.relative_time}</div>
+              </div>
+            </div>
+            <div className="flex mb-2">{[...Array(r.rating || 5)].map((_, k) => <Star key={k} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />)}</div>
+            <p className="text-sm leading-relaxed line-clamp-5">{r.text}</p>
+          </div>
+        ))}
+      </div>
+      {conn.business_url && (
+        <div className="text-center mt-6">
+          <a href={conn.business_url} target="_blank" rel="noreferrer" className="text-sm underline" style={{ color: dna.palette?.muted }}>
+            See all reviews on Google
+          </a>
+        </div>
+      )}
+    </section>
+  );
 }

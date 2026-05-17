@@ -35,7 +35,7 @@ const PAGES = [
 const SECTION_LABEL: Record<string, string> = {
   hero: "Hero", usp_strip: "Trust strip", category_grid: "Categories",
   product_grid: "Products", trending: "Trending", story: "Brand Story",
-  testimonials: "Testimonials", newsletter: "Newsletter", page_title: "Page title",
+  testimonials: "Testimonials", google_reviews: "Google Reviews", newsletter: "Newsletter", page_title: "Page title",
   values: "Values", signup: "Sign up form", signin: "Sign in form",
   forgot_password: "Forgot password", reset_password: "Reset password",
   line_items: "Line items", cart_summary: "Cart summary",
