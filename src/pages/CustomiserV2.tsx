@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Loader2, RotateCcw, Save, Upload, Trash2, Image as ImageIcon,
-  Smartphone, Monitor, ExternalLink,
+  Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown,
+  PanelTop, PanelBottom,
 } from "lucide-react";
 
 const PAGES = [
@@ -42,6 +45,22 @@ const SECTION_LABEL: Record<string, string> = {
 };
 
 const TEXT_KEYS = ["title", "sub", "kicker", "cta", "cta_secondary", "body", "email", "phone"];
+const ICON_OPTIONS = ["truck", "shield", "refresh", "headphones", "lock", "tag", "gift", "sparkles"];
+
+const NAV_PAGE_OPTIONS = [
+  { value: "home", label: "Home" },
+  { value: "shop", label: "Shop" },
+  { value: "about", label: "About" },
+  { value: "contact", label: "Contact" },
+  { value: "blog", label: "Journal / Blog" },
+  { value: "account", label: "Account" },
+  { value: "cart", label: "Cart" },
+];
+
+type Selection =
+  | { kind: "section"; index: number }
+  | { kind: "header" }
+  | { kind: "footer" };
 
 export default function CustomiserV2() {
   const { store, setStore } = useStore();
@@ -52,7 +71,7 @@ export default function CustomiserV2() {
 
   const [overrides, setOverrides] = useState<any>(settings.theme_overrides || {});
   const [page, setPage] = useState("home");
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Selection | null>(null);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState<string | null>(null);
@@ -64,15 +83,12 @@ export default function CustomiserV2() {
     setHydrated(store.id);
   }, [store, hydrated]);
 
-  // Push updates to iframe whenever overrides or page change.
   useEffect(() => {
-    const send = () => iframeRef.current?.contentWindow?.postMessage(
+    iframeRef.current?.contentWindow?.postMessage(
       { type: "customiser:update", overrides, page }, "*",
     );
-    send();
   }, [overrides, page]);
 
-  // Re-push when iframe signals ready.
   useEffect(() => {
     const onReady = (ev: MessageEvent) => {
       if (ev.data?.type === "customiser:ready") {
@@ -90,8 +106,6 @@ export default function CustomiserV2() {
     () => (manifest as any)?.pages?.[page]?.sections ?? [],
     [manifest, page],
   );
-  const pageOverrides = overrides?.pages?.[page] ?? overrides; // backwards compat: legacy stored at root
-  // We standardize on overrides.pages[page].sections[idx]
   const sectionOverrides: Record<string, any> =
     overrides?.pages?.[page]?.sections ?? {};
 
@@ -136,7 +150,7 @@ export default function CustomiserV2() {
     toast.success(`Reset all changes on ${page}`);
   };
 
-  const uploadImage = async (idx: number, file: File) => {
+  const uploadImage = async (idx: number, file: File, key: "image" | "logo_url" = "image") => {
     if (!store?.id) return;
     try {
       const ext = file.name.split(".").pop();
@@ -144,11 +158,51 @@ export default function CustomiserV2() {
       const { error } = await supabase.storage.from("store-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from("store-assets").getPublicUrl(path);
-      updateField(idx, "image", data.publicUrl);
+      if (key === "logo_url") updateHeader("logo_url", data.publicUrl);
+      else updateField(idx, "image", data.publicUrl);
       toast.success("Image updated");
     } catch (e: any) {
       toast.error(e?.message || "Upload failed");
     }
+  };
+
+  // ---------- Header / Footer overrides ----------
+  const headerOv = overrides?.header || {};
+  const footerOv = overrides?.footer || {};
+  const updateHeader = (key: string, value: any) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      next.header = { ...(next.header || {}), [key]: value };
+      return next;
+    });
+  };
+  const resetHeader = () => {
+    setOverrides((prev: any) => { const next = structuredClone(prev || {}); delete next.header; return next; });
+    toast.success("Header reset to theme default");
+  };
+  const updateFooter = (key: string, value: any) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      next.footer = { ...(next.footer || {}), [key]: value };
+      return next;
+    });
+  };
+  const resetFooter = () => {
+    setOverrides((prev: any) => { const next = structuredClone(prev || {}); delete next.footer; return next; });
+    toast.success("Footer reset to theme default");
+  };
+
+  const uploadLogo = async (file: File) => {
+    if (!store?.id) return;
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${store.id}/logo/header-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("store-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("store-assets").getPublicUrl(path);
+      updateHeader("logo_url", data.publicUrl);
+      toast.success("Logo uploaded");
+    } catch (e: any) { toast.error(e?.message || "Logo upload failed"); }
   };
 
   const save = async () => {
@@ -173,28 +227,16 @@ export default function CustomiserV2() {
     );
   }
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
   if (!manifest) {
     return <div className="p-8 text-center text-muted-foreground">This theme has no published manifest yet.</div>;
   }
 
-  const selected = selectedIdx !== null ? sections[selectedIdx] : null;
-  const selectedDefaults = selected?.props ?? {};
-  const selectedOv = sectionOverrides[selectedIdx as any] ?? sectionOverrides[String(selectedIdx)] ?? {};
-  const selectedMerged = { ...selectedDefaults, ...selectedOv };
-  const textKeys = TEXT_KEYS.filter((k) => k in selectedDefaults);
-  const hasImage = "image" in selectedDefaults;
-
   const previewUrl = `/admin/themes/preview-live/${activeThemeId}?page=${page}&storeSlug=${store?.slug ?? ""}`;
 
   return (
     <div className="-m-4 md:-m-6 h-[calc(100vh-4rem)] flex flex-col bg-background">
-      {/* Top bar */}
       <div className="border-b px-4 h-12 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="font-semibold text-sm">Customise</h1>
@@ -202,24 +244,16 @@ export default function CustomiserV2() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex border rounded-md overflow-hidden">
-            <button onClick={() => setDevice("desktop")} className={`p-1.5 ${device === "desktop" ? "bg-muted" : ""}`} title="Desktop">
-              <Monitor className="h-3.5 w-3.5" />
-            </button>
-            <button onClick={() => setDevice("mobile")} className={`p-1.5 ${device === "mobile" ? "bg-muted" : ""}`} title="Mobile">
-              <Smartphone className="h-3.5 w-3.5" />
-            </button>
+            <button onClick={() => setDevice("desktop")} className={`p-1.5 ${device === "desktop" ? "bg-muted" : ""}`} title="Desktop"><Monitor className="h-3.5 w-3.5" /></button>
+            <button onClick={() => setDevice("mobile")} className={`p-1.5 ${device === "mobile" ? "bg-muted" : ""}`} title="Mobile"><Smartphone className="h-3.5 w-3.5" /></button>
           </div>
-          <Button size="sm" variant="outline" onClick={resetPage}>
-            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset page
-          </Button>
-          <Button size="sm" onClick={save} disabled={saving}>
-            <Save className="mr-1 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
-          </Button>
+          <Button size="sm" variant="outline" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset page</Button>
+          <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}</Button>
         </div>
       </div>
 
       <div className="flex flex-1 min-h-0">
-        {/* Left: Pages */}
+        {/* Left: Pages + Sections */}
         <aside className="w-44 border-r flex flex-col">
           <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">Pages</div>
           <ScrollArea className="flex-1">
@@ -231,7 +265,7 @@ export default function CustomiserV2() {
                   <button
                     key={p.id}
                     disabled={!exists}
-                    onClick={() => { setPage(p.id); setSelectedIdx(null); }}
+                    onClick={() => { setPage(p.id); setSelected(null); }}
                     className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${page === p.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"} ${!exists ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
                     <span>{p.label}</span>
@@ -245,21 +279,40 @@ export default function CustomiserV2() {
           <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">Sections</div>
           <ScrollArea className="flex-1">
             <div className="px-2 pb-3 space-y-0.5">
+              {/* Synthetic Header row */}
+              <button
+                onClick={() => setSelected({ kind: "header" })}
+                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "header" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+              >
+                <span className="flex items-center gap-1.5"><PanelTop className="h-3 w-3" /> Header</span>
+                {Object.keys(headerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+              </button>
+
               {sections.length === 0 && <div className="px-2 py-3 text-[11px] text-muted-foreground">No sections on this page.</div>}
               {sections.map((s, i) => {
                 const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
                 const edited = Object.keys(ov).length > 0;
+                const isSel = selected?.kind === "section" && selected.index === i;
                 return (
                   <button
                     key={i}
-                    onClick={() => setSelectedIdx(i)}
-                    className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selectedIdx === i ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+                    onClick={() => setSelected({ kind: "section", index: i })}
+                    className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${isSel ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
                   >
                     <span className="truncate">{i + 1}. {SECTION_LABEL[s.type] || s.type}</span>
                     {edited && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
                   </button>
                 );
               })}
+
+              {/* Synthetic Footer row */}
+              <button
+                onClick={() => setSelected({ kind: "footer" })}
+                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "footer" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+              >
+                <span className="flex items-center gap-1.5"><PanelBottom className="h-3 w-3" /> Footer</span>
+                {Object.keys(footerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+              </button>
             </div>
           </ScrollArea>
         </aside>
@@ -274,109 +327,375 @@ export default function CustomiserV2() {
               maxWidth: device === "mobile" ? 390 : 1280,
             }}
           >
-            <iframe
-              ref={iframeRef}
-              src={previewUrl}
-              title="Live preview"
-              className="w-full h-full border-0"
-            />
+            <iframe ref={iframeRef} src={previewUrl} title="Live preview" className="w-full h-full border-0" />
           </div>
         </main>
 
         {/* Right: Inspector */}
         <aside className="w-80 border-l flex flex-col">
-          <div className="px-4 py-3 border-b flex items-center justify-between">
-            <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Inspector</div>
-              <div className="text-sm font-medium">
-                {selected ? (SECTION_LABEL[selected.type] || selected.type) : "No section selected"}
-              </div>
-            </div>
-            {selected && Object.keys(selectedOv).length > 0 && (
-              <Button size="sm" variant="ghost" onClick={() => resetSection(selectedIdx!)}>
-                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
-              </Button>
-            )}
-          </div>
+          <InspectorHeader selected={selected} headerOv={headerOv} footerOv={footerOv} sections={sections} sectionOverrides={sectionOverrides}
+            onResetHeader={resetHeader} onResetFooter={resetFooter} onResetSection={resetSection} />
           <ScrollArea className="flex-1">
             {!selected && (
               <div className="p-4 text-xs text-muted-foreground">
-                Pick a section on the left to edit its text and images. Reset any field to fall back to the theme's default.
+                Pick a section on the left to edit its text and images. Header and Footer are editable too — they apply across every page.
               </div>
             )}
-            {selected && (
-              <div className="p-4 space-y-4">
-                {hasImage && (
-                  <div>
-                    <Label className="text-xs">Section image</Label>
-                    <div className="mt-1.5 flex items-start gap-3">
-                      <div className="w-20 h-20 rounded-md border bg-muted overflow-hidden flex items-center justify-center shrink-0">
-                        {selectedMerged.image
-                          ? <img src={selectedMerged.image} alt="" className="w-full h-full object-cover" />
-                          : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        <Button size="sm" variant="outline" asChild>
-                          <label className="cursor-pointer">
-                            <Upload className="mr-1 h-3.5 w-3.5" /> Replace
-                            <input
-                              type="file" accept="image/*" className="hidden"
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) uploadImage(selectedIdx!, f);
-                              }}
-                            />
-                          </label>
-                        </Button>
-                        {selectedMerged.image && (
-                          <Button size="sm" variant="outline" onClick={() => updateField(selectedIdx!, "image", "")}>
-                            <Trash2 className="mr-1 h-3.5 w-3.5" /> Remove
-                          </Button>
-                        )}
-                        {"image" in selectedOv && (
-                          <Button size="sm" variant="ghost" onClick={() => resetField(selectedIdx!, "image")}>
-                            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {textKeys.map((k) => {
-                  const value = selectedMerged[k] ?? "";
-                  const isLong = k === "sub" || k === "body";
-                  return (
-                    <div key={k}>
-                      <div className="flex items-center justify-between mb-1">
-                        <Label className="text-xs capitalize">{k.replace("_", " ")}</Label>
-                        {k in selectedOv && (
-                          <button onClick={() => resetField(selectedIdx!, k)} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5">
-                            <RotateCcw className="h-3 w-3" /> reset
-                          </button>
-                        )}
-                      </div>
-                      {isLong
-                        ? <Textarea rows={3} value={value} onChange={(e) => updateField(selectedIdx!, k, e.target.value)} className="text-sm" />
-                        : <Input value={value} onChange={(e) => updateField(selectedIdx!, k, e.target.value)} className="h-8 text-sm" />}
-                    </div>
-                  );
-                })}
-                {textKeys.length === 0 && !hasImage && (
-                  <p className="text-xs text-muted-foreground">This section has no editable fields exposed by the theme.</p>
-                )}
-                <div className="pt-2 border-t">
-                  <a
-                    href={previewUrl}
-                    target="_blank" rel="noreferrer"
-                    className="text-xs text-primary inline-flex items-center gap-1 hover:underline"
-                  >
-                    <ExternalLink className="h-3 w-3" /> Open preview in new tab
-                  </a>
-                </div>
-              </div>
+
+            {selected?.kind === "header" && (
+              <HeaderInspector
+                headerOv={headerOv}
+                storeName={store?.name || ""}
+                onChange={updateHeader}
+                onLogoUpload={uploadLogo}
+              />
+            )}
+
+            {selected?.kind === "footer" && (
+              <FooterInspector footerOv={footerOv} onChange={updateFooter} />
+            )}
+
+            {selected?.kind === "section" && (
+              <SectionInspector
+                idx={selected.index}
+                section={sections[selected.index]}
+                sectionOv={sectionOverrides[selected.index] ?? sectionOverrides[String(selected.index)] ?? {}}
+                onUpdate={updateField}
+                onReset={resetField}
+                onUploadImage={uploadImage}
+                previewUrl={previewUrl}
+              />
             )}
           </ScrollArea>
         </aside>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Inspector sub-components ----------
+
+function InspectorHeader({ selected, headerOv, footerOv, sections, sectionOverrides, onResetHeader, onResetFooter, onResetSection }: any) {
+  let title = "No section selected";
+  let resetBtn: React.ReactNode = null;
+  if (selected?.kind === "header") {
+    title = "Header";
+    if (Object.keys(headerOv).length > 0) {
+      resetBtn = <Button size="sm" variant="ghost" onClick={onResetHeader}><RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset</Button>;
+    }
+  } else if (selected?.kind === "footer") {
+    title = "Footer";
+    if (Object.keys(footerOv).length > 0) {
+      resetBtn = <Button size="sm" variant="ghost" onClick={onResetFooter}><RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset</Button>;
+    }
+  } else if (selected?.kind === "section") {
+    const s = sections[selected.index];
+    title = SECTION_LABEL[s?.type] || s?.type || "Section";
+    const ov = sectionOverrides[selected.index] ?? sectionOverrides[String(selected.index)] ?? {};
+    if (Object.keys(ov).length > 0) {
+      resetBtn = <Button size="sm" variant="ghost" onClick={() => onResetSection(selected.index)}><RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset</Button>;
+    }
+  }
+  return (
+    <div className="px-4 py-3 border-b flex items-center justify-between">
+      <div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Inspector</div>
+        <div className="text-sm font-medium">{title}</div>
+      </div>
+      {resetBtn}
+    </div>
+  );
+}
+
+function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload }: { headerOv: any; storeName: string; onChange: (k: string, v: any) => void; onLogoUpload: (f: File) => void }) {
+  const links: Array<{ label: string; page: string }> = headerOv.nav_links ?? [
+    { label: "Shop", page: "shop" }, { label: "About", page: "about" }, { label: "Journal", page: "blog" }, { label: "Contact", page: "contact" },
+  ];
+  const updateLinks = (next: typeof links) => onChange("nav_links", next);
+  return (
+    <div className="p-4 space-y-5">
+      <div>
+        <Label className="text-xs">Logo</Label>
+        <div className="mt-1.5 flex items-start gap-3">
+          <div className="w-16 h-16 rounded-md border bg-muted overflow-hidden flex items-center justify-center shrink-0">
+            {headerOv.logo_url
+              ? <img src={headerOv.logo_url} alt="" className="w-full h-full object-contain" />
+              : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <Button size="sm" variant="outline" asChild>
+              <label className="cursor-pointer">
+                <Upload className="mr-1 h-3.5 w-3.5" /> {headerOv.logo_url ? "Replace" : "Upload"}
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onLogoUpload(f); }} />
+              </label>
+            </Button>
+            {headerOv.logo_url && (
+              <Button size="sm" variant="outline" onClick={() => onChange("logo_url", "")}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remove</Button>
+            )}
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1">PNG/SVG with transparent background works best.</p>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <Label className="text-xs">Show store name</Label>
+          <p className="text-[10px] text-muted-foreground">Hide if your logo already includes the name.</p>
+        </div>
+        <Switch checked={headerOv.show_name !== false} onCheckedChange={(v) => onChange("show_name", v)} />
+      </div>
+
+      <div>
+        <Label className="text-xs">Brand name (shown in header & footer)</Label>
+        <Input value={headerOv.brand_name ?? ""} onChange={(e) => onChange("brand_name", e.target.value)} placeholder={storeName} className="h-8 text-sm mt-1" />
+      </div>
+
+      <div>
+        <Label className="text-xs">Navigation links</Label>
+        <div className="mt-2 space-y-2">
+          {links.map((l, i) => (
+            <div key={i} className="flex gap-1.5 items-center">
+              <Input value={l.label} onChange={(e) => updateLinks(links.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))} className="h-8 text-xs flex-1" placeholder="Label" />
+              <Select value={l.page} onValueChange={(v) => updateLinks(links.map((x, idx) => idx === i ? { ...x, page: v } : x))}>
+                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{NAV_PAGE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+              <button onClick={() => updateLinks(links.filter((_, idx) => idx !== i))} className="text-destructive text-xs px-1.5"><Trash2 className="h-3 w-3" /></button>
+            </div>
+          ))}
+          <button onClick={() => updateLinks([...links, { label: "New link", page: "shop" }])} className="text-xs text-primary hover:underline inline-flex items-center gap-1"><Plus className="h-3 w-3" /> Add link</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FooterInspector({ footerOv, onChange }: { footerOv: any; onChange: (k: string, v: any) => void }) {
+  const social = footerOv.social ?? {};
+  const columns: Array<{ title: string; links: Array<{ label: string; page?: string; href?: string }> }> = footerOv.columns ?? [
+    { title: "Shop",     links: [{ label: "All products", page: "shop" }, { label: "Cart", page: "cart" }, { label: "My account", page: "account" }] },
+    { title: "About",    links: [{ label: "About us", page: "about" }, { label: "Journal", page: "blog" }, { label: "Contact", page: "contact" }] },
+    { title: "Policies", links: [{ label: "Privacy Policy", page: "privacy" }, { label: "Terms of Service", page: "terms" }, { label: "Refund Policy", page: "refund" }, { label: "Shipping Policy", page: "shipping" }] },
+  ];
+  const updateColumns = (next: typeof columns) => onChange("columns", next);
+
+  return (
+    <div className="p-4 space-y-5">
+      <div>
+        <Label className="text-xs">Tagline</Label>
+        <Textarea rows={2} value={footerOv.tagline ?? ""} onChange={(e) => onChange("tagline", e.target.value)} className="text-sm mt-1" placeholder="A short tagline shown under your brand name in the footer." />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <Label className="text-xs">Show "Powered by Pic to Cart"</Label>
+          <p className="text-[10px] text-muted-foreground">Disable on Premium to hide platform branding.</p>
+        </div>
+        <Switch checked={footerOv.show_powered_by !== false} onCheckedChange={(v) => onChange("show_powered_by", v)} />
+      </div>
+
+      <div>
+        <Label className="text-xs">Social links</Label>
+        <div className="space-y-1.5 mt-1">
+          {(["instagram", "facebook", "twitter", "youtube"] as const).map((k) => (
+            <div key={k} className="flex gap-1.5 items-center">
+              <Label className="text-[10px] capitalize w-16 shrink-0">{k}</Label>
+              <Input value={social[k] ?? ""} onChange={(e) => onChange("social", { ...social, [k]: e.target.value })} className="h-8 text-xs" placeholder={`https://${k}.com/yourbrand`} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-xs">Footer columns</Label>
+        <div className="mt-2 space-y-3">
+          {columns.map((col, ci) => (
+            <div key={ci} className="border rounded-md p-2 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Input value={col.title} onChange={(e) => updateColumns(columns.map((c, i) => i === ci ? { ...c, title: e.target.value } : c))} className="h-7 text-xs flex-1" placeholder="Column title" />
+                <button onClick={() => updateColumns(columns.filter((_, i) => i !== ci))} className="text-destructive text-xs px-1.5"><Trash2 className="h-3 w-3" /></button>
+              </div>
+              {col.links.map((l, li) => (
+                <div key={li} className="flex gap-1.5 items-center pl-2">
+                  <Input value={l.label} onChange={(e) => updateColumns(columns.map((c, i) => i === ci ? { ...c, links: c.links.map((x, j) => j === li ? { ...x, label: e.target.value } : x) } : c))} className="h-7 text-xs flex-1" placeholder="Label" />
+                  <Select value={l.page ?? "home"} onValueChange={(v) => updateColumns(columns.map((c, i) => i === ci ? { ...c, links: c.links.map((x, j) => j === li ? { ...x, page: v, href: "" } : x) } : c))}>
+                    <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {NAV_PAGE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      <SelectItem value="privacy">Privacy Policy</SelectItem>
+                      <SelectItem value="terms">Terms of Service</SelectItem>
+                      <SelectItem value="refund">Refund Policy</SelectItem>
+                      <SelectItem value="shipping">Shipping Policy</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <button onClick={() => updateColumns(columns.map((c, i) => i === ci ? { ...c, links: c.links.filter((_, j) => j !== li) } : c))} className="text-destructive text-xs px-1.5"><Trash2 className="h-3 w-3" /></button>
+                </div>
+              ))}
+              <button onClick={() => updateColumns(columns.map((c, i) => i === ci ? { ...c, links: [...c.links, { label: "New link", page: "shop" }] } : c))} className="text-[11px] text-primary hover:underline ml-2 inline-flex items-center gap-1"><Plus className="h-3 w-3" /> Add link</button>
+            </div>
+          ))}
+          <button onClick={() => updateColumns([...columns, { title: "New column", links: [] }])} className="text-xs text-primary hover:underline inline-flex items-center gap-1"><Plus className="h-3 w-3" /> Add column</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, previewUrl }: any) {
+  const defaults = section?.props ?? {};
+  const merged = { ...defaults, ...sectionOv };
+  const textKeys = TEXT_KEYS.filter((k) => k in defaults);
+  const hasImage = "image" in defaults;
+  const hasItems = Array.isArray(defaults.items);
+  const itemShape: "usp" | "testimonial" | "category" | "product" | "generic" =
+    section?.type === "usp_strip" ? "usp"
+    : section?.type === "testimonials" ? "testimonial"
+    : section?.type === "category_grid" ? "category"
+    : (section?.type === "product_grid" || section?.type === "trending") ? "product"
+    : "generic";
+
+  const items = merged.items ?? [];
+  const updateItems = (next: any[]) => onUpdate(idx, "items", next);
+
+  return (
+    <div className="p-4 space-y-4">
+      {hasImage && (
+        <div>
+          <Label className="text-xs">Section image</Label>
+          <div className="mt-1.5 flex items-start gap-3">
+            <div className="w-20 h-20 rounded-md border bg-muted overflow-hidden flex items-center justify-center shrink-0">
+              {merged.image
+                ? <img src={merged.image} alt="" className="w-full h-full object-cover" />
+                : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Button size="sm" variant="outline" asChild>
+                <label className="cursor-pointer">
+                  <Upload className="mr-1 h-3.5 w-3.5" /> Replace
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(idx, f); }} />
+                </label>
+              </Button>
+              {merged.image && <Button size="sm" variant="outline" onClick={() => onUpdate(idx, "image", "")}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remove</Button>}
+              {"image" in sectionOv && <Button size="sm" variant="ghost" onClick={() => onReset(idx, "image")}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset</Button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {textKeys.map((k) => {
+        const value = merged[k] ?? "";
+        const isLong = k === "sub" || k === "body";
+        return (
+          <div key={k}>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-xs capitalize">{k.replace("_", " ")}</Label>
+              {k in sectionOv && (
+                <button onClick={() => onReset(idx, k)} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"><RotateCcw className="h-3 w-3" /> reset</button>
+              )}
+            </div>
+            {isLong
+              ? <Textarea rows={3} value={value} onChange={(e) => onUpdate(idx, k, e.target.value)} className="text-sm" />
+              : <Input value={value} onChange={(e) => onUpdate(idx, k, e.target.value)} className="h-8 text-sm" />}
+          </div>
+        );
+      })}
+
+      {hasItems && itemShape === "usp" && (
+        <ItemsEditor
+          label="Trust strip items"
+          items={items}
+          renderRow={(it, update) => (
+            <>
+              <Select value={it.icon ?? "sparkles"} onValueChange={(v) => update({ ...it, icon: v })}>
+                <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{ICON_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+              </Select>
+              <div className="flex-1 space-y-1">
+                <Input value={it.title ?? ""} onChange={(e) => update({ ...it, title: e.target.value })} className="h-7 text-xs" placeholder="Title (e.g. Free shipping)" />
+                <Input value={it.sub ?? ""}   onChange={(e) => update({ ...it, sub:   e.target.value })} className="h-7 text-xs" placeholder="Subtitle" />
+              </div>
+            </>
+          )}
+          blank={{ icon: "truck", title: "New benefit", sub: "Short description" }}
+          onChange={updateItems}
+        />
+      )}
+
+      {hasItems && itemShape === "testimonial" && (
+        <ItemsEditor
+          label="Testimonials"
+          items={items}
+          renderRow={(it, update) => (
+            <div className="flex-1 space-y-1">
+              <Textarea rows={2} value={it.quote ?? ""}    onChange={(e) => update({ ...it, quote:    e.target.value })} className="text-xs" placeholder="“Quote…”" />
+              <div className="flex gap-1.5">
+                <Input value={it.author ?? ""}   onChange={(e) => update({ ...it, author:   e.target.value })} className="h-7 text-xs flex-1" placeholder="Author" />
+                <Input value={it.location ?? ""} onChange={(e) => update({ ...it, location: e.target.value })} className="h-7 text-xs flex-1" placeholder="Location" />
+              </div>
+            </div>
+          )}
+          blank={{ quote: "Great experience!", author: "Customer Name", location: "City" }}
+          onChange={updateItems}
+        />
+      )}
+
+      {hasItems && itemShape === "category" && (
+        <ItemsEditor
+          label="Categories"
+          items={items}
+          renderRow={(it, update) => (
+            <div className="flex-1 space-y-1">
+              <Input value={it.name ?? ""}  onChange={(e) => update({ ...it, name:  e.target.value })} className="h-7 text-xs" placeholder="Category name" />
+              <Input value={it.image ?? ""} onChange={(e) => update({ ...it, image: e.target.value })} className="h-7 text-xs" placeholder="Image URL" />
+            </div>
+          )}
+          blank={{ name: "New category", image: "" }}
+          onChange={updateItems}
+        />
+      )}
+
+      {"items" in sectionOv && (
+        <button onClick={() => onReset(idx, "items")} className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+          <RotateCcw className="h-3 w-3" /> Reset items to theme default
+        </button>
+      )}
+
+      {textKeys.length === 0 && !hasImage && !hasItems && (
+        <p className="text-xs text-muted-foreground">This section has no editable fields exposed by the theme.</p>
+      )}
+
+      <div className="pt-2 border-t">
+        <a href={previewUrl} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 hover:underline">
+          <ExternalLink className="h-3 w-3" /> Open preview in new tab
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function ItemsEditor({ label, items, renderRow, blank, onChange }: { label: string; items: any[]; renderRow: (it: any, update: (next: any) => void) => React.ReactNode; blank: any; onChange: (next: any[]) => void }) {
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= items.length) return;
+    const next = [...items]; [next[i], next[j]] = [next[j], next[i]]; onChange(next);
+  };
+  return (
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <div className="mt-2 space-y-2">
+        {items.map((it, i) => (
+          <div key={i} className="border rounded-md p-2 flex gap-2 items-start">
+            {renderRow(it, (next) => onChange(items.map((x, idx) => idx === i ? next : x)))}
+            <div className="flex flex-col gap-0.5 shrink-0">
+              <button onClick={() => move(i, -1)} className="text-muted-foreground hover:text-foreground p-0.5" disabled={i === 0}><ArrowUp className="h-3 w-3" /></button>
+              <button onClick={() => move(i,  1)} className="text-muted-foreground hover:text-foreground p-0.5" disabled={i === items.length - 1}><ArrowDown className="h-3 w-3" /></button>
+              <button onClick={() => onChange(items.filter((_, idx) => idx !== i))} className="text-destructive p-0.5"><Trash2 className="h-3 w-3" /></button>
+            </div>
+          </div>
+        ))}
+        <button onClick={() => onChange([...items, { ...blank }])} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+          <Plus className="h-3 w-3" /> Add item
+        </button>
       </div>
     </div>
   );
