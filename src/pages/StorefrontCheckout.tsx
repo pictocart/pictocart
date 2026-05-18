@@ -204,6 +204,49 @@ const StorefrontCheckout = () => {
     } as any).select('id, order_number').single();
 
     if (error) throw error;
+
+    // Save address to customer's profile (so it appears under My Account → Addresses)
+    if (user?.id) {
+      try {
+        const { data: existing } = await supabase
+          .from('customers')
+          .select('saved_addresses')
+          .eq('user_id', user.id)
+          .eq('store_id', store.id)
+          .maybeSingle();
+        const current: any[] = Array.isArray(existing?.saved_addresses) ? existing!.saved_addresses as any[] : [];
+        const normalize = (s: string) => (s || '').trim().toLowerCase();
+        const duplicate = current.find((a: any) =>
+          normalize(a.address) === normalize(form.address) &&
+          normalize(a.pincode) === normalize(form.pincode) &&
+          normalize(a.phone) === normalize(form.phone)
+        );
+        if (!duplicate) {
+          const newAddr = {
+            id: Date.now().toString(),
+            label: 'Home',
+            name: form.name,
+            address: form.address,
+            landmark: '',
+            city: form.city,
+            state: form.state,
+            pincode: form.pincode,
+            phone: form.phone,
+            isDefault: current.length === 0,
+          };
+          const updated = [...current, newAddr];
+          await supabase
+            .from('customers')
+            .upsert(
+              { user_id: user.id, store_id: store.id, saved_addresses: updated },
+              { onConflict: 'user_id,store_id' }
+            );
+        }
+      } catch (e) {
+        console.warn('[checkout] failed to persist address to profile', e);
+      }
+    }
+
     return data;
   };
 
