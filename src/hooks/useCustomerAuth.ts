@@ -11,7 +11,7 @@ export const useCustomerAuth = (storeSlug: string) => {
 
   const isStoreCustomer = (candidate: User | null) => {
     if (!candidate || !storeSlug) return false;
-    const metaSlug = candidate.user_metadata.store_slug;
+    const metaSlug = candidate.user_metadata?.store_slug;
     const email = candidate.email || '';
     const isCustomer = candidate.user_metadata?.is_customer === true || email.endsWith(`@${storeSlug}.${TENANT_DOMAIN}`);
     return isCustomer && (metaSlug === storeSlug || email.endsWith(`@${storeSlug}.${TENANT_DOMAIN}`));
