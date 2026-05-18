@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { PicaMascot } from './PicaMascot';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,28 +24,84 @@ interface ChatMessage { id: string; role: 'user' | 'assistant' | 'system'; conte
 
 const WHATSAPP = 'https://wa.me/919810189606?text=Hi%20PicToCart%20support';
 
+const DISMISS_KEY = 'pica2_dismissed_session';
+
 export const HelpLauncher = () => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('chat');
+  const [bubble, setBubble] = useState(false);
   const { user } = useAuth();
+  const location = useLocation();
+
+  // Auto popup after 1 min on a single page, unless dismissed this session
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (sessionStorage.getItem(DISMISS_KEY) === '1') return;
+    if (open) return;
+    const t = window.setTimeout(() => {
+      if (sessionStorage.getItem(DISMISS_KEY) === '1') return;
+      setBubble(true);
+      try {
+        const u = new SpeechSynthesisUtterance('May I help you!');
+        u.rate = 1.05; u.pitch = 1.3; u.volume = 0.9;
+        window.speechSynthesis?.cancel();
+        window.speechSynthesis?.speak(u);
+      } catch {}
+    }, 60_000);
+    return () => window.clearTimeout(t);
+  }, [location.pathname, open]);
+
+  const dismissBubble = () => {
+    setBubble(false);
+    try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch {}
+    try { window.speechSynthesis?.cancel(); } catch {}
+  };
+
+  const handleOpenChange = (v: boolean) => {
+    setOpen(v);
+    if (v) setBubble(false);
+    else {
+      try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch {}
+    }
+  };
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <button
-          aria-label="Help & AI assistant"
-          className="fixed bottom-5 right-5 z-40 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform flex items-center justify-center"
-        >
-          <Sparkles className="h-5 w-5" />
-        </button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2">
+        {bubble && (
+          <div className="relative animate-fade-in bg-background border shadow-lg rounded-2xl rounded-br-sm px-3 py-2 max-w-[220px] text-sm">
+            <button
+              onClick={dismissBubble}
+              aria-label="Dismiss"
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-muted text-muted-foreground hover:bg-foreground hover:text-background text-xs leading-none flex items-center justify-center"
+            >
+              ×
+            </button>
+            <p className="font-medium leading-snug">May I help you? ✨</p>
+            <button
+              onClick={() => { setBubble(false); setOpen(true); }}
+              className="text-xs text-primary underline mt-0.5"
+            >
+              Open Pica 2
+            </button>
+          </div>
+        )}
+        <SheetTrigger asChild>
+          <button
+            aria-label="Pica 2 — help assistant"
+            className="h-14 w-14 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-400 shadow-lg hover:scale-105 transition-transform flex items-center justify-center ring-2 ring-yellow-500/30"
+          >
+            <PicaMascot size={42} />
+          </button>
+        </SheetTrigger>
+      </div>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
         <Tabs value={tab} onValueChange={setTab} className="flex flex-col h-full">
           <div className="border-b px-4 pt-4 pb-2 shrink-0">
             <h2 className="font-semibold text-base flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" /> PicToCart Assistant
+              <PicaMascot size={22} /> Pica 2
             </h2>
-            <p className="text-xs text-muted-foreground">Diagnoses your store and walks you through fixes.</p>
+            <p className="text-xs text-muted-foreground">Your store buddy — diagnoses issues and walks you through fixes.</p>
             <TabsList className="mt-3 grid grid-cols-3 w-full">
               <TabsTrigger value="chat" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Chat</TabsTrigger>
               <TabsTrigger value="help" className="gap-1.5"><BookOpen className="h-3.5 w-3.5" /> Articles</TabsTrigger>
