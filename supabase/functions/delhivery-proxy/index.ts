@@ -248,7 +248,7 @@ serve(async (req) => {
     });
   } catch (error: unknown) {
     console.error("delhivery-proxy error:", error);
-    const message = "Shipping provider error";
+    const message = error instanceof Error ? error.message : "Shipping provider error";
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
