@@ -59,7 +59,16 @@ Deno.serve(async (req) => {
     if (action === "list_users") {
       const { data: { users }, error } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
       if (error) throw error;
-      return new Response(JSON.stringify({ users: users.map(u => ({ id: u.id, email: u.email, created_at: u.created_at, last_sign_in_at: u.last_sign_in_at, email_confirmed_at: u.email_confirmed_at })) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({
+        users: users.map(u => ({
+          id: u.id,
+          email: u.email,
+          created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at,
+          email_confirmed_at: u.email_confirmed_at,
+          user_metadata: u.user_metadata || {},
+        })),
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     throw new Error("Invalid action");
