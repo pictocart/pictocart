@@ -10,10 +10,11 @@ export const useCustomerAuth = (storeSlug: string) => {
   const [loading, setLoading] = useState(true);
 
   const isStoreCustomer = (candidate: User | null) => {
-    if (!candidate?.user_metadata?.is_customer || !storeSlug) return false;
+    if (!candidate || !storeSlug) return false;
     const metaSlug = candidate.user_metadata.store_slug;
     const email = candidate.email || '';
-    return metaSlug === storeSlug || email.endsWith(`@${storeSlug}.${TENANT_DOMAIN}`);
+    const isCustomer = candidate.user_metadata?.is_customer === true || email.endsWith(`@${storeSlug}.${TENANT_DOMAIN}`);
+    return isCustomer && (metaSlug === storeSlug || email.endsWith(`@${storeSlug}.${TENANT_DOMAIN}`));
   };
 
   const scopeCustomerUser = (candidate: User | null) => (
