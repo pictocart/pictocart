@@ -41,7 +41,7 @@ serve(async (req) => {
     const test_mode = secrets?.delhivery_test_mode ?? true;
 
     // For mutating/sensitive actions, require an authenticated store owner
-    const sensitiveActions = new Set(["create-shipment"]);
+    const sensitiveActions = new Set(["create-shipment", "register-warehouse"]);
     if (sensitiveActions.has(action)) {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) {
