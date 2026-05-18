@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import {
   Loader2, RotateCcw, Save, Upload, Trash2, Image as ImageIcon,
   Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown,
-  PanelTop, PanelBottom,
+  PanelTop, PanelBottom, Palette,
 } from "lucide-react";
 
 const PAGES = [
@@ -60,7 +60,30 @@ const NAV_PAGE_OPTIONS = [
 type Selection =
   | { kind: "section"; index: number }
   | { kind: "header" }
-  | { kind: "footer" };
+  | { kind: "footer" }
+  | { kind: "palette" };
+
+const PALETTE_PRESETS: Array<{ name: string; colors: Record<string, string> }> = [
+  { name: "Default theme", colors: {} },
+  { name: "Kumkum & Brass", colors: { primary: "#9A2A2A", primary_fg: "#FFFFFF", accent: "#C9A227", bg: "#FBF6EE", surface: "#FFFFFF", fg: "#2A1A0F", muted: "#6B5A4A", border: "#E7DBC6" } },
+  { name: "Midnight Indigo", colors: { primary: "#4f46e5", primary_fg: "#FFFFFF", accent: "#a78bfa", bg: "#0a0a1a", surface: "#141432", fg: "#f5f5fa", muted: "#9090b0", border: "#1e1e5a" } },
+  { name: "Ocean Deep", colors: { primary: "#2d8a9e", primary_fg: "#FFFFFF", accent: "#5cbdb9", bg: "#f4f9fb", surface: "#FFFFFF", fg: "#0c2340", muted: "#6b8a9e", border: "#cfe0e7" } },
+  { name: "Emerald Prestige", colors: { primary: "#0d7a5f", primary_fg: "#FFFFFF", accent: "#c9a84c", bg: "#f5f0e0", surface: "#FFFFFF", fg: "#064e3b", muted: "#5a7a6a", border: "#dcd3b8" } },
+  { name: "Noir & Gold", colors: { primary: "#c9a84c", primary_fg: "#0d0d0d", accent: "#f0d78c", bg: "#0d0d0d", surface: "#1a1a1a", fg: "#f5f0e0", muted: "#a09680", border: "#2a2a2a" } },
+  { name: "Sunset Blaze", colors: { primary: "#ff6b35", primary_fg: "#FFFFFF", accent: "#e84393", bg: "#fff8f3", surface: "#FFFFFF", fg: "#2a1a14", muted: "#8a6a5a", border: "#f0d8c8" } },
+  { name: "Forest & Moss", colors: { primary: "#2d5a3d", primary_fg: "#FFFFFF", accent: "#a0c49d", bg: "#f3f6f1", surface: "#FFFFFF", fg: "#1a3c2a", muted: "#6a8a70", border: "#d0dccc" } },
+];
+
+const COLOR_KEYS: Array<{ key: string; label: string }> = [
+  { key: "primary", label: "Primary" },
+  { key: "primary_fg", label: "Primary text" },
+  { key: "accent", label: "Accent" },
+  { key: "bg", label: "Background" },
+  { key: "surface", label: "Surface" },
+  { key: "fg", label: "Text" },
+  { key: "muted", label: "Muted text" },
+  { key: "border", label: "Border" },
+];
 
 export default function CustomiserV2() {
   const { store, setStore } = useStore();
@@ -192,6 +215,66 @@ export default function CustomiserV2() {
     toast.success("Footer reset to theme default");
   };
 
+  // ---------- Global palette overrides ----------
+  const paletteOv: Record<string, string> = (overrides?.palette as any) || {};
+  const updatePalette = (key: string, value: string) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      next.palette = { ...(next.palette || {}), [key]: value };
+      return next;
+    });
+  };
+  const applyPalettePreset = (preset: Record<string, string>) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      if (!preset || Object.keys(preset).length === 0) delete next.palette;
+      else next.palette = { ...preset };
+      return next;
+    });
+    toast.success("Palette applied");
+  };
+  const resetPalette = () => {
+    setOverrides((prev: any) => { const next = structuredClone(prev || {}); delete next.palette; return next; });
+    toast.success("Palette reset to theme default");
+  };
+
+  // ---------- Per-section color override ----------
+  const updateSectionColor = (idx: number, key: string, value: string) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      next.pages = next.pages || {};
+      next.pages[page] = next.pages[page] || {};
+      next.pages[page].sections = next.pages[page].sections || {};
+      const sec = next.pages[page].sections[idx] || {};
+      sec.colors = { ...(sec.colors || {}), [key]: value };
+      next.pages[page].sections[idx] = sec;
+      return next;
+    });
+  };
+  const resetSectionColors = (idx: number) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      const sec = next?.pages?.[page]?.sections?.[idx];
+      if (sec) {
+        delete sec.colors;
+        if (Object.keys(sec).length === 0) delete next.pages[page].sections[idx];
+      }
+      return next;
+    });
+  };
+
+  // ---------- Auto-scroll preview when a section is picked ----------
+  const selectAndScroll = (sel: Selection) => {
+    setSelected(sel);
+    const anchor =
+      sel.kind === "header" ? "header" :
+      sel.kind === "footer" ? "footer" :
+      sel.kind === "section" ? `s-${sel.index}` : null;
+    if (anchor) {
+      iframeRef.current?.contentWindow?.postMessage({ type: "customiser:scroll", anchor }, "*");
+    }
+  };
+
   const uploadLogo = async (file: File) => {
     if (!store?.id) return;
     try {
@@ -279,9 +362,18 @@ export default function CustomiserV2() {
           <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">Sections</div>
           <ScrollArea className="flex-1">
             <div className="px-2 pb-3 space-y-0.5">
+              {/* Theme palette row */}
+              <button
+                onClick={() => selectAndScroll({ kind: "palette" })}
+                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "palette" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+              >
+                <span className="flex items-center gap-1.5"><Palette className="h-3 w-3" /> Theme colors</span>
+                {Object.keys(paletteOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+              </button>
+
               {/* Synthetic Header row */}
               <button
-                onClick={() => setSelected({ kind: "header" })}
+                onClick={() => selectAndScroll({ kind: "header" })}
                 className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "header" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
               >
                 <span className="flex items-center gap-1.5"><PanelTop className="h-3 w-3" /> Header</span>
@@ -296,7 +388,7 @@ export default function CustomiserV2() {
                 return (
                   <button
                     key={i}
-                    onClick={() => setSelected({ kind: "section", index: i })}
+                    onClick={() => selectAndScroll({ kind: "section", index: i })}
                     className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${isSel ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
                   >
                     <span className="truncate">{i + 1}. {SECTION_LABEL[s.type] || s.type}</span>
@@ -307,7 +399,7 @@ export default function CustomiserV2() {
 
               {/* Synthetic Footer row */}
               <button
-                onClick={() => setSelected({ kind: "footer" })}
+                onClick={() => selectAndScroll({ kind: "footer" })}
                 className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "footer" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
               >
                 <span className="flex items-center gap-1.5"><PanelBottom className="h-3 w-3" /> Footer</span>
@@ -355,6 +447,15 @@ export default function CustomiserV2() {
               <FooterInspector footerOv={footerOv} onChange={updateFooter} />
             )}
 
+            {selected?.kind === "palette" && (
+              <PaletteInspector
+                paletteOv={paletteOv}
+                onChangeColor={updatePalette}
+                onApplyPreset={applyPalettePreset}
+                onReset={resetPalette}
+              />
+            )}
+
             {selected?.kind === "section" && (
               <SectionInspector
                 idx={selected.index}
@@ -363,6 +464,8 @@ export default function CustomiserV2() {
                 onUpdate={updateField}
                 onReset={resetField}
                 onUploadImage={uploadImage}
+                onColorChange={updateSectionColor}
+                onResetColors={resetSectionColors}
                 previewUrl={previewUrl}
               />
             )}
@@ -378,7 +481,9 @@ export default function CustomiserV2() {
 function InspectorHeader({ selected, headerOv, footerOv, sections, sectionOverrides, onResetHeader, onResetFooter, onResetSection }: any) {
   let title = "No section selected";
   let resetBtn: React.ReactNode = null;
-  if (selected?.kind === "header") {
+  if (selected?.kind === "palette") {
+    title = "Theme colors";
+  } else if (selected?.kind === "header") {
     title = "Header";
     if (Object.keys(headerOv).length > 0) {
       resetBtn = <Button size="sm" variant="ghost" onClick={onResetHeader}><RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset</Button>;
@@ -541,7 +646,7 @@ function FooterInspector({ footerOv, onChange }: { footerOv: any; onChange: (k: 
   );
 }
 
-function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, previewUrl }: any) {
+function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl }: any) {
   const defaults = section?.props ?? {};
   const merged = { ...defaults, ...sectionOv };
   const textKeys = TEXT_KEYS.filter((k) => k in defaults);
@@ -664,6 +769,40 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         <p className="text-xs text-muted-foreground">This section has no editable fields exposed by the theme.</p>
       )}
 
+      <div className="pt-3 border-t space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs flex items-center gap-1.5"><Palette className="h-3 w-3" /> Section colors</Label>
+          {sectionOv?.colors && (
+            <button onClick={() => onResetColors(idx)} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"><RotateCcw className="h-3 w-3" /> reset</button>
+          )}
+        </div>
+        <p className="text-[10px] text-muted-foreground">Override colors just for this section. Leave blank to use the theme default.</p>
+        <div className="grid grid-cols-2 gap-2">
+          {COLOR_KEYS.map(({ key, label }) => {
+            const val = sectionOv?.colors?.[key] ?? "";
+            return (
+              <div key={key} className="space-y-1">
+                <Label className="text-[10px]">{label}</Label>
+                <div className="flex gap-1 items-center">
+                  <input
+                    type="color"
+                    value={val || "#000000"}
+                    onChange={(e) => onColorChange(idx, key, e.target.value)}
+                    className="h-7 w-7 rounded border cursor-pointer shrink-0"
+                  />
+                  <Input
+                    value={val}
+                    onChange={(e) => onColorChange(idx, key, e.target.value)}
+                    placeholder="theme"
+                    className="h-7 text-[11px] font-mono"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="pt-2 border-t">
         <a href={previewUrl} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 hover:underline">
           <ExternalLink className="h-3 w-3" /> Open preview in new tab
@@ -696,6 +835,75 @@ function ItemsEditor({ label, items, renderRow, blank, onChange }: { label: stri
         <button onClick={() => onChange([...items, { ...blank }])} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
           <Plus className="h-3 w-3" /> Add item
         </button>
+      </div>
+    </div>
+  );
+}
+
+function PaletteInspector({ paletteOv, onChangeColor, onApplyPreset, onReset }: { paletteOv: Record<string, string>; onChangeColor: (k: string, v: string) => void; onApplyPreset: (p: Record<string, string>) => void; onReset: () => void }) {
+  return (
+    <div className="p-4 space-y-5">
+      <div>
+        <Label className="text-xs">Quick palette presets</Label>
+        <p className="text-[10px] text-muted-foreground mt-0.5">One click applies these colors across the whole storefront.</p>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {PALETTE_PRESETS.map((preset) => {
+            const swatchKeys = ["primary", "accent", "bg", "surface", "fg"];
+            return (
+              <button
+                key={preset.name}
+                onClick={() => onApplyPreset(preset.colors)}
+                className="border rounded-md p-2 text-left hover:border-primary transition-colors"
+              >
+                <div className="flex gap-0.5 mb-1.5">
+                  {swatchKeys.map((k) => (
+                    <div
+                      key={k}
+                      className="h-4 flex-1 rounded-sm border"
+                      style={{ background: preset.colors[k] || "#e5e5e5" }}
+                    />
+                  ))}
+                </div>
+                <div className="text-[11px] font-medium truncate">{preset.name}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-xs">Custom colors</Label>
+          {Object.keys(paletteOv).length > 0 && (
+            <button onClick={onReset} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5">
+              <RotateCcw className="h-3 w-3" /> reset
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {COLOR_KEYS.map(({ key, label }) => {
+            const val = paletteOv[key] ?? "";
+            return (
+              <div key={key} className="space-y-1">
+                <Label className="text-[10px]">{label}</Label>
+                <div className="flex gap-1 items-center">
+                  <input
+                    type="color"
+                    value={val || "#000000"}
+                    onChange={(e) => onChangeColor(key, e.target.value)}
+                    className="h-7 w-7 rounded border cursor-pointer shrink-0"
+                  />
+                  <Input
+                    value={val}
+                    onChange={(e) => onChangeColor(key, e.target.value)}
+                    placeholder="theme"
+                    className="h-7 text-[11px] font-mono"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

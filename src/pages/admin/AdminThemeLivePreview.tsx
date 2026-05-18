@@ -46,9 +46,20 @@ export default function AdminThemeLivePreview() {
   useEffect(() => {
     const handler = (ev: MessageEvent) => {
       const msg = ev.data;
-      if (!msg || msg.type !== "customiser:update") return;
-      if (msg.overrides !== undefined) setOverrides(msg.overrides ?? {});
-      if (msg.page !== undefined) setPage(msg.page);
+      if (!msg) return;
+      if (msg.type === "customiser:update") {
+        if (msg.overrides !== undefined) setOverrides(msg.overrides ?? {});
+        if (msg.page !== undefined) setPage(msg.page);
+        return;
+      }
+      if (msg.type === "customiser:scroll") {
+        // Scroll after the next paint so newly-rendered sections are measurable.
+        requestAnimationFrame(() => {
+          const sel = msg.anchor ? `[data-section-anchor="${msg.anchor}"]` : null;
+          const el = sel ? document.querySelector(sel) as HTMLElement | null : null;
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);

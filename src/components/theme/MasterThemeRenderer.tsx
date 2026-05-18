@@ -68,8 +68,10 @@ interface Props {
 }
 
 export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, onNavigate, products }: Props) {
-  const dna = manifest?.dna ?? {};
-  const palette = dna.palette ?? {};
+  const baseDna = manifest?.dna ?? {};
+  // Merge global palette overrides into dna so every Section/Header/Footer picks them up.
+  const palette = { ...(baseDna.palette ?? {}), ...((overrides as any)?.palette ?? {}) };
+  const dna = { ...baseDna, palette };
   const fonts = dna.fonts ?? {};
   const radius = dna.radius ?? "8px";
   const headerStyle = manifest?.header_style ?? dna.layout?.header_style ?? "classic";
@@ -110,7 +112,9 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
 
   return (
     <div style={style} className="min-h-screen">
-      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={overrides?.header} />
+      <div data-section-anchor="header" style={{ scrollMarginTop: 80 }}>
+        <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={overrides?.header} />
+      </div>
       {sections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
@@ -127,13 +131,37 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           newsletter: "contact",
         };
         const anchorId = anchorMap[s.type];
+        // Per-section color override: ov.colors = { primary, accent, bg, surface, fg, muted, border, primary_fg }
+        const secColors = (mergedProps.colors ?? ov.colors) as Record<string, string> | undefined;
+        const sectionDna = secColors ? { ...dna, palette: { ...dna.palette, ...secColors } } : dna;
+        const sectionStyle: React.CSSProperties = secColors
+          ? {
+              ["--p" as any]: sectionDna.palette.primary,
+              ["--pf" as any]: sectionDna.palette.primary_fg,
+              ["--ac" as any]: sectionDna.palette.accent,
+              ["--bg" as any]: sectionDna.palette.bg,
+              ["--sf" as any]: sectionDna.palette.surface,
+              ["--fg" as any]: sectionDna.palette.fg,
+              ["--mu" as any]: sectionDna.palette.muted,
+              ["--bd" as any]: sectionDna.palette.border,
+              color: sectionDna.palette.fg,
+            }
+          : {};
         return (
-          <div key={i} id={anchorId} style={{ scrollMarginTop: 80 }}>
-            <Section s={{ ...s, props: mergedProps }} dna={dna} storeSlug={storeSlug} />
+          <div
+            key={i}
+            id={anchorId}
+            data-section-index={i}
+            data-section-anchor={`s-${i}`}
+            style={{ scrollMarginTop: 80, ...sectionStyle }}
+          >
+            <Section s={{ ...s, props: mergedProps }} dna={sectionDna} storeSlug={storeSlug} />
           </div>
         );
       })}
-      <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
+      <div data-section-anchor="footer" style={{ scrollMarginTop: 80 }}>
+        <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
+      </div>
     </div>
   );
 }
