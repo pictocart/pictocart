@@ -84,17 +84,20 @@ Deno.serve(async (req) => {
   const storeSlug = String(payload?.storeSlug || "").trim().toLowerCase();
   const email = String(payload?.email || "").trim().toLowerCase();
 
-  if (!action || !storeSlug || !email) {
+  if (!action || !storeSlug) {
     return json({ error: "missing_required_fields" }, 400);
   }
   if (!/^[a-z0-9-]+$/.test(storeSlug)) {
     return json({ error: "invalid_store_slug" }, 400);
   }
+  if (action !== "google" && !email) {
+    return json({ error: "missing_required_fields" }, 400);
+  }
 
   const store = await getStore(storeSlug);
   if (!store) return json({ error: "store_not_found" }, 404);
 
-  const alias = tenantEmail(email, storeSlug);
+  const alias = email ? tenantEmail(email, storeSlug) : "";
 
   try {
     if (action === "signup") {
