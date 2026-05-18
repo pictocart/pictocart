@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
     if (action === "signin") {
       const password = String(payload?.password || "");
       if (!password) return json({ error: "missing_password" });
-      const grant = await passwordGrant(alias, password);
+      const grant = await createPasswordSession(alias, password);
       if (!grant.ok) {
         const code = grant.body?.error_code || grant.body?.error || "";
         if (/invalid_credentials|invalid_grant|400/.test(String(code) + grant.status)) {
