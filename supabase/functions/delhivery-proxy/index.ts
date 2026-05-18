@@ -192,12 +192,20 @@ serve(async (req) => {
           throw new Error(`Delhivery create shipment error [${res.status}]: ${text}`);
         }
         const data = await res.json();
+        console.log("delhivery create.json response:", JSON.stringify(data));
         const waybill = data?.packages?.[0]?.waybill || data?.upload_wbn || null;
-        result = {
-          success: data?.success || false,
-          waybill,
-          response: data,
-        };
+        const pkgRemark = data?.packages?.[0]?.remarks?.join?.("; ") || data?.packages?.[0]?.remarks || "";
+        const topErr = data?.rmk || data?.error || "";
+        if (!waybill) {
+          return new Response(
+            JSON.stringify({
+              error: pkgRemark || topErr || "Delhivery rejected the shipment. Check pickup warehouse name & wallet balance in Delhivery One.",
+              response: data,
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        result = { success: true, waybill, response: data };
         break;
       }
 
@@ -240,7 +248,7 @@ serve(async (req) => {
     });
   } catch (error: unknown) {
     console.error("delhivery-proxy error:", error);
-    const message = "Shipping provider error";
+    const message = error instanceof Error ? error.message : "Shipping provider error";
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
