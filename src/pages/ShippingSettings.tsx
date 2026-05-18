@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Truck, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound } from 'lucide-react';
+import { Truck, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound, Package } from 'lucide-react';
 
 interface PickupAddress {
   name: string;
@@ -32,22 +32,33 @@ const ShippingSettings = () => {
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
   const [registering, setRegistering] = useState(false);
 
+  // Shiprocket
+  const [srEmail, setSrEmail] = useState('');
+  const [srPassword, setSrPassword] = useState('');
+  const [srPickupName, setSrPickupName] = useState('Primary');
+  const [srTesting, setSrTesting] = useState(false);
+  const [srTestResult, setSrTestResult] = useState<'success' | 'error' | null>(null);
+
+  const [preferredCourier, setPreferredCourier] = useState<'delhivery' | 'shiprocket'>('delhivery');
+
   useEffect(() => {
     const load = async () => {
       if (!store?.id) return;
       setLoading(true);
-      // Pickup address (non-secret) lives in stores.settings.shipping
       const s = (store.settings as any)?.shipping;
       if (s?.pickup) setPickup({ ...emptyPickup, ...s.pickup });
-      // Token (secret) lives in store_secrets
+      if (s?.shiprocket_pickup_name) setSrPickupName(s.shiprocket_pickup_name);
       const { data } = await supabase
         .from('store_secrets' as any)
-        .select('delhivery_api_token, delhivery_test_mode')
+        .select('delhivery_api_token, delhivery_test_mode, shiprocket_email, shiprocket_password, preferred_courier')
         .eq('store_id', store.id)
         .maybeSingle();
       if (data) {
         setApiToken((data as any).delhivery_api_token || '');
         setTestMode((data as any).delhivery_test_mode ?? true);
+        setSrEmail((data as any).shiprocket_email || '');
+        setSrPassword((data as any).shiprocket_password || '');
+        setPreferredCourier(((data as any).preferred_courier || 'delhivery') as any);
       }
       setLoading(false);
     };
@@ -58,24 +69,27 @@ const ShippingSettings = () => {
     if (!store) return;
     setSaving(true);
 
-    // Save pickup + flags (NO api_token) to public settings
     const settings = {
       ...((store.settings as any) || {}),
       shipping: {
-        configured: !!apiToken,
+        configured: !!apiToken || !!(srEmail && srPassword),
         test_mode: testMode,
         pickup,
+        shiprocket_pickup_name: srPickupName,
+        preferred_courier: preferredCourier,
       },
     };
     const { error } = await supabase.from('stores').update({ settings }).eq('id', store.id);
 
-    // Save token to private store_secrets
     const { error: secErr } = await supabase
       .from('store_secrets' as any)
       .upsert({
         store_id: store.id,
         delhivery_api_token: apiToken || null,
         delhivery_test_mode: testMode,
+        shiprocket_email: srEmail || null,
+        shiprocket_password: srPassword || null,
+        preferred_courier: preferredCourier,
       }, { onConflict: 'store_id' });
 
     if (error || secErr) {
@@ -85,6 +99,51 @@ const ShippingSettings = () => {
       setStore({ ...store, settings });
     }
     setSaving(false);
+  };
+
+  const handleTestShiprocket = async () => {
+    if (!store?.id) return;
+    if (!srEmail || !srPassword) {
+      toast.error('Enter Shiprocket email & password, then save before testing');
+      return;
+    }
+    setSrTesting(true);
+    setSrTestResult(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/shiprocket-proxy`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({
+            action: 'serviceability',
+            store_id: store.id,
+            pickup_pincode: pickup.pincode || '110001',
+            delivery_pincode: '560001',
+            weight: 0.5,
+            cod: 0,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (res.ok && !data.error) {
+        setSrTestResult('success');
+        toast.success('Shiprocket connection successful!');
+      } else {
+        setSrTestResult('error');
+        toast.error(data.error || 'Shiprocket connection failed. Save settings first.');
+      }
+    } catch {
+      setSrTestResult('error');
+      toast.error('Shiprocket connection failed.');
+    }
+    setSrTesting(false);
   };
 
   const handleTestConnection = async () => {
@@ -349,6 +408,162 @@ const ShippingSettings = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Shiprocket Integration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Shiprocket Integration</CardTitle>
+                <CardDescription>Multi-courier aggregator — compare rates across 17+ partners</CardDescription>
+              </div>
+            </div>
+            <Badge variant={srEmail && srPassword ? 'default' : 'secondary'}>
+              {srEmail && srPassword ? 'Configured' : 'Not Set Up'}
+            </Badge>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="h-4 w-4 text-primary" /> Don't have a Shiprocket account?
+          </CardTitle>
+          <CardDescription>
+            Sign up free, complete KYC, register a pickup location, then paste your login below.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ol className="space-y-3 text-sm">
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">1</span>
+              <div>
+                <p className="font-medium">Sign up on Shiprocket</p>
+                <p className="text-muted-foreground text-xs">Free account — no monthly fees on the basic plan.</p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">2</span>
+              <div>
+                <p className="font-medium">Complete KYC & add a Pickup Location</p>
+                <p className="text-muted-foreground text-xs">In Shiprocket → Settings → Pickup Addresses. Note the <strong>nickname</strong> you give it (e.g. "Primary").</p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">3</span>
+              <div>
+                <p className="font-medium">Paste your login email & password below</p>
+                <p className="text-muted-foreground text-xs">We use them to fetch a short-lived API token; stored encrypted server-side, never exposed to the storefront.</p>
+              </div>
+            </li>
+          </ol>
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button asChild size="sm">
+              <a href="https://app.shiprocket.in/register" target="_blank" rel="noopener noreferrer">
+                Sign up on Shiprocket <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a href="https://app.shiprocket.in/" target="_blank" rel="noopener noreferrer">
+                Open Shiprocket panel <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="ghost">
+              <a href="https://apidocs.shiprocket.in/" target="_blank" rel="noopener noreferrer">
+                API docs <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Shiprocket Credentials</CardTitle>
+          <CardDescription>Login email & password from your Shiprocket account.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Shiprocket Email</Label>
+            <Input
+              type="email"
+              placeholder="you@yourbusiness.com"
+              value={srEmail}
+              onChange={(e) => setSrEmail(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Shiprocket Password</Label>
+            <Input
+              type="password"
+              placeholder="Your Shiprocket login password"
+              value={srPassword}
+              onChange={(e) => setSrPassword(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Pickup Location Nickname</Label>
+            <Input
+              placeholder="Primary"
+              value={srPickupName}
+              onChange={(e) => setSrPickupName(e.target.value)}
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Must match exactly the nickname registered in Shiprocket → Settings → Pickup Addresses.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleTestShiprocket} variant="outline" disabled={srTesting || !srEmail || !srPassword}>
+              {srTesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Test Connection
+            </Button>
+            {srTestResult === 'success' && (
+              <div className="flex items-center gap-1 text-sm text-green-600">
+                <CheckCircle2 className="h-4 w-4" /> Connected
+              </div>
+            )}
+            {srTestResult === 'error' && (
+              <div className="flex items-center gap-1 text-sm text-destructive">
+                <XCircle className="h-4 w-4" /> Failed
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Default courier */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Default Courier</CardTitle>
+          <CardDescription>Pre-selected provider in the Ship Order dialog. Sellers can still switch per-order.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-2">
+            {(['delhivery', 'shiprocket'] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPreferredCourier(p)}
+                className={`rounded-md border px-3 py-2 text-sm font-medium capitalize transition ${
+                  preferredCourier === p ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving || loading}>

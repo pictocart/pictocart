@@ -24,12 +24,13 @@ interface CustomerAddress {
 }
 
 const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOrderDialogProps) => {
-  const [weight, setWeight] = useState('500');
-  const [shipping, setShipping] = useState(false);
-  const [provider, setProvider] = useState<'delhivery' | 'shiprocket'>('delhivery');
-
   const settings = store.settings as any;
   const shippingConfig = settings?.shipping;
+  const defaultProvider = (shippingConfig?.preferred_courier === 'shiprocket' ? 'shiprocket' : 'delhivery') as 'delhivery' | 'shiprocket';
+  const [weight, setWeight] = useState('500');
+  const [shipping, setShipping] = useState(false);
+  const [provider, setProvider] = useState<'delhivery' | 'shiprocket'>(defaultProvider);
+
   const isConfigured =
     (!!shippingConfig?.configured || !!shippingConfig?.api_token) &&
     !!shippingConfig?.pickup?.pincode;
@@ -75,7 +76,7 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
               total_amount: order.total || 0,
               weight: parseInt(weight) || 500,
               seller_name: store.name,
-              pickup_name: pickup.name,
+              pickup_name: provider === 'shiprocket' ? (shippingConfig.shiprocket_pickup_name || pickup.name || 'Primary') : pickup.name,
               pickup_phone: pickup.phone,
               pickup_address: pickup.address,
               pickup_city: pickup.city,
