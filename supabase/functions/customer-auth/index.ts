@@ -88,14 +88,20 @@ async function findUserByEmail(email: string) {
 }
 
 async function ensureCustomerUser(userId: string, store: any, realEmail: string, fullName = "", phone = "") {
+  const { data: existing } = await admin.auth.admin.getUserById(userId);
+  const existingMeta = existing?.user?.user_metadata || {};
+  const customerName = fullName || existingMeta.full_name || null;
+  const customerPhone = phone || existingMeta.phone || null;
+
   await admin.auth.admin.updateUserById(userId, {
     email_confirm: true,
     user_metadata: {
+      ...existingMeta,
       is_customer: true,
       store_slug: store.slug,
       customer_email: realEmail,
-      full_name: fullName || null,
-      phone: phone || null,
+      full_name: customerName,
+      phone: customerPhone,
     },
   });
   await admin.from("user_roles").delete().eq("user_id", userId).eq("role", "seller");
@@ -103,9 +109,9 @@ async function ensureCustomerUser(userId: string, store: any, realEmail: string,
   await admin.from("customers").upsert({
     user_id: userId,
     store_id: store.id,
-    name: fullName || null,
+    name: customerName,
     email: realEmail,
-    phone: phone || null,
+    phone: customerPhone,
   }, { onConflict: "user_id,store_id" });
 }
 
