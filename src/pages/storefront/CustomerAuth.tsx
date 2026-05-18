@@ -153,13 +153,13 @@ const CustomerAuth = () => {
   const googleSignedInRef = useRef(false);
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || user) return;
+    if (!googleClientId || user) return;
     if (mode !== 'login' && mode !== 'signup') return;
     const SCRIPT_ID = 'gsi-client';
     const init = () => {
       if (!window.google?.accounts?.id || !googleBtnRef.current) return;
       window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: googleClientId,
         callback: async (resp: { credential: string }) => {
           if (!resp?.credential || googleSignedInRef.current) return;
           googleSignedInRef.current = true;
@@ -320,7 +320,7 @@ const CustomerAuth = () => {
                 )}
               </form>
 
-              {GOOGLE_CLIENT_ID && (
+              {googleClientId && (
                 <div className="space-y-3">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
