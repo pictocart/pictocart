@@ -30,6 +30,7 @@ interface AdminUser {
 const AdminUsers = () => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [storeFilter, setStoreFilter] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
   const [viewUser, setViewUser] = useState<AdminUser | null>(null);
@@ -73,7 +74,11 @@ const AdminUsers = () => {
         const aliasStoreSlug = auth?.email?.match(/@([a-z0-9-]+)\.customers\.pictocart\.in$/)?.[1];
         const isCustomer = meta.is_customer === true || Boolean(aliasStoreSlug);
         const store = isCustomer ? storeSlugMap.get(meta.store_slug || aliasStoreSlug) : storeMap.get(p.user_id);
-        const roles = roleMap.get(p.user_id) || (isCustomer ? ['customer'] : ['seller']);
+        const rawRoles = roleMap.get(p.user_id) || (isCustomer ? ['customer'] : ['seller']);
+        // Customer accounts should only ever show the customer role
+        const roles = isCustomer
+          ? Array.from(new Set([...rawRoles.filter((r) => r !== 'seller'), 'customer']))
+          : rawRoles;
         return {
           ...p,
           email: meta.customer_email || (aliasStoreSlug ? auth?.email?.split('@')[0]?.replace('-at-', '@') : auth?.email) || null,
@@ -81,7 +86,7 @@ const AdminUsers = () => {
           phone: p.phone || meta.phone || null,
           last_sign_in_at: auth?.last_sign_in_at || null,
           email_confirmed_at: auth?.email_confirmed_at || null,
-          roles: isCustomer && !roles.includes('customer') ? [...roles, 'customer'] : roles,
+          roles,
           storeName: store?.name || null,
           storeSlug: store?.slug || null,
           isCustomer,
@@ -98,7 +103,8 @@ const AdminUsers = () => {
           const meta = auth.user_metadata || {};
           const aliasStoreSlug = auth?.email?.match(/@([a-z0-9-]+)\.customers\.pictocart\.in$/)?.[1];
           const store = storeSlugMap.get(meta.store_slug || aliasStoreSlug);
-          const roles = roleMap.get(auth.id) || ['customer'];
+          const rawRoles = roleMap.get(auth.id) || ['customer'];
+          const roles = Array.from(new Set([...rawRoles.filter((r) => r !== 'seller'), 'customer']));
           return {
             id: auth.id,
             user_id: auth.id,
@@ -109,7 +115,7 @@ const AdminUsers = () => {
             email: meta.customer_email || (aliasStoreSlug ? auth.email?.split('@')[0]?.replace('-at-', '@') : auth.email) || null,
             last_sign_in_at: auth.last_sign_in_at || null,
             email_confirmed_at: auth.email_confirmed_at || null,
-            roles: roles.includes('customer') ? roles : [...roles, 'customer'],
+            roles,
             storeName: store?.name || null,
             storeSlug: store?.slug || meta.store_slug || null,
             isCustomer: true,
@@ -182,6 +188,9 @@ const AdminUsers = () => {
     if (roleFilter !== 'all') {
       list = list.filter((u) => u.roles.includes(roleFilter));
     }
+    if (storeFilter !== 'all') {
+      list = list.filter((u) => (storeFilter === '__none__' ? !u.storeSlug : u.storeSlug === storeFilter));
+    }
     if (search) {
       const s = search.toLowerCase();
       list = list.filter(
@@ -193,7 +202,15 @@ const AdminUsers = () => {
       );
     }
     return list;
-  }, [users, search, roleFilter]);
+  }, [users, search, roleFilter, storeFilter]);
+
+  const storeOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    (users || []).forEach((u) => {
+      if (u.storeSlug && u.storeName) map.set(u.storeSlug, u.storeName);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [users]);
 
   const stats = useMemo(() => {
     const all = users || [];
@@ -252,6 +269,18 @@ const AdminUsers = () => {
             <SelectItem value="customer">Customer</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={storeFilter} onValueChange={setStoreFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by store" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stores</SelectItem>
+            <SelectItem value="__none__">No Store</SelectItem>
+            {storeOptions.map(([slug, name]) => (
+              <SelectItem key={slug} value={slug}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -265,7 +294,7 @@ const AdminUsers = () => {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden lg:table-cell">Store</TableHead>
+                <TableHead>Store</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead className="hidden md:table-cell">Joined</TableHead>
                 <TableHead className="hidden lg:table-cell">Last Login</TableHead>
@@ -296,7 +325,7 @@ const AdminUsers = () => {
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{user.email || '—'}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-sm">
+                  <TableCell className="text-sm">
                     {user.storeName ? (
                       <span className="text-foreground">{user.storeName}</span>
                     ) : (
