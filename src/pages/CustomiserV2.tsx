@@ -215,7 +215,65 @@ export default function CustomiserV2() {
     toast.success("Footer reset to theme default");
   };
 
-  const uploadLogo = async (file: File) => {
+  // ---------- Global palette overrides ----------
+  const paletteOv: Record<string, string> = (overrides?.palette as any) || {};
+  const updatePalette = (key: string, value: string) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      next.palette = { ...(next.palette || {}), [key]: value };
+      return next;
+    });
+  };
+  const applyPalettePreset = (preset: Record<string, string>) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      if (!preset || Object.keys(preset).length === 0) delete next.palette;
+      else next.palette = { ...preset };
+      return next;
+    });
+    toast.success("Palette applied");
+  };
+  const resetPalette = () => {
+    setOverrides((prev: any) => { const next = structuredClone(prev || {}); delete next.palette; return next; });
+    toast.success("Palette reset to theme default");
+  };
+
+  // ---------- Per-section color override ----------
+  const updateSectionColor = (idx: number, key: string, value: string) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      next.pages = next.pages || {};
+      next.pages[page] = next.pages[page] || {};
+      next.pages[page].sections = next.pages[page].sections || {};
+      const sec = next.pages[page].sections[idx] || {};
+      sec.colors = { ...(sec.colors || {}), [key]: value };
+      next.pages[page].sections[idx] = sec;
+      return next;
+    });
+  };
+  const resetSectionColors = (idx: number) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      const sec = next?.pages?.[page]?.sections?.[idx];
+      if (sec) {
+        delete sec.colors;
+        if (Object.keys(sec).length === 0) delete next.pages[page].sections[idx];
+      }
+      return next;
+    });
+  };
+
+  // ---------- Auto-scroll preview when a section is picked ----------
+  const selectAndScroll = (sel: Selection) => {
+    setSelected(sel);
+    const anchor =
+      sel.kind === "header" ? "header" :
+      sel.kind === "footer" ? "footer" :
+      sel.kind === "section" ? `s-${sel.index}` : null;
+    if (anchor) {
+      iframeRef.current?.contentWindow?.postMessage({ type: "customiser:scroll", anchor }, "*");
+    }
+  };
     if (!store?.id) return;
     try {
       const ext = file.name.split(".").pop();
