@@ -210,6 +210,105 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "google") {
+      const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
+      if (!GOOGLE_CLIENT_ID) return json({ error: "google_not_configured" }, 400);
+
+      const idToken = String(payload?.idToken || "");
+      if (!idToken) return json({ error: "missing_id_token" }, 400);
+
+      // Verify Google ID token
+      const verifyRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+      );
+      if (!verifyRes.ok) return json({ error: "invalid_google_token" }, 401);
+      const claims = await verifyRes.json();
+      if (claims.aud !== GOOGLE_CLIENT_ID) {
+        return json({ error: "invalid_google_token" }, 401);
+      }
+      if (!claims.email_verified || !claims.email) {
+        return json({ error: "invalid_google_token" }, 401);
+      }
+
+      const googleEmail = String(claims.email).toLowerCase();
+      const googleSub = String(claims.sub);
+      const fullName = String(claims.name || "");
+      const googleAlias = tenantEmail(googleEmail, storeSlug);
+
+      // Look for existing user by alias
+      let userId: string | undefined;
+      const { data: lookup } = await admin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1,
+        // @ts-ignore - filter not in typed surface but supported
+        filter: `email.eq.${googleAlias}`,
+      });
+      userId = lookup?.users?.[0]?.id;
+
+      if (!userId) {
+        // Create the tenant-aliased customer user
+        const { data: created, error: createErr } = await admin.auth.admin
+          .createUser({
+            email: googleAlias,
+            email_confirm: true,
+            user_metadata: {
+              is_customer: true,
+              store_slug: storeSlug,
+              customer_email: googleEmail,
+              full_name: fullName || null,
+              google_sub: googleSub,
+              auth_provider: "google",
+            },
+          });
+        if (createErr) {
+          console.error("google createUser failed", createErr);
+          return json({ error: "signup_failed", detail: createErr.message }, 400);
+        }
+        userId = created.user?.id;
+      }
+
+      // Issue a session via magiclink → verifyotp
+      const { data: linkData, error: linkErr } = await admin.auth.admin
+        .generateLink({ type: "magiclink", email: googleAlias });
+      if (linkErr || !linkData?.properties?.email_otp) {
+        console.error("magiclink generation failed", linkErr);
+        return json({ error: "session_issue_failed" }, 500);
+      }
+
+      const otpRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+        body: JSON.stringify({
+          type: "magiclink",
+          token: linkData.properties.hashed_token,
+        }),
+      });
+      // /verify returns a redirect; we need /token endpoint instead via OTP exchange
+      // Fallback to /otp verify endpoint
+      let session: any = null;
+      if (otpRes.ok) {
+        session = await otpRes.json();
+      } else {
+        const verifyOtpRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+          body: JSON.stringify({
+            type: "magiclink",
+            email: googleAlias,
+            token: linkData.properties.email_otp,
+          }),
+        });
+        if (!verifyOtpRes.ok) {
+          const detail = await verifyOtpRes.text();
+          console.error("verify OTP failed", verifyOtpRes.status, detail);
+          return json({ error: "session_issue_failed", detail }, 500);
+        }
+        session = await verifyOtpRes.json();
+      }
+
+      return json({ ok: true, session, user_id: userId });
+    }
+
     return json({ error: "unknown_action" }, 400);
   } catch (e) {
     console.error("customer-auth fatal", e);
