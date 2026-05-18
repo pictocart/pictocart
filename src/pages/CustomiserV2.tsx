@@ -60,7 +60,30 @@ const NAV_PAGE_OPTIONS = [
 type Selection =
   | { kind: "section"; index: number }
   | { kind: "header" }
-  | { kind: "footer" };
+  | { kind: "footer" }
+  | { kind: "palette" };
+
+const PALETTE_PRESETS: Array<{ name: string; colors: Record<string, string> }> = [
+  { name: "Default theme", colors: {} },
+  { name: "Kumkum & Brass", colors: { primary: "#9A2A2A", primary_fg: "#FFFFFF", accent: "#C9A227", bg: "#FBF6EE", surface: "#FFFFFF", fg: "#2A1A0F", muted: "#6B5A4A", border: "#E7DBC6" } },
+  { name: "Midnight Indigo", colors: { primary: "#4f46e5", primary_fg: "#FFFFFF", accent: "#a78bfa", bg: "#0a0a1a", surface: "#141432", fg: "#f5f5fa", muted: "#9090b0", border: "#1e1e5a" } },
+  { name: "Ocean Deep", colors: { primary: "#2d8a9e", primary_fg: "#FFFFFF", accent: "#5cbdb9", bg: "#f4f9fb", surface: "#FFFFFF", fg: "#0c2340", muted: "#6b8a9e", border: "#cfe0e7" } },
+  { name: "Emerald Prestige", colors: { primary: "#0d7a5f", primary_fg: "#FFFFFF", accent: "#c9a84c", bg: "#f5f0e0", surface: "#FFFFFF", fg: "#064e3b", muted: "#5a7a6a", border: "#dcd3b8" } },
+  { name: "Noir & Gold", colors: { primary: "#c9a84c", primary_fg: "#0d0d0d", accent: "#f0d78c", bg: "#0d0d0d", surface: "#1a1a1a", fg: "#f5f0e0", muted: "#a09680", border: "#2a2a2a" } },
+  { name: "Sunset Blaze", colors: { primary: "#ff6b35", primary_fg: "#FFFFFF", accent: "#e84393", bg: "#fff8f3", surface: "#FFFFFF", fg: "#2a1a14", muted: "#8a6a5a", border: "#f0d8c8" } },
+  { name: "Forest & Moss", colors: { primary: "#2d5a3d", primary_fg: "#FFFFFF", accent: "#a0c49d", bg: "#f3f6f1", surface: "#FFFFFF", fg: "#1a3c2a", muted: "#6a8a70", border: "#d0dccc" } },
+];
+
+const COLOR_KEYS: Array<{ key: string; label: string }> = [
+  { key: "primary", label: "Primary" },
+  { key: "primary_fg", label: "Primary text" },
+  { key: "accent", label: "Accent" },
+  { key: "bg", label: "Background" },
+  { key: "surface", label: "Surface" },
+  { key: "fg", label: "Text" },
+  { key: "muted", label: "Muted text" },
+  { key: "border", label: "Border" },
+];
 
 export default function CustomiserV2() {
   const { store, setStore } = useStore();
