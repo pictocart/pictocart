@@ -41,7 +41,7 @@ serve(async (req) => {
     const test_mode = secrets?.delhivery_test_mode ?? true;
 
     // For mutating/sensitive actions, require an authenticated store owner
-    const sensitiveActions = new Set(["create-shipment"]);
+    const sensitiveActions = new Set(["create-shipment", "register-warehouse"]);
     if (sensitiveActions.has(action)) {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) {
@@ -131,6 +131,63 @@ serve(async (req) => {
         break;
       }
 
+      case "register-warehouse": {
+        const { warehouse } = body;
+        if (!warehouse?.name || !warehouse?.pincode || !warehouse?.address) {
+          return new Response(
+            JSON.stringify({ error: "warehouse name, address and pincode required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        const whPayload = {
+          name: warehouse.name,
+          email: warehouse.email || "",
+          phone: warehouse.phone || "",
+          address: warehouse.address,
+          city: warehouse.city || "",
+          country: "India",
+          pin: warehouse.pincode,
+          return_address: warehouse.address,
+          return_pin: warehouse.pincode,
+          return_city: warehouse.city || "",
+          return_state: warehouse.state || "",
+          return_country: "India",
+        };
+        const whUrl = `${base}/api/backend/clientwarehouse/create/`;
+        const whRes = await fetch(whUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Token ${api_token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(whPayload),
+        });
+        const whText = await whRes.text();
+        let whData: any = {};
+        try { whData = JSON.parse(whText); } catch { /* not json */ }
+        console.log("delhivery clientwarehouse/create:", whRes.status, whText);
+        const alreadyExists =
+          whRes.status === 400 &&
+          /already exists|duplicate|registered/i.test(whText);
+        if (!whRes.ok && !alreadyExists) {
+          return new Response(
+            JSON.stringify({
+              error: whData?.error || whData?.message || `Delhivery rejected warehouse [${whRes.status}]: ${whText.slice(0, 300)}`,
+              response: whData,
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        result = {
+          success: true,
+          already_exists: alreadyExists,
+          warehouse_name: warehouse.name,
+          response: whData,
+        };
+        break;
+      }
+
       case "create-shipment": {
         const { shipment } = body;
         if (!shipment) {
@@ -140,7 +197,7 @@ serve(async (req) => {
           );
         }
 
-        const packageData = {
+        const buildPackageData = () => ({
           shipments: [
             {
               name: shipment.customer_name,
@@ -174,26 +231,70 @@ serve(async (req) => {
             country: "India",
             phone: shipment.pickup_phone,
           },
-        };
-
-        const formData = `format=json&data=${encodeURIComponent(JSON.stringify(packageData))}`;
-        const url = `${base}/api/cmu/create.json`;
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            Authorization: `Token ${api_token}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: formData,
         });
 
+        const url = `${base}/api/cmu/create.json`;
+        const callCreate = async () => {
+          const formData = `format=json&data=${encodeURIComponent(JSON.stringify(buildPackageData()))}`;
+          const r = await fetch(url, {
+            method: "POST",
+            headers: {
+              Authorization: `Token ${api_token}`,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: formData,
+          });
+          const t = await r.text();
+          let d: any = {};
+          try { d = JSON.parse(t); } catch { /* */ }
+          return { r, d, t };
+        };
+
+        let { r: res, d: data, t: text } = await callCreate();
         if (!res.ok) {
-          const text = await res.text();
           throw new Error(`Delhivery create shipment error [${res.status}]: ${text}`);
         }
-        const data = await res.json();
         console.log("delhivery create.json response:", JSON.stringify(data));
-        const waybill = data?.packages?.[0]?.waybill || data?.upload_wbn || null;
+
+        let waybill = data?.packages?.[0]?.waybill || data?.upload_wbn || null;
+        const warehouseMissing =
+          !waybill && /ClientWarehouse matching query does not exist/i.test(JSON.stringify(data));
+
+        // Auto-register the warehouse using the same name, then retry once
+        if (warehouseMissing && shipment.pickup_name && shipment.pickup_pincode) {
+          console.log("auto-registering warehouse:", shipment.pickup_name);
+          const whRes = await fetch(`${base}/api/backend/clientwarehouse/create/`, {
+            method: "POST",
+            headers: {
+              Authorization: `Token ${api_token}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              name: shipment.pickup_name,
+              email: shipment.pickup_email || "",
+              phone: shipment.pickup_phone,
+              address: shipment.pickup_address,
+              city: shipment.pickup_city,
+              country: "India",
+              pin: shipment.pickup_pincode,
+              return_address: shipment.pickup_address,
+              return_pin: shipment.pickup_pincode,
+              return_city: shipment.pickup_city,
+              return_state: shipment.pickup_state,
+              return_country: "India",
+            }),
+          });
+          const whText = await whRes.text();
+          console.log("auto clientwarehouse/create:", whRes.status, whText);
+
+          // Retry the shipment regardless (it may succeed if warehouse now exists)
+          const retry = await callCreate();
+          res = retry.r; data = retry.d; text = retry.t;
+          console.log("delhivery create.json retry response:", JSON.stringify(data));
+          waybill = data?.packages?.[0]?.waybill || data?.upload_wbn || null;
+        }
+
         const pkgRemark = data?.packages?.[0]?.remarks?.join?.("; ") || data?.packages?.[0]?.remarks || "";
         const topErr = data?.rmk || data?.error || "";
         if (!waybill) {

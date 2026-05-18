@@ -30,6 +30,7 @@ const ShippingSettings = () => {
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
+  const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -120,6 +121,47 @@ const ShippingSettings = () => {
       toast.error('Connection failed.');
     }
     setTesting(false);
+  };
+
+  const handleRegisterWarehouse = async () => {
+    if (!store?.id) return;
+    if (!apiToken) { toast.error('Save your API token first'); return; }
+    if (!pickup.name || !pickup.phone || !pickup.address || !pickup.city || !pickup.state || !pickup.pincode) {
+      toast.error('Fill in all pickup address fields, save, then register');
+      return;
+    }
+    setRegistering(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/delhivery-proxy`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({
+            action: 'register-warehouse',
+            store_id: store.id,
+            warehouse: pickup,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to register warehouse with Delhivery');
+      } else if (data.already_exists) {
+        toast.success(`Warehouse "${pickup.name}" is already registered in Delhivery ✓`);
+      } else {
+        toast.success(`Warehouse "${pickup.name}" registered with Delhivery!`);
+      }
+    } catch {
+      toast.error('Failed to register warehouse');
+    }
+    setRegistering(false);
   };
 
   const updatePickup = (key: keyof PickupAddress, value: string) =>
@@ -293,6 +335,17 @@ const ShippingSettings = () => {
               <Label>Pincode *</Label>
               <Input placeholder="6-digit pincode" value={pickup.pincode} onChange={(e) => updatePickup('pincode', e.target.value)} />
             </div>
+          </div>
+          <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+            <p className="text-sm font-medium">Register this pickup with Delhivery</p>
+            <p className="text-xs text-muted-foreground">
+              Delhivery requires the <strong>Contact Name</strong> above to exactly match a registered warehouse name in your Delhivery account.
+              Save your settings, then click below to register this address as a pickup warehouse. (If "ClientWarehouse matching query does not exist" appears when shipping, it means this step is needed.)
+            </p>
+            <Button size="sm" variant="outline" onClick={handleRegisterWarehouse} disabled={registering || !apiToken}>
+              {registering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Register Warehouse with Delhivery
+            </Button>
           </div>
         </CardContent>
       </Card>
