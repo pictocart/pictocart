@@ -481,7 +481,9 @@ export default function CustomiserV2() {
 function InspectorHeader({ selected, headerOv, footerOv, sections, sectionOverrides, onResetHeader, onResetFooter, onResetSection }: any) {
   let title = "No section selected";
   let resetBtn: React.ReactNode = null;
-  if (selected?.kind === "header") {
+  if (selected?.kind === "palette") {
+    title = "Theme colors";
+  } else if (selected?.kind === "header") {
     title = "Header";
     if (Object.keys(headerOv).length > 0) {
       resetBtn = <Button size="sm" variant="ghost" onClick={onResetHeader}><RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset</Button>;
