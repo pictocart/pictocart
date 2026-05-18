@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag } from "lucide-react";
+import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -158,6 +159,8 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
     .map((l) => ({ label: l.label, page: l.page, to: `${base}${pageToPath[l.page] ?? `/${l.page}`}` }));
 
   const { totalItems } = useCart(storeSlug || "");
+  const { user } = useCustomerAuth(storeSlug || "");
+  const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split("@")[0] || "Account";
   const wrap = "sticky top-0 z-10 border-b backdrop-blur";
   const bg = { background: `${dna.palette?.bg}ee`, borderColor: dna.palette?.border };
   const brandSize = variant === "bold_serif" ? 32 : variant === "minimal_thin" ? 16 : 22;
@@ -187,6 +190,11 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       <ShoppingBag className="h-4 w-4" /> Cart · 0
     </button>
   );
+  const AccountBtn = storeSlug ? (
+    <Link to={user ? `/store/${storeSlug}/account` : `/store/${storeSlug}/account/auth`} className="hidden md:inline-flex text-sm px-4 py-2 items-center gap-2 border" style={{ borderColor: "var(--p)", color: "var(--p)", borderRadius: "var(--r)" }}>
+      <User className="h-4 w-4" /> <span className="max-w-28 truncate">{user ? customerName : "Sign in"}</span>
+    </Link>
+  ) : null;
   const renderLink = (l: { label: string; to: string; page: string }, cls: string) =>
     storeSlug
       ? <Link key={l.label} to={l.to} className={cls} style={{ opacity: 0.85 }}>{l.label}</Link>
@@ -214,7 +222,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
         <nav className="hidden md:flex gap-6 text-sm" style={{ color: dna.palette?.muted }}>
           {links.map(l => renderLink(l, "hover:opacity-100 transition"))}
         </nav>
-        {CartBtn}
+        <div className="flex items-center gap-3">
+          {AccountBtn}
+          {CartBtn}
+        </div>
       </div>
     </header>
   );
