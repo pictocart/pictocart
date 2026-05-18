@@ -219,7 +219,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
       <BottomNav colors={colors} onSearchOpen={() => setSearchOpen(true)} />
 
       {searchOpen && (
-        <SearchOverlay products={products} storeSlug={store.slug} colors={colors} fonts={fonts} borderRadius={theme.borderRadius} onClose={() => setSearchOpen(false)} />
+        <SearchOverlay products={searchProducts} storeSlug={store.slug} colors={colors} fonts={fonts} borderRadius={theme.borderRadius} onClose={() => setSearchOpen(false)} />
       )}
 
       <StorefrontAssistant
