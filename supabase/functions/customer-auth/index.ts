@@ -67,6 +67,54 @@ async function passwordGrant(email: string, password: string) {
   return { ok: res.ok, status: res.status, body };
 }
 
+async function createPasswordSession(email: string, password: string) {
+  const grant = await passwordGrant(email, password);
+  if (grant.ok) return grant;
+
+  const code = String(grant.body?.error_code || grant.body?.error || grant.body?.code || "");
+  if (/email_not_confirmed|not_confirmed/i.test(code + JSON.stringify(grant.body))) {
+    const { error } = await admin.auth.admin.updateUserById((await findUserByEmail(email))?.id || "", {
+      email_confirm: true,
+    });
+    if (!error) return await passwordGrant(email, password);
+  }
+
+  return grant;
+}
+
+async function findUserByEmail(email: string) {
+  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  return data?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase()) || null;
+}
+
+async function ensureCustomerUser(userId: string, store: any, realEmail: string, fullName = "", phone = "") {
+  const { data: existing } = await admin.auth.admin.getUserById(userId);
+  const existingMeta = existing?.user?.user_metadata || {};
+  const customerName = fullName || existingMeta.full_name || null;
+  const customerPhone = phone || existingMeta.phone || null;
+
+  await admin.auth.admin.updateUserById(userId, {
+    email_confirm: true,
+    user_metadata: {
+      ...existingMeta,
+      is_customer: true,
+      store_slug: store.slug,
+      customer_email: realEmail,
+      full_name: customerName,
+      phone: customerPhone,
+    },
+  });
+  await admin.from("user_roles").delete().eq("user_id", userId).eq("role", "seller");
+  await admin.from("user_roles").upsert({ user_id: userId, role: "customer" }, { onConflict: "user_id,role" });
+  await admin.from("customers").upsert({
+    user_id: userId,
+    store_id: store.id,
+    name: customerName,
+    email: realEmail,
+    phone: customerPhone,
+  }, { onConflict: "user_id,store_id" });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -112,7 +160,7 @@ Deno.serve(async (req) => {
       const fullName = String(payload?.fullName || "").trim();
       const phone = String(payload?.phone || "").trim();
       if (password.length < 6) {
-        return json({ error: "password_too_short" }, 400);
+        return json({ error: "password_too_short" });
       }
 
       const { data: created, error: createErr } = await admin.auth.admin
@@ -132,25 +180,18 @@ Deno.serve(async (req) => {
       if (createErr) {
         const msg = (createErr as any).message || "";
         if (/already.*registered|already exists|duplicate/i.test(msg)) {
-          return json({ error: "already_registered_for_this_store" }, 409);
+          const existing = await findUserByEmail(alias);
+          if (existing?.id) await ensureCustomerUser(existing.id, store, email, fullName, phone);
+          const grant = await createPasswordSession(alias, password);
+          if (grant.ok) return json({ ok: true, session: grant.body, existing: true });
+          return json({ error: "already_registered_for_this_store" });
         }
         console.error("createUser failed", createErr);
         return json({ error: "signup_failed", detail: msg }, 400);
       }
 
-      // Generate a verification link via the auth-email-hook pipeline.
-      const redirectTo = String(payload?.redirectTo || "");
-      const { error: linkErr } = await admin.auth.admin.generateLink({
-        type: "signup",
-        email: alias,
-        password,
-        options: redirectTo ? { redirectTo } : undefined,
-      });
-      if (linkErr) console.warn("generateLink (signup) failed", linkErr);
-
-      // Immediately password-grant so the user is logged in even before
-      // verifying email — matches the previous customer UX.
-      const grant = await passwordGrant(alias, password);
+      await ensureCustomerUser(created.user!.id, store, email, fullName, phone);
+      const grant = await createPasswordSession(alias, password);
       if (!grant.ok) {
         return json({
           ok: true,
@@ -163,12 +204,14 @@ Deno.serve(async (req) => {
 
     if (action === "signin") {
       const password = String(payload?.password || "");
-      if (!password) return json({ error: "missing_password" }, 400);
-      const grant = await passwordGrant(alias, password);
+      if (!password) return json({ error: "missing_password" });
+      const existing = await findUserByEmail(alias);
+      if (existing?.id) await ensureCustomerUser(existing.id, store, email);
+      const grant = await createPasswordSession(alias, password);
       if (!grant.ok) {
         const code = grant.body?.error_code || grant.body?.error || "";
         if (/invalid_credentials|invalid_grant|400/.test(String(code) + grant.status)) {
-          return json({ error: "invalid_credentials" }, 401);
+          return json({ error: "invalid_credentials" });
         }
         return json({ error: "signin_failed", detail: grant.body }, grant.status);
       }

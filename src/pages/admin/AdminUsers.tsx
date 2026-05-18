@@ -24,6 +24,7 @@ interface AdminUser {
   roles: string[];
   storeName: string | null;
   storeSlug: string | null;
+  isCustomer: boolean;
 }
 
 const AdminUsers = () => {
@@ -58,25 +59,64 @@ const AdminUsers = () => {
 
       const storeMap = new Map<string, { name: string; slug: string }>();
       (storesRes.data || []).forEach((s) => storeMap.set(s.user_id, { name: s.name, slug: s.slug }));
+      const storeSlugMap = new Map<string, { name: string; slug: string }>();
+      (storesRes.data || []).forEach((s) => storeSlugMap.set(s.slug, { name: s.name, slug: s.slug }));
 
       const authMap = new Map<string, any>();
       if (authRes.data?.users) {
         authRes.data.users.forEach((u: any) => authMap.set(u.id, u));
       }
 
-      return (profilesRes.data || []).map((p) => {
+      const profileRows: AdminUser[] = (profilesRes.data || []).map((p) => {
         const auth = authMap.get(p.user_id);
-        const store = storeMap.get(p.user_id);
+        const meta = auth?.user_metadata || {};
+        const aliasStoreSlug = auth?.email?.match(/@([a-z0-9-]+)\.customers\.pictocart\.in$/)?.[1];
+        const isCustomer = meta.is_customer === true || Boolean(aliasStoreSlug);
+        const store = isCustomer ? storeSlugMap.get(meta.store_slug || aliasStoreSlug) : storeMap.get(p.user_id);
+        const roles = roleMap.get(p.user_id) || (isCustomer ? ['customer'] : ['seller']);
         return {
           ...p,
-          email: auth?.email || null,
+          email: meta.customer_email || (aliasStoreSlug ? auth?.email?.split('@')[0]?.replace('-at-', '@') : auth?.email) || null,
+          full_name: p.full_name || meta.full_name || null,
+          phone: p.phone || meta.phone || null,
           last_sign_in_at: auth?.last_sign_in_at || null,
           email_confirmed_at: auth?.email_confirmed_at || null,
-          roles: roleMap.get(p.user_id) || ['seller'],
+          roles: isCustomer && !roles.includes('customer') ? [...roles, 'customer'] : roles,
           storeName: store?.name || null,
           storeSlug: store?.slug || null,
+          isCustomer,
         };
       });
+
+      const profiledUserIds = new Set(profileRows.map((u) => u.user_id));
+      const customerAuthRows: AdminUser[] = Array.from(authMap.values())
+        .filter((auth: any) => {
+          const aliasStoreSlug = auth?.email?.match(/@([a-z0-9-]+)\.customers\.pictocart\.in$/)?.[1];
+          return (auth?.user_metadata?.is_customer === true || Boolean(aliasStoreSlug)) && !profiledUserIds.has(auth.id);
+        })
+        .map((auth: any) => {
+          const meta = auth.user_metadata || {};
+          const aliasStoreSlug = auth?.email?.match(/@([a-z0-9-]+)\.customers\.pictocart\.in$/)?.[1];
+          const store = storeSlugMap.get(meta.store_slug || aliasStoreSlug);
+          const roles = roleMap.get(auth.id) || ['customer'];
+          return {
+            id: auth.id,
+            user_id: auth.id,
+            full_name: meta.full_name || null,
+            phone: meta.phone || null,
+            avatar_url: meta.avatar_url || null,
+            created_at: auth.created_at,
+            email: meta.customer_email || (aliasStoreSlug ? auth.email?.split('@')[0]?.replace('-at-', '@') : auth.email) || null,
+            last_sign_in_at: auth.last_sign_in_at || null,
+            email_confirmed_at: auth.email_confirmed_at || null,
+            roles: roles.includes('customer') ? roles : [...roles, 'customer'],
+            storeName: store?.name || null,
+            storeSlug: store?.slug || meta.store_slug || null,
+            isCustomer: true,
+          };
+        });
+
+      return [...profileRows, ...customerAuthRows].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
   });
 
@@ -161,7 +201,7 @@ const AdminUsers = () => {
       total: all.length,
       admins: all.filter((u) => u.roles.includes('admin')).length,
       sellers: all.filter((u) => u.roles.includes('seller')).length,
-      withStore: all.filter((u) => u.storeName).length,
+      customers: all.filter((u) => u.isCustomer || u.roles.includes('customer')).length,
     };
   }, [users]);
 
@@ -183,7 +223,7 @@ const AdminUsers = () => {
           { label: 'Total Users', value: stats.total, icon: Users },
           { label: 'Admins', value: stats.admins, icon: ShieldPlus },
           { label: 'Sellers', value: stats.sellers, icon: UserPlus },
-          { label: 'With Store', value: stats.withStore, icon: Eye },
+          { label: 'Customers', value: stats.customers, icon: Eye },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border bg-card p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
@@ -245,7 +285,12 @@ const AdminUsers = () => {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{user.full_name || 'Unknown'}</p>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="font-medium text-sm truncate">{user.full_name || 'Unknown'}</p>
+                          {(user.isCustomer || user.roles.includes('customer')) && (
+                            <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-primary/40 text-primary shrink-0">Customer</Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground md:hidden">{user.email || 'No email'}</p>
                       </div>
                     </div>
@@ -264,7 +309,7 @@ const AdminUsers = () => {
                         <Badge
                           key={role}
                           variant={role === 'admin' ? 'destructive' : role === 'customer' ? 'outline' : 'secondary'}
-                          className="text-[10px]"
+                          className={role === 'customer' ? 'text-[10px] border-primary/40 text-primary' : 'text-[10px]'}
                         >
                           {role}
                         </Badge>
