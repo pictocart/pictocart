@@ -447,6 +447,15 @@ export default function CustomiserV2() {
               <FooterInspector footerOv={footerOv} onChange={updateFooter} />
             )}
 
+            {selected?.kind === "palette" && (
+              <PaletteInspector
+                paletteOv={paletteOv}
+                onChangeColor={updatePalette}
+                onApplyPreset={applyPalettePreset}
+                onReset={resetPalette}
+              />
+            )}
+
             {selected?.kind === "section" && (
               <SectionInspector
                 idx={selected.index}
@@ -455,6 +464,8 @@ export default function CustomiserV2() {
                 onUpdate={updateField}
                 onReset={resetField}
                 onUploadImage={uploadImage}
+                onColorChange={updateSectionColor}
+                onResetColors={resetSectionColors}
                 previewUrl={previewUrl}
               />
             )}
