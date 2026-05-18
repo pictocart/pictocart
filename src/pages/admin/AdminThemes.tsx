@@ -451,7 +451,7 @@ const CostMatrixTab = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Stat label="Themes" value={String(rows.length)} />
           <Stat label="Total installs" value={String(totals.installs)} />
-          <Stat label="AI spend" value={`₹${totals.ai.toFixed(0)}`} />
+          <Stat label="AI spend" value={`₹${totals.ai.toFixed(2)}`} />
           <Stat label="Theme revenue" value={`₹${totals.rev.toLocaleString('en-IN')}`} />
         </div>
         {isLoading ? <p className="text-sm text-muted-foreground py-6 text-center">Loading…</p> : (
