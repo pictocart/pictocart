@@ -67,6 +67,26 @@ async function passwordGrant(email: string, password: string) {
   return { ok: res.ok, status: res.status, body };
 }
 
+async function createPasswordSession(email: string, password: string) {
+  const grant = await passwordGrant(email, password);
+  if (grant.ok) return grant;
+
+  const code = String(grant.body?.error_code || grant.body?.error || grant.body?.code || "");
+  if (/email_not_confirmed|not_confirmed/i.test(code + JSON.stringify(grant.body))) {
+    const { error } = await admin.auth.admin.updateUserById((await findUserByEmail(email))?.id || "", {
+      email_confirm: true,
+    });
+    if (!error) return await passwordGrant(email, password);
+  }
+
+  return grant;
+}
+
+async function findUserByEmail(email: string) {
+  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  return data?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase()) || null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -132,7 +152,7 @@ Deno.serve(async (req) => {
       if (createErr) {
         const msg = (createErr as any).message || "";
         if (/already.*registered|already exists|duplicate/i.test(msg)) {
-          const grant = await passwordGrant(alias, password);
+          const grant = await createPasswordSession(alias, password);
           if (grant.ok) return json({ ok: true, session: grant.body, existing: true });
           return json({ error: "already_registered_for_this_store" });
         }
@@ -152,7 +172,7 @@ Deno.serve(async (req) => {
 
       // Immediately password-grant so the user is logged in even before
       // verifying email — matches the previous customer UX.
-      const grant = await passwordGrant(alias, password);
+      const grant = await createPasswordSession(alias, password);
       if (!grant.ok) {
         return json({
           ok: true,
