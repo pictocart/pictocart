@@ -24,6 +24,7 @@ interface AdminUser {
   roles: string[];
   storeName: string | null;
   storeSlug: string | null;
+  isCustomer: boolean;
 }
 
 const AdminUsers = () => {
@@ -58,25 +59,59 @@ const AdminUsers = () => {
 
       const storeMap = new Map<string, { name: string; slug: string }>();
       (storesRes.data || []).forEach((s) => storeMap.set(s.user_id, { name: s.name, slug: s.slug }));
+      const storeSlugMap = new Map<string, { name: string; slug: string }>();
+      (storesRes.data || []).forEach((s) => storeSlugMap.set(s.slug, { name: s.name, slug: s.slug }));
 
       const authMap = new Map<string, any>();
       if (authRes.data?.users) {
         authRes.data.users.forEach((u: any) => authMap.set(u.id, u));
       }
 
-      return (profilesRes.data || []).map((p) => {
+      const profileRows: AdminUser[] = (profilesRes.data || []).map((p) => {
         const auth = authMap.get(p.user_id);
-        const store = storeMap.get(p.user_id);
+        const meta = auth?.user_metadata || {};
+        const isCustomer = meta.is_customer === true;
+        const store = isCustomer ? storeSlugMap.get(meta.store_slug) : storeMap.get(p.user_id);
+        const roles = roleMap.get(p.user_id) || (isCustomer ? ['customer'] : ['seller']);
         return {
           ...p,
-          email: auth?.email || null,
+          email: meta.customer_email || auth?.email || null,
+          full_name: p.full_name || meta.full_name || null,
+          phone: p.phone || meta.phone || null,
           last_sign_in_at: auth?.last_sign_in_at || null,
           email_confirmed_at: auth?.email_confirmed_at || null,
-          roles: roleMap.get(p.user_id) || ['seller'],
+          roles: isCustomer && !roles.includes('customer') ? [...roles, 'customer'] : roles,
           storeName: store?.name || null,
           storeSlug: store?.slug || null,
+          isCustomer,
         };
       });
+
+      const profiledUserIds = new Set(profileRows.map((u) => u.user_id));
+      const customerAuthRows: AdminUser[] = Array.from(authMap.values())
+        .filter((auth: any) => auth?.user_metadata?.is_customer === true && !profiledUserIds.has(auth.id))
+        .map((auth: any) => {
+          const meta = auth.user_metadata || {};
+          const store = storeSlugMap.get(meta.store_slug);
+          const roles = roleMap.get(auth.id) || ['customer'];
+          return {
+            id: auth.id,
+            user_id: auth.id,
+            full_name: meta.full_name || null,
+            phone: meta.phone || null,
+            avatar_url: meta.avatar_url || null,
+            created_at: auth.created_at,
+            email: meta.customer_email || auth.email || null,
+            last_sign_in_at: auth.last_sign_in_at || null,
+            email_confirmed_at: auth.email_confirmed_at || null,
+            roles: roles.includes('customer') ? roles : [...roles, 'customer'],
+            storeName: store?.name || null,
+            storeSlug: store?.slug || meta.store_slug || null,
+            isCustomer: true,
+          };
+        });
+
+      return [...profileRows, ...customerAuthRows].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
   });
 
