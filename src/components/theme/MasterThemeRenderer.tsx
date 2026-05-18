@@ -159,7 +159,9 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           </div>
         );
       })}
-      <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
+      <div data-section-anchor="footer" style={{ scrollMarginTop: 80 }}>
+        <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
+      </div>
     </div>
   );
 }
