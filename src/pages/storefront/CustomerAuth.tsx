@@ -313,6 +313,22 @@ const CustomerAuth = () => {
                   </button>
                 )}
               </form>
+
+              {GOOGLE_CLIENT_ID && (
+                <div className="space-y-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" style={{ borderColor: colors.secondary }} />
+                    </div>
+                    <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+                      <span className="px-2" style={{ backgroundColor: colors.card, color: colors.text, opacity: 0.5 }}>
+                        Or
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-center" ref={googleBtnRef} />
+                </div>
+              )}
             </>
           )}
 
