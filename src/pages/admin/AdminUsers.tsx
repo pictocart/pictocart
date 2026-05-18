@@ -294,7 +294,7 @@ const AdminUsers = () => {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden lg:table-cell">Store</TableHead>
+                <TableHead>Store</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead className="hidden md:table-cell">Joined</TableHead>
                 <TableHead className="hidden lg:table-cell">Last Login</TableHead>
