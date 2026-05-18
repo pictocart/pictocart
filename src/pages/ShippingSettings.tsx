@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Truck, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound } from 'lucide-react';
+import { Truck, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound, Package } from 'lucide-react';
 
 interface PickupAddress {
   name: string;
