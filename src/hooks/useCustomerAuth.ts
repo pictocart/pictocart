@@ -35,10 +35,10 @@ export const useCustomerAuth = (storeSlug: string) => {
       setLoading(false);
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       void setScopedUser(session?.user ?? null);
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       void setScopedUser(session?.user ?? null);
     });
 
