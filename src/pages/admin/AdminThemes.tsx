@@ -478,9 +478,9 @@ const CostMatrixTab = () => {
                     <TableCell className="text-right">{row.installs}</TableCell>
                     <TableCell className="text-right">{row.sales}</TableCell>
                     <TableCell className="text-right">{row.price ? `₹${row.price}` : '—'}</TableCell>
-                    <TableCell className="text-right">₹{row.ai_cost_inr.toFixed(2)}</TableCell>
+                    <TableCell className="text-right" title={row.image_count ? `${row.image_count} images generated` : undefined}>₹{row.ai_cost_inr.toFixed(2)}</TableCell>
                     <TableCell className="text-right">₹{row.revenue_inr.toLocaleString('en-IN')}</TableCell>
-                    <TableCell className={`text-right font-semibold ${pnl >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>₹{pnl.toFixed(0)}</TableCell>
+                    <TableCell className={`text-right font-semibold ${pnl >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>₹{pnl.toFixed(2)}</TableCell>
                   </TableRow>
                 );
               })}
