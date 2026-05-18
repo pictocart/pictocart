@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -55,8 +55,7 @@ const CustomerAuth = () => {
 
   // Redirect if already logged in
   if (user) {
-    navigate(destinationAfterAuth(), { replace: true });
-    return null;
+    return <Navigate to={destinationAfterAuth()} replace />;
   }
 
   const theme = resolveTheme(store.theme);
