@@ -188,6 +188,9 @@ const AdminUsers = () => {
     if (roleFilter !== 'all') {
       list = list.filter((u) => u.roles.includes(roleFilter));
     }
+    if (storeFilter !== 'all') {
+      list = list.filter((u) => (storeFilter === '__none__' ? !u.storeSlug : u.storeSlug === storeFilter));
+    }
     if (search) {
       const s = search.toLowerCase();
       list = list.filter(
@@ -199,7 +202,15 @@ const AdminUsers = () => {
       );
     }
     return list;
-  }, [users, search, roleFilter]);
+  }, [users, search, roleFilter, storeFilter]);
+
+  const storeOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    (users || []).forEach((u) => {
+      if (u.storeSlug && u.storeName) map.set(u.storeSlug, u.storeName);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [users]);
 
   const stats = useMemo(() => {
     const all = users || [];
