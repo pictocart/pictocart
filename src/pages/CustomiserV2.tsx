@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import {
   Loader2, RotateCcw, Save, Upload, Trash2, Image as ImageIcon,
   Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown,
-  PanelTop, PanelBottom,
+  PanelTop, PanelBottom, Palette,
 } from "lucide-react";
 
 const PAGES = [
