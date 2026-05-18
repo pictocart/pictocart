@@ -383,10 +383,11 @@ const CostMatrixTab = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-theme-cost-matrix'],
     queryFn: async () => {
-      const [{ data: themes }, { data: stores }, { data: provReqs }, { data: packs }, { data: purchases }] = await Promise.all([
-        supabase.from('theme_master_projects').select('id, theme_id, name, category'),
+      const [{ data: themes }, { data: stores }, { data: provReqs }, { data: metrics }, { data: packs }, { data: purchases }] = await Promise.all([
+        supabase.from('theme_master_projects').select('id, theme_id, name, category, price'),
         supabase.from('stores').select('id, theme'),
         supabase.from('provision_requests').select('theme_master_id, status'),
+        supabase.from('theme_master_metrics').select('theme_id, total_cost_inr, image_count'),
         supabase.from('theme_packs').select('id, name, price, sales_count, ai_generation_cost'),
         supabase.from('theme_purchases').select('id, theme_pack_id'),
       ]);
@@ -399,7 +400,8 @@ const CostMatrixTab = () => {
       (provReqs || []).forEach((p: any) => {
         if (p.theme_master_id) provisions.set(p.theme_master_id, (provisions.get(p.theme_master_id) || 0) + 1);
       });
-      // Match theme_master to theme_pack by case-insensitive name
+      const costByThemeId = new Map<string, { cost: number; images: number }>();
+      (metrics || []).forEach((m: any) => costByThemeId.set(m.theme_id, { cost: Number(m.total_cost_inr || 0), images: Number(m.image_count || 0) }));
       const packByName = new Map<string, any>();
       (packs || []).forEach((p: any) => packByName.set((p.name || '').toLowerCase().trim(), p));
       const purchaseCount = new Map<string, number>();
@@ -408,12 +410,15 @@ const CostMatrixTab = () => {
       const themeRows = (themes || []).map((t: any) => {
         const pack = packByName.get((t.name || '').toLowerCase().trim());
         const sales = pack ? Math.max(Number(pack.sales_count || 0), purchaseCount.get(pack.id) || 0) : 0;
-        const price = pack ? Number(pack.price || 0) : 0;
+        const price = Number(t.price || 0) || (pack ? Number(pack.price || 0) : 0);
+        const metric = costByThemeId.get(t.theme_id);
+        const aiCost = metric?.cost ?? (pack ? Number(pack.ai_generation_cost || 0) : 0);
         return {
           ...t,
           installs: installs.get(t.theme_id) || 0,
           provisions: provisions.get(t.id) || 0,
-          ai_cost_inr: pack ? Number(pack.ai_generation_cost || 0) : 0,
+          ai_cost_inr: aiCost,
+          image_count: metric?.images ?? 0,
           revenue_inr: sales * price,
           sales,
           price,
@@ -446,7 +451,7 @@ const CostMatrixTab = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Stat label="Themes" value={String(rows.length)} />
           <Stat label="Total installs" value={String(totals.installs)} />
-          <Stat label="AI spend" value={`₹${totals.ai.toFixed(0)}`} />
+          <Stat label="AI spend" value={`₹${totals.ai.toFixed(2)}`} />
           <Stat label="Theme revenue" value={`₹${totals.rev.toLocaleString('en-IN')}`} />
         </div>
         {isLoading ? <p className="text-sm text-muted-foreground py-6 text-center">Loading…</p> : (
@@ -473,9 +478,9 @@ const CostMatrixTab = () => {
                     <TableCell className="text-right">{row.installs}</TableCell>
                     <TableCell className="text-right">{row.sales}</TableCell>
                     <TableCell className="text-right">{row.price ? `₹${row.price}` : '—'}</TableCell>
-                    <TableCell className="text-right">₹{row.ai_cost_inr.toFixed(2)}</TableCell>
+                    <TableCell className="text-right" title={row.image_count ? `${row.image_count} images generated` : undefined}>₹{row.ai_cost_inr.toFixed(2)}</TableCell>
                     <TableCell className="text-right">₹{row.revenue_inr.toLocaleString('en-IN')}</TableCell>
-                    <TableCell className={`text-right font-semibold ${pnl >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>₹{pnl.toFixed(0)}</TableCell>
+                    <TableCell className={`text-right font-semibold ${pnl >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>₹{pnl.toFixed(2)}</TableCell>
                   </TableRow>
                 );
               })}
