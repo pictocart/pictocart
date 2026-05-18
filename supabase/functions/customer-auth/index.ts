@@ -90,8 +90,15 @@ Deno.serve(async (req) => {
   if (!/^[a-z0-9-]+$/.test(storeSlug)) {
     return json({ error: "invalid_store_slug" }, 400);
   }
-  if (action !== "google" && !email) {
+  if (action !== "google" && action !== "config" && !email) {
     return json({ error: "missing_required_fields" }, 400);
+  }
+
+  if (action === "config") {
+    return json({
+      ok: true,
+      googleClientId: Deno.env.get("GOOGLE_CLIENT_ID") || null,
+    });
   }
 
   const store = await getStore(storeSlug);
