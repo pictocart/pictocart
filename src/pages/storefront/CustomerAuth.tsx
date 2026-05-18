@@ -118,7 +118,7 @@ const CustomerAuth = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      navigate(`/store/${slug}`);
+      navigate(destinationAfterAuth());
     }
     setSubmitting(false);
   };
@@ -140,9 +140,55 @@ const CustomerAuth = () => {
     setMode('login');
   };
 
-  // Google sign-in is intentionally disabled on storefronts: it would create a
-  // single global Supabase user keyed by the user's real gmail address, which
-  // breaks per-store tenancy. Customers must use email + password (or phone OTP).
+  // Google Sign-In via Google Identity Services. The ID token is verified
+  // server-side and exchanged for a tenant-aliased customer session, so the
+  // visitor's raw gmail address never collides across stores.
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const googleSignedInRef = useRef(false);
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || user) return;
+    if (mode !== 'login' && mode !== 'signup') return;
+    const SCRIPT_ID = 'gsi-client';
+    const init = () => {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (resp: { credential: string }) => {
+          if (!resp?.credential || googleSignedInRef.current) return;
+          googleSignedInRef.current = true;
+          setSubmitting(true);
+          const { error } = await signInWithGoogle(resp.credential);
+          setSubmitting(false);
+          if (error) {
+            googleSignedInRef.current = false;
+            toast.error(error.message || 'Google sign-in failed');
+          } else {
+            navigate(destinationAfterAuth());
+          }
+        },
+      });
+      googleBtnRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: 320,
+        text: mode === 'signup' ? 'signup_with' : 'continue_with',
+      });
+    };
+    if (document.getElementById(SCRIPT_ID)) {
+      init();
+    } else {
+      const s = document.createElement('script');
+      s.id = SCRIPT_ID;
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.defer = true;
+      s.onload = init;
+      document.head.appendChild(s);
+    }
+  }, [mode, user, signInWithGoogle, navigate]);
+
 
   return (
     <StorefrontLayout store={store}>
