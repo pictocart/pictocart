@@ -49,7 +49,8 @@ const CustomerAccount = () => {
     setProfilePhone(user.phone || user.user_metadata?.phone || '');
   }, [user]);
 
-  const displayEmail = user.user_metadata?.customer_email || user.email;
+  const customerMeta = user?.user_metadata || {};
+  const displayEmail = customerMeta.customer_email || user?.email || '';
 
   useEffect(() => {
     if (!user || !store) return;
@@ -71,6 +72,7 @@ const CustomerAccount = () => {
   }
 
   if (!store || !user) return null;
+  const displayName = customerMeta.full_name || 'Welcome!';
 
   const theme = resolveTheme(store.theme);
   const { colors, fonts, borderRadius } = theme;
@@ -174,11 +176,11 @@ const CustomerAccount = () => {
         <div className="p-5 md:p-6 mb-6" style={{ background: `linear-gradient(135deg, ${colors.primary}18, ${colors.primary}08)`, borderRadius: br, border: `1px solid ${colors.secondary}` }}>
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 md:h-20 md:w-20 rounded-full flex items-center justify-center text-2xl font-bold shrink-0" style={{ backgroundColor: colors.primary + '25', color: colors.primary }}>
-              {(user.user_metadata?.full_name || displayEmail || 'U')[0].toUpperCase()}
+              {(displayName || displayEmail || 'U')[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl md:text-2xl font-bold truncate" style={{ fontFamily: fonts.heading }}>
-                {user.user_metadata?.full_name || 'Welcome!'}
+                {displayName}
               </h1>
               <p className="text-sm opacity-60 truncate">{displayEmail || user.phone}</p>
               {user.phone && user.email && <p className="text-xs opacity-40 mt-0.5">{user.phone}</p>}

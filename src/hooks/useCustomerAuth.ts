@@ -18,7 +18,7 @@ export const useCustomerAuth = (storeSlug: string) => {
   };
 
   const scopeCustomerUser = (candidate: User | null) => (
-    isStoreCustomer(candidate) ? candidate : null
+    isStoreCustomer(candidate) ? { ...candidate, user_metadata: candidate?.user_metadata || {} } as User : null
   );
 
   useEffect(() => {
