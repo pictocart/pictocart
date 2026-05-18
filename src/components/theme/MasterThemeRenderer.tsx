@@ -208,8 +208,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       <header className={wrap} style={bg}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col items-center gap-2">
           {Brand}
-          <nav className="flex gap-6 text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>
+          <nav className="flex flex-wrap items-center justify-center gap-4 text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>
             {links.map(l => renderLink(l, "hover:opacity-100 transition"))}
+            {AccountBtn}
+            {CartBtn}
           </nav>
         </div>
       </header>
