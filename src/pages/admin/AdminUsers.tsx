@@ -76,7 +76,7 @@ const AdminUsers = () => {
         const roles = roleMap.get(p.user_id) || (isCustomer ? ['customer'] : ['seller']);
         return {
           ...p,
-          email: meta.customer_email || auth?.email || null,
+          email: meta.customer_email || (aliasStoreSlug ? auth?.email?.split('@')[0]?.replace('-at-', '@') : auth?.email) || null,
           full_name: p.full_name || meta.full_name || null,
           phone: p.phone || meta.phone || null,
           last_sign_in_at: auth?.last_sign_in_at || null,
@@ -106,7 +106,7 @@ const AdminUsers = () => {
             phone: meta.phone || null,
             avatar_url: meta.avatar_url || null,
             created_at: auth.created_at,
-            email: meta.customer_email || auth.email || null,
+            email: meta.customer_email || (aliasStoreSlug ? auth.email?.split('@')[0]?.replace('-at-', '@') : auth.email) || null,
             last_sign_in_at: auth.last_sign_in_at || null,
             email_confirmed_at: auth.email_confirmed_at || null,
             roles: roles.includes('customer') ? roles : [...roles, 'customer'],
