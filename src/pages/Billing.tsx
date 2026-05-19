@@ -192,7 +192,7 @@ const Billing = () => {
                   </li>
                   {p.custom_domain && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Custom domain</li>}
                   {p.razorpay_payments && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Online payments</li>}
-                  {p.shipping && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Shipping (Delhivery)</li>}
+                  {p.shipping && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Shipping (Shiprocket)</li>}
                   {p.blog && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Blog & newsletter</li>}
                   {p.email_branding && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Branded emails</li>}
                   {p.premium_themes && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Premium themes</li>}
