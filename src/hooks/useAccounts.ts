@@ -86,6 +86,53 @@ export const useCreatePurchase = () => {
   });
 };
 
+export const useUpdatePurchase = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: any) => {
+      const { error } = await supabase.from('purchase_bills' as any).update(updates).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts'] }),
+  });
+};
+
+// Settle dues for a supplier: distribute payment across oldest unpaid bills (FIFO)
+export const useSettleSupplier = () => {
+  const qc = useQueryClient();
+  const { store } = useStore();
+  return useMutation({
+    mutationFn: async ({ supplier_id, amount, payment_mode, note }: { supplier_id: string; amount: number; payment_mode: string; note?: string }) => {
+      const { data: bills, error } = await supabase
+        .from('purchase_bills' as any)
+        .select('id, total, paid_amount, payment_mode')
+        .eq('store_id', store!.id)
+        .eq('supplier_id', supplier_id)
+        .order('bill_date', { ascending: true });
+      if (error) throw error;
+      let remaining = Number(amount);
+      for (const b of (bills ?? []) as any[]) {
+        if (remaining <= 0) break;
+        const due = Math.max(Number(b.total) - Number(b.paid_amount || 0), 0);
+        if (due <= 0) continue;
+        const apply = Math.min(due, remaining);
+        const newPaid = Number(b.paid_amount || 0) + apply;
+        const status = newPaid >= Number(b.total) ? 'paid' : 'partial';
+        const { error: uerr } = await supabase.from('purchase_bills' as any).update({
+          paid_amount: newPaid,
+          payment_status: status,
+          payment_mode: payment_mode || b.payment_mode || 'cash',
+          notes: note || undefined,
+        }).eq('id', b.id);
+        if (uerr) throw uerr;
+        remaining -= apply;
+      }
+      if (remaining > 0) throw new Error(`No open dues — ₹${remaining.toFixed(2)} not applied`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts'] }),
+  });
+};
+
 // ---------- Expenses ----------
 export const useExpenses = (range?: { from?: string; to?: string }) => {
   const { store } = useStore();
