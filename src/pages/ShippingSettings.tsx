@@ -193,137 +193,255 @@ const ShippingSettings = () => {
         </CardHeader>
       </Card>
 
-      {/* Step-by-step setup guide */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <KeyRound className="h-4 w-4 text-primary" /> Complete Shiprocket setup in 6 steps
-          </CardTitle>
-          <CardDescription>
-            Follow these in order. Most sellers go live within 15–30 minutes (KYC approval can take up to 24 hours).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
+      {/* Step-by-step setup guide — collapsible carousel */}
+      {(() => {
+        const steps = [
+          {
+            icon: UserCheck,
+            title: 'Create a free Shiprocket account',
+            bullets: [
+              <>Go to <span className="font-mono">app.shiprocket.in/register</span></>,
+              <>Sign up using your business email + 10-digit mobile number</>,
+              <>Choose plan <strong>"Lite" (Free — pay-per-shipment)</strong> to start. You can upgrade later.</>,
+              <>Verify the OTP sent to your phone & email</>,
+            ],
+            cta: { href: 'https://app.shiprocket.in/register', label: 'Open Shiprocket Signup' },
+          },
+          {
+            icon: ShieldCheck,
+            title: 'Complete KYC (Know Your Customer)',
+            bullets: [
+              <>In Shiprocket dashboard go to <span className="font-mono">Settings → Company Setup → KYC</span></>,
+              <>Upload your <strong>PAN card</strong> (mandatory)</>,
+              <>Upload <strong>GST certificate</strong> (mandatory if turnover &gt; ₹40 lakh)</>,
+              <>Upload a <strong>cancelled cheque</strong> or bank statement (for COD remittance)</>,
+              <>Upload <strong>Aadhaar</strong> of the proprietor / authorised signatory</>,
+              <>Approval usually arrives within 4–24 hours by email</>,
+            ],
+          },
+          {
+            icon: Warehouse,
+            title: 'Add a Pickup Location (warehouse address)',
+            bullets: [
+              <>Go to <span className="font-mono">Settings → Pickup Addresses → + Add New</span></>,
+              <>Give it a short <strong>Nickname</strong> like <span className="font-mono">"Primary"</span> — paste this same nickname in Step 6</>,
+              <>Enter the exact address, city, state, pincode and a 10-digit pickup contact number</>,
+              <>Wait for the green <strong>"Verified"</strong> tag against the address (usually instant)</>,
+              <>Mark this address as <strong>"Primary Pickup"</strong></>,
+            ],
+            note: {
+              tone: 'amber' as const,
+              icon: Info,
+              text: <>The <strong>nickname</strong> here must match the "Pickup Location Nickname" in Step 6 — character-for-character. Otherwise shipments fail with <em>"Wrong Pickup location entered"</em>.</>,
+            },
+          },
+          {
+            icon: Wallet,
+            title: 'Recharge your Shiprocket wallet',
+            bullets: [
+              <>Go to <span className="font-mono">Wallet → Recharge</span> in the Shiprocket dashboard</>,
+              <>Add a minimum of <strong>₹500</strong> to start (shipping charges auto-deduct per order)</>,
+              <>For COD orders, remittance gets credited to your bank in 8 days (or 2 days on Pro plan)</>,
+            ],
+          },
+          {
+            icon: Key,
+            title: 'Create a dedicated API User (critical!)',
+            bullets: [
+              <>Go to <span className="font-mono">Settings → API → Configure</span></>,
+              <>Click <strong>"Create an API User"</strong></>,
+              <>Enter a <strong>new</strong> email (e.g. <span className="font-mono">api@yourbusiness.com</span>) and a fresh password</>,
+              <>Leave <strong>"Allowed IPs for PII Access"</strong> blank (our server uses a rotating IP pool)</>,
+              <>Tick all module permissions shown and click <strong>Create User</strong></>,
+            ],
+            note: {
+              tone: 'destructive' as const,
+              icon: ShieldCheck,
+              text: <>Your normal dashboard login <strong>WILL NOT WORK</strong> — Shiprocket's API returns <em>"Access forbidden"</em>. You MUST create a separate API User.</>,
+            },
+          },
+          {
+            icon: Settings2,
+            title: 'Paste credentials & pickup address below',
+            bullets: [
+              <>Fill in the <strong>API credentials</strong> form below</>,
+              <>Fill in the <strong>pickup address</strong> form below</>,
+              <>Enter the same <strong>pickup nickname</strong> from Step 3</>,
+              <>Click <strong>"Test Connection"</strong>, then <strong>"Save Shipping Settings"</strong></>,
+            ],
+          },
+        ];
 
-          {/* Step 1 */}
-          <div className="rounded-lg border bg-background p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">1</span>
-              <p className="font-semibold text-sm">Create a free Shiprocket account</p>
-            </div>
-            <ul className="ml-9 list-disc space-y-1 text-xs text-muted-foreground">
-              <li>Go to <span className="font-mono">app.shiprocket.in/register</span></li>
-              <li>Sign up using your business email + 10-digit mobile number</li>
-              <li>Choose plan <strong>"Lite" (Free — pay-per-shipment)</strong> to start. You can upgrade later.</li>
-              <li>Verify the OTP sent to your phone & email</li>
-            </ul>
-            <Button asChild size="sm" className="ml-9 mt-2">
-              <a href="https://app.shiprocket.in/register" target="_blank" rel="noopener noreferrer">
-                Open Shiprocket Signup <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-              </a>
-            </Button>
-          </div>
+        const go = (next: number) => {
+          if (next < 0 || next >= steps.length || next === activeStep) return;
+          setSlideDir(next > activeStep ? 'right' : 'left');
+          setActiveStep(next);
+        };
 
-          {/* Step 2 */}
-          <div className="rounded-lg border bg-background p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">2</span>
-              <p className="font-semibold text-sm">Complete KYC (Know Your Customer)</p>
-            </div>
-            <ul className="ml-9 list-disc space-y-1 text-xs text-muted-foreground">
-              <li>In Shiprocket dashboard go to <span className="font-mono">Settings → Company Setup → KYC</span></li>
-              <li>Upload your <strong>PAN card</strong> (mandatory)</li>
-              <li>Upload <strong>GST certificate</strong> (mandatory if turnover &gt; ₹40 lakh)</li>
-              <li>Upload a <strong>cancelled cheque</strong> or bank statement (for COD remittance)</li>
-              <li>Upload <strong>Aadhaar</strong> of the proprietor / authorised signatory</li>
-              <li>Approval usually arrives within 4–24 hours by email</li>
-            </ul>
-          </div>
+        const Step = steps[activeStep];
+        const StepIcon = Step.icon;
 
-          {/* Step 3 */}
-          <div className="rounded-lg border bg-background p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">3</span>
-              <p className="font-semibold text-sm">Add a Pickup Location (warehouse address)</p>
-            </div>
-            <ul className="ml-9 list-disc space-y-1 text-xs text-muted-foreground">
-              <li>Go to <span className="font-mono">Settings → Pickup Addresses → + Add New</span></li>
-              <li>Give it a short <strong>Nickname</strong> like <span className="font-mono">"Primary"</span> — you'll paste this same nickname below in Step 6</li>
-              <li>Enter the exact address, city, state, pincode and a 10-digit pickup contact number</li>
-              <li>Wait for the green <strong>"Verified"</strong> tag against the address (usually instant)</li>
-              <li>Mark this address as <strong>"Primary Pickup"</strong></li>
-            </ul>
-            <div className="ml-9 mt-2 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs">
-              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-600" />
-              <p>The <strong>nickname</strong> here must match the "Pickup Location Nickname" you enter in Step 6 — character-for-character. If they don't match, shipments will fail with <em>"Wrong Pickup location entered"</em>.</p>
-            </div>
-          </div>
+        return (
+          <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 via-background to-primary/[0.02]">
+            <Collapsible open={guideOpen} onOpenChange={setGuideOpen}>
+              <CollapsibleTrigger asChild>
+                <button className="w-full group">
+                  <CardHeader className="cursor-pointer transition-colors hover:bg-primary/5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-lg shadow-primary/25 transition-transform group-hover:scale-110">
+                          <Sparkles className="h-5 w-5 text-primary-foreground" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            Complete Shiprocket setup in 6 steps
+                            {isConfigured && (
+                              <Badge variant="secondary" className="text-[10px] h-5">
+                                <CheckCircle2 className="h-3 w-3 mr-1" /> Done
+                              </Badge>
+                            )}
+                          </CardTitle>
+                          <CardDescription className="text-xs">
+                            {guideOpen ? 'Tap to collapse — swipe through each step below' : `Most sellers go live in 15–30 minutes · ${steps.length} guided steps`}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <ChevronDown className={cn('h-5 w-5 text-muted-foreground transition-transform duration-300', guideOpen && 'rotate-180')} />
+                    </div>
+                  </CardHeader>
+                </button>
+              </CollapsibleTrigger>
 
-          {/* Step 4 */}
-          <div className="rounded-lg border bg-background p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">4</span>
-              <p className="font-semibold text-sm">Recharge your Shiprocket wallet</p>
-            </div>
-            <ul className="ml-9 list-disc space-y-1 text-xs text-muted-foreground">
-              <li>Go to <span className="font-mono">Wallet → Recharge</span> in the Shiprocket dashboard</li>
-              <li>Add a minimum of <strong>₹500</strong> to start (shipping charges get auto-deducted per order)</li>
-              <li>For COD orders, your COD remittance gets credited to your bank in 8 days (or 2 days on Pro plan)</li>
-            </ul>
-          </div>
+              <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                <CardContent className="space-y-4 pt-0">
+                  {/* Step pills */}
+                  <div className="flex items-center justify-center gap-1.5 pt-1">
+                    {steps.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => go(i)}
+                        aria-label={`Go to step ${i + 1}`}
+                        className={cn(
+                          'h-1.5 rounded-full transition-all duration-500',
+                          i === activeStep ? 'w-8 bg-primary shadow-sm shadow-primary/40' : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                        )}
+                      />
+                    ))}
+                  </div>
 
-          {/* Step 5 */}
-          <div className="rounded-lg border bg-background p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">5</span>
-              <p className="font-semibold text-sm">Create a dedicated API User (critical!)</p>
-            </div>
-            <ul className="ml-9 list-disc space-y-1 text-xs text-muted-foreground">
-              <li>Go to <span className="font-mono">Settings → API → Configure</span></li>
-              <li>Click the button <strong>"Create an API User"</strong></li>
-              <li>Enter a <strong>new</strong> email (e.g. <span className="font-mono">api@yourbusiness.com</span>) and set a fresh password</li>
-              <li>Leave <strong>"Allowed IPs for PII Access"</strong> blank (our server uses a rotating IP pool)</li>
-              <li>Tick all module permissions shown and click <strong>Create User</strong></li>
-            </ul>
-            <div className="ml-9 mt-2 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs">
-              <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-destructive" />
-              <p>
-                Your normal dashboard login <strong>WILL NOT WORK</strong> — Shiprocket's API returns <em>"Access forbidden"</em> for dashboard credentials.
-                You MUST create a separate API User.
-              </p>
-            </div>
-          </div>
+                  {/* Slide viewport */}
+                  <div className="relative overflow-hidden rounded-xl border bg-background/80 backdrop-blur">
+                    <div
+                      key={activeStep}
+                      className={cn(
+                        'p-5 md:p-6',
+                        slideDir === 'right' ? 'animate-slide-in-right-soft' : 'animate-slide-in-left-soft'
+                      )}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="relative shrink-0">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-md shadow-primary/20">
+                            <StepIcon className="h-5 w-5" />
+                          </div>
+                          <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-foreground text-[11px] font-bold text-background">
+                            {activeStep + 1}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm leading-snug">{Step.title}</p>
+                          <p className="text-[11px] uppercase tracking-wider text-muted-foreground mt-0.5">
+                            Step {activeStep + 1} of {steps.length}
+                          </p>
+                        </div>
+                      </div>
 
-          {/* Step 6 */}
-          <div className="rounded-lg border bg-background p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">6</span>
-              <p className="font-semibold text-sm">Paste those API-User credentials & pickup address below</p>
-            </div>
-            <p className="ml-9 text-xs text-muted-foreground">
-              Fill in the three forms below — <strong>API credentials</strong>, <strong>pickup address</strong>, and the <strong>pickup nickname</strong> — then click <strong>"Test Connection"</strong>, then <strong>"Save Shipping Settings"</strong>.
-            </p>
-          </div>
+                      <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                        {Step.bullets.map((b, i) => (
+                          <li
+                            key={i}
+                            className="flex gap-2 animate-fade-in"
+                            style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'backwards' }}
+                          >
+                            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary/60" />
+                            <span className="leading-relaxed">{b}</span>
+                          </li>
+                        ))}
+                      </ul>
 
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button asChild size="sm" variant="outline">
-              <a href="https://app.shiprocket.in/" target="_blank" rel="noopener noreferrer">
-                Open Shiprocket Dashboard <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-              </a>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <a href="https://app.shiprocket.in/api/dashboard" target="_blank" rel="noopener noreferrer">
-                Go to API → Configure <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-              </a>
-            </Button>
-            <Button asChild size="sm" variant="ghost">
-              <a href="https://apidocs.shiprocket.in/" target="_blank" rel="noopener noreferrer">
-                Shiprocket API docs <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-              </a>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                      {Step.note && (
+                        <div
+                          className={cn(
+                            'mt-4 flex items-start gap-2 rounded-lg border p-3 text-xs animate-fade-in',
+                            Step.note.tone === 'amber' && 'border-amber-500/30 bg-amber-500/5',
+                            Step.note.tone === 'destructive' && 'border-destructive/30 bg-destructive/5'
+                          )}
+                          style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}
+                        >
+                          <Step.note.icon className={cn('h-3.5 w-3.5 mt-0.5 shrink-0', Step.note.tone === 'amber' ? 'text-amber-600' : 'text-destructive')} />
+                          <p>{Step.note.text}</p>
+                        </div>
+                      )}
+
+                      {Step.cta && (
+                        <Button asChild size="sm" className="mt-4 shadow-md shadow-primary/20">
+                          <a href={Step.cta.href} target="_blank" rel="noopener noreferrer">
+                            {Step.cta.label} <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Nav controls */}
+                  <div className="flex items-center justify-between gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => go(activeStep - 1)}
+                      disabled={activeStep === 0}
+                      className="gap-1"
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Back
+                    </Button>
+                    <span className="text-xs text-muted-foreground hidden sm:block">
+                      {activeStep + 1} / {steps.length}
+                    </span>
+                    {activeStep < steps.length - 1 ? (
+                      <Button size="sm" onClick={() => go(activeStep + 1)} className="gap-1 shadow-md shadow-primary/20">
+                        Next <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={() => setGuideOpen(false)} className="gap-1 shadow-md shadow-primary/20">
+                        <CheckCircle2 className="h-4 w-4" /> Got it
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Helpful external links */}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button asChild size="sm" variant="ghost" className="text-xs h-8">
+                      <a href="https://app.shiprocket.in/" target="_blank" rel="noopener noreferrer">
+                        Dashboard <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                    <Button asChild size="sm" variant="ghost" className="text-xs h-8">
+                      <a href="https://app.shiprocket.in/api/dashboard" target="_blank" rel="noopener noreferrer">
+                        API → Configure <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                    <Button asChild size="sm" variant="ghost" className="text-xs h-8">
+                      <a href="https://apidocs.shiprocket.in/" target="_blank" rel="noopener noreferrer">
+                        API docs <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
+        );
+      })()}
+
 
       {/* API Credentials */}
       <Card>
