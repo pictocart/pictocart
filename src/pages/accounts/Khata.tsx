@@ -173,19 +173,22 @@ const Khata = () => {
                 </tr>
               </thead>
               <tbody>
-                {customers.filter((c: any) => Number(c.balance) > 0).map((c: any) => (
-                  <tr key={c.id} className="border-t">
+                {owingList.map((c) => (
+                  <tr key={c.key} className="border-t">
                     <td className="p-3">{c.name}</td>
                     <td className="p-3">{c.phone || '—'}</td>
                     <td className="p-3 text-right font-semibold">{inr(c.balance)}</td>
-                    <td className="p-3 text-right">
-                      <Button size="sm" variant="outline" onClick={() => sendReminder(c)}>
+                    <td className="p-3 text-right whitespace-nowrap">
+                      <Button size="sm" variant="outline" className="mr-2" onClick={() => settle(c)}>
+                        Settle
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => sendReminder(c)}>
                         <MessageCircle className="h-4 w-4 mr-1" /> Remind
                       </Button>
                     </td>
                   </tr>
                 ))}
-                {!customers.some((c: any) => Number(c.balance) > 0) && (
+                {!owingList.length && (
                   <tr><td className="p-6 text-center text-muted-foreground" colSpan={4}>No outstanding khata.</td></tr>
                 )}
               </tbody>
