@@ -38,6 +38,7 @@ const ShippingSettings = () => {
   const [srPickupName, setSrPickupName] = useState('Primary');
   const [srTesting, setSrTesting] = useState(false);
   const [srTestResult, setSrTestResult] = useState<'success' | 'error' | null>(null);
+  const [srTestError, setSrTestError] = useState<string | null>(null);
 
   const [preferredCourier, setPreferredCourier] = useState<'delhivery' | 'shiprocket'>('delhivery');
 
