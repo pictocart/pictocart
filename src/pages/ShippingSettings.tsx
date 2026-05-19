@@ -104,12 +104,28 @@ const ShippingSettings = () => {
   const handleTestShiprocket = async () => {
     if (!store?.id) return;
     if (!srEmail || !srPassword) {
-      toast.error('Enter Shiprocket email & password, then save before testing');
+      toast.error('Enter Shiprocket email & password first');
       return;
     }
     setSrTesting(true);
     setSrTestResult(null);
     try {
+      // Auto-save credentials first so the proxy can read them
+      const { error: secErr } = await supabase
+        .from('store_secrets' as any)
+        .upsert({
+          store_id: store.id,
+          shiprocket_email: srEmail,
+          shiprocket_password: srPassword,
+          preferred_courier: preferredCourier,
+        }, { onConflict: 'store_id' });
+      if (secErr) {
+        setSrTestResult('error');
+        toast.error('Could not save credentials: ' + secErr.message);
+        setSrTesting(false);
+        return;
+      }
+
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -134,10 +150,10 @@ const ShippingSettings = () => {
       const data = await res.json();
       if (res.ok && !data.error) {
         setSrTestResult('success');
-        toast.success('Shiprocket connection successful!');
+        toast.success('Shiprocket connected successfully!');
       } else {
         setSrTestResult('error');
-        toast.error(data.error || 'Shiprocket connection failed. Save settings first.');
+        toast.error(data.error || 'Shiprocket connection failed. Check your email & password.');
       }
     } catch {
       setSrTestResult('error');
