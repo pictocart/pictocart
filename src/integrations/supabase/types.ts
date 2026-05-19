@@ -2118,6 +2118,7 @@ export type Database = {
           sku: string | null
           store_id: string
           tags: string[] | null
+          tax_rate: number
           title: string
           updated_at: string
           variants: Json | null
@@ -2142,6 +2143,7 @@ export type Database = {
           sku?: string | null
           store_id: string
           tags?: string[] | null
+          tax_rate?: number
           title: string
           updated_at?: string
           variants?: Json | null
@@ -2166,6 +2168,7 @@ export type Database = {
           sku?: string | null
           store_id?: string
           tags?: string[] | null
+          tax_rate?: number
           title?: string
           updated_at?: string
           variants?: Json | null
