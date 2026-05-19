@@ -130,6 +130,15 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
           )}
 
           <div className="flex items-center gap-3">
+            {menuEnabled && (
+              <Link
+                to={`/store/${store.slug}/menu`}
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full"
+                style={{ backgroundColor: colors.primary, color: '#fff' }}
+              >
+                <Utensils className="h-4 w-4" /> Menu
+              </Link>
+            )}
             <button onClick={() => setSearchOpen(true)} className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm opacity-60 hover:opacity-100 border rounded-full" style={{ borderColor: colors.secondary }}>
               <Search className="h-4 w-4" /> Search
             </button>
