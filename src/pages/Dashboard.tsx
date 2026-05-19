@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
+import { useLowStockNotifications } from '@/hooks/useLowStockNotifications';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import RevenueChart from '@/components/dashboard/RevenueChart';
 import TopProducts from '@/components/dashboard/TopProducts';
@@ -34,6 +35,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   useOrderNotifications(store?.id);
+  useLowStockNotifications();
 
   const { stats } = useDashboardStats(store?.id);
 

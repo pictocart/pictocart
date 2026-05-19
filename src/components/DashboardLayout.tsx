@@ -80,7 +80,16 @@ const navTree: NavEntry[] = [
     icon: WalletIcon,
     key: 'accounts',
     children: [
+      { label: 'Overview', icon: LayoutDashboard, path: '/accounts' },
+      { label: 'Purchases', icon: ShoppingBag, path: '/accounts/purchases' },
+      { label: 'Expenses', icon: Banknote, path: '/accounts/expenses' },
+      { label: 'Suppliers', icon: Truck, path: '/accounts/suppliers' },
+      { label: 'Customer Khata', icon: Users, path: '/accounts/khata' },
+      { label: 'Inventory Ledger', icon: Package, path: '/accounts/inventory' },
       { label: 'Invoices', icon: Receipt, path: '/invoices' },
+      { label: 'Profit & Loss', icon: TrendingUp, path: '/accounts/reports/pnl' },
+      { label: 'Cash Book', icon: WalletIcon, path: '/accounts/reports/cashbook' },
+      { label: 'GST Summary', icon: FileText, path: '/accounts/reports/gst' },
     ],
   },
   {

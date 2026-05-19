@@ -99,6 +99,15 @@ const PartnersDashboard = lazy(() => import("@/pages/PartnersDashboard"));
 const Help = lazy(() => import("@/pages/Help"));
 const Invoices = lazy(() => import("@/pages/Invoices"));
 const InvoicePrint = lazy(() => import("@/pages/InvoicePrint"));
+const AccountsOverview = lazy(() => import("@/pages/accounts/AccountsOverview"));
+const AccountsPurchases = lazy(() => import("@/pages/accounts/Purchases"));
+const AccountsExpenses = lazy(() => import("@/pages/accounts/Expenses"));
+const AccountsSuppliers = lazy(() => import("@/pages/accounts/Suppliers"));
+const AccountsKhata = lazy(() => import("@/pages/accounts/Khata"));
+const AccountsInventory = lazy(() => import("@/pages/accounts/InventoryLedger"));
+const AccountsPnl = lazy(() => import("@/pages/accounts/ProfitLossReport"));
+const AccountsCashBook = lazy(() => import("@/pages/accounts/CashBook"));
+const AccountsGst = lazy(() => import("@/pages/accounts/GstSummary"));
 
 
 const queryClient = new QueryClient();
@@ -230,6 +239,15 @@ const AppRoutes = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="/accounts" element={<ProtectedRoute><DashboardLayout><AccountsOverview /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/accounts/purchases" element={<ProtectedRoute><DashboardLayout><AccountsPurchases /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/accounts/expenses" element={<ProtectedRoute><DashboardLayout><AccountsExpenses /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/accounts/suppliers" element={<ProtectedRoute><DashboardLayout><AccountsSuppliers /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/accounts/khata" element={<ProtectedRoute><DashboardLayout><AccountsKhata /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/accounts/inventory" element={<ProtectedRoute><DashboardLayout><AccountsInventory /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/accounts/reports/pnl" element={<ProtectedRoute><DashboardLayout><AccountsPnl /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/accounts/reports/cashbook" element={<ProtectedRoute><DashboardLayout><AccountsCashBook /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/accounts/reports/gst" element={<ProtectedRoute><DashboardLayout><AccountsGst /></DashboardLayout></ProtectedRoute>} />
             <Route
               path="/returns"
               element={
