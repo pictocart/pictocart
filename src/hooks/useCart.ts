@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
+export type FulfillmentMode = 'dine_in' | 'takeaway' | 'delivery';
+
 export interface CartItem {
   productId: string;
   title: string;
@@ -7,17 +9,27 @@ export interface CartItem {
   image: string | null;
   quantity: number;
   variant?: string;
+  /** Optional per-item allowed modes (from menu_meta.available_modes). */
+  available_modes?: FulfillmentMode[];
 }
 
 const CART_KEY = (storeSlug: string) => `cart_${storeSlug}`;
+const MODE_KEY = (storeSlug: string) => `cart_mode_${storeSlug}`;
+const TABLE_KEY = (storeSlug: string) => `cart_table_${storeSlug}`;
 
 export const useCart = (storeSlug: string) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [fulfillmentMode, setFulfillmentModeState] = useState<FulfillmentMode>('delivery');
+  const [tableLabel, setTableLabelState] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(CART_KEY(storeSlug));
       if (saved) setItems(JSON.parse(saved));
+      const m = localStorage.getItem(MODE_KEY(storeSlug)) as FulfillmentMode | null;
+      if (m) setFulfillmentModeState(m);
+      const t = localStorage.getItem(TABLE_KEY(storeSlug));
+      if (t) setTableLabelState(t);
     } catch {}
   }, [storeSlug]);
 
@@ -40,8 +52,6 @@ export const useCart = (storeSlug: string) => {
     const next = existing
       ? prev.map((i) => (`${i.productId}_${i.variant || ''}` === key ? { ...i, quantity: i.quantity + qty } : i))
       : [...prev, { ...item, quantity: qty }];
-    // Write synchronously BEFORE React state update so navigation immediately
-    // after addItem() still persists the change (Buy Now → navigate to cart).
     localStorage.setItem(CART_KEY(storeSlug), JSON.stringify(next));
     setItems(next);
   }, [storeSlug]);
@@ -62,10 +72,34 @@ export const useCart = (storeSlug: string) => {
 
   const clearCart = useCallback(() => {
     persist([]);
+    // Don't clear table binding — server clears it when bill is paid; keep table sticky
+  }, [storeSlug]);
+
+  const setFulfillmentMode = useCallback((mode: FulfillmentMode) => {
+    localStorage.setItem(MODE_KEY(storeSlug), mode);
+    setFulfillmentModeState(mode);
+    if (mode !== 'dine_in') {
+      localStorage.removeItem(TABLE_KEY(storeSlug));
+      setTableLabelState(null);
+    }
+  }, [storeSlug]);
+
+  const setTableLabel = useCallback((label: string | null) => {
+    if (label) {
+      localStorage.setItem(TABLE_KEY(storeSlug), label);
+      localStorage.setItem(MODE_KEY(storeSlug), 'dine_in');
+      setFulfillmentModeState('dine_in');
+    } else {
+      localStorage.removeItem(TABLE_KEY(storeSlug));
+    }
+    setTableLabelState(label);
   }, [storeSlug]);
 
   const totalItems = items.reduce((s, i) => s + i.quantity, 0);
   const totalPrice = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  return { items, addItem, updateQuantity, removeItem, clearCart, totalItems, totalPrice };
+  return {
+    items, addItem, updateQuantity, removeItem, clearCart, totalItems, totalPrice,
+    fulfillmentMode, setFulfillmentMode, tableLabel, setTableLabel,
+  };
 };
