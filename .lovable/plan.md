@@ -1,86 +1,143 @@
-# Phase A2 + A4 — Menu Builder & Mode-aware Guest Checkout
+## Accounts Module — Industry-Standard Bookkeeping for Small Sellers
 
-Picking up where A1 (schema + fulfillment settings + QR codes) left off. Next we make the storefront actually usable for a café/restaurant: a menu page customers can browse, and a checkout that adapts to dine-in / takeaway / delivery without forcing sign-up.
+A self-contained "mini Tally / Vyapar" inside Pictocart. Built around six pillars that mirror what Indian small retailers, cafés and D2C sellers actually track. Everything is auto-wired to existing orders, inventory and Razorpay so the merchant never has to enter the same number twice.
 
-## A2 — Menu Builder (dashboard side)
+### Sidebar (under Accounts)
 
-**New page `src/pages/Menu.tsx`** (route `/menu`, only shown in sidebar when `dine_in_enabled || takeaway_enabled` OR category is `food`/`grocery`).
-
-- Drag-reorder sections built on existing categories (`categories.parent_id` already supports sections like Starters / Mains / Drinks).
-- Per-item drawer to edit `menu_meta` jsonb on `products`:
-  - `diet`: veg / non_veg / egg (color-coded badge)
-  - `spice_level`: 0–3
-  - `allergens[]`: nuts, dairy, gluten, …
-  - `prep_minutes`: number
-  - `available_modes[]`: dine_in / takeaway / delivery (default = all enabled)
-  - `daily_window`: optional `{ from, to }` for breakfast-only items, etc.
-- Reuses existing `useProducts`, `useCategories` hooks — no fork of the products table.
-- Bulk action: "Mark all items veg" / "Set 15-min prep for section".
-
-**New hook `src/hooks/useMenu.ts`** — wraps products+categories grouped into menu sections, filtered by `available_modes` for storefront use.
-
-## A4 — Mode-aware storefront menu + checkout
-
-**Public routes** (no auth):
-- `/store/:slug/menu` — full menu with mode picker pinned to top
-- `/menu/t/:tableToken` — auto-selects dine-in + binds table, hides address/phone entirely
-- `/menu/takeaway` — phone-only checkout
-- `/menu/delivery` — falls back to existing address flow
-
-**New components** under `src/components/storefront/menu/`:
-- `MenuPage.tsx` — sticky mode picker + scroll-spy section nav + item cards with veg dot, price, prep time, "+" button
-- `ModePicker.tsx` — 3-tab selector (only shows enabled modes)
-- `MenuItemCard.tsx` — compact card, veg/non-veg dot, spice icons, "Add" button
-- `TableBanner.tsx` — "You're ordering at Table 4 · clear" pill on table-bound carts
-
-**Cart changes** (`src/hooks/useCart.ts`):
-- Add `fulfillment_mode` and `table_label` to cart state; persist alongside items in `localStorage`.
-- Table token sets a 4-hour cookie binding cart to that table (prevents cross-table mix-ups).
-- Filter out items whose `available_modes` excludes the active mode.
-
-**Checkout split** (`src/pages/StorefrontCheckout.tsx` refactor):
-- Three variants share one flow, branched on `cart.fulfillment_mode`:
-  - **Dine-in**: no fields. Confirm button → creates order with `customer_user_id=NULL`, `guest_tracking_code`, `table_label`, `prep_status='received'`, payment defaults to "Pay at counter". Shows order code + estimated time on success screen.
-  - **Takeaway**: single phone field (+ optional name). Creates guest order, payment = Razorpay or pay-at-pickup based on `takeaway_payment_modes`.
-  - **Delivery**: existing flow stays, just tagged with `fulfillment_mode='delivery'`.
-- Skip shipping fee for dine-in/takeaway; apply `delivery_fee_flat` + `delivery_min_order` for delivery.
-- Order success page now shows `prep_status` timeline (Received → Preparing → Ready) for food modes.
-
-**Public order tracking** `/track/:code` — looks up order by `guest_tracking_code`, shows current `prep_status`, no login needed.
-
-## Sidebar / nav wiring
-
-- Add "Menu" entry to `DashboardLayout.tsx` between Products and Categories, conditional on fulfillment settings or food category.
-- Storefront header gets a "Menu" link when any non-delivery mode is enabled.
-
-## Technical notes (for the dev)
-
-- `useCart` migration: existing carts default to `{ fulfillment_mode: 'delivery' }` so current shoppers see no change.
-- Guest order INSERT policy from A1 already allows anon dine-in/takeaway when store has those modes enabled — no new RLS needed for A4.
-- `prep_status` is a separate column from `status`; retail orders ignore it. No enum change to `status`.
-- Order success screen polls `prep_status` via `supabase.channel` (realtime publication added in A1 migration).
-- Menu page is server-rendered via `useStorefrontBundle` (extend the bundle to include `menu_meta` and grouped sections) so first paint is instant on QR scan.
-- Out of scope here: kitchen desk (A5), notifications (A7), food-menu theme archetype (A6) — they ship in the next batch.
-
-## Files to create
 ```text
-src/pages/Menu.tsx
-src/hooks/useMenu.ts
-src/components/storefront/menu/MenuPage.tsx
-src/components/storefront/menu/ModePicker.tsx
-src/components/storefront/menu/MenuItemCard.tsx
-src/components/storefront/menu/TableBanner.tsx
-src/pages/storefront/OrderTracking.tsx        (/track/:code)
+Accounts
+├── Overview           (dashboard: today's cash-in, cash-out, low stock, dues)
+├── Sales              (read-only summary of Orders → revenue, COGS, GST)
+├── Purchases          (supplier bills / stock-in receipts)
+├── Expenses           (rent, salary, utilities, marketing, misc.)
+├── Suppliers          (vendor master + outstanding payable)
+├── Customer Khata     (credit given to walk-in & online customers)
+├── Inventory Ledger   (stock movement log + low-stock alerts)
+├── Invoices           (existing — unchanged)
+└── Reports
+       ├── Profit & Loss
+       ├── Cash Book
+       └── GST Summary (GSTR-1 style)
 ```
 
-## Files to edit
+### 1. Overview page (`/accounts`)
+
+Single dashboard that pulls everything together:
+
+- **KPIs**: Today's revenue, Today's expenses, Net today, Cash in hand, Bank balance, Receivables (Khata), Payables (suppliers)
+- **Cash-flow chart** (last 30 days, money in vs money out)
+- **Low-stock alert strip** — products at/below reorder level with a "Reorder" button that opens a pre-filled Purchase entry
+- **Outstanding dues**: top 5 customers owing money + top 5 suppliers we owe
+- **Quick-add buttons**: + Expense, + Purchase, + Khata entry
+
+### 2. Purchases (`/accounts/purchases`)
+
+Record stock bought from a supplier. On save, optionally bumps `products.inventory_count` so inventory stays accurate.
+
+Fields: supplier (dropdown from Suppliers), bill number, bill date, line items `[{ product, qty, rate, gst% }]`, subtotal/GST/total, payment status (paid/partial/unpaid), payment mode (cash/UPI/card/bank/credit). "Mark as paid later" creates a payable.
+
+### 3. Expenses (`/accounts/expenses`)
+
+Quick mobile-first capture for café/shop spends.
+
+- Categories (seeded, editable): Rent, Salary & Wages, Electricity, Gas/Fuel, Internet/Phone, Marketing, Packaging, Repairs, Transport, Bank charges, Other
+- Fields: date, category, amount, mode (cash/UPI/card/bank), notes, attach bill photo (upload to existing `store-assets` bucket)
+- Recurring toggle (monthly rent, salaries) — auto-creates next month's draft
+
+### 4. Suppliers (`/accounts/suppliers`)
+
+Master list: name, contact, GSTIN, opening balance. Tapping a supplier shows their statement (purchases, payments, running balance).
+
+### 5. Customer Khata / Credit (`/accounts/khata`)
+
+The "udhaar register" every Indian shop has on paper.
+
+- Customers from existing `customers` table + ability to add walk-in entries
+- Two-column ledger per customer: amount given (sale on credit) and amount received (settlement)
+- One-tap "Send reminder" via WhatsApp link (`wa.me/...?text=...`) and email
+- Online orders with `payment_status='pending' AND total>0` flow in automatically
+
+### 6. Inventory Ledger (`/accounts/inventory`)
+
+- Per-product stock movement: opening, purchases (+), sales (−), adjustments (±), closing
+- **Reorder level** per product (new column) + "Low stock" badge
+- Daily 09:00 IST cron checks all products; sends one in app notification to the seller if any product is at/below reorder level (uses existing `send-transactional-email` function)
+- Manual "Stock adjust" entry for damages/spoilage with reason
+
+### 7. Reports
+
+- **Profit & Loss** — date range picker, computed live:
+  - Revenue (paid orders) − COGS (sum of `products.cost_price × qty` from order items) − Expenses = Net Profit
+  - Export CSV / Print
+- **Cash Book** — every money-in (paid orders + Khata receipts) and money-out (expenses + supplier payments), running balance per payment mode (Cash / UPI / Bank)
+- **GST Summary** — outward supplies (sales), inward supplies (purchases), tax payable, in a GSTR-1-style table; export CSV
+
+### Wiring with what already exists
+
+- **Sales revenue & COGS** read from `orders` (paid only) — already filtered correctly in the dashboard fix shipped earlier today
+- **Invoices** stays the same; we just link to it from the Sales tab
+- **Wallet** (AI credits) stays separate — it isn't business cash
+- **Razorpay payments** become a "Bank — Razorpay" row in the Cash Book automatically
+
+### Permissions
+
+Everything is store-scoped. RLS: only the store owner (and `admin` role) can read/write. Bill-photo uploads use a new `accounts/<store_id>/<file>` prefix in the existing `store-assets` bucket.
+
+---
+
+## Technical Plan
+
+### New tables (one migration)
+
+- `suppliers` — `id, store_id, name, phone, email, gstin, address jsonb, opening_balance, created_at, updated_at`
+- `purchase_bills` — `id, store_id, supplier_id, bill_number, bill_date, items jsonb, subtotal, tax, total, payment_status, payment_mode, paid_amount, notes, attachment_url`
+- `expenses` — `id, store_id, category, amount, expense_date, payment_mode, notes, attachment_url, is_recurring bool, recurrence text, parent_expense_id`
+- `expense_categories` — `id, store_id, name, is_default` (seeded list above)
+- `khata_entries` — `id, store_id, customer_id (nullable), customer_name, customer_phone, entry_type ('credit'|'payment'), amount, entry_date, order_id (nullable), notes` — `customer_id` nullable to support walk-ins
+- `inventory_movements` — `id, store_id, product_id, movement_type ('opening'|'purchase'|'sale'|'adjustment'|'return'), qty (signed), reference_table, reference_id, notes, created_at`
+- `accounts_settings` — `id, store_id, opening_cash, opening_bank, low_stock_email_enabled bool, gst_enabled bool` (one row per store)
+
+Schema additions on existing tables:
+
+- `products.cost_price numeric(10,2)` — needed for COGS / P&L
+- `products.reorder_level integer DEFAULT 0` — drives low-stock alerts
+- `customers.balance numeric(10,2) DEFAULT 0` — denormalised Khata balance, kept fresh by trigger on `khata_entries`
+
+All new tables get standard RLS: "store owner manages own rows" + "admin manages all".
+
+### Triggers / functions
+
+- `recompute_customer_balance()` — trigger on `khata_entries` insert/update/delete, recomputes the `customers.balance` total
+- `inventory_on_purchase()` — trigger on `purchase_bills` insert, writes one `inventory_movements` row per line and bumps `products.inventory_count`
+- `inventory_on_order()` — extend the existing `deduct_inventory_on_order` trigger to also log a `sale` movement row
+- `pnl_report(_store_id uuid, _from date, _to date)` — security-definer function returning revenue / COGS / expenses / net for the date range (keeps the heavy aggregate on the DB)
+
+### Edge function
+
+- `accounts-low-stock-check` (scheduled daily 09:00 IST via cron) — scans all stores where `low_stock_email_enabled = true`, finds products at/below `reorder_level`, calls existing `notification on the desktop.` 
+
+### Frontend
+
+New routes (lazy-loaded in `App.tsx`):
+
 ```text
-src/App.tsx                         (new public routes + /menu dashboard route)
-src/components/DashboardLayout.tsx  (Menu sidebar entry)
-src/hooks/useCart.ts                (mode + table state)
-src/pages/StorefrontCheckout.tsx    (3-way branch)
-src/hooks/useStorefrontBundle.ts    (include menu_meta + sections)
-src/components/storefront/StorefrontLayout.tsx  (Menu link in header)
+/accounts                   AccountsOverview.tsx
+/accounts/purchases         Purchases.tsx          + PurchaseForm.tsx
+/accounts/expenses          Expenses.tsx           + ExpenseForm.tsx (sheet)
+/accounts/suppliers         Suppliers.tsx          + SupplierForm.tsx
+/accounts/khata             Khata.tsx              + KhataCustomerDetail.tsx
+/accounts/inventory         InventoryLedger.tsx
+/accounts/reports/pnl       ProfitLossReport.tsx
+/accounts/reports/cashbook  CashBook.tsx
+/accounts/reports/gst       GstSummary.tsx
 ```
 
-Approve to start. After A2+A4 land, next batch is A5 (kitchen desk) + A6 (food-menu theme archetype) + A7 (notifications) so a café is fully production-ready.
+Sidebar update in `DashboardLayout.tsx`: expand the existing **Accounts** group with the entries above (keep Invoices where it is).
+
+Shared hooks: `useSuppliers`, `usePurchases`, `useExpenses`, `useKhata`, `useInventoryLedger`, `usePnl`, `useCashBook` — all React Query, store-scoped.
+
+Reusable UI: `MoneyInput`, `PaymentModePicker` (Cash / UPI / Card / Bank), `DateRangePicker`, `ExportCsvButton`, all built on existing shadcn primitives + `--primary` (#F97316) tokens to match the rest of the dashboard.
+
+### Rollout
+
+Single migration → seed default expense categories per store → ship UI behind the existing `/accounts` route. No breaking changes to Orders, Invoices or the storefront. Mobile layouts use the same sticky-bottom-nav pattern already in use across the dashboard.
