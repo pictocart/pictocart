@@ -68,6 +68,8 @@ export default function ThemeMasterPipeline() {
     (async () => {
       const { data } = await supabase.from("theme_category_briefs").select("vertical,subcategory,display_name").eq("is_active", true).order("sort_order");
       setBriefs((data ?? []) as any);
+      const { data: lay } = await supabase.from("theme_layout_archetypes").select("slug,name,description").eq("is_active", true).order("sort_order");
+      setLayouts((lay ?? []) as any);
     })();
   }, []);
   useEffect(() => { if (settings && !searchQuery) setSearchQuery(settings.research_query); /* eslint-disable-next-line */ }, [settings]);
