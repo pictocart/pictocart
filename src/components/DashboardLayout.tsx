@@ -75,6 +75,14 @@ const navTree: NavEntry[] = [
     ],
   },
   {
+    label: 'Accounts',
+    icon: WalletIcon,
+    key: 'accounts',
+    children: [
+      { label: 'Invoices', icon: Receipt, path: '/invoices' },
+    ],
+  },
+  {
     label: 'Marketing',
     icon: Megaphone,
     key: 'marketing',
