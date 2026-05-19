@@ -82,6 +82,8 @@ const ProductForm = () => {
       setImages((existingProduct.images as string[]) || []);
       setVariants((existingProduct.variants as unknown as VariantOption[]) || []);
       setInventoryCount(String(existingProduct.inventory_count ?? 0));
+      setCostPrice(existingProduct.cost_price ? String(existingProduct.cost_price) : '');
+      setTaxRate((existingProduct as any).tax_rate ? String((existingProduct as any).tax_rate) : '');
       setIsActive(existingProduct.is_active ?? true);
       setSeoTitle(existingProduct.seo_title || '');
       setSeoDescription(existingProduct.seo_description || '');
