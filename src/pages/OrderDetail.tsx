@@ -411,7 +411,7 @@ const OrderDetail = () => {
             <CardHeader>
               <CardTitle className="text-base">Payment</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Method</span>
                 <span className="capitalize">{order.payment_method || '—'}</span>
@@ -429,6 +429,62 @@ const OrderDetail = () => {
                   );
                 })()}
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount Due</span>
+                <span className="font-semibold">
+                  ₹{order.payment_status === 'paid' ? 0 : Number(order.total || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              {order.payment_status !== 'paid' && order.payment_status !== 'refunded' && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wide">Collect Payment</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'cash', label: 'Cash', icon: Banknote },
+                      { id: 'upi', label: 'UPI', icon: Smartphone },
+                      { id: 'card', label: 'Card', icon: CreditCard },
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => setCollectMode(m.id)}
+                        className={cn(
+                          'flex flex-col items-center gap-1 rounded-md border-2 p-2 transition-colors',
+                          collectMode === m.id
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border hover:border-primary/40 text-muted-foreground'
+                        )}
+                      >
+                        <m.icon className="h-4 w-4" />
+                        <span className="text-xs font-medium">{m.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1" /> Mark Payment Received
+                  </Button>
+                </div>
+              )}
+
+              {order.payment_status === 'paid' && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-3 flex items-center gap-2 text-green-800">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="text-xs font-medium">Payment received</span>
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => window.open(`/invoices/${order.id}/print`, '_blank')}
+              >
+                <Printer className="h-4 w-4 mr-1" /> Print Invoice
+              </Button>
+
               <RefundPanel
                 orderId={order.id}
                 total={Number(order.total ?? 0)}
@@ -439,6 +495,27 @@ const OrderDetail = () => {
               />
             </CardContent>
           </Card>
+
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm payment received?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You're marking ₹{Number(order.total || 0).toLocaleString('en-IN')} as received via{' '}
+                  <span className="font-semibold uppercase">{collectMode}</span>. This will update the
+                  order's payment status to <span className="font-semibold">Paid</span>.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={collecting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmCollectPayment} disabled={collecting}>
+                  {collecting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                  Yes, payment received
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
 
           {order.notes && (
             <Card>
