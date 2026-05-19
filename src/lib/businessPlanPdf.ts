@@ -135,7 +135,7 @@ const PLAN: Section[] = [
     ],
     bullets: [
       'AI-first onboarding — no other player generates the entire store from one photo.',
-      'Bharat-native — GST invoices, FSSAI fields, COD, Delhivery, vernacular UI baked in.',
+      'Bharat-native — GST invoices, FSSAI fields, COD, Shiprocket, vernacular UI baked in.',
       'Compounding cost economics — caching, prompt optimization and prefab themes reduce per-store AI cost by 90%.',
     ],
   },
