@@ -110,8 +110,8 @@ const ShippingSettings = () => {
     }
     setSrTesting(true);
     setSrTestResult(null);
+    setSrTestError(null);
     try {
-      // Auto-save credentials first so the proxy can read them
       const { error: secErr } = await supabase
         .from('store_secrets' as any)
         .upsert({
@@ -122,6 +122,7 @@ const ShippingSettings = () => {
         }, { onConflict: 'store_id' });
       if (secErr) {
         setSrTestResult('error');
+        setSrTestError(secErr.message);
         toast.error('Could not save credentials: ' + secErr.message);
         setSrTesting(false);
         return;
@@ -148,16 +149,19 @@ const ShippingSettings = () => {
           }),
         }
       );
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && !data.error) {
         setSrTestResult('success');
         toast.success('Shiprocket connected successfully!');
       } else {
+        const msg = data?.error || `HTTP ${res.status}`;
         setSrTestResult('error');
-        toast.error(data.error || 'Shiprocket connection failed. Check your email & password.');
+        setSrTestError(msg);
+        toast.error(msg);
       }
-    } catch {
+    } catch (e: any) {
       setSrTestResult('error');
+      setSrTestError(e?.message || 'Network error');
       toast.error('Shiprocket connection failed.');
     }
     setSrTesting(false);
