@@ -35,7 +35,9 @@ export default function ThemeMasterPipeline() {
   const [refineText, setRefineText] = useState("");
   const [adhocName, setAdhocName] = useState("");
   const [adhocVibe, setAdhocVibe] = useState("");
-  const [adhocCategory, setAdhocCategory] = useState("general");
+  const [adhocVertical, setAdhocVertical] = useState("general");
+  const [adhocSub, setAdhocSub] = useState("general");
+  const [briefs, setBriefs] = useState<Array<{ vertical: string; subcategory: string; display_name: string }>>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const pollRef = useRef<number | null>(null);
 
