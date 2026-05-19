@@ -27,10 +27,19 @@ const TABS = [
   { value: 'rejected', label: 'Rejected' },
 ];
 
+interface OrderFeedbackRow {
+  id: string;
+  order_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
 const ReviewsModeration = () => {
   const { store } = useStore();
   const [tab, setTab] = useState('pending');
   const [rows, setRows] = useState<ReviewRow[]>([]);
+  const [feedback, setFeedback] = useState<OrderFeedbackRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -38,14 +47,24 @@ const ReviewsModeration = () => {
     if (!store?.id) return;
     setLoading(true);
     const sb = supabase as any;
-    const { data, error } = await sb
-      .from('reviews')
-      .select('*')
-      .eq('store_id', store.id)
-      .eq('moderation_status', tab)
-      .order('created_at', { ascending: false });
-    if (error) toast.error(error.message);
-    setRows(((data || []) as unknown as ReviewRow[]));
+    if (tab === 'order_feedback') {
+      const { data, error } = await sb
+        .from('order_feedback')
+        .select('id, order_id, rating, comment, created_at')
+        .eq('store_id', store.id)
+        .order('created_at', { ascending: false });
+      if (error) toast.error(error.message);
+      setFeedback((data || []) as OrderFeedbackRow[]);
+    } else {
+      const { data, error } = await sb
+        .from('reviews')
+        .select('*')
+        .eq('store_id', store.id)
+        .eq('moderation_status', tab)
+        .order('created_at', { ascending: false });
+      if (error) toast.error(error.message);
+      setRows(((data || []) as unknown as ReviewRow[]));
+    }
     setLoading(false);
   };
 
@@ -53,6 +72,7 @@ const ReviewsModeration = () => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store?.id, tab]);
+
 
   const moderate = async (id: string, status: 'approved' | 'rejected') => {
     setBusyId(id);
