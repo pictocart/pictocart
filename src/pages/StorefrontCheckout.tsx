@@ -85,6 +85,15 @@ const StorefrontCheckout = () => {
     }
   }, [store]);
 
+  // Force payment method to match fulfillment mode (dine-in = pay-at-counter only)
+  useEffect(() => {
+    if (fulfillmentMode === 'dine_in' && form.paymentMethod !== 'pay_at_counter') {
+      setForm((f) => ({ ...f, paymentMethod: 'pay_at_counter' }));
+    } else if (fulfillmentMode !== 'dine_in' && form.paymentMethod === 'pay_at_counter') {
+      setForm((f) => ({ ...f, paymentMethod: 'cod' }));
+    }
+  }, [fulfillmentMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load COD rules + customer order history (for risk checks)
   useEffect(() => {
     if (!store?.id) return;
@@ -499,11 +508,16 @@ const StorefrontCheckout = () => {
     color: colors.text,
   };
 
-  const paymentMethods = [
-    { id: 'cod', label: 'Cash on Delivery', icon: Banknote, always: true, disabledReason: codBlockedReason },
-    { id: 'upi', label: 'UPI (GPay, PhonePe, Paytm)', icon: Smartphone, always: false, disabledReason: null as string | null },
-    { id: 'online', label: 'Cards & Net Banking', icon: CreditCard, always: false, disabledReason: null as string | null },
-  ];
+  const isDineIn = fulfillmentMode === 'dine_in';
+  const isTakeaway = fulfillmentMode === 'takeaway';
+
+  const paymentMethods = isDineIn
+    ? [{ id: 'pay_at_counter', label: 'Pay at Counter', icon: Banknote, always: true, disabledReason: null as string | null }]
+    : [
+        { id: 'cod', label: 'Cash on Delivery', icon: Banknote, always: true, disabledReason: codBlockedReason },
+        { id: 'upi', label: 'UPI (GPay, PhonePe, Paytm)', icon: Smartphone, always: false, disabledReason: null as string | null },
+        { id: 'online', label: 'Cards & Net Banking', icon: CreditCard, always: false, disabledReason: null as string | null },
+      ];
 
   return (
     <StorefrontLayout store={store}>
@@ -549,56 +563,69 @@ const StorefrontCheckout = () => {
               />
             </div>
 
-            <h2 className="text-sm font-semibold mb-3 pt-3" style={{ fontFamily: fonts.heading }}>
-              Shipping Address
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                placeholder="Address *"
-                value={form.address}
-                onChange={(e) => handleField('address', e.target.value)}
-                className="col-span-2 w-full px-3 py-2.5 text-sm border"
-                style={inputStyle}
-              />
-              <input
-                placeholder="City *"
-                value={form.city}
-                onChange={(e) => handleField('city', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border"
-                style={inputStyle}
-              />
-              <input
-                placeholder="State"
-                value={form.state}
-                onChange={(e) => handleField('state', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border"
-                style={inputStyle}
-              />
-              <input
-                placeholder="Pincode *"
-                value={form.pincode}
-                onChange={(e) => handleField('pincode', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border"
-                style={inputStyle}
-              />
-            </div>
-
-            {/* Pincode Delivery Check */}
-            {(() => {
-              const settings = store?.settings as any;
-              const shipping = settings?.shipping;
-              // Show only if seller has configured shipping (token is server-side)
-              if ((shipping?.configured || shipping?.api_token) && shipping?.pickup?.pincode) {
-                return (
-                  <PincodeChecker
-                    storeId={store.id}
-                    colors={colors}
-                    borderRadius={borderRadius}
+            {!isDineIn && !isTakeaway && (
+              <>
+                <h2 className="text-sm font-semibold mb-3 pt-3" style={{ fontFamily: fonts.heading }}>
+                  Shipping Address
+                </h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    placeholder="Address *"
+                    value={form.address}
+                    onChange={(e) => handleField('address', e.target.value)}
+                    className="col-span-2 w-full px-3 py-2.5 text-sm border"
+                    style={inputStyle}
                   />
-                );
-              }
-              return null;
-            })()}
+                  <input
+                    placeholder="City *"
+                    value={form.city}
+                    onChange={(e) => handleField('city', e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border"
+                    style={inputStyle}
+                  />
+                  <input
+                    placeholder="State"
+                    value={form.state}
+                    onChange={(e) => handleField('state', e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border"
+                    style={inputStyle}
+                  />
+                  <input
+                    placeholder="Pincode *"
+                    value={form.pincode}
+                    onChange={(e) => handleField('pincode', e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border"
+                    style={inputStyle}
+                  />
+                </div>
+
+                {/* Pincode Delivery Check */}
+                {(() => {
+                  const settings = store?.settings as any;
+                  const shipping = settings?.shipping;
+                  if ((shipping?.configured || shipping?.api_token) && shipping?.pickup?.pincode) {
+                    return (
+                      <PincodeChecker
+                        storeId={store.id}
+                        colors={colors}
+                        borderRadius={borderRadius}
+                      />
+                    );
+                  }
+                  return null;
+                })()}
+              </>
+            )}
+
+            {isDineIn && tableLabel && (
+              <div
+                className="flex items-center gap-2 p-3 text-sm"
+                style={{ backgroundColor: colors.primary + '10', borderRadius: `${borderRadius / 2}px`, color: colors.primary }}
+              >
+                <span className="font-semibold">Table {tableLabel}</span>
+                <span className="opacity-70">· We'll bring your order to your table.</span>
+              </div>
+            )}
 
             <h2 className="text-sm font-semibold mb-3 pt-3" style={{ fontFamily: fonts.heading }}>
               Payment Method
@@ -739,6 +766,8 @@ const StorefrontCheckout = () => {
                 {placing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {placing
                   ? 'Processing...'
+                  : isDineIn
+                  ? 'Place Order (Pay at Counter)'
                   : form.paymentMethod === 'cod'
                   ? 'Place Order (COD)'
                   : 'Pay Now'}
