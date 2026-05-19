@@ -39,6 +39,7 @@ const FulfillmentSettings = lazy(() => import("@/pages/FulfillmentSettings"));
 const QRCodes = lazy(() => import("@/pages/QRCodes"));
 const QRRedirect = lazy(() => import("@/pages/QRRedirect"));
 const Menu = lazy(() => import("@/pages/Menu"));
+const Kitchen = lazy(() => import("@/pages/Kitchen"));
 const StorefrontMenu = lazy(() => import("@/pages/storefront/StorefrontMenu"));
 const OrderTracking = lazy(() => import("@/pages/storefront/OrderTracking"));
 const DomainSettings = lazy(() => import("@/pages/DomainSettings"));
