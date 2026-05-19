@@ -26,18 +26,14 @@ interface CustomerAddress {
 const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOrderDialogProps) => {
   const settings = store.settings as any;
   const shippingConfig = settings?.shipping;
-  const defaultProvider = (shippingConfig?.preferred_courier === 'shiprocket' ? 'shiprocket' : 'delhivery') as 'delhivery' | 'shiprocket';
   const [weight, setWeight] = useState('500');
   const [shipping, setShipping] = useState(false);
-  const [provider, setProvider] = useState<'delhivery' | 'shiprocket'>(defaultProvider);
 
-  const isConfigured =
-    (!!shippingConfig?.configured || !!shippingConfig?.api_token) &&
-    !!shippingConfig?.pickup?.pincode;
+  const isConfigured = !!shippingConfig?.configured && !!shippingConfig?.pickup?.pincode;
 
   const handleShip = async () => {
     if (!isConfigured) {
-      toast.error('Configure shipping settings first');
+      toast.error('Configure Shiprocket in Settings → Shipping first');
       return;
     }
 
@@ -51,9 +47,8 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
       const accessToken = sessionData.session?.access_token;
 
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const fnName = provider === 'shiprocket' ? 'shiprocket-proxy' : 'delhivery-proxy';
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/${fnName}`,
+        `https://${projectId}.supabase.co/functions/v1/shiprocket-proxy`,
         {
           method: 'POST',
           headers: {
@@ -76,7 +71,7 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
               total_amount: order.total || 0,
               weight: parseInt(weight) || 500,
               seller_name: store.name,
-              pickup_name: provider === 'shiprocket' ? (shippingConfig.shiprocket_pickup_name || pickup.name || 'Primary') : pickup.name,
+              pickup_name: shippingConfig.shiprocket_pickup_name || pickup.name || 'Primary',
               pickup_phone: pickup.phone,
               pickup_address: pickup.address,
               pickup_city: pickup.city,
@@ -95,10 +90,9 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
         return;
       }
 
-      // Persist provider choice on the order so the tracking call later uses the right proxy
-      await supabase.from('orders').update({ courier_provider: provider } as any).eq('id', order.id);
+      await supabase.from('orders').update({ courier_provider: 'shiprocket' } as any).eq('id', order.id);
 
-      toast.success(`Shipment created via ${provider}! AWB: ${data.waybill}`);
+      toast.success(`Shipment created on Shiprocket! AWB: ${data.waybill}`);
       onShipped(data.waybill);
       onOpenChange(false);
     } catch (err) {
@@ -113,9 +107,9 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Shipping Not Configured</DialogTitle>
+            <DialogTitle>Shiprocket Not Configured</DialogTitle>
             <DialogDescription>
-              Please configure your Delhivery API token and pickup address in Settings → Shipping before creating shipments.
+              Please add your Shiprocket API-User credentials and pickup address in Settings → Shipping before creating shipments.
             </DialogDescription>
           </DialogHeader>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
@@ -132,7 +126,7 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
             <Truck className="h-5 w-5" /> Ship Order #{order.order_number}
           </DialogTitle>
           <DialogDescription>
-            Create a shipment with your preferred courier and get an AWB tracking number
+            Create a Shiprocket shipment and get an AWB tracking number
           </DialogDescription>
         </DialogHeader>
 
@@ -145,29 +139,6 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
           </div>
 
           <div className="space-y-2">
-            <Label>Courier</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['delhivery', 'shiprocket'] as const).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setProvider(p)}
-                  className={`rounded-md border px-3 py-2 text-sm font-medium capitalize transition ${
-                    provider === p ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted'
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-            {provider === 'shiprocket' && (
-              <p className="text-xs text-muted-foreground">
-                Make sure your Shiprocket email + password are saved under Settings → Shipping.
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
             <Label>Package Weight (grams)</Label>
             <Input
               type="number"
@@ -177,7 +148,7 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
               min={1}
             />
             <p className="text-xs text-muted-foreground">
-              Enter the total weight of the package in grams
+              Total weight of the package in grams. Shiprocket auto-picks the cheapest courier serviceable to the customer's pincode.
             </p>
           </div>
 
@@ -187,6 +158,9 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
             </p>
             <p className="text-muted-foreground">
               {shippingConfig.pickup.address}, {shippingConfig.pickup.city}, {shippingConfig.pickup.state} - {shippingConfig.pickup.pincode}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Nickname: <span className="font-mono">{shippingConfig.shiprocket_pickup_name || shippingConfig.pickup.name || 'Primary'}</span>
             </p>
           </div>
         </div>
