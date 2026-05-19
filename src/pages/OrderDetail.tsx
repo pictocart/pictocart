@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useOrder, useOrders, ORDER_STATUSES, PAYMENT_STATUSES, type OrderStatus } from '@/hooks/useOrders';
 import { useStore } from '@/hooks/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,13 +38,35 @@ const STATUS_ORDER: OrderStatus[] = ['pending', 'confirmed', 'processing', 'ship
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: order, isLoading, refetch } = useOrder(id);
   const { updateStatus } = useOrders();
   const { store } = useStore();
   const [shipDialogOpen, setShipDialogOpen] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
-  const [collectMode, setCollectMode] = useState<string>('cash');
+
+  // Offline payment modes available for "Collect Payment" at counter.
+  // F&B stores get all three on by default; other shops respect merchant choice.
+  const FNB_KEYWORDS = ['food', 'food_beverages', 'food-and-beverages', 'restaurant', 'cafe'];
+  const isFnB = !!store?.category && FNB_KEYWORDS.includes(String(store.category).toLowerCase());
+  const offlineCfg = (store?.settings as any)?.offline_payments;
+  const enabledOffline = useMemo(() => {
+    const defaults = { cash: true, upi: isFnB, card: isFnB };
+    const cfg = offlineCfg ?? defaults;
+    return {
+      cash: cfg.cash !== false,
+      upi: cfg.upi !== false ? (isFnB || !!cfg.upi) : false,
+      card: cfg.card !== false ? (isFnB || !!cfg.card) : false,
+    };
+  }, [offlineCfg, isFnB]);
+  const offlineModes = [
+    enabledOffline.cash && { id: 'cash', label: 'Cash', icon: Banknote },
+    enabledOffline.upi && { id: 'upi', label: 'UPI', icon: Smartphone },
+    enabledOffline.card && { id: 'card', label: 'Card', icon: CreditCard },
+  ].filter(Boolean) as Array<{ id: string; label: string; icon: any }>;
+
+  const [collectMode, setCollectMode] = useState<string>(offlineModes[0]?.id || 'cash');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [collecting, setCollecting] = useState(false);
 
@@ -145,6 +168,9 @@ const OrderDetail = () => {
     setConfirmOpen(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`Payment received via ${collectMode.toUpperCase()}`);
+    // Invalidate dashboard + order list caches so revenue updates immediately
+    qc.invalidateQueries({ queryKey: ['dashboard-orders'] });
+    qc.invalidateQueries({ queryKey: ['orders'] });
     refetch();
   };
 
@@ -436,15 +462,11 @@ const OrderDetail = () => {
                 </span>
               </div>
 
-              {order.payment_status !== 'paid' && order.payment_status !== 'refunded' && (
+              {order.payment_status !== 'paid' && order.payment_status !== 'refunded' && offlineModes.length > 0 && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
                   <p className="text-xs font-semibold text-primary uppercase tracking-wide">Collect Payment</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'cash', label: 'Cash', icon: Banknote },
-                      { id: 'upi', label: 'UPI', icon: Smartphone },
-                      { id: 'card', label: 'Card', icon: CreditCard },
-                    ].map((m) => (
+                  <div className={cn('grid gap-2', offlineModes.length === 1 ? 'grid-cols-1' : offlineModes.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+                    {offlineModes.map((m) => (
                       <button
                         key={m.id}
                         onClick={() => setCollectMode(m.id)}
@@ -466,6 +488,9 @@ const OrderDetail = () => {
                   >
                     <CheckCircle2 className="h-4 w-4 mr-1" /> Mark Payment Received
                   </Button>
+                  <p className="text-[10px] text-muted-foreground">
+                    Manage offline modes in <a href="/settings/payments" className="underline">Settings → Payments → Offline</a>
+                  </p>
                 </div>
               )}
 
