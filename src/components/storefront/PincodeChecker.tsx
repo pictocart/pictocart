@@ -29,7 +29,7 @@ const PincodeChecker = ({
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/delhivery-proxy`,
+        `https://${projectId}.supabase.co/functions/v1/shiprocket-proxy`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
