@@ -166,9 +166,23 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
     if (!toolCall) throw new Error("AI did not return theme blueprint");
     const dna = JSON.parse(toolCall.function.arguments);
 
-    const imgPrompts: { key: string; prompt: string }[] = [
-      { key: "hero", prompt: `${dna.hero.image_prompt}. Cinematic, ${dna.vibe} aesthetic, 16:9, high-end product photography, no text.` },
-      ...dna.categories.map((c: any, i: number) => ({ key: `cat_${i}`, prompt: `${c.image_prompt}. ${dna.vibe} aesthetic, square crop, clean studio background, no text.` })),
+    // Defensive override: lock layout fields to the archetype contract so the model can't drift.
+    if (archetype) {
+      dna.layout = {
+        hero_style: archetype.hero_style,
+        category_style: archetype.category_style,
+        product_style: archetype.product_style,
+        header_style: archetype.header_style,
+        density: archetype.density,
+        section_order: archetype.section_order,
+      };
+    }
+
+    const heroRatio = archetype?.image_ratios?.hero ?? "16:9";
+    const catRatio = archetype?.image_ratios?.category ?? "1:1";
+    const imgPrompts: { key: string; prompt: string; ratio: string }[] = [
+      { key: "hero", prompt: `${dna.hero.image_prompt}. Cinematic, ${dna.vibe} aesthetic, ${heroRatio}, high-end product photography, no text.`, ratio: heroRatio },
+      ...dna.categories.map((c: any, i: number) => ({ key: `cat_${i}`, prompt: `${c.image_prompt}. ${dna.vibe} aesthetic, ${catRatio} crop, clean studio background, no text.`, ratio: catRatio })),
     ];
     const imgResults = await Promise.all(imgPrompts.map((p) => genImage(p.prompt, "generate-and-ship-theme")));
     const imageCostTotal = imgResults.reduce((s, r) => s + r.cost, 0);
