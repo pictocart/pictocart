@@ -47,6 +47,8 @@ const ProductForm = () => {
   const [images, setImages] = useState<string[]>([]);
   const [variants, setVariants] = useState<VariantOption[]>([]);
   const [inventoryCount, setInventoryCount] = useState('0');
+  const [costPrice, setCostPrice] = useState('');
+  const [taxRate, setTaxRate] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
