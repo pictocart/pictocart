@@ -11,6 +11,7 @@ export interface MenuMeta {
   daily_window?: { from: string; to: string };
 }
 
+export interface MenuVariantOption { name: string; values: string[] }
 export interface MenuItem {
   id: string;
   title: string;
@@ -21,6 +22,7 @@ export interface MenuItem {
   category_id: string | null;
   menu_meta: MenuMeta;
   is_active: boolean;
+  variants: MenuVariantOption[];
 }
 
 export interface MenuSection {
@@ -49,6 +51,10 @@ export const useStoreMenu = (storeId: string | undefined, mode?: FulfillmentMode
       for (const p of prods || []) {
         const meta = parseMeta((p as any).menu_meta);
         if (mode && meta.available_modes && meta.available_modes.length > 0 && !meta.available_modes.includes(mode)) continue;
+        const rawVariants = (p as any).variants;
+        const variants: MenuVariantOption[] = Array.isArray(rawVariants)
+          ? rawVariants.filter((v: any) => v && v.name && Array.isArray(v.values))
+          : [];
         const item: MenuItem = {
           id: p.id,
           title: p.title,
@@ -59,6 +65,7 @@ export const useStoreMenu = (storeId: string | undefined, mode?: FulfillmentMode
           category_id: (p as any).category_id ?? null,
           menu_meta: meta,
           is_active: p.is_active ?? true,
+          variants,
         };
         const target = sections.find((s) => s.id === item.category_id);
         if (target) target.items.push(item);
