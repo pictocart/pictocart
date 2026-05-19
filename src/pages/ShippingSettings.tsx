@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Package, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound, ShieldCheck, Info } from 'lucide-react';
+import { Package, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound, ShieldCheck, Info, ChevronDown, ChevronLeft, ChevronRight, Sparkles, UserCheck, Warehouse, Wallet, Key, Settings2 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 interface PickupAddress {
   name: string;
