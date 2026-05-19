@@ -236,7 +236,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-          {navTree.map((entry) => {
+          {filteredNavTree.map((entry) => {
             if (!isGroup(entry)) return renderLeaf(entry);
 
             if (collapsed) {
