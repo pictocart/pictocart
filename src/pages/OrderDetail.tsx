@@ -168,6 +168,9 @@ const OrderDetail = () => {
     setConfirmOpen(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`Payment received via ${collectMode.toUpperCase()}`);
+    // Invalidate dashboard + order list caches so revenue updates immediately
+    qc.invalidateQueries({ queryKey: ['dashboard-orders'] });
+    qc.invalidateQueries({ queryKey: ['orders'] });
     refetch();
   };
 
