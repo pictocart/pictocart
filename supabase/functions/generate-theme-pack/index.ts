@@ -211,14 +211,67 @@ serve(async (req) => {
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdmin) throw new Error("Admin access required");
 
-    const { category, styleHints } = await req.json();
+    const { category, subcategory, styleHints } = await req.json();
     if (!category) throw new Error("Category is required");
 
     const parsedHints = parseStyleHints(styleHints || "");
 
+    // ── Load category brief (vertical + optional subcategory). ──
+    // Supports either "vertical" or legacy "vertical/sub" string in category.
+    let briefVertical = String(category).trim();
+    let briefSub = subcategory ? String(subcategory).trim() : null;
+    if (!briefSub && briefVertical.includes("/")) {
+      const [v, s] = briefVertical.split("/");
+      briefVertical = v.trim();
+      briefSub = s.trim();
+    }
+    let briefRow: any = null;
+    if (briefSub) {
+      const { data } = await adminClient
+        .from("theme_category_briefs")
+        .select("*")
+        .eq("vertical", briefVertical)
+        .eq("subcategory", briefSub)
+        .eq("is_active", true)
+        .maybeSingle();
+      briefRow = data;
+    }
+    if (!briefRow) {
+      // Fallback: first active brief for the vertical, then "general/general".
+      const { data: anyForVertical } = await adminClient
+        .from("theme_category_briefs")
+        .select("*")
+        .eq("vertical", briefVertical)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      briefRow = anyForVertical;
+    }
+    if (!briefRow) {
+      const { data: generic } = await adminClient
+        .from("theme_category_briefs")
+        .select("*")
+        .eq("vertical", "general")
+        .eq("subcategory", "general")
+        .maybeSingle();
+      briefRow = generic;
+    }
+
+    const briefBlock = briefRow ? `
+CATEGORY BRIEF
+Vertical: ${briefRow.vertical}${briefRow.subcategory ? " / " + briefRow.subcategory : ""}
+Display: ${briefRow.display_name}
+Direction: ${briefRow.prompt_addendum}
+Palette hints: ${briefRow.palette_hints ?? "n/a"}
+Tone & vocabulary: ${briefRow.vocabulary ?? "n/a"}
+Image style: ${briefRow.image_style ?? "n/a"}
+Preferred section order (use unless a better one fits): ${(briefRow.section_priority || []).join(", ")}
+` : "";
+
     // ── TIER 1: Lightweight AI call for Design DNA only ──
-    const designDnaPrompt = `You are a world-class e-commerce brand designer. Generate ONLY the brand identity for a "${category}" store theme.
-${styleHints ? `\nDesign brief: ${styleHints}` : ""}
+    const designDnaPrompt = `You are a world-class e-commerce brand designer. Generate ONLY the brand identity for a "${briefRow?.display_name ?? category}" store theme.
+${briefBlock}${styleHints ? `\nAdditional design brief from operator: ${styleHints}` : ""}
 
 Return ONLY the design DNA — no section content, no testimonials, no badge text.`;
 
