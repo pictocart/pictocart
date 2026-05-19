@@ -136,8 +136,26 @@ Deno.serve(async (req) => {
     const category: string = cb ? `${cb.vertical}${cb.subcategory ? "/" + cb.subcategory : ""}` : rawCategory;
     const briefBlock = cb ? `\n\nCATEGORY BRIEF\nDisplay: ${cb.display_name}\nDirection: ${cb.prompt_addendum}\nPalette hints: ${cb.palette_hints ?? "n/a"}\nTone & vocabulary: ${cb.vocabulary ?? "n/a"}\nImage style: ${cb.image_style ?? "n/a"}\nPreferred section order (use unless a clearly better one fits the vibe): ${(cb.section_priority || []).join(", ")}` : "";
 
-    const sysPrompt = `You design beautiful, distinctive e-commerce themes for Indian small sellers (Pic To Cart). Each theme MUST feel structurally different from the previous ones — not just a recolor. Vary LAYOUT aggressively: pick a hero_style, category_style, product_style and section_order that suit the vibe and DIFFER from typical centered-hero+4-grid templates. Use real Google Fonts. Palette must be tight and cohesive. All colors valid hex.`;
-    const userPrompt = `Brief: ${JSON.stringify({ ...brief, category, name: briefName })}.${briefBlock}
+    // Load layout archetype. If none specified, AI-pick from category brief best-fit.
+    let layoutSlug: string | null = brief.layout_slug ?? null;
+    let archetype: any = null;
+    if (layoutSlug) {
+      const { data } = await supabase.from("theme_layout_archetypes").select("*").eq("slug", layoutSlug).eq("is_active", true).maybeSingle();
+      archetype = data;
+    }
+    if (!archetype) {
+      // Pick best-fit by matching category vertical against archetype.best_for[]
+      const { data: all } = await supabase.from("theme_layout_archetypes").select("*").eq("is_active", true).order("sort_order");
+      const verticalKey = (vert || "").toLowerCase();
+      archetype = (all ?? []).find((a: any) => (a.best_for || []).some((b: string) => verticalKey.includes(b) || b.includes(verticalKey)))
+        ?? (all ?? []).find((a: any) => a.slug === "catalog-dense")
+        ?? (all ?? [])[0];
+      layoutSlug = archetype?.slug ?? "catalog-dense";
+    }
+    const layoutBlock = archetype ? `\n\nLAYOUT CONTRACT — YOU MUST FOLLOW THIS EXACTLY (do not invent another structure):\nLayout: ${archetype.name} (${archetype.slug})\nRequired hero_style: ${archetype.hero_style}\nRequired category_style: ${archetype.category_style}\nRequired product_style: ${archetype.product_style}\nRequired header_style: ${archetype.header_style}\nDensity: ${archetype.density}\nRadius: ${archetype.radius_hint}\nRequired section_order (use this order): ${(archetype.section_order || []).join(", ")}\nMotion language: ${archetype.motion_language}\nImage ratios — hero: ${archetype.image_ratios?.hero}, category: ${archetype.image_ratios?.category}, product: ${archetype.image_ratios?.product}\n\nDETAILED INSTRUCTIONS:\n${archetype.prompt_instructions}\n\nFORBIDDEN sections: ${(archetype.forbidden_sections || []).join(", ") || "none"}` : "";
+
+    const sysPrompt = `You design beautiful, distinctive e-commerce themes for Indian small sellers (Pic To Cart). Each theme MUST feel structurally different from the previous ones — not just a recolor. You will be given a strict LAYOUT CONTRACT — obey it exactly. Use real Google Fonts. Palette must be tight and cohesive. All colors valid hex.`;
+    const userPrompt = `Brief: ${JSON.stringify({ ...brief, category, name: briefName, layout: layoutSlug })}.${briefBlock}${layoutBlock}
 Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill EVERY field. Products must have realistic Indian INR prices. Image prompts must be detailed photographic descriptions for e-commerce, no text overlay.`;
     const dnaRes = await callAI("google/gemini-2.5-flash", {
       messages: [{ role: "system", content: sysPrompt }, { role: "user", content: userPrompt }],
@@ -148,9 +166,23 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
     if (!toolCall) throw new Error("AI did not return theme blueprint");
     const dna = JSON.parse(toolCall.function.arguments);
 
-    const imgPrompts: { key: string; prompt: string }[] = [
-      { key: "hero", prompt: `${dna.hero.image_prompt}. Cinematic, ${dna.vibe} aesthetic, 16:9, high-end product photography, no text.` },
-      ...dna.categories.map((c: any, i: number) => ({ key: `cat_${i}`, prompt: `${c.image_prompt}. ${dna.vibe} aesthetic, square crop, clean studio background, no text.` })),
+    // Defensive override: lock layout fields to the archetype contract so the model can't drift.
+    if (archetype) {
+      dna.layout = {
+        hero_style: archetype.hero_style,
+        category_style: archetype.category_style,
+        product_style: archetype.product_style,
+        header_style: archetype.header_style,
+        density: archetype.density,
+        section_order: archetype.section_order,
+      };
+    }
+
+    const heroRatio = archetype?.image_ratios?.hero ?? "16:9";
+    const catRatio = archetype?.image_ratios?.category ?? "1:1";
+    const imgPrompts: { key: string; prompt: string; ratio: string }[] = [
+      { key: "hero", prompt: `${dna.hero.image_prompt}. Cinematic, ${dna.vibe} aesthetic, ${heroRatio}, high-end product photography, no text.`, ratio: heroRatio },
+      ...dna.categories.map((c: any, i: number) => ({ key: `cat_${i}`, prompt: `${c.image_prompt}. ${dna.vibe} aesthetic, ${catRatio} crop, clean studio background, no text.`, ratio: catRatio })),
     ];
     const imgResults = await Promise.all(imgPrompts.map((p) => genImage(p.prompt, "generate-and-ship-theme")));
     const imageCostTotal = imgResults.reduce((s, r) => s + r.cost, 0);
@@ -183,6 +215,8 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
       version: 2,
       dna,
       layout,
+      layout_slug: layoutSlug,
+      layout_archetype: archetype ? { slug: archetype.slug, name: archetype.name, editor_schema: archetype.editor_schema, image_ratios: archetype.image_ratios, motion_language: archetype.motion_language } : null,
       hero_image: heroUrl,
       pages: {
         auth: { sections: [
@@ -254,9 +288,11 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
       category,
       preview_image: heroUrl,
       lovable_project_url: lovableUrl || null,
-      client_patch_prompt: `Apply theme ${dna.name} (${dna.vibe}). Palette: ${JSON.stringify(dna.palette)}. Fonts: ${JSON.stringify(dna.fonts)}. Layout: ${JSON.stringify(layout)}.`,
+      client_patch_prompt: `Apply theme ${dna.name} (${dna.vibe}) using layout "${layoutSlug}". Palette: ${JSON.stringify(dna.palette)}. Fonts: ${JSON.stringify(dna.fonts)}. Layout: ${JSON.stringify(layout)}.`,
       is_active: true,
     }, { onConflict: "theme_id" });
+
+    await supabase.from("master_theme_deliveries").update({ layout_slug: layoutSlug }).eq("master_id", themeId);
 
     const totalCost = Number(((dnaRes.cost ?? 0) + imageCostTotal).toFixed(4));
     await supabase.from("theme_master_metrics").upsert({

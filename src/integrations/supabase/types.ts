@@ -1084,6 +1084,7 @@ export type Database = {
           delivered_at: string
           generation_cost_inr: number | null
           id: string
+          layout_slug: string | null
           master_id: string | null
           name: string
           payload: Json
@@ -1101,6 +1102,7 @@ export type Database = {
           delivered_at?: string
           generation_cost_inr?: number | null
           id?: string
+          layout_slug?: string | null
           master_id?: string | null
           name: string
           payload: Json
@@ -1118,6 +1120,7 @@ export type Database = {
           delivered_at?: string
           generation_cost_inr?: number | null
           id?: string
+          layout_slug?: string | null
           master_id?: string | null
           name?: string
           payload?: Json
@@ -2658,6 +2661,7 @@ export type Database = {
           id: string
           installed_theme_version: string | null
           is_published: boolean | null
+          layout_slug: string | null
           logo_url: string | null
           name: string
           onboarding_step: number | null
@@ -2679,6 +2683,7 @@ export type Database = {
           id?: string
           installed_theme_version?: string | null
           is_published?: boolean | null
+          layout_slug?: string | null
           logo_url?: string | null
           name: string
           onboarding_step?: number | null
@@ -2700,6 +2705,7 @@ export type Database = {
           id?: string
           installed_theme_version?: string | null
           is_published?: boolean | null
+          layout_slug?: string | null
           logo_url?: string | null
           name?: string
           onboarding_step?: number | null
@@ -2948,6 +2954,84 @@ export type Database = {
         }
         Relationships: []
       }
+      theme_layout_archetypes: {
+        Row: {
+          allowed_extra_sections: string[]
+          best_for: string[]
+          category_style: string
+          created_at: string
+          density: string
+          description: string
+          editor_schema: Json
+          forbidden_sections: string[]
+          header_style: string
+          hero_style: string
+          id: string
+          image_ratios: Json
+          is_active: boolean
+          motion_language: string
+          name: string
+          preview_image: string | null
+          product_style: string
+          prompt_instructions: string
+          radius_hint: string
+          section_order: string[]
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          allowed_extra_sections?: string[]
+          best_for?: string[]
+          category_style: string
+          created_at?: string
+          density?: string
+          description: string
+          editor_schema?: Json
+          forbidden_sections?: string[]
+          header_style: string
+          hero_style: string
+          id?: string
+          image_ratios?: Json
+          is_active?: boolean
+          motion_language?: string
+          name: string
+          preview_image?: string | null
+          product_style: string
+          prompt_instructions: string
+          radius_hint?: string
+          section_order?: string[]
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          allowed_extra_sections?: string[]
+          best_for?: string[]
+          category_style?: string
+          created_at?: string
+          density?: string
+          description?: string
+          editor_schema?: Json
+          forbidden_sections?: string[]
+          header_style?: string
+          hero_style?: string
+          id?: string
+          image_ratios?: Json
+          is_active?: boolean
+          motion_language?: string
+          name?: string
+          preview_image?: string | null
+          product_style?: string
+          prompt_instructions?: string
+          radius_hint?: string
+          section_order?: string[]
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       theme_master_metrics: {
         Row: {
           image_count: number
@@ -3078,6 +3162,7 @@ export type Database = {
           description: string | null
           id: string
           is_published: boolean
+          layout_slug: string | null
           name: string
           pages: Json
           price: number
@@ -3095,6 +3180,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_published?: boolean
+          layout_slug?: string | null
           name: string
           pages?: Json
           price?: number
@@ -3112,6 +3198,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_published?: boolean
+          layout_slug?: string | null
           name?: string
           pages?: Json
           price?: number
