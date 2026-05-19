@@ -1634,6 +1634,7 @@ export type Database = {
           razorpay_plan_id: string | null
           seo: boolean
           shipping: boolean
+          signup_bonus_credits: number
           sort_order: number
           theme_limit: number
           trial_days: number
@@ -1660,6 +1661,7 @@ export type Database = {
           razorpay_plan_id?: string | null
           seo?: boolean
           shipping?: boolean
+          signup_bonus_credits?: number
           sort_order?: number
           theme_limit?: number
           trial_days?: number
@@ -1686,6 +1688,7 @@ export type Database = {
           razorpay_plan_id?: string | null
           seo?: boolean
           shipping?: boolean
+          signup_bonus_credits?: number
           sort_order?: number
           theme_limit?: number
           trial_days?: number
@@ -3689,6 +3692,10 @@ export type Database = {
         Returns: number
       }
       generate_referral_code: { Args: never; Returns: string }
+      grant_plan_signup_bonus: {
+        Args: { _plan: string; _store_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

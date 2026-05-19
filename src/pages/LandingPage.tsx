@@ -725,7 +725,9 @@ const LandingPage = () => {
                 cta: 'Get Started Free',
                 ctaVariant: 'outline' as const,
                 highlight: false,
+                bonusCredits: 100,
                 features: [
+                  '100 AI credits free on signup',
                   'Up to 10 products',
                   '1 free theme',
                   'AI product generation',
@@ -743,7 +745,9 @@ const LandingPage = () => {
                 cta: 'Start with Starter',
                 ctaVariant: 'default' as const,
                 highlight: true,
+                bonusCredits: 399,
                 features: [
+                  '399 AI credits free on signup',
                   'Up to 100 products',
                   '3 themes (Free + Premium)',
                   'Custom domain + SSL',
@@ -762,7 +766,9 @@ const LandingPage = () => {
                 cta: 'Try Growth Free',
                 ctaVariant: 'default' as const,
                 highlight: false,
+                bonusCredits: 1499,
                 features: [
+                  '1,499 AI credits free on signup',
                   'Up to 1,000 products',
                   '10 themes incl. all premium',
                   'Multi-domain support',
@@ -821,7 +827,7 @@ const LandingPage = () => {
             ))}
           </div>
           <p className="text-center text-sm text-slate-500 mt-8">
-            Need more? <Link to="/billing" className="font-semibold text-indigo-600 hover:underline">See our Scale plan (₹4,999, 0% commission)</Link>
+            Need more? <Link to="/billing" className="font-semibold text-indigo-600 hover:underline">See our Scale plan (₹4,999, 0% commission + 6,000 AI credits free)</Link>
           </p>
         </div>
       </section>

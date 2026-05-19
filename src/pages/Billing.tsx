@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Crown, Check, X, Loader2, Zap } from 'lucide-react';
+import { Crown, Check, X, Loader2, Zap, Sparkles } from 'lucide-react';
 
 declare global {
   interface Window { Razorpay: any; }
@@ -16,6 +16,7 @@ declare global {
 // Razorpay key ID is returned by the create-razorpay-subscription edge function (sourced from RAZORPAY_KEY_ID secret)
 
 const FEATURE_ROWS: { key: keyof PlanConfig; label: string }[] = [
+  { key: 'signup_bonus_credits', label: 'Signup AI Credits' },
   { key: 'product_limit',      label: 'Products' },
   { key: 'theme_limit',        label: 'Themes' },
   { key: 'commission_percent', label: 'Commission' },
@@ -38,6 +39,10 @@ const renderCell = (plan: PlanConfig, key: keyof PlanConfig) => {
     return (v as number) >= 2_000_000_000 ? 'Unlimited' : String(v);
   }
   if (key === 'commission_percent') return `${v}%`;
+  if (key === 'signup_bonus_credits') {
+    const n = Number(v ?? 0);
+    return n > 0 ? `${n.toLocaleString('en-IN')} cr` : '—';
+  }
   if (typeof v === 'boolean') {
     return v
       ? <Check className="h-4 w-4 text-green-600 mx-auto" />
@@ -179,9 +184,21 @@ const Billing = () => {
                 <p className="text-xs text-muted-foreground">
                   Commission {p.commission_percent}% · {p.trial_days > 0 ? `${p.trial_days}-day trial` : 'No trial'}
                 </p>
+                {!!p.signup_bonus_credits && p.signup_bonus_credits > 0 && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-100 to-orange-100 text-amber-900 text-xs font-semibold">
+                    <Sparkles className="h-3 w-3" />
+                    {p.signup_bonus_credits.toLocaleString('en-IN')} AI credits free
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="flex-1 flex flex-col gap-3">
                 <ul className="space-y-1.5 text-sm flex-1">
+                  {!!p.signup_bonus_credits && p.signup_bonus_credits > 0 && (
+                    <li className="flex items-center gap-2 text-amber-700 font-medium">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {p.signup_bonus_credits.toLocaleString('en-IN')} AI credits on signup
+                    </li>
+                  )}
                   <li className="flex items-center gap-2">
                     <Check className="h-3.5 w-3.5 text-green-600" />
                     {p.product_limit >= 2_000_000_000 ? 'Unlimited' : p.product_limit} products

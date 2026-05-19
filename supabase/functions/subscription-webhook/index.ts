@@ -109,6 +109,13 @@ Deno.serve(async (req) => {
           current_period_start: entity.current_start ? new Date(entity.current_start * 1000).toISOString() : null,
           current_period_end: entity.current_end ? new Date(entity.current_end * 1000).toISOString() : null,
         }, { onConflict: 'store_id' });
+
+        // Grant the plan signup bonus (idempotent — only once per plan)
+        try {
+          await supabase.rpc('grant_plan_signup_bonus', { _store_id: storeId, _plan: resolvedPlan });
+        } catch (e) {
+          console.error('grant_plan_signup_bonus failed:', e);
+        }
         break;
       }
 

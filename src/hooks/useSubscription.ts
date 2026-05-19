@@ -27,6 +27,7 @@ export interface PlanConfig {
   early_access: boolean;
   sort_order: number;
   is_active: boolean;
+  signup_bonus_credits?: number;
 }
 
 export interface Subscription {
