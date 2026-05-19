@@ -236,7 +236,8 @@ const Kitchen = () => {
                         {items.map((it: any, i: number) => (
                           <li key={i} className="flex justify-between gap-2">
                             <span className="truncate">
-                              <span className="font-semibold">{it.quantity}×</span> {it.name || it.product_name}
+                              <span className="font-semibold">{it.quantity}×</span> {it.title || it.name || it.product_name}
+                              {it.variant && <span className="text-muted-foreground"> ({it.variant})</span>}
                             </span>
                           </li>
                         ))}
