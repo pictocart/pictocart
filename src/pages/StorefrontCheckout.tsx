@@ -33,10 +33,11 @@ const StorefrontCheckout = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { store, loading } = useStorefront(slug || '');
-  const { items, totalPrice, clearCart } = useCart(slug || '');
+  const { items, totalPrice, clearCart, fulfillmentMode, tableLabel } = useCart(slug || '');
   const { user } = useCustomerAuth(slug || '');
   const [placing, setPlacing] = useState(false);
-  const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
+  const [orderPlaced, setOrderPlaced] = useState<{ number: string; trackingCode: string | null } | null>(null);
+  const isGuestMode = fulfillmentMode === 'dine_in' || fulfillmentMode === 'takeaway';
   const [razorpayAvailable, setRazorpayAvailable] = useState(false);
   const [codRules, setCodRules] = useState<any | null>(null);
   const [priorOrders, setPriorOrders] = useState<number>(0);
