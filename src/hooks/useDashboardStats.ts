@@ -84,15 +84,20 @@ export const useDashboardStats = (storeId?: string) => {
     for (const o of orders) {
       const total = Number(o.total) || 0;
       const created = new Date(o.created_at);
-      totalRevenue += total;
+      // Revenue counts only paid orders (online gateway, COD marked paid, or
+      // offline cash/UPI/card collected at counter). Pending/unpaid orders
+      // are excluded so the dashboard updates the moment payment is received.
+      const isPaid = (o as any).payment_status === 'paid';
+      const revenueAmt = isPaid ? total : 0;
+      totalRevenue += revenueAmt;
       if (o.status === 'pending') pendingCount += 1;
-      if (created >= today) { todayCount += 1; todayRevenue += total; }
+      if (created >= today) { todayCount += 1; todayRevenue += revenueAmt; }
 
       const key = created.toISOString().slice(0, 10);
-      if (days[key]) { days[key].revenue += total; days[key].orders += 1; revenue30 += total; count30 += 1; }
+      if (days[key]) { days[key].revenue += revenueAmt; days[key].orders += 1; revenue30 += revenueAmt; count30 += 1; }
 
-      if (created >= sevenAgo) { curr7Revenue += total; curr7Orders += 1; }
-      else if (created >= fourteenAgo) { prev7Revenue += total; prev7Orders += 1; }
+      if (created >= sevenAgo) { curr7Revenue += revenueAmt; curr7Orders += 1; }
+      else if (created >= fourteenAgo) { prev7Revenue += revenueAmt; prev7Orders += 1; }
     }
 
     const last30Days = Object.values(days);
