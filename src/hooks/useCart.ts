@@ -9,6 +9,7 @@ export interface CartItem {
   image: string | null;
   quantity: number;
   variant?: string;
+  notes?: string;
   /** Optional per-item allowed modes (from menu_meta.available_modes). */
   available_modes?: FulfillmentMode[];
 }
