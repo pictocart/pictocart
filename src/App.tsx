@@ -35,6 +35,9 @@ const AdminThemeLivePreview = lazy(() => import("@/pages/admin/AdminThemeLivePre
 const PaymentSettings = lazy(() => import("@/pages/PaymentSettings"));
 const CodSettings = lazy(() => import("@/pages/CodSettings"));
 const ShippingSettings = lazy(() => import("@/pages/ShippingSettings"));
+const FulfillmentSettings = lazy(() => import("@/pages/FulfillmentSettings"));
+const QRCodes = lazy(() => import("@/pages/QRCodes"));
+const QRRedirect = lazy(() => import("@/pages/QRRedirect"));
 const DomainSettings = lazy(() => import("@/pages/DomainSettings"));
 const CouponList = lazy(() => import("@/pages/CouponList"));
 const SEOSettings = lazy(() => import("@/pages/SEOSettings"));
