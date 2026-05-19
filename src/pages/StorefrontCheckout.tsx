@@ -35,6 +35,7 @@ const StorefrontCheckout = () => {
   const navigate = useNavigate();
   const { store, loading } = useStorefront(slug || '');
   const { items, totalPrice, clearCart, fulfillmentMode, tableLabel } = useCart(slug || '');
+  const { settings } = useFulfillment(store?.id);
   const { user } = useCustomerAuth(slug || '');
   const [placing, setPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<{ number: string; trackingCode: string | null } | null>(null);
@@ -460,7 +461,7 @@ const StorefrontCheckout = () => {
           </h1>
           <p className="text-sm opacity-60 mb-2">Your order number is</p>
           <p className="text-lg font-bold mb-6" style={{ color: colors.primary }}>
-            {orderPlaced}
+            {orderPlaced.number}
           </p>
           <p className="text-sm opacity-50 mb-8">
             We'll notify you when your order ships. Thank you for shopping with us!
