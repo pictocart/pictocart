@@ -473,8 +473,18 @@ const ShippingSettings = () => {
             <li className="flex gap-3">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">3</span>
               <div>
-                <p className="font-medium">Paste your login email & password below</p>
-                <p className="text-muted-foreground text-xs">We use them to fetch a short-lived API token; stored encrypted server-side, never exposed to the storefront.</p>
+                <p className="font-medium">Create a dedicated API User</p>
+                <p className="text-muted-foreground text-xs">
+                  In Shiprocket → <strong>Settings → API → Configure</strong> → click <strong>"Create an API User"</strong> and set a separate email + password.
+                  Your normal dashboard login will return <em>"Access forbidden"</em> — only API-User credentials work here.
+                </p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">4</span>
+              <div>
+                <p className="font-medium">Paste those API-User credentials below</p>
+                <p className="text-muted-foreground text-xs">Stored encrypted server-side, never exposed to the storefront.</p>
               </div>
             </li>
           </ol>
