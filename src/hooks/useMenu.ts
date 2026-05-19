@@ -60,7 +60,7 @@ export const useStoreMenu = (storeId: string | undefined, mode?: FulfillmentMode
           title: p.title,
           description: p.description,
           price: Number(p.price) || 0,
-          image_url: (p as any).image_url ?? null,
+          image_url: (p as any).image_url ?? (Array.isArray((p as any).images) && (p as any).images[0]) ?? null,
           images: Array.isArray((p as any).images) ? (p as any).images : null,
           category_id: (p as any).category_id ?? null,
           menu_meta: meta,
