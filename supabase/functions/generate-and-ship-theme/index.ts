@@ -114,11 +114,30 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const themeId: string = body.theme_id ?? `theme-${Date.now()}`;
     const brief = body.brief ?? {};
-    const category: string = brief.category ?? "general";
-    const briefName = brief.name ?? brief.vibe ?? category;
+    const rawCategory: string = brief.category ?? "general";
+    const briefName = brief.name ?? brief.vibe ?? rawCategory;
+
+    // Load category brief (supports "vertical" or "vertical/subcategory")
+    let vert = rawCategory;
+    let sub: string | null = brief.subcategory ?? null;
+    if (!sub && rawCategory.includes("/")) {
+      const [v, s] = rawCategory.split("/");
+      vert = v.trim(); sub = s.trim();
+    }
+    let cb: any = null;
+    if (sub) {
+      const { data } = await supabase.from("theme_category_briefs").select("*").eq("vertical", vert).eq("subcategory", sub).eq("is_active", true).maybeSingle();
+      cb = data;
+    }
+    if (!cb) {
+      const { data } = await supabase.from("theme_category_briefs").select("*").eq("vertical", vert).eq("is_active", true).order("sort_order", { ascending: true }).limit(1).maybeSingle();
+      cb = data;
+    }
+    const category: string = cb ? `${cb.vertical}${cb.subcategory ? "/" + cb.subcategory : ""}` : rawCategory;
+    const briefBlock = cb ? `\n\nCATEGORY BRIEF\nDisplay: ${cb.display_name}\nDirection: ${cb.prompt_addendum}\nPalette hints: ${cb.palette_hints ?? "n/a"}\nTone & vocabulary: ${cb.vocabulary ?? "n/a"}\nImage style: ${cb.image_style ?? "n/a"}\nPreferred section order (use unless a clearly better one fits the vibe): ${(cb.section_priority || []).join(", ")}` : "";
 
     const sysPrompt = `You design beautiful, distinctive e-commerce themes for Indian small sellers (Pic To Cart). Each theme MUST feel structurally different from the previous ones — not just a recolor. Vary LAYOUT aggressively: pick a hero_style, category_style, product_style and section_order that suit the vibe and DIFFER from typical centered-hero+4-grid templates. Use real Google Fonts. Palette must be tight and cohesive. All colors valid hex.`;
-    const userPrompt = `Brief: ${JSON.stringify({ ...brief, category, name: briefName })}.
+    const userPrompt = `Brief: ${JSON.stringify({ ...brief, category, name: briefName })}.${briefBlock}
 Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill EVERY field. Products must have realistic Indian INR prices. Image prompts must be detailed photographic descriptions for e-commerce, no text overlay.`;
     const dnaRes = await callAI("google/gemini-2.5-flash", {
       messages: [{ role: "system", content: sysPrompt }, { role: "user", content: userPrompt }],

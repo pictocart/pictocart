@@ -35,7 +35,9 @@ export default function ThemeMasterPipeline() {
   const [refineText, setRefineText] = useState("");
   const [adhocName, setAdhocName] = useState("");
   const [adhocVibe, setAdhocVibe] = useState("");
-  const [adhocCategory, setAdhocCategory] = useState("general");
+  const [adhocVertical, setAdhocVertical] = useState("general");
+  const [adhocSub, setAdhocSub] = useState("general");
+  const [briefs, setBriefs] = useState<Array<{ vertical: string; subcategory: string; display_name: string }>>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const pollRef = useRef<number | null>(null);
 
@@ -60,6 +62,12 @@ export default function ThemeMasterPipeline() {
     if (searchQuery && !s.data?.research_query) setSearchQuery("");
   }
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("theme_category_briefs").select("vertical,subcategory,display_name").eq("is_active", true).order("sort_order");
+      setBriefs((data ?? []) as any);
+    })();
+  }, []);
   useEffect(() => { if (settings && !searchQuery) setSearchQuery(settings.research_query); /* eslint-disable-next-line */ }, [settings]);
 
   // Poll active research job.
@@ -119,7 +127,7 @@ export default function ThemeMasterPipeline() {
     setBusy("adhoc");
     try {
       const { data, error } = await supabase.functions.invoke("theme-action", {
-        body: { action: "generate_adhoc", brief: { name: adhocName, category: adhocCategory, vibe: adhocVibe || `${adhocCategory} aesthetic` } },
+        body: { action: "generate_adhoc", brief: { name: adhocName, category: adhocVertical, subcategory: adhocSub, vibe: adhocVibe || `${adhocVertical}/${adhocSub} aesthetic` } },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Failed");
@@ -197,20 +205,23 @@ export default function ThemeMasterPipeline() {
       {/* Quick ad-hoc generator */}
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Wand2 className="h-4 w-4" />Generate a theme right now</CardTitle></CardHeader>
-        <CardContent className="grid md:grid-cols-[1fr,1fr,180px,auto] gap-2">
+        <CardContent className="grid md:grid-cols-[1fr,1fr,160px,200px,auto] gap-2">
           <Input placeholder="Theme name (e.g. Saffron)" value={adhocName} onChange={(e) => setAdhocName(e.target.value)} />
           <Input placeholder="Vibe (e.g. festive Indian, ornate)" value={adhocVibe} onChange={(e) => setAdhocVibe(e.target.value)} />
-          <select value={adhocCategory} onChange={(e) => setAdhocCategory(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
-            {["general","luxury","beauty","fashion","food","wellness","indian/heritage","creative/tech","lifestyle"].map(c => <option key={c}>{c}</option>)}
+          <select value={adhocVertical} onChange={(e) => { const v = e.target.value; setAdhocVertical(v); const first = briefs.find(b => b.vertical === v); setAdhocSub(first?.subcategory ?? "general"); }} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+            {Array.from(new Set(briefs.map(b => b.vertical))).map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={adhocSub} onChange={(e) => setAdhocSub(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+            {briefs.filter(b => b.vertical === adhocVertical).map(b => <option key={b.subcategory} value={b.subcategory}>{b.display_name}</option>)}
           </select>
           <Button onClick={generateAdhoc} disabled={busy === "adhoc"}>
             {busy === "adhoc" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}Generate
           </Button>
-          <div className="md:col-span-4 flex flex-wrap gap-1.5 pt-1">
+          <div className="md:col-span-5 flex flex-wrap gap-1.5 pt-1">
             <span className="text-[11px] text-muted-foreground self-center mr-1">Presets:</span>
-            <Button size="sm" variant="outline" type="button" onClick={() => { setAdhocName("Heritage"); setAdhocVibe("Indian heritage, handcrafted, earthy tones, premium editorial"); setAdhocCategory("indian/heritage"); }}>Heritage</Button>
-            <Button size="sm" variant="outline" type="button" onClick={() => { setAdhocName("Saffron"); setAdhocVibe("festive Indian, ornate, warm"); setAdhocCategory("indian/heritage"); }}>Saffron</Button>
-            <Button size="sm" variant="outline" type="button" onClick={() => { setAdhocName("Atelier"); setAdhocVibe("minimal luxury, monochrome, generous whitespace"); setAdhocCategory("luxury"); }}>Atelier</Button>
+            <Button size="sm" variant="outline" type="button" onClick={() => { setAdhocName("Heritage"); setAdhocVibe("Indian heritage, handcrafted, earthy tones, premium editorial"); setAdhocVertical("handicraft"); setAdhocSub("handloom"); }}>Heritage</Button>
+            <Button size="sm" variant="outline" type="button" onClick={() => { setAdhocName("Saffron"); setAdhocVibe("festive Indian, ornate, warm"); setAdhocVertical("gifts"); setAdhocSub("diwali"); }}>Saffron</Button>
+            <Button size="sm" variant="outline" type="button" onClick={() => { setAdhocName("Atelier"); setAdhocVibe("minimal luxury, monochrome, generous whitespace"); setAdhocVertical("jewellery"); setAdhocSub("designer-couture"); }}>Atelier</Button>
           </div>
         </CardContent>
       </Card>

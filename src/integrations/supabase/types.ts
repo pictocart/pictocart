@@ -2825,6 +2825,57 @@ export type Database = {
         }
         Relationships: []
       }
+      theme_category_briefs: {
+        Row: {
+          created_at: string
+          display_name: string
+          hero_archetypes: string | null
+          id: string
+          image_style: string | null
+          is_active: boolean
+          palette_hints: string | null
+          prompt_addendum: string
+          section_priority: string[]
+          sort_order: number
+          subcategory: string
+          updated_at: string
+          vertical: string
+          vocabulary: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          hero_archetypes?: string | null
+          id?: string
+          image_style?: string | null
+          is_active?: boolean
+          palette_hints?: string | null
+          prompt_addendum?: string
+          section_priority?: string[]
+          sort_order?: number
+          subcategory: string
+          updated_at?: string
+          vertical: string
+          vocabulary?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          hero_archetypes?: string | null
+          id?: string
+          image_style?: string | null
+          is_active?: boolean
+          palette_hints?: string | null
+          prompt_addendum?: string
+          section_priority?: string[]
+          sort_order?: number
+          subcategory?: string
+          updated_at?: string
+          vertical?: string
+          vocabulary?: string | null
+        }
+        Relationships: []
+      }
       theme_generation_metrics: {
         Row: {
           category: string | null
