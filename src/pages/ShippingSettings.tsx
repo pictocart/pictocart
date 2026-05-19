@@ -335,7 +335,7 @@ const ShippingSettings = () => {
                       key={activeStep}
                       className={cn(
                         'p-5 md:p-6',
-                        slideDir === 'right' ? 'animate-slide-in-right-soft' : 'animate-slide-in-left-soft'
+                        slideDir === 'right' ? 'animate-slide-in-right' : 'animate-slide-in-left'
                       )}
                     >
                       <div className="flex items-start gap-4">
