@@ -50,7 +50,7 @@ const SmartActions = ({ pendingOrders, productCount, lowStockCount, hasCustomDom
   });
   if (productCount > 0 && !hasShipping) actions.push({
     title: 'Set up shipping rates',
-    desc: 'Connect Delhivery to ship pan-India in 60 seconds.',
+    desc: 'Connect Shiprocket to ship pan-India with 17+ couriers in 60 seconds.',
     icon: ShoppingBag, tone: 'indigo', to: '/settings/shipping', cta: 'Setup',
   });
   if (isPublished && !hasCustomDomain) actions.push({
