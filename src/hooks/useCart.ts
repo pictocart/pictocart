@@ -17,26 +17,53 @@ export interface CartItem {
 const CART_KEY = (storeSlug: string) => `cart_${storeSlug}`;
 const MODE_KEY = (storeSlug: string) => `cart_mode_${storeSlug}`;
 const TABLE_KEY = (storeSlug: string) => `cart_table_${storeSlug}`;
+const CART_EVENT = 'cart:updated';
+
+const emitCartUpdate = (storeSlug: string) => {
+  try {
+    window.dispatchEvent(new CustomEvent(CART_EVENT, { detail: { storeSlug } }));
+  } catch {}
+};
 
 export const useCart = (storeSlug: string) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [fulfillmentMode, setFulfillmentModeState] = useState<FulfillmentMode>('delivery');
   const [tableLabel, setTableLabelState] = useState<string | null>(null);
 
-  useEffect(() => {
+  const reloadFromStorage = useCallback(() => {
     try {
       const saved = localStorage.getItem(CART_KEY(storeSlug));
-      if (saved) setItems(JSON.parse(saved));
+      setItems(saved ? JSON.parse(saved) : []);
       const m = localStorage.getItem(MODE_KEY(storeSlug)) as FulfillmentMode | null;
       if (m) setFulfillmentModeState(m);
       const t = localStorage.getItem(TABLE_KEY(storeSlug));
-      if (t) setTableLabelState(t);
+      setTableLabelState(t || null);
     } catch {}
   }, [storeSlug]);
+
+  useEffect(() => {
+    reloadFromStorage();
+    const onCustom = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.storeSlug === storeSlug) reloadFromStorage();
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === CART_KEY(storeSlug) || e.key === MODE_KEY(storeSlug) || e.key === TABLE_KEY(storeSlug)) {
+        reloadFromStorage();
+      }
+    };
+    window.addEventListener(CART_EVENT, onCustom);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(CART_EVENT, onCustom);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [storeSlug, reloadFromStorage]);
 
   const persist = (newItems: CartItem[]) => {
     setItems(newItems);
     localStorage.setItem(CART_KEY(storeSlug), JSON.stringify(newItems));
+    emitCartUpdate(storeSlug);
   };
 
   const readStorage = (): CartItem[] => {
@@ -55,6 +82,7 @@ export const useCart = (storeSlug: string) => {
       : [...prev, { ...item, quantity: qty }];
     localStorage.setItem(CART_KEY(storeSlug), JSON.stringify(next));
     setItems(next);
+    emitCartUpdate(storeSlug);
   }, [storeSlug]);
 
   const updateQuantity = useCallback((productId: string, variant: string | undefined, qty: number) => {
@@ -65,6 +93,7 @@ export const useCart = (storeSlug: string) => {
       : prev.map((i) => (`${i.productId}_${i.variant || ''}` === key ? { ...i, quantity: qty } : i));
     localStorage.setItem(CART_KEY(storeSlug), JSON.stringify(next));
     setItems(next);
+    emitCartUpdate(storeSlug);
   }, [storeSlug]);
 
   const removeItem = useCallback((productId: string, variant?: string) => {
@@ -83,6 +112,7 @@ export const useCart = (storeSlug: string) => {
       localStorage.removeItem(TABLE_KEY(storeSlug));
       setTableLabelState(null);
     }
+    emitCartUpdate(storeSlug);
   }, [storeSlug]);
 
   const setTableLabel = useCallback((label: string | null) => {
@@ -94,6 +124,7 @@ export const useCart = (storeSlug: string) => {
       localStorage.removeItem(TABLE_KEY(storeSlug));
     }
     setTableLabelState(label);
+    emitCartUpdate(storeSlug);
   }, [storeSlug]);
 
   const totalItems = items.reduce((s, i) => s + i.quantity, 0);
