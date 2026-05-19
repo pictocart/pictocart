@@ -38,6 +38,9 @@ const ShippingSettings = lazy(() => import("@/pages/ShippingSettings"));
 const FulfillmentSettings = lazy(() => import("@/pages/FulfillmentSettings"));
 const QRCodes = lazy(() => import("@/pages/QRCodes"));
 const QRRedirect = lazy(() => import("@/pages/QRRedirect"));
+const Menu = lazy(() => import("@/pages/Menu"));
+const StorefrontMenu = lazy(() => import("@/pages/storefront/StorefrontMenu"));
+const OrderTracking = lazy(() => import("@/pages/storefront/OrderTracking"));
 const DomainSettings = lazy(() => import("@/pages/DomainSettings"));
 const CouponList = lazy(() => import("@/pages/CouponList"));
 const SEOSettings = lazy(() => import("@/pages/SEOSettings"));
@@ -379,6 +382,12 @@ const AppRoutes = () => {
             <Route path="/store/:slug/product/:productId" element={<StorefrontProduct />} />
             <Route path="/store/:slug/cart" element={<StorefrontCart />} />
             <Route path="/store/:slug/checkout" element={<StorefrontCheckout />} />
+            <Route path="/store/:slug/menu" element={<StorefrontMenu />} />
+            <Route path="/store/:slug/menu/t/:tableToken" element={<StorefrontMenu forceMode="dine_in" />} />
+            <Route path="/store/:slug/menu/takeaway" element={<StorefrontMenu forceMode="takeaway" />} />
+            <Route path="/store/:slug/menu/delivery" element={<StorefrontMenu forceMode="delivery" />} />
+            <Route path="/track/:code" element={<OrderTracking />} />
+            <Route path="/menu" element={<ProtectedRoute><DashboardLayout><Menu /></DashboardLayout></ProtectedRoute>} />
             <Route path="/store/:slug/blog" element={<StorefrontBlog />} />
             <Route path="/store/:slug/blog/:postSlug" element={<StorefrontBlogPost />} />
             <Route path="/store/:slug/account/auth" element={<CustomerAuth />} />

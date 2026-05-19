@@ -5,6 +5,7 @@ import StorefrontLayout, { resolveTheme } from '@/components/storefront/Storefro
 import { useCart } from '@/hooks/useCart';
 import { useValidateCoupon } from '@/hooks/useCoupons';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
+import { useFulfillment } from '@/hooks/useFulfillment';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Check, ChevronLeft, CreditCard, Banknote, Smartphone, Tag, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,10 +34,12 @@ const StorefrontCheckout = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { store, loading } = useStorefront(slug || '');
-  const { items, totalPrice, clearCart } = useCart(slug || '');
+  const { items, totalPrice, clearCart, fulfillmentMode, tableLabel } = useCart(slug || '');
+  const { settings } = useFulfillment(store?.id);
   const { user } = useCustomerAuth(slug || '');
   const [placing, setPlacing] = useState(false);
-  const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
+  const [orderPlaced, setOrderPlaced] = useState<{ number: string; trackingCode: string | null } | null>(null);
+  const isGuestMode = fulfillmentMode === 'dine_in' || fulfillmentMode === 'takeaway';
   const [razorpayAvailable, setRazorpayAvailable] = useState(false);
   const [codRules, setCodRules] = useState<any | null>(null);
   const [priorOrders, setPriorOrders] = useState<number>(0);
@@ -179,34 +182,44 @@ const StorefrontCheckout = () => {
       variant: i.variant || null,
     }));
 
+    const trackingCode = isGuestMode
+      ? Math.random().toString(36).slice(2, 8).toUpperCase()
+      : null;
+
+    const paymentMethod = fulfillmentMode === 'dine_in' ? 'pay_at_counter' : form.paymentMethod;
+    const paymentStatus = fulfillmentMode === 'dine_in'
+      ? 'pending'
+      : paymentMethod === 'cod' ? 'cod' : 'pending';
+
     const { data, error } = await supabase.from('orders').insert({
       store_id: store.id,
       order_number: orderNumber,
       items: orderItems,
       subtotal: totalPrice,
       tax: 0,
-      shipping: 0,
+      shipping: fulfillmentMode === 'delivery' ? 0 : 0,
       total: finalTotal,
       notes: appliedCoupon ? `Coupon: ${appliedCoupon.code} (-₹${discount})` : null,
-      customer_name: form.name,
+      customer_name: form.name || (fulfillmentMode === 'dine_in' ? `Table ${tableLabel ?? ''}`.trim() : ''),
       customer_email: form.email || null,
-      customer_phone: form.phone,
-      customer_address: {
-        address: form.address,
-        city: form.city,
-        state: form.state,
-        pincode: form.pincode,
-      },
-      payment_method: form.paymentMethod,
-      payment_status: form.paymentMethod === 'cod' ? 'cod' : 'pending',
+      customer_phone: form.phone || null,
+      customer_address: fulfillmentMode === 'delivery' ? {
+        address: form.address, city: form.city, state: form.state, pincode: form.pincode,
+      } : null,
+      payment_method: paymentMethod,
+      payment_status: paymentStatus,
       status: 'pending',
       customer_user_id: user?.id || null,
+      fulfillment_mode: fulfillmentMode,
+      table_label: tableLabel || null,
+      prep_status: 'received',
+      guest_tracking_code: trackingCode,
     } as any).select('id, order_number').single();
 
     if (error) throw error;
 
-    // Save address to customer's profile (so it appears under My Account → Addresses)
-    if (user?.id) {
+    // Save address to customer's profile (delivery + signed-in only)
+    if (fulfillmentMode === 'delivery' && user?.id) {
       try {
         const { data: existing } = await supabase
           .from('customers')
@@ -223,32 +236,23 @@ const StorefrontCheckout = () => {
         );
         if (!duplicate) {
           const newAddr = {
-            id: Date.now().toString(),
-            label: 'Home',
-            name: form.name,
-            address: form.address,
-            landmark: '',
-            city: form.city,
-            state: form.state,
-            pincode: form.pincode,
-            phone: form.phone,
-            isDefault: current.length === 0,
+            id: Date.now().toString(), label: 'Home', name: form.name,
+            address: form.address, landmark: '', city: form.city, state: form.state,
+            pincode: form.pincode, phone: form.phone, isDefault: current.length === 0,
           };
-          const updated = [...current, newAddr];
-          await supabase
-            .from('customers')
-            .upsert(
-              { user_id: user.id, store_id: store.id, saved_addresses: updated },
-              { onConflict: 'user_id,store_id' }
-            );
+          await supabase.from('customers').upsert(
+            { user_id: user.id, store_id: store.id, saved_addresses: [...current, newAddr] },
+            { onConflict: 'user_id,store_id' }
+          );
         }
       } catch (e) {
         console.warn('[checkout] failed to persist address to profile', e);
       }
     }
 
-    return data;
+    return { ...data, guest_tracking_code: trackingCode };
   };
+
 
   const handleRazorpayPayment = async () => {
     setPlacing(true);
@@ -352,7 +356,7 @@ const StorefrontCheckout = () => {
             }).catch(() => {});
             clearCart();
             track({ store_id: store.id, event_type: 'purchase', order_id: order.id, value: totalPrice, metadata: { payment: 'razorpay' } });
-            setOrderPlaced(order.order_number);
+            setOrderPlaced({ number: order.order_number, trackingCode: order.guest_tracking_code });
           } else {
             toast.error('Payment verification failed. Contact support.');
           }
@@ -394,7 +398,7 @@ const StorefrontCheckout = () => {
       }).catch(() => {});
       clearCart();
       track({ store_id: store.id, event_type: 'purchase', order_id: order.id, value: totalPrice, metadata: { payment: 'cod' } });
-      setOrderPlaced(order.order_number);
+      setOrderPlaced({ number: order.order_number, trackingCode: order.guest_tracking_code });
     } catch (err) {
       console.error(err);
       toast.error('Failed to place order. Please try again.');
@@ -403,6 +407,28 @@ const StorefrontCheckout = () => {
   };
 
   const handlePlaceOrder = () => {
+    if (items.length === 0) { toast.error('Your cart is empty'); return; }
+
+    if (fulfillmentMode === 'dine_in') {
+      if (settings.dine_in_requires_table && !tableLabel) {
+        toast.error('Please scan your table QR code to place a dine-in order.');
+        return;
+      }
+      handleCODOrder(); // pay-at-counter uses the same code path (no payment gateway)
+      return;
+    }
+
+    if (fulfillmentMode === 'takeaway') {
+      if (!form.phone || form.phone.length < 7) {
+        toast.error('Please enter your phone number');
+        return;
+      }
+      if (form.paymentMethod === 'cod') handleCODOrder();
+      else handleRazorpayPayment();
+      return;
+    }
+
+    // delivery (existing path)
     if (!user) {
       toast.error('Please sign in or create an account to place your order');
       navigate(`/store/${slug}/account/auth?redirect=checkout`);
@@ -412,11 +438,6 @@ const StorefrontCheckout = () => {
       toast.error('Please fill in all required fields');
       return;
     }
-    if (items.length === 0) {
-      toast.error('Your cart is empty');
-      return;
-    }
-
     if (form.paymentMethod === 'cod') {
       if (codBlockedReason) { toast.error(codBlockedReason); return; }
       handleCODOrder();
@@ -440,21 +461,31 @@ const StorefrontCheckout = () => {
           </h1>
           <p className="text-sm opacity-60 mb-2">Your order number is</p>
           <p className="text-lg font-bold mb-6" style={{ color: colors.primary }}>
-            {orderPlaced}
+            {orderPlaced.number}
           </p>
+          {tableLabel && (
+            <p className="text-sm mb-2">Table <span className="font-semibold">{tableLabel}</span> · We'll bring it to you.</p>
+          )}
           <p className="text-sm opacity-50 mb-8">
-            We'll notify you when your order ships. Thank you for shopping with us!
+            {fulfillmentMode === 'dine_in' ? 'Your order has been sent to the kitchen.' :
+             fulfillmentMode === 'takeaway' ? 'We\'ll text you when your order is ready for pickup.' :
+             'We\'ll notify you when your order ships. Thank you!'}
           </p>
+          {orderPlaced.trackingCode && (
+            <Link
+              to={`/track/${orderPlaced.trackingCode}`}
+              className="inline-block px-6 py-2.5 text-sm font-semibold mr-2"
+              style={{ backgroundColor: colors.primary, color: '#fff', borderRadius: `${borderRadius}px` }}
+            >
+              Track Order →
+            </Link>
+          )}
           <Link
-            to={`/store/${slug}`}
-            className="inline-block px-6 py-2.5 text-sm font-semibold"
-            style={{
-              backgroundColor: colors.primary,
-              color: '#fff',
-              borderRadius: `${borderRadius}px`,
-            }}
+            to={fulfillmentMode === 'dine_in' || fulfillmentMode === 'takeaway' ? `/store/${slug}/menu` : `/store/${slug}`}
+            className="inline-block px-6 py-2.5 text-sm font-semibold border"
+            style={{ borderColor: colors.primary, color: colors.primary, borderRadius: `${borderRadius}px` }}
           >
-            Continue Shopping
+            {fulfillmentMode === 'delivery' ? 'Continue Shopping' : 'Back to Menu'}
           </Link>
         </div>
       </StorefrontLayout>
