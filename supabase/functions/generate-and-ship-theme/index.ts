@@ -191,25 +191,79 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
     dna.categories.forEach((c: any, i: number) => { c.image = imgResults[i + 1].url; });
 
     const layout = dna.layout ?? {};
-    const sectionMap: Record<string, any> = {
-      hero: { type: "hero", props: { ...dna.hero, image: heroUrl, style: layout.hero_style } },
-      usp_strip: { type: "usp_strip", props: { items: dna.usps } },
-      category_grid: { type: "category_grid", props: { title: "Shop by category", items: dna.categories, style: layout.category_style } },
-      trending: { type: "product_grid", props: { title: "Trending now", items: dna.products, style: layout.product_style } },
-      story: { type: "story", props: { ...dna.story, image: heroUrl } },
-      testimonials: { type: "testimonials", props: { items: dna.testimonials } },
-      newsletter: { type: "newsletter", props: dna.newsletter },
-    };
-    const order = (layout.section_order && layout.section_order.length >= 5)
-      ? layout.section_order
-      : ["hero","usp_strip","category_grid","trending","story","testimonials","newsletter"];
-    const homeSections = order.map((k: string) => sectionMap[k]).filter(Boolean);
 
-    // Inject required marketplace sections so the manifest passes validation.
-    const homeWithJournal = [
-      ...homeSections,
-      { type: "journal_strip", props: { title: "From the journal", limit: 3 } },
-    ];
+    // Canonical builders — one per section type. Pure: () => section.
+    const builders: Record<string, () => any> = {
+      hero:          () => ({ type: "hero",          props: { ...dna.hero, image: heroUrl, style: layout.hero_style } }),
+      usp_strip:     () => ({ type: "usp_strip",     props: { items: dna.usps } }),
+      category_grid: () => ({ type: "category_grid", props: { title: "Shop by category", items: dna.categories, style: layout.category_style } }),
+      product_grid:  () => ({ type: "product_grid",  props: { title: "Trending now", items: dna.products, style: layout.product_style } }),
+      story:         () => ({ type: "story",         props: { ...dna.story, image: heroUrl } }),
+      testimonials:  () => ({ type: "testimonials",  props: { items: dna.testimonials } }),
+      newsletter:    () => ({ type: "newsletter",    props: dna.newsletter }),
+      journal_strip: () => ({ type: "journal_strip", props: { title: "From the journal", limit: 3 } }),
+      // Archetype-specific layout sections — built from existing DNA, no extra AI call.
+      features:      () => ({ type: "features",      props: { title: "What makes it special", items: dna.usps } }),
+      feature_grid:  () => ({ type: "features",      props: { title: "What makes it special", items: dna.usps } }),
+      values:        () => ({ type: "values",        props: { items: dna.about?.values ?? [] } }),
+      spec_table:    () => ({ type: "spec_table",    props: { title: "Specifications", rows: dna.products.slice(0, 4).map((p: any) => ({ name: p.name, price: p.price, badge: p.badge })) } }),
+      lookbook:      () => ({ type: "lookbook",      props: { title: "The lookbook", items: dna.categories } }),
+      portfolio_grid:() => ({ type: "lookbook",      props: { title: "Selected works", items: dna.categories } }),
+      process_steps: () => ({ type: "features",      props: { title: "Our process", items: dna.usps } }),
+      faq:           () => ({ type: "faq",           props: { title: "Questions", items: (dna.about?.values ?? []).slice(0, 5).map((v: string) => ({ q: v, a: v })) } }),
+      marquee:       () => ({ type: "marquee",       props: { items: (dna.usps ?? []).map((u: any) => u.title) } }),
+      countdown:     () => ({ type: "marquee",       props: { items: ["Festive sale ending soon", "Free gift wrap", "Same-day metro delivery"] } }),
+      gift_finder:   () => ({ type: "features",      props: { title: "Find the perfect gift", items: dna.usps } }),
+    };
+
+    // Aliases — normalize legacy / synonym keys to canonical builder keys.
+    const alias: Record<string, string> = {
+      trending: "product_grid",
+      products: "product_grid",
+      categories: "category_grid",
+      usps: "usp_strip",
+      news: "newsletter",
+    };
+    const resolve = (k: string) => alias[k] ?? k;
+
+    const order = (layout.section_order && layout.section_order.length >= 3)
+      ? layout.section_order
+      : ["hero","usp_strip","category_grid","product_grid","story","testimonials","newsletter"];
+
+    const used = new Set<string>();
+    const homeSections: any[] = [];
+    for (const raw of order) {
+      const k = resolve(raw);
+      const b = builders[k];
+      if (!b) { console.warn("unknown section key, skipping:", raw); continue; }
+      if (used.has(k)) continue;
+      homeSections.push(b());
+      used.add(k);
+    }
+
+    // Required-sections guarantee — validator demands these on home; inject any missing.
+    const REQUIRED = ["hero","usp_strip","category_grid","product_grid","story","journal_strip","newsletter"];
+    const injectionIndex: Record<string, (arr: any[]) => number> = {
+      hero:          () => 0,
+      usp_strip:     (arr) => Math.min(1, arr.length),
+      category_grid: (arr) => (arr.findIndex((s) => s.type === "hero") + 1) || arr.length,
+      product_grid:  (arr) => {
+        const cat = arr.findIndex((s) => s.type === "category_grid");
+        return cat >= 0 ? cat + 1 : arr.length;
+      },
+      story:         (arr) => Math.max(arr.length - 2, 0),
+      journal_strip: (arr) => Math.max(arr.length - 1, 0),
+      newsletter:    (arr) => arr.length,
+    };
+    for (const req of REQUIRED) {
+      if (homeSections.some((s) => s.type === req)) continue;
+      const b = builders[req];
+      if (!b) continue;
+      const at = injectionIndex[req](homeSections);
+      homeSections.splice(at, 0, b());
+    }
+
+    const homeWithJournal = homeSections;
 
     const manifest = {
       version: 2,
