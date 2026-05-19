@@ -43,6 +43,9 @@ const OrderDetail = () => {
   const [shipDialogOpen, setShipDialogOpen] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
+  const [collectMode, setCollectMode] = useState<string>('cash');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [collecting, setCollecting] = useState(false);
 
   if (isLoading) {
     return (
