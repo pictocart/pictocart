@@ -22,7 +22,7 @@ type KitchenOrder = {
   total: number;
   created_at: string;
   guest_tracking_code: string | null;
-  shipping_address: any;
+  customer_address: any;
 };
 
 const MODE_LABEL: Record<string, string> = {
@@ -98,7 +98,7 @@ const Kitchen = () => {
       const { data, error } = await supabase
         .from('orders')
         .select(
-          'id, order_number, fulfillment_mode, prep_status, table_label, customer_name, customer_phone, items, total, created_at, guest_tracking_code, shipping_address',
+          'id, order_number, fulfillment_mode, prep_status, table_label, customer_name, customer_phone, items, total, created_at, guest_tracking_code, customer_address',
         )
         .eq('store_id', store.id)
         .not('prep_status', 'is', null)
@@ -221,11 +221,11 @@ const Kitchen = () => {
                           <Phone className="h-3 w-3" /> {order.customer_phone}
                         </div>
                       )}
-                      {order.fulfillment_mode === 'delivery' && order.shipping_address && (
+                      {order.fulfillment_mode === 'delivery' && order.customer_address && (
                         <div className="flex items-start gap-1 text-xs text-muted-foreground line-clamp-2">
                           <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
                           <span>
-                            {[order.shipping_address?.line1, order.shipping_address?.city]
+                            {[order.customer_address?.line1, order.customer_address?.city]
                               .filter(Boolean)
                               .join(', ')}
                           </span>
