@@ -158,6 +158,8 @@ const ProductForm = () => {
       images,
       variants: variants as any,
       inventory_count: Number(inventoryCount) || 0,
+      cost_price: costPrice ? Number(costPrice) : 0,
+      tax_rate: taxRate ? Number(taxRate) : 0,
       is_active: asDraft ? false : isActive,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
