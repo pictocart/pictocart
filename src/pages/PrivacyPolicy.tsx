@@ -22,7 +22,7 @@ const PrivacyPolicy = () => (
 
         <section>
           <h2 className="text-xl font-semibold text-foreground">4. Third-Party Services</h2>
-          <p>We use third-party services including payment processors (Razorpay), shipping providers (Delhivery), and analytics tools. These services have their own privacy policies governing data use. We share only the minimum data necessary to provide our services.</p>
+          <p>We use third-party services including payment processors (Razorpay), shipping providers (Shiprocket), and analytics tools. These services have their own privacy policies governing data use. We share only the minimum data necessary to provide our services.</p>
         </section>
 
         <section>
