@@ -47,13 +47,17 @@ const StorefrontMenu = ({ forceMode, tableFromParam }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedTable, forceMode]);
 
-  // Fallback: if current mode isn't enabled, switch to the first enabled
+  // Fallback: if current mode isn't enabled, switch to the first enabled.
+  // Exception: if the customer arrived via a table QR (resolvedTable / forceMode),
+  // keep dine-in even when the seller hasn't toggled it on yet — the QR itself
+  // is intent to allow dine-in.
   useEffect(() => {
+    if (resolvedTable || forceMode === 'dine_in') return;
     if (enabledModes.length > 0 && !enabledModes.includes(fulfillmentMode)) {
       setFulfillmentMode(enabledModes[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabledModes.join(',')]);
+  }, [enabledModes.join(','), resolvedTable, forceMode]);
 
   const qtyOf = (id: string) => cartItems.filter((i) => i.productId === id).reduce((s, i) => s + i.quantity, 0);
 
