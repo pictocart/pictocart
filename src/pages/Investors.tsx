@@ -215,7 +215,7 @@ const SlideRevenue = () => (
         { t: "AI Credits Wallet", p: "Pay-per-use generation (descriptions, images, blogs, themes)", v: "₹200/seller/mo" },
         { t: "Custom Domains", p: "₹999/year domain + DNS (Domain Name System) management upsell", v: "₹999 ARR (Annual Recurring Revenue)" },
         { t: "Payments Float", p: "Razorpay revenue share + branded checkout fees", v: "0.3% GMV" },
-        { t: "Shipping Margin", p: "Delhivery / Shiprocket aggregator markup", v: "₹15/order" },
+        { t: "Shipping Margin", p: "Shiprocket aggregator markup", v: "₹15/order" },
         { t: "Partner Network", p: "Agency commissions, theme marketplace 30% cut", v: "₹50K/agency" },
       ].map((r, i) => (
         <div key={i} className="rounded-2xl bg-white/5 border border-white/10 p-5 flex items-center justify-between hover:bg-white/10 transition-colors"
