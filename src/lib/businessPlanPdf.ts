@@ -63,7 +63,7 @@ const PLAN: Section[] = [
     bullets: [
       'AI-written product titles, descriptions, Search Engine Optimization (SEO) metadata, and tags.',
       'AI-generated themes, blog posts, store policies, and email templates.',
-      'Pincode-aware shipping integrations with Delhivery and Shiprocket.',
+      'Pincode-aware shipping integration with Shiprocket (17+ couriers, 29,000+ pincodes).',
       'One-page checkout with Razorpay, Cash on Delivery (COD) and Unified Payments Interface (UPI).',
       'Custom Domain Name System (DNS) management and white-label transactional emails.',
     ],
