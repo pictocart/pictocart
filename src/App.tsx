@@ -8,6 +8,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { StoreProvider } from "@/contexts/StoreContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/DashboardLayout";
+import DashboardShell from "@/components/DashboardShell";
+import AdminShell from "@/components/AdminShell";
 import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
 import ProductList from "@/pages/ProductList";
@@ -161,244 +163,80 @@ const AppRoutes = () => {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <Dashboard />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/products"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <ProductList />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/products/new"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <ProductForm />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/products/:id"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <ProductForm />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/orders"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <OrderList />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/orders/:id"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <OrderDetail />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/invoices"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <Invoices />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/invoices/:id/print"
-              element={
-                <ProtectedRoute>
-                  <InvoicePrint />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/accounts" element={<ProtectedRoute><DashboardLayout><AccountsOverview /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/accounts/purchases" element={<ProtectedRoute><DashboardLayout><AccountsPurchases /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/accounts/expenses" element={<ProtectedRoute><DashboardLayout><AccountsExpenses /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/accounts/suppliers" element={<ProtectedRoute><DashboardLayout><AccountsSuppliers /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/accounts/khata" element={<ProtectedRoute><DashboardLayout><AccountsKhata /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/accounts/inventory" element={<ProtectedRoute><DashboardLayout><AccountsInventory /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/accounts/reports/pnl" element={<ProtectedRoute><DashboardLayout><AccountsPnl /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/accounts/reports/cashbook" element={<ProtectedRoute><DashboardLayout><AccountsCashBook /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/accounts/reports/gst" element={<ProtectedRoute><DashboardLayout><AccountsGst /></DashboardLayout></ProtectedRoute>} />
-            <Route
-              path="/returns"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <Returns />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reviews"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <ReviewsModeration />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/customise"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <Customise />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/store-design"
-              element={<Navigate to="/customise" replace />}
-            />
-            <Route
-              path="/settings/payments"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <PaymentSettings />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings/cod"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <CodSettings />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings/shipping"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <ShippingSettings />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings/fulfillment"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <FulfillmentSettings />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings/qr"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <QRCodes />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings/domain"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <DomainSettings />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coupons"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <CouponList />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings/seo"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <SEOSettings />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            {/* Blog, Subscribers, Analytics */}
-            <Route path="/categories" element={<ProtectedRoute><DashboardLayout><Categories /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/blog-posts" element={<ProtectedRoute><DashboardLayout><BlogPosts /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/blog-posts/new" element={<ProtectedRoute><DashboardLayout><BlogPostForm /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/blog-posts/:id" element={<ProtectedRoute><DashboardLayout><BlogPostForm /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/subscribers" element={<ProtectedRoute><DashboardLayout><Subscribers /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/customers" element={<ProtectedRoute><DashboardLayout><Customers /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><DashboardLayout><StoreAnalytics /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/themes" element={<ProtectedRoute><DashboardLayout><Themes /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/settings/email" element={<ProtectedRoute><DashboardLayout><EmailBrandingSettings /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute><DashboardLayout><Billing /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/wallet" element={<ProtectedRoute><DashboardLayout><Wallet /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/admin/credits-economy" element={<AdminRoute><AdminLayout><AdminCreditsEconomy /></AdminLayout></AdminRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><DashboardLayout><SellerProfile /></DashboardLayout></ProtectedRoute>} />
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminRoute><AdminLayout><AdminOverview /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/stores" element={<AdminRoute><AdminLayout><AdminStores /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/themes" element={<AdminRoute><AdminLayout><AdminThemes /></AdminLayout></AdminRoute>} />
+            {/* Seller dashboard routes — share a single layout so the sidebar
+                stays mounted and Suspense only swaps the page content. */}
+            <Route element={<DashboardShell />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/products" element={<ProductList />} />
+              <Route path="/products/new" element={<ProductForm />} />
+              <Route path="/products/:id" element={<ProductForm />} />
+              <Route path="/orders" element={<OrderList />} />
+              <Route path="/orders/:id" element={<OrderDetail />} />
+              <Route path="/invoices" element={<Invoices />} />
+              <Route path="/accounts" element={<AccountsOverview />} />
+              <Route path="/accounts/purchases" element={<AccountsPurchases />} />
+              <Route path="/accounts/expenses" element={<AccountsExpenses />} />
+              <Route path="/accounts/suppliers" element={<AccountsSuppliers />} />
+              <Route path="/accounts/khata" element={<AccountsKhata />} />
+              <Route path="/accounts/inventory" element={<AccountsInventory />} />
+              <Route path="/accounts/reports/pnl" element={<AccountsPnl />} />
+              <Route path="/accounts/reports/cashbook" element={<AccountsCashBook />} />
+              <Route path="/accounts/reports/gst" element={<AccountsGst />} />
+              <Route path="/returns" element={<Returns />} />
+              <Route path="/reviews" element={<ReviewsModeration />} />
+              <Route path="/customise" element={<Customise />} />
+              <Route path="/customise/legacy" element={<CustomiseLegacy />} />
+              <Route path="/settings/payments" element={<PaymentSettings />} />
+              <Route path="/settings/cod" element={<CodSettings />} />
+              <Route path="/settings/shipping" element={<ShippingSettings />} />
+              <Route path="/settings/fulfillment" element={<FulfillmentSettings />} />
+              <Route path="/settings/qr" element={<QRCodes />} />
+              <Route path="/settings/domain" element={<DomainSettings />} />
+              <Route path="/settings/seo" element={<SEOSettings />} />
+              <Route path="/settings/email" element={<EmailBrandingSettings />} />
+              <Route path="/coupons" element={<CouponList />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/blog-posts" element={<BlogPosts />} />
+              <Route path="/blog-posts/new" element={<BlogPostForm />} />
+              <Route path="/blog-posts/:id" element={<BlogPostForm />} />
+              <Route path="/subscribers" element={<Subscribers />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/analytics" element={<StoreAnalytics />} />
+              <Route path="/themes" element={<Themes />} />
+              <Route path="/billing" element={<Billing />} />
+              <Route path="/wallet" element={<Wallet />} />
+              <Route path="/profile" element={<SellerProfile />} />
+              <Route path="/policies" element={<Policies />} />
+              <Route path="/testimonials" element={<Testimonials />} />
+              <Route path="/google-reviews" element={<GoogleReviewsConnect />} />
+              <Route path="/menu" element={<Menu />} />
+              <Route path="/kitchen" element={<Kitchen />} />
+            </Route>
+
+            <Route path="/store-design" element={<Navigate to="/customise" replace />} />
+            <Route path="/invoices/:id/print" element={<ProtectedRoute><InvoicePrint /></ProtectedRoute>} />
+
+            {/* Admin routes — same pattern, persistent AdminLayout */}
+            <Route element={<AdminShell />}>
+              <Route path="/admin" element={<AdminOverview />} />
+              <Route path="/admin/stores" element={<AdminStores />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/themes" element={<AdminThemes />} />
+              <Route path="/admin/revenue" element={<AdminRevenue />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/profile" element={<AdminProfile />} />
+              <Route path="/admin/security" element={<AdminSecurity />} />
+              <Route path="/admin/provisioning" element={<AdminProvisioning />} />
+              <Route path="/admin/plans" element={<AdminPlans />} />
+              <Route path="/admin/launch" element={<AdminLaunchChecklist />} />
+              <Route path="/admin/credits-economy" element={<AdminCreditsEconomy />} />
+              <Route path="/admin/health" element={<AdminHealth />} />
+              <Route path="/admin/disputes" element={<AdminDisputes />} />
+              <Route path="/admin/partners" element={<AdminPartners />} />
+            </Route>
             <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
             <Route path="/admin/themes/preview-live/:themeId" element={<AdminThemeLivePreview />} />
-            <Route path="/customise/legacy" element={<ProtectedRoute><DashboardLayout><CustomiseLegacy /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/policies" element={<ProtectedRoute><DashboardLayout><Policies /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/testimonials" element={<ProtectedRoute><DashboardLayout><Testimonials /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/google-reviews" element={<ProtectedRoute><DashboardLayout><GoogleReviewsConnect /></DashboardLayout></ProtectedRoute>} />
-            
-            <Route path="/admin/revenue" element={<AdminRoute><AdminLayout><AdminRevenue /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/profile" element={<AdminRoute><AdminLayout><AdminProfile /></AdminLayout></AdminRoute>} />
-            
-            <Route path="/admin/security" element={<AdminRoute><AdminLayout><AdminSecurity /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/provisioning" element={<AdminRoute><AdminLayout><AdminProvisioning /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/plans" element={<AdminRoute><AdminLayout><AdminPlans /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/launch" element={<AdminRoute><AdminLayout><AdminLaunchChecklist /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/health" element={<AdminRoute><AdminLayout><AdminHealth /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/disputes" element={<AdminRoute><AdminLayout><AdminDisputes /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/partners" element={<AdminRoute><AdminLayout><AdminPartners /></AdminLayout></AdminRoute>} />
+
             {/* Partner program (public signup + partner-only dashboard) */}
             <Route path="/partners" element={<PartnersSignup />} />
             <Route path="/partners/signup" element={<PartnersSignup />} />
