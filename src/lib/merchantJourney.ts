@@ -100,7 +100,7 @@ export const merchantFAQs: FAQ[] = [
   },
   {
     q: 'Can I sell physical products and digital products?',
-    a: 'Yes to both. Physical products integrate with Delhivery for shipping label generation and tracking. Digital products (PDFs, courses, templates) can be delivered via secure download links after purchase.',
+    a: 'Yes to both. Physical products integrate with Shiprocket (17+ couriers, 29,000+ pincodes) for shipping label generation and tracking. Digital products (PDFs, courses, templates) can be delivered via secure download links after purchase.',
   },
   {
     q: 'What about GST and invoices?',
