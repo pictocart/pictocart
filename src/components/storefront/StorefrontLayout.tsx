@@ -5,6 +5,8 @@ import { ShoppingBag, Search, User, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/hooks/useCart';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
+import { useFulfillment } from '@/hooks/useFulfillment';
+import { Utensils } from 'lucide-react';
 import { THEME_TEMPLATES, type ThemeTemplate } from '@/lib/themes';
 import BottomNav from './BottomNav';
 import SearchOverlay from './SearchOverlay';
@@ -56,6 +58,8 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
   const { colors, fonts } = theme;
   const { totalItems } = useCart(store.slug);
   const { user } = useCustomerAuth(store.slug);
+  const { enabledModes } = useFulfillment(store.id);
+  const menuEnabled = enabledModes.includes('dine_in') || enabledModes.includes('takeaway');
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split('@')?.[0] || 'Account';
@@ -126,6 +130,15 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
           )}
 
           <div className="flex items-center gap-3">
+            {menuEnabled && (
+              <Link
+                to={`/store/${store.slug}/menu`}
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full"
+                style={{ backgroundColor: colors.primary, color: '#fff' }}
+              >
+                <Utensils className="h-4 w-4" /> Menu
+              </Link>
+            )}
             <button onClick={() => setSearchOpen(true)} className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm opacity-60 hover:opacity-100 border rounded-full" style={{ borderColor: colors.secondary }}>
               <Search className="h-4 w-4" /> Search
             </button>
@@ -216,7 +229,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
       {/* Custom Footer */}
       <StorefrontFooter store={store} config={footer} colors={colors} />
 
-      <BottomNav colors={colors} onSearchOpen={() => setSearchOpen(true)} />
+      <BottomNav colors={colors} onSearchOpen={() => setSearchOpen(true)} storeId={store.id} />
 
       {searchOpen && (
         <SearchOverlay products={searchProducts} storeSlug={store.slug} colors={colors} fonts={fonts} borderRadius={theme.borderRadius} onClose={() => setSearchOpen(false)} />
