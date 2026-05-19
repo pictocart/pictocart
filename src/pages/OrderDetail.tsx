@@ -132,6 +132,22 @@ const OrderDetail = () => {
     }
     setTrackingLoading(false);
   };
+  const confirmCollectPayment = async () => {
+    setCollecting(true);
+    const { error } = await supabase
+      .from('orders')
+      .update({
+        payment_status: 'paid',
+        payment_method: collectMode,
+      } as any)
+      .eq('id', order.id);
+    setCollecting(false);
+    setConfirmOpen(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Payment received via ${collectMode.toUpperCase()}`);
+    refetch();
+  };
+
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
