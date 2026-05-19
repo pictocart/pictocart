@@ -97,6 +97,8 @@ const AdminPartners = lazy(() => import("@/pages/admin/AdminPartners"));
 const PartnersSignup = lazy(() => import("@/pages/PartnersSignup"));
 const PartnersDashboard = lazy(() => import("@/pages/PartnersDashboard"));
 const Help = lazy(() => import("@/pages/Help"));
+const Invoices = lazy(() => import("@/pages/Invoices"));
+const InvoicePrint = lazy(() => import("@/pages/InvoicePrint"));
 
 
 const queryClient = new QueryClient();
