@@ -165,11 +165,18 @@ async function loadMerchantContext(admin: any, userId: string) {
     missing_description: allProducts.filter((p) => !p.short_description).length,
     missing_image: allProducts.filter((p) => !p.images || p.images.length === 0).length,
   };
+  const isFoodService = ['food', 'grocery'].includes((store.category || '').toLowerCase());
   const orderSummary = {
     total: orders.count ?? allOrders.length,
     pending: allOrders.filter((o) => o.status === 'pending' || o.status === 'placed').length,
     paid: allOrders.filter((o) => o.payment_status === 'paid').length,
-    unshipped: allOrders.filter((o) => !o.tracking_number && o.payment_status === 'paid').length,
+    // For food/cafe stores, "unshipped" doesn't apply — orders are served in-house.
+    unshipped: isFoodService
+      ? 0
+      : allOrders.filter((o) => !o.tracking_number && o.payment_status === 'paid' && !['delivered', 'cancelled', 'returned'].includes(o.status)).length,
+    unfulfilled_dinein: isFoodService
+      ? allOrders.filter((o) => !['delivered', 'cancelled', 'returned'].includes(o.status)).length
+      : 0,
     last_30d_revenue: allOrders
       .filter((o) => o.payment_status === 'paid' && Date.now() - new Date(o.created_at).getTime() < 30 * 86400000)
       .reduce((s, o) => s + Number(o.total || 0), 0),
