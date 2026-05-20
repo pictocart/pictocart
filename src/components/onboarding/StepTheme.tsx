@@ -124,7 +124,14 @@ const ThemeCard = ({ theme, selected, onClick }: { theme: ThemeMaster; selected:
         )}
       </div>
       <div className="p-3">
-        <p className="text-sm font-bold leading-tight">{theme.name}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-bold leading-tight flex-1 truncate">{theme.name}</p>
+          {theme.is_premium && (
+            <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-[10px] gap-1 px-1.5 py-0">
+              <Crown className="h-2.5 w-2.5" /> ₹{theme.price}
+            </Badge>
+          )}
+        </div>
         {theme.category && (
           <Badge variant="secondary" className="mt-1 text-[10px] capitalize">{theme.category}</Badge>
         )}
