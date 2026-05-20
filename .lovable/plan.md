@@ -1,123 +1,80 @@
-# Fix: Sidebar disappears + "Loading…" flashes on every page change
+# Pro Themes & Customise — Premium Tier Plan
 
-## Root cause
+_Status: planned, not built. Reserved as a paid upgrade. (This doc replaces the previous sidebar-fix plan, which has shipped.)_
 
-In `src/App.tsx`, all authenticated routes are declared as:
+> Intended filename: `.lovable/Pro themes and Customise.md`. Plan mode only allows writes to `plan.md`, so this content lives here for now — please rename/move on build mode if needed.
 
-```text
-<Suspense fallback={<div>Loading…</div>}>
-  <Routes>
-    <Route path="/accounts/inventory"
-      element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <AccountsInventory />   {/* lazy */}
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-    ...
-  </Routes>
-</Suspense>
-```
+## Positioning
 
-When the user navigates to a route whose lazy chunk has not been downloaded yet (e.g. first visit to `/accounts/inventory`), React suspends the **entire** element tree under that Suspense boundary — including `DashboardLayout`. The fallback (`Loading…` text, full screen, no sidebar) replaces everything until the chunk arrives. This happens on every fresh navigation to a not-yet-loaded page and is what the screenshot shows.
+Bundle the upcoming **Theme Brief Generator** (multi-page AI theme from a free-text brand idea) and **Advanced Customise** (rename pages/nav, add/remove pages, per-page section editor) as a **premium add-on** — not part of the free tier.
 
-`ProtectedRoute`'s own spinner is fine; the problem is purely the Suspense boundary placement.
+- **Pack name:** Pro Themes & Customise Pro
+- **Entry price:** ₹1,499 / store / one-time unlock (or bundled inside higher SaaS tiers)
+- **Target merchants:** restaurants, cafés, doctors, lawyers, salons, boutiques — anyone whose storefront vocabulary doesn't match the default e-commerce "Shop / Journal / About".
 
-## Fix
+## What the merchant gets at ₹1,499
 
-Refactor the seller dashboard routes to use a **layout route** with `<Outlet/>`, and move `<Suspense>` inside the layout so it only wraps the page content area, not the chrome.
+1. **Theme Brief Generator**
+   - Large free-text brief box ("Describe your brand — e.g. *A South Indian vegetarian restaurant in Bengaluru, heritage feel, banana-leaf greens + temple gold, menu / chef's story / locations / reservations…*").
+   - One-shot generation of a **complete multi-page theme** (Home + Menu/Shop + About + Contact + optional Blog / Gallery / Locations / Reservations).
+   - Vertical-aware section blocks (`MenuSection` for restaurants, `DoctorSchedule` for clinics, `CaseStudies` for lawyers).
+   - 3 regenerations included; further regenerations billed from the wallet.
 
-### 1. New file `src/components/DashboardShell.tsx`
+2. **Customise Pro**
+   - **Pages tab** — list every page from `dna.pages`, reorder, toggle visible/hidden, rename page title and nav label independently (*Shop → Menu / Store*, *Journal → Blog*, *About Us → Who We Are*).
+   - **Per-page section editor** — drop new sections into any page, not just Home.
+   - **Vocabulary presets** — one click swaps *Shop → Menu / Services / Catalogue / Collection* sitewide.
+   - **Custom page builder** — add brand-new pages (*Franchise*, *Press*, *Careers*) that appear in nav + sitemap.
 
-A tiny wrapper used by the layout route:
+3. **Premium-only goodies**
+   - 5 paid theme presets (Restaurant, Clinic, Law Firm, Salon, Atelier).
+   - Higher-quality image model on generation (Gemini 3 Pro Image vs 2.5 Flash Image).
+   - Priority queue on the generation pipeline.
 
-```text
-ProtectedRoute
-  └─ DashboardLayout
-       └─ Suspense fallback={<PageSkeleton />}
-            └─ Outlet
-```
+## What stays free
 
-`PageSkeleton` is a small placeholder (a few shimmer blocks inside the content area) so the sidebar/header stay visible and only the main panel shows a skeleton.
+- Existing 8 starter themes.
+- Today's `HomepageBuilder`, `HeaderEditor`, `FooterEditor`.
+- Renaming the 3 default nav labels in the Header editor (already shipped).
 
-### 2. Refactor `src/App.tsx` route table
+## Pros
 
-Replace the ~30 repetitive seller routes with a single nested block:
+- Clear monetisation hook for the most asked-for feature (full brand match).
+- Differentiates serious merchants (restaurants, clinics) from hobbyists without alienating either.
+- Justifies ongoing AI cost — ~80 credits / generation in tokens + images; ₹1,499 covers many regenerations with margin.
+- Drives upgrades into Pro SaaS tiers; the unlock can be bundled free with ₹2,499/mo to push subscriptions.
+- Gives sales/marketing a vertical-first story beyond "e-commerce store builder".
 
-```text
-<Route element={<DashboardShell />}>
-  <Route path="/dashboard" element={<Dashboard />} />
-  <Route path="/products" element={<ProductList />} />
-  <Route path="/products/new" element={<ProductForm />} />
-  <Route path="/products/:id" element={<ProductForm />} />
-  <Route path="/orders" element={<OrderList />} />
-  <Route path="/orders/:id" element={<OrderDetail />} />
-  <Route path="/invoices" element={<Invoices />} />
-  <Route path="/accounts" element={<AccountsOverview />} />
-  <Route path="/accounts/purchases" element={<AccountsPurchases />} />
-  <Route path="/accounts/expenses" element={<AccountsExpenses />} />
-  <Route path="/accounts/suppliers" element={<AccountsSuppliers />} />
-  <Route path="/accounts/khata" element={<AccountsKhata />} />
-  <Route path="/accounts/inventory" element={<AccountsInventory />} />
-  <Route path="/accounts/reports/pnl" element={<AccountsPnl />} />
-  <Route path="/accounts/reports/cashbook" element={<AccountsCashBook />} />
-  <Route path="/accounts/reports/gst" element={<AccountsGst />} />
-  <Route path="/returns" element={<Returns />} />
-  <Route path="/reviews" element={<ReviewsModeration />} />
-  <Route path="/customise" element={<Customise />} />
-  <Route path="/settings/payments" element={<PaymentSettings />} />
-  <Route path="/settings/cod" element={<CodSettings />} />
-  <Route path="/settings/shipping" element={<ShippingSettings />} />
-  <Route path="/settings/fulfillment" element={<FulfillmentSettings />} />
-  <Route path="/settings/qr" element={<QRCodes />} />
-  <Route path="/settings/domain" element={<DomainSettings />} />
-  <Route path="/settings/seo" element={<SEOSettings />} />
-  <Route path="/settings/email" element={<EmailBrandingSettings />} />
-  <Route path="/coupons" element={<CouponList />} />
-  <Route path="/categories" element={<Categories />} />
-  <Route path="/blog-posts" element={<BlogPosts />} />
-  <Route path="/blog-posts/new" element={<BlogPostForm />} />
-  <Route path="/blog-posts/:id" element={<BlogPostForm />} />
-  <Route path="/subscribers" element={<Subscribers />} />
-  <Route path="/customers" element={<Customers />} />
-  <Route path="/analytics" element={<StoreAnalytics />} />
-  <Route path="/themes" element={<Themes />} />
-  <Route path="/billing" element={<Billing />} />
-  <Route path="/wallet" element={<Wallet />} />
-  <Route path="/profile" element={<SellerProfile />} />
-  <Route path="/policies" element={<Policies />} />
-  <Route path="/testimonials" element={<Testimonials />} />
-  <Route path="/google-reviews" element={<GoogleReviewsConnect />} />
-  <Route path="/help" element={<Help />} />
-  <Route path="/menu" element={<Menu />} />
-  <Route path="/kitchen" element={<Kitchen />} />
-</Route>
-```
+## Cons / risks
 
-Do the same for `/admin/*` with an `AdminShell` (`AdminRoute` + `AdminLayout` + Suspense + Outlet) so admin pages also stop flashing.
+- Free-tier merchants in service verticals see a paywall on Day 1 — must be framed as *"upgrade to unlock your industry"*, not *"you can't rename Shop"*.
+- Generation quality varies with brief quality; refund policy must be explicit ("regenerations included, no cash refunds").
+- Token + image cost is real — enforce per-store generation caps server-side to prevent abuse.
+- Extra surface area in Customise raises support load; needs in-product help + Pica 2 prompt updates.
 
-Keep public/storefront routes and the top-level Suspense as-is — they don't have a persistent chrome to preserve.
+## Packaging options
 
-### 3. Behaviour after fix
+| SKU | Price | What's included |
+|---|---|---|
+| **Pro Themes & Customise (one-time)** | ₹1,499 / store | Brief generator (3 generations) + Customise Pro forever |
+| **Pro Themes & Customise (monthly)** | ₹199 / mo | Unlimited regenerations, all 5 premium presets |
+| **Bundled in SaaS** | included in ₹2,499/mo plan | Same as monthly add-on, plus priority queue |
 
-- Sidebar + header stay mounted across every seller navigation.
-- Lazy chunks now suspend only the content area; user sees a brief skeleton inside the page panel, never a blank screen.
-- Route table shrinks from ~600 lines to ~70 and becomes the single source of truth.
+## Gating implementation notes (for later)
 
-## Files touched
+- New flag: `stores.settings.entitlements.themes_pro = true` (set on successful payment).
+- Customise checks `entitlements.themes_pro` before showing Pages tab, Brief generator, and rename-everywhere actions; otherwise shows upsell card with "Unlock for ₹1,499" CTA → Razorpay → webhook flips the flag.
+- `generate-and-ship-theme` edge function reads the flag + a `generations_remaining` counter; rejects with 402 when exhausted.
+- Admin override at `/admin/stores/:id` to grant/revoke for support cases.
+- Reuse the existing `Billing` page to surface the add-on, and the wallet for overage regenerations.
 
-- New: `src/components/DashboardShell.tsx`, `src/components/AdminShell.tsx`, `src/components/ui/PageSkeleton.tsx`
-- Edit: `src/App.tsx` (refactor seller + admin routes to nested layout routes)
+## Build order (when greenlit)
 
-## Out of scope
+1. **Phase 1** — Theme Brief textarea + multi-page DNA in `generate-and-ship-theme` (behind a feature flag).
+2. **Phase 2** — `Pages` tab in Customise + storefront wiring of renamable nav.
+3. **Phase 3** — Entitlements + paywall + Razorpay unlock + admin grant.
+4. **Phase 4** — Vertical presets (Restaurant, Clinic, Law Firm, Salon) and the `MenuSection` / `DoctorSchedule` blocks.
 
-- No changes to `DashboardLayout`, `AdminLayout`, `ProtectedRoute`, or any page component.
-- No changes to the custom-domain redirect, auth, or storefront routes.
-- No backend / data changes.
+## Out of scope for this doc
 
-## Verification
-
-1. Hard reload `/dashboard`, then click Accounts → Inventory Ledger → Suppliers → Khata. Sidebar must remain visible; only the content panel may briefly show a skeleton on first visit to a chunk.
-2. Direct deep-link to `/accounts/inventory` in a fresh tab should render sidebar immediately and skeleton-then-content in the panel.
-3. Browser back/forward across dashboard pages must never blank the sidebar.
+Actual implementation. This file only locks positioning and price (₹1,499 entry) so the engineering plan can be picked up later as a paid feature, not a free one.
