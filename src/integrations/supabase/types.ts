@@ -3616,6 +3616,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_default: boolean
+          is_premium: boolean
           latest_changelog: string | null
           lovable_project_url: string | null
           name: string
@@ -3637,6 +3638,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_default?: boolean
+          is_premium?: boolean
           latest_changelog?: string | null
           lovable_project_url?: string | null
           name: string
@@ -3658,6 +3660,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_default?: boolean
+          is_premium?: boolean
           latest_changelog?: string | null
           lovable_project_url?: string | null
           name?: string
@@ -3749,6 +3752,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      theme_purchase_intents: {
+        Row: {
+          amount_inr: number
+          created_at: string
+          discount_inr: number
+          id: string
+          paid_at: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: string
+          store_id: string
+          theme_kind: string
+          theme_ref: string
+          user_id: string
+        }
+        Insert: {
+          amount_inr: number
+          created_at?: string
+          discount_inr?: number
+          id?: string
+          paid_at?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          store_id: string
+          theme_kind: string
+          theme_ref: string
+          user_id: string
+        }
+        Update: {
+          amount_inr?: number
+          created_at?: string
+          discount_inr?: number
+          id?: string
+          paid_at?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          store_id?: string
+          theme_kind?: string
+          theme_ref?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theme_purchase_intents_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       theme_purchases: {
         Row: {
