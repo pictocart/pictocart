@@ -38,6 +38,7 @@ interface ThemeMaster {
   created_at: string;
   price: number;
   compare_at_price: number | null;
+  is_premium?: boolean;
 }
 
 const PublishVersionDialog = ({ theme, open, onOpenChange }: { theme: ThemeMaster; open: boolean; onOpenChange: (o: boolean) => void }) => {
@@ -135,6 +136,7 @@ const ThemeMasterForm = ({ initial, onClose }: { initial: Partial<ThemeMaster>; 
         compare_at_price: form.compare_at_price != null && form.compare_at_price !== ('' as any)
           ? Number(form.compare_at_price)
           : null,
+        is_premium: (Number(form.price ?? 0) || 0) > 0,
       };
       if (!payload.theme_id || !payload.name) throw new Error('theme_id and name are required');
       if (isEdit) {
@@ -198,7 +200,7 @@ const ThemeMasterForm = ({ initial, onClose }: { initial: Partial<ThemeMaster>; 
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">Price (₹) — set 0 for free</Label>
+          <Label className="text-xs">Price (₹) — set 0 for free, any value &gt; 0 marks it Premium 👑</Label>
           <Input
             type="number"
             min={0}
