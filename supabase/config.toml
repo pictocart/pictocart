@@ -29,6 +29,8 @@ project_id = "qxeyndsvkfsmkilkzmuc"
     verify_jwt = true
   [functions.razorpay-webhook]
     verify_jwt = false
+  [functions.create-theme-purchase-order]
+    verify_jwt = false
   [functions.razorpay-refund]
     verify_jwt = true
   [functions.store-robots]
