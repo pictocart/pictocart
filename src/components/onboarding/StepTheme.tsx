@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import { Check, Palette, Loader2, Sparkles, Flame, Eye } from 'lucide-react';
+import { Check, Palette, Loader2, Sparkles, Flame, Eye, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { OnboardingData } from '@/pages/Onboarding';
 
