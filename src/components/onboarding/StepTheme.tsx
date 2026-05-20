@@ -20,6 +20,8 @@ interface ThemeMaster {
   preview_image: string | null;
   is_default: boolean;
   created_at: string;
+  is_premium?: boolean;
+  price?: number;
 }
 
 const StepTheme = ({ data, setData }: Props) => {
@@ -31,7 +33,7 @@ const StepTheme = ({ data, setData }: Props) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('theme_master_projects')
-        .select('id, theme_id, name, description, category, preview_image, is_default, created_at')
+        .select('id, theme_id, name, description, category, preview_image, is_default, created_at, is_premium, price')
         .eq('is_active', true)
         .order('is_default', { ascending: false })
         .order('created_at', { ascending: false });
