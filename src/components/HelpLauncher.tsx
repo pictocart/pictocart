@@ -42,10 +42,28 @@ export const HelpLauncher = () => {
       if (sessionStorage.getItem(DISMISS_KEY) === '1') return;
       setBubble(true);
       try {
-        const u = new SpeechSynthesisUtterance('May I help you!');
-        u.rate = 1.05; u.pitch = 1.3; u.volume = 0.9;
-        window.speechSynthesis?.cancel();
-        window.speechSynthesis?.speak(u);
+        const synth = window.speechSynthesis;
+        if (!synth) return;
+        const u = new SpeechSynthesisUtterance('May I help you?');
+        // Soft, plushie/cartoon-ish voice: gentle pace, higher pitch, low volume
+        u.rate = 0.9;
+        u.pitch = 1.7;
+        u.volume = 0.35;
+        // Prefer a soft female / child-like voice when the browser offers one
+        const pickVoice = () => {
+          const voices = synth.getVoices?.() || [];
+          const preferred = voices.find(v =>
+            /samantha|karen|tessa|google uk english female|microsoft zira|google हिन्दी|female|girl|child|kid|soft/i.test(`${v.name} ${v.voiceURI}`)
+          ) || voices.find(v => /en[-_]/i.test(v.lang) && /female/i.test(v.name));
+          if (preferred) u.voice = preferred;
+        };
+        if (synth.getVoices && synth.getVoices().length === 0) {
+          synth.addEventListener('voiceschanged', pickVoice, { once: true });
+        } else {
+          pickVoice();
+        }
+        synth.cancel();
+        synth.speak(u);
       } catch {}
     }, 60_000);
     return () => window.clearTimeout(t);
