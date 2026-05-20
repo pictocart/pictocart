@@ -136,6 +136,7 @@ const ThemeMasterForm = ({ initial, onClose }: { initial: Partial<ThemeMaster>; 
         compare_at_price: form.compare_at_price != null && form.compare_at_price !== ('' as any)
           ? Number(form.compare_at_price)
           : null,
+        is_premium: (Number(form.price ?? 0) || 0) > 0,
       };
       if (!payload.theme_id || !payload.name) throw new Error('theme_id and name are required');
       if (isEdit) {
