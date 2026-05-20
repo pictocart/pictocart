@@ -251,8 +251,17 @@ const Onboarding = () => {
         if (store) {
           // If a master theme (theme-xxxx) was chosen, seed its manifest into
           // store.theme + theme_overrides so the customiser has defaults to edit.
+          let isPremiumMaster = false;
           if (data.selectedThemeId?.startsWith('theme-')) {
             try {
+              // Check if premium
+              const { data: meta } = await supabase
+                .from('theme_master_projects')
+                .select('is_premium, price')
+                .eq('theme_id', data.selectedThemeId)
+                .maybeSingle();
+              isPremiumMaster = !!meta?.is_premium;
+
               const { applyMasterTheme } = await import('@/lib/applyMasterTheme');
               await applyMasterTheme(store.id, data.selectedThemeId, (store.settings as any) || {});
             } catch (e) {
@@ -280,18 +289,30 @@ const Onboarding = () => {
             }
           }
           // Auto-generate default homepage sections if none exist
-          const currentSettings = (store.settings as any) || {};
+          const { data: freshStore } = await supabase
+            .from('stores').select('settings').eq('id', store.id).maybeSingle();
+          const currentSettings = (freshStore?.settings as any) || (store.settings as any) || {};
+
+          // Tag pending premium theme so dashboard + customise show the paywall
+          const purchased: string[] = currentSettings.purchased_themes || [];
+          if (isPremiumMaster && !purchased.includes(data.selectedThemeId)) {
+            currentSettings.pending_premium_theme = {
+              theme_id: data.selectedThemeId,
+              selected_at: new Date().toISOString(),
+            };
+          }
+
           if (!currentSettings.homepage_sections?.length) {
             const { generateDefaultSections } = await import('@/lib/defaultSections');
             const defaultSections = generateDefaultSections(data.storeName || store.name, data.category || store.category || undefined);
-            await supabase.from('stores').update({
-              is_published: true,
-              onboarding_step: TOTAL_STEPS,
-              settings: { ...currentSettings, homepage_sections: defaultSections },
-            }).eq('id', store.id);
-          } else {
-            await supabase.from('stores').update({ is_published: true, onboarding_step: TOTAL_STEPS }).eq('id', store.id);
+            currentSettings.homepage_sections = defaultSections;
           }
+
+          await supabase.from('stores').update({
+            is_published: true,
+            onboarding_step: TOTAL_STEPS,
+            settings: currentSettings,
+          }).eq('id', store.id);
         }
         navigate('/dashboard', { replace: true });
       }} />;
