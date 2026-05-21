@@ -708,13 +708,15 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = page === "shop" ? (searchParams.get("category") || "") : "";
 
-  // Prefer seller's catalog categories; fall back to categories inferred from product data.
+  // Categories shown as chips = union of seller's catalog categories + any
+  // category strings actually present on products (so legacy/free-text product
+  // categories still appear even if the seller hasn't added them to the catalog).
   const categories = useMemo(() => {
-    const fromSeller: string[] = (p.sellerCategories ?? [])
-      .map((c: any) => (c?.name || "").trim())
-      .filter(Boolean);
-    if (fromSeller.length > 0) return fromSeller;
-    const seen = new Map<string, string>();
+    const seen = new Map<string, string>(); // lower -> display
+    (p.sellerCategories ?? []).forEach((c: any) => {
+      const name = (c?.name || "").trim();
+      if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name);
+    });
     allItems.forEach((it) => {
       const c = (it.category || "").trim();
       if (c && !seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c);
