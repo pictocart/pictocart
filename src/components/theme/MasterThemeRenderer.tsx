@@ -132,6 +132,10 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           mergedProps.items = productItemsForOverride;
           productSectionInjected = true;
         }
+        // Pass seller catalog categories into product sections so shop-page chips use them.
+        if (sellerCategoryItems && (s.type === "product_grid" || s.type === "trending")) {
+          mergedProps.sellerCategories = sellerCategoryItems;
+        }
         // category_grid: replace items with seller's real categories if they've defined any.
         if (sellerCategoryItems && s.type === "category_grid") {
           mergedProps.items = sellerCategoryItems;
@@ -704,15 +708,19 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = page === "shop" ? (searchParams.get("category") || "") : "";
 
-  // Build unique category chips from real product data (case-insensitive).
+  // Prefer seller's catalog categories; fall back to categories inferred from product data.
   const categories = useMemo(() => {
+    const fromSeller: string[] = (p.sellerCategories ?? [])
+      .map((c: any) => (c?.name || "").trim())
+      .filter(Boolean);
+    if (fromSeller.length > 0) return fromSeller;
     const seen = new Map<string, string>();
     allItems.forEach((it) => {
       const c = (it.category || "").trim();
       if (c && !seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c);
     });
     return Array.from(seen.values());
-  }, [allItems]);
+  }, [allItems, p.sellerCategories]);
 
   const items = selectedCategory
     ? allItems.filter((it) => (it.category || "").toLowerCase() === selectedCategory.toLowerCase())
