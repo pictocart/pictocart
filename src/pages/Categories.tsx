@@ -1,11 +1,83 @@
-import { useState } from 'react';
-import { useCategories } from '@/hooks/useCategories';
+import { useState, useRef } from 'react';
+import { useCategories, type Category } from '@/hooks/useCategories';
+import { useStore } from '@/hooks/useStore';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ChevronRight, Edit2, Check, X, FolderTree } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Edit2, Check, X, FolderTree, ImagePlus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const CategoryImage = ({ cat }: { cat: Category }) => {
+  const { store } = useStore();
+  const { updateCategory } = useCategories();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const onPick = async (file: File) => {
+    if (!store?.id) return;
+    if (!file.type.startsWith('image/')) return toast.error('Pick an image');
+    if (file.size > 5 * 1024 * 1024) return toast.error('Max 5MB');
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `categories/${store.id}/${cat.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from('store-assets').getPublicUrl(path);
+      await updateCategory.mutateAsync({ id: cat.id, image_url: data.publicUrl });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const remove = async () => {
+    await updateCategory.mutateAsync({ id: cat.id, image_url: null });
+  };
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="h-10 w-10 rounded-md border bg-muted/30 overflow-hidden flex items-center justify-center hover:bg-muted transition"
+        title={cat.image_url ? 'Change image' : 'Add image'}
+      >
+        {uploading ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+        ) : cat.image_url ? (
+          <img src={cat.image_url} alt={cat.name} className="h-full w-full object-cover" />
+        ) : (
+          <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
+        )}
+      </button>
+      {cat.image_url && (
+        <button
+          type="button"
+          onClick={remove}
+          className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+          title="Remove image"
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onPick(f);
+          e.target.value = '';
+        }}
+      />
+    </div>
+  );
+};
 
 const Categories = () => {
   const { parentCategories, getSubcategories, createCategory, updateCategory, deleteCategory, loading } = useCategories();
@@ -52,10 +124,11 @@ const Categories = () => {
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <h1 className="text-xl font-bold">Categories</h1>
-        <p className="text-sm text-muted-foreground">Create categories and subcategories for your products</p>
+        <p className="text-sm text-muted-foreground">
+          Create categories with photos. They appear in your store's "Shop by category" section and filter the shop page.
+        </p>
       </div>
 
-      {/* Add parent category */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Add Category</CardTitle>
@@ -65,17 +138,19 @@ const Categories = () => {
             <Input
               value={newParent}
               onChange={(e) => setNewParent(e.target.value)}
-              placeholder="e.g. Fashion, Food, Electronics"
+              placeholder="e.g. Coffee, Sandwiches"
               onKeyDown={(e) => e.key === 'Enter' && addParent()}
             />
             <Button onClick={addParent} disabled={createCategory.isPending}>
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            After adding, click the image tile to upload a photo for that category.
+          </p>
         </CardContent>
       </Card>
 
-      {/* Category list */}
       {parentCategories.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -91,14 +166,15 @@ const Categories = () => {
             return (
               <Card key={parent.id}>
                 <CardContent className="pt-4 pb-3">
-                  {/* Parent row */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={() => setExpandedParent(isExpanded ? null : parent.id)}
                       className="shrink-0"
                     >
                       <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                     </button>
+
+                    <CategoryImage cat={parent} />
 
                     {editingId === parent.id ? (
                       <div className="flex flex-1 items-center gap-2">
@@ -125,11 +201,11 @@ const Categories = () => {
                     )}
                   </div>
 
-                  {/* Subcategories */}
                   {isExpanded && (
                     <div className="mt-3 ml-6 space-y-2 border-l-2 border-muted pl-4">
                       {subs.map((sub) => (
                         <div key={sub.id} className="flex items-center gap-2">
+                          <CategoryImage cat={sub} />
                           {editingId === sub.id ? (
                             <div className="flex flex-1 items-center gap-2">
                               <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-7 text-sm" autoFocus />
@@ -149,7 +225,6 @@ const Categories = () => {
                           )}
                         </div>
                       ))}
-                      {/* Add subcategory */}
                       <div className="flex gap-2">
                         <Input
                           value={newSub[parent.id] || ''}
