@@ -21,8 +21,11 @@ const CategoryImage = ({ cat }: { cat: Category }) => {
     if (file.size > 5 * 1024 * 1024) return toast.error('Max 5MB');
     setUploading(true);
     try {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) throw new Error('Not signed in');
       const ext = file.name.split('.').pop() || 'jpg';
-      const path = `categories/${store.id}/${cat.id}-${Date.now()}.${ext}`;
+      // store-assets RLS requires first folder = auth.uid()
+      const path = `${userData.user.id}/categories/${store.id}/${cat.id}-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true });
       if (upErr) throw upErr;
       const { data } = supabase.storage.from('store-assets').getPublicUrl(path);
