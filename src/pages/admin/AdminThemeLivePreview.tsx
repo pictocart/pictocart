@@ -62,7 +62,7 @@ export default function AdminThemeLivePreview() {
         setOverrides((cur: any) => (Object.keys(cur || {}).length ? cur : { ...savedOv, brand_name: savedOv?.brand_name || store.name }));
       }
       const [{ data: prods }, { data: cats }] = await Promise.all([
-        supabase.from("products").select("id, title, price, compare_at_price, images, category").eq("store_id", store.id).eq("status", "active").order("created_at", { ascending: false }),
+        supabase.from("products").select("id, title, price, compare_at_price, images, category").eq("store_id", store.id).eq("is_active", true).order("created_at", { ascending: false }),
         supabase.from("categories").select("name, image_url, parent_id, sort_order").eq("store_id", store.id).is("parent_id", null).order("sort_order", { ascending: true }),
       ]);
       setProducts((prods ?? []) as any[]);
