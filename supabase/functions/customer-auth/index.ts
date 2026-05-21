@@ -191,6 +191,27 @@ Deno.serve(async (req) => {
       }
 
       await ensureCustomerUser(created.user!.id, store, email, fullName, phone);
+
+      // Fire-and-forget welcome email to the customer's real inbox.
+      try {
+        const storeUrl = `https://${storeSlug}.pictocart.in`;
+        await admin.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "welcome-customer",
+            recipientEmail: email,
+            idempotencyKey: `welcome-customer-${storeSlug}-${created.user!.id}`,
+            senderName: store.name,
+            templateData: {
+              storeName: store.name,
+              name: fullName || null,
+              storeUrl,
+            },
+          },
+        });
+      } catch (e) {
+        console.warn("welcome email failed", e);
+      }
+
       const grant = await createPasswordSession(alias, password);
       if (!grant.ok) {
         return json({
