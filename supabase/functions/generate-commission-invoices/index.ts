@@ -20,16 +20,26 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE);
 
     // Optional override for backfill / manual runs: { period_start, period_end }
+    // Scheduled daily trigger sets { scheduled: true } and is guarded to only run on 1st IST.
     let periodStart: string;
     let periodEnd: string;
-    try {
-      const body = await req.json();
-      if (body?.period_start && body?.period_end) {
-        periodStart = body.period_start;
-        periodEnd = body.period_end;
-      } else throw 0;
-    } catch {
-      // Default: previous calendar month (IST)
+    let bodyJson: any = null;
+    try { bodyJson = await req.json(); } catch { /* no body */ }
+
+    if (bodyJson?.scheduled && !(bodyJson?.period_start && bodyJson?.period_end)) {
+      // 02:00 IST on 1st = 20:30 UTC on last day of prev month. Cron fires daily 20:30 UTC;
+      // only proceed when the IST date 30 minutes from now is the 1st.
+      const istIn30 = new Date(Date.now() + (5.5 * 3600 + 30 * 60) * 1000);
+      if (istIn30.getUTCDate() !== 1) {
+        return json({ ok: true, skipped: "not_1st_ist", ist_date: istIn30.toISOString().slice(0, 10) });
+      }
+    }
+
+    if (bodyJson?.period_start && bodyJson?.period_end) {
+      periodStart = bodyJson.period_start;
+      periodEnd = bodyJson.period_end;
+    } else {
+      // Default: previous calendar month (UTC)
       const now = new Date();
       const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
       const lastMonthEnd = new Date(first.getTime() - 1);
