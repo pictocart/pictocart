@@ -132,13 +132,55 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { type, order_id, store_id } = await req.json();
+    const { type, order_id, store_id, guest_tracking_code } = await req.json();
 
     if (!type || !order_id || !store_id) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // ── Auth: allow if (a) service-role bearer, (b) signed-in store owner, or
+    // (c) the caller supplies the correct guest_tracking_code for this order.
+    // Prevents anonymous spam / quota-abuse of transactional emails.
+    const authHeader = req.headers.get('Authorization') || '';
+    const isServiceRole = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+    let isAuthorized = isServiceRole;
+
+    // Pre-load the order to check ownership / tracking code
+    const { data: preOrder } = await supabase
+      .from('orders')
+      .select('store_id, guest_tracking_code')
+      .eq('id', order_id)
+      .maybeSingle();
+    if (!preOrder || preOrder.store_id !== store_id) {
+      return new Response(JSON.stringify({ error: 'Order not found' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!isAuthorized && authHeader.startsWith('Bearer ')) {
+      const userClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData } = await userClient.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (userData?.user) {
+        const { data: ownerCheck } = await supabase
+          .from('stores').select('user_id').eq('id', store_id).maybeSingle();
+        if (ownerCheck?.user_id === userData.user.id) isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized && guest_tracking_code && preOrder.guest_tracking_code === guest_tracking_code) {
+      isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
 
     // Fetch order, store, and custom templates in parallel
     // Fetch order, store, custom templates, and email domain in parallel

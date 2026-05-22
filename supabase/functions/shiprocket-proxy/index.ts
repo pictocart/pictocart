@@ -68,6 +68,28 @@ serve(async (req) => {
     if (!action || !store_id) return json({ error: "action and store_id are required" }, 400);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Only the public storefront pincode check (serviceability) is allowed anonymously.
+    // create-shipment and track expose / consume the seller's Shiprocket account and MUST be authenticated.
+    if (action !== "serviceability" && action !== "check-serviceability") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: userData } = await userClient.auth.getUser(authHeader.replace("Bearer ", ""));
+      if (!userData?.user) return json({ error: "Unauthorized" }, 401);
+
+      const { data: storeOwn } = await admin
+        .from("stores")
+        .select("user_id")
+        .eq("id", store_id)
+        .maybeSingle();
+      if (!storeOwn || storeOwn.user_id !== userData.user.id) return json({ error: "Forbidden" }, 403);
+    }
+
     const t = await getToken(admin, store_id);
     if (t.error) return json({ error: t.error }, 400);
     const headers = { Authorization: `Bearer ${t.token}`, "Content-Type": "application/json" };
