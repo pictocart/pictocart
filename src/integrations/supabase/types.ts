@@ -606,6 +606,74 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_invoices: {
+        Row: {
+          created_at: string
+          due_date: string
+          id: string
+          invoice_number: string | null
+          paid_at: string | null
+          paid_via: string | null
+          pdf_url: string | null
+          period_end: string
+          period_start: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: Database["public"]["Enums"]["commission_invoice_status"]
+          store_id: string
+          total_commission: number
+          total_gmv: number
+          updated_at: string
+          waive_reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          due_date: string
+          id?: string
+          invoice_number?: string | null
+          paid_at?: string | null
+          paid_via?: string | null
+          pdf_url?: string | null
+          period_end: string
+          period_start: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: Database["public"]["Enums"]["commission_invoice_status"]
+          store_id: string
+          total_commission?: number
+          total_gmv?: number
+          updated_at?: string
+          waive_reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          due_date?: string
+          id?: string
+          invoice_number?: string | null
+          paid_at?: string | null
+          paid_via?: string | null
+          pdf_url?: string | null
+          period_end?: string
+          period_start?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: Database["public"]["Enums"]["commission_invoice_status"]
+          store_id?: string
+          total_commission?: number
+          total_gmv?: number
+          updated_at?: string
+          waive_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_invoices_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           allowed_modes: Database["public"]["Enums"]["fulfillment_mode"][]
@@ -1499,6 +1567,70 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "newsletter_subscribers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_commissions: {
+        Row: {
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          gmv_amount: number
+          id: string
+          invoice_id: string | null
+          order_id: string
+          plan: string
+          status: Database["public"]["Enums"]["commission_status"]
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          commission_amount: number
+          commission_rate: number
+          created_at?: string
+          gmv_amount: number
+          id?: string
+          invoice_id?: string | null
+          order_id: string
+          plan: string
+          status?: Database["public"]["Enums"]["commission_status"]
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          gmv_amount?: number
+          id?: string
+          invoice_id?: string | null
+          order_id?: string
+          plan?: string
+          status?: Database["public"]["Enums"]["commission_status"]
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_commissions_invoice_fk"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "commission_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_commissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_commissions_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -4225,6 +4357,8 @@ export type Database = {
     Enums: {
       app_role: "admin" | "seller" | "customer" | "freelancer"
       bill_payment_status: "paid" | "partial" | "unpaid"
+      commission_invoice_status: "pending" | "paid" | "overdue" | "waived"
+      commission_status: "accrued" | "invoiced" | "waived"
       coupon_type: "percentage" | "flat" | "bogo" | "tiered"
       credit_promo_type:
         | "code"
@@ -4395,6 +4529,8 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "seller", "customer", "freelancer"],
       bill_payment_status: ["paid", "partial", "unpaid"],
+      commission_invoice_status: ["pending", "paid", "overdue", "waived"],
+      commission_status: ["accrued", "invoiced", "waived"],
       coupon_type: ["percentage", "flat", "bogo", "tiered"],
       credit_promo_type: [
         "code",

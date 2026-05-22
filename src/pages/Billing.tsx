@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Crown, Check, X, Loader2, Zap, Sparkles } from 'lucide-react';
+import { CommissionPanel } from '@/components/billing/CommissionPanel';
 
 declare global {
   interface Window { Razorpay: any; }
@@ -139,6 +140,16 @@ const Billing = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* GMV commission */}
+      {store && (
+        <CommissionPanel
+          storeId={store.id}
+          storeName={store.name}
+          storeSettings={(store as any).settings}
+          commissionPercent={planConfig.commission_percent}
+        />
+      )}
 
       {/* Usage on free */}
       {plan === 'free' && (

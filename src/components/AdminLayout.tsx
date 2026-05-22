@@ -21,6 +21,7 @@ import {
   Activity,
   ShieldAlert,
   Handshake,
+  Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ const adminNavItems = [
   { label: 'Themes', icon: Palette, path: '/admin/themes' },
   { label: 'Plans', icon: Crown, path: '/admin/plans' },
   { label: 'Revenue', icon: IndianRupee, path: '/admin/revenue' },
+  { label: 'Commissions', icon: Receipt, path: '/admin/commissions' },
   { label: 'Credits Economy', icon: Sparkles, path: '/admin/credits-economy' },
   { label: 'Launch QA', icon: CheckSquare, path: '/admin/launch' },
   { label: 'Health', icon: Activity, path: '/admin/health' },
