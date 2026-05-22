@@ -4307,6 +4307,34 @@ export type Database = {
         Returns: number
       }
       generate_referral_code: { Args: never; Returns: string }
+      get_order_by_tracking: {
+        Args: { tracking_code: string }
+        Returns: {
+          created_at: string
+          fulfillment_mode: string
+          guest_tracking_code: string
+          id: string
+          items: Json
+          order_number: string
+          prep_status: string
+          status: string
+          store_id: string
+          table_label: string
+          total: number
+        }[]
+      }
+      get_storefront_cod_rules: {
+        Args: { _store_id: string }
+        Returns: {
+          enabled: boolean
+          max_order_value: number
+          min_order_value: number
+          min_prior_orders: number
+          pincode_allowlist: string[]
+          pincode_blocklist: string[]
+          require_phone_verification: boolean
+        }[]
+      }
       grant_plan_signup_bonus: {
         Args: { _plan: string; _store_id: string }
         Returns: number
@@ -4321,6 +4349,10 @@ export type Database = {
       increment_coupon_usage: {
         Args: { coupon_id: string }
         Returns: undefined
+      }
+      is_phone_cod_blocked: {
+        Args: { _phone: string; _store_id: string }
+        Returns: boolean
       }
       move_to_dlq: {
         Args: {
