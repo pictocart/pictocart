@@ -88,6 +88,32 @@ Deno.serve(async (req) => {
       return json({ ok: true, kind: "theme_purchase" });
     }
 
+    // === COMMISSION INVOICE FAST PATH ===
+    if (purpose === "commission_invoice" && rzpOrderId) {
+      const commissionInvoiceId =
+        payment?.notes?.commission_invoice_id ??
+        event.payload?.order?.entity?.notes?.commission_invoice_id;
+      const { data: inv } = await supabase
+        .from("commission_invoices")
+        .select("*")
+        .eq(commissionInvoiceId ? "id" : "razorpay_order_id", commissionInvoiceId ?? rzpOrderId)
+        .maybeSingle();
+      if (!inv) return json({ ok: true, note: "commission invoice not found" });
+
+      if ((eventType === "payment.captured" || eventType === "order.paid") && inv.status !== "paid") {
+        await supabase.from("commission_invoices").update({
+          status: "paid",
+          razorpay_payment_id: rzpPaymentId ?? null,
+          razorpay_order_id: rzpOrderId,
+          paid_at: new Date().toISOString(),
+          paid_via: "razorpay",
+        }).eq("id", inv.id);
+      } else if (eventType === "payment.failed") {
+        // keep status; merchant can retry
+      }
+      return json({ ok: true, kind: "commission_invoice" });
+    }
+
 
     // Find matching order
     let orderRow: any = null;
