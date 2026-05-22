@@ -216,8 +216,11 @@ export const useValidateCoupon = () => {
     return best;
   };
 
-  const incrementUsage = async (couponId: string) => {
-    await supabase.rpc('increment_coupon_usage' as any, { coupon_id: couponId });
+  // Safe coupon usage increment — requires a matching recent order on the same store.
+  // The legacy increment_coupon_usage RPC was locked down to service_role only.
+  const incrementUsage = async (couponId: string, orderId?: string) => {
+    if (!orderId) return;
+    await supabase.rpc('apply_coupon_to_recent_order' as any, { _coupon_id: couponId, _order_id: orderId });
   };
 
   return { validateCoupon, findBestAutoCoupon, incrementUsage };
