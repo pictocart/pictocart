@@ -1,90 +1,73 @@
-# Premium Themes — Real Razorpay Purchase Flow
 
-Today, both premium theme systems (static `THEME_TEMPLATES.purchased_themes` and AI `theme_packs` / `theme_purchases`) have **no payment** — `usePurchaseTheme` inserts directly, `StoreDesign.handleSave` shows a toast, `theme-deploy-to-store`'s 402 guard is bypassable. We'll wire real Razorpay and make the onboarding path frictionless so merchants pay immediately instead of "later".
+# GMV Commission — make it real (accrue → invoice → collect)
 
-## Industry-standard money flow
+## Where we stand today
+- `plan_configs.commission_percent` is **already set** at 3% (Free), 2% (Starter), 1% (Growth), 0% (Scale).
+- It is **only displayed analytically** in `AdminRevenue.tsx` and on the pricing/Billing page.
+- **No merchant is actually being charged.** No per-order accrual, no invoice, no collection. That's the gap.
 
-```text
-Client → create-theme-purchase-order (edge)
-         ├─ verify auth + store ownership
-         ├─ read theme price (theme_packs OR static catalog)
-         ├─ apply discount (launch / first-store)
-         ├─ create Razorpay order via platform RAZORPAY_KEY_ID
-         └─ insert theme_purchase_intents (pending)
-Client → Razorpay Checkout (platform keys, not seller keys)
-Razorpay → razorpay-webhook (extend existing)
-         ├─ HMAC verify with RAZORPAY_WEBHOOK_SECRET
-         ├─ on payment.captured → insert theme_purchases (service role)
-         ├─ flip intent to paid, store payment_id + amount
-         └─ if onboarding_pending → mark store ready_to_publish
-Client polls / realtime → unlocks Customiser, deploys theme
-```
+## What we'll build
 
-Platform Razorpay keys are used (not seller's) — this is **platform revenue**, not seller revenue.
+### 1. Per-order accrual (automatic, at the moment payment is confirmed)
+- New table `order_commissions`:
+  - `order_id`, `store_id`, `gmv_amount` (order subtotal, excluding tax + shipping), `commission_rate`, `commission_amount`, `plan` (snapshot at time of order), `status` (`accrued` | `invoiced` | `waived`), `invoice_id`, `created_at`.
+  - Unique on `order_id` so it can't double-charge.
+- Trigger on `orders` AFTER UPDATE: when `payment_status` transitions to `paid` (and order is not `cancelled`/`refunded`), insert a row using the store's *current* `subscriptions.plan` → `plan_configs.commission_percent`.
+- On `cancelled` / `refunded` transition → flip the accrual to `waived`.
+- GMV definition: `subtotal` (excludes platform-collected tax and shipping). Documented in code.
 
-## Database changes
+### 2. Monthly invoice generation
+- New table `commission_invoices`:
+  - `store_id`, `period_start`, `period_end`, `total_gmv`, `total_commission`, `invoice_number` (reuses `next_invoice_number` with prefix `COM`), `status` (`pending` | `paid` | `overdue` | `waived`), `due_date` (period_end + 7 days), `razorpay_order_id`, `razorpay_payment_id`, `paid_at`, `pdf_url`.
+- New edge function `generate-commission-invoices` (cron: 1st of every month, 02:00 IST):
+  - For each store with `status='accrued'` rows in the previous month → create one `commission_invoices` row, set those `order_commissions` to `invoiced` and link `invoice_id`.
+  - Skip stores whose plan has `commission_percent = 0` or whose total < ₹10 (carry forward to next month).
+- Email the invoice via existing `send-transactional-email` with a new template `commission_invoice_generated` (PDF link + pay button).
 
-1. New table `theme_purchase_intents` — `id, store_id, user_id, theme_kind ('pack'|'static'), theme_ref, amount_inr, discount_inr, razorpay_order_id, status ('pending'|'paid'|'failed'|'expired'), created_at, paid_at`. RLS: owner can select own; insert/update via service role only.
-2. Lock down `theme_purchases` — drop client INSERT policy, keep SELECT for store owner. All writes via webhook with service role.
-3. Lock down `stores.settings.purchased_themes` — add trigger preventing client updates to this key; mutated only by webhook.
-4. Add `is_premium boolean` + `price_inr int` to `theme_master_projects` so static premium themes have a single source of truth (replaces hardcoded `price` in `THEME_TEMPLATES`).
-5. Add `stores.settings.pending_premium_theme = { theme_id, intent_id, selected_at }` — set during onboarding when merchant picks premium without paying.
+### 3. Collection (3 fallback paths, in order)
+1. **Auto-debit from AI credit wallet** — if `ai_credit_wallets.balance` covers the INR amount at current credit rate, debit it via existing `credit_wallet` (negative entry with type `debit` and reason `commission_settlement`). Mark invoice `paid`. Opt-in toggle in Billing → "Auto-pay commission from credits".
+2. **Razorpay checkout link** — edge function `create-commission-payment` creates a Razorpay order tied to `commission_invoices.id`. Existing `razorpay-webhook` extended with a new `commission_invoice` branch that marks the invoice paid on `payment.captured`.
+3. **Grace period + soft block** — if unpaid after `due_date + 7 days`: hide premium theme catalog + show a non-dismissible banner in the dashboard. After +14 days: pause new-order acceptance on storefront (return a "store temporarily unavailable" page). All thresholds configurable in `platform_credit_settings`.
 
-## Edge functions
+### 4. Merchant UI (extend existing Billing page)
+- New tab **"GMV Commission"** on `/billing`:
+  - This month's accrued commission (live counter), last month's invoice card with Pay Now button, history table.
+  - Toggle "Auto-pay from AI credits".
+  - Plan upsell card: "On Growth you'd save ₹X this month" (live calc from current accrual × delta).
 
-1. **`create-theme-purchase-order`** (new, verify_jwt=false + in-code auth)
-   - Input: `{ store_id, theme_kind, theme_ref }`
-   - Verifies store ownership, looks up price, applies discount, creates Razorpay order with platform keys, returns `{ order_id, key_id, amount, discount_applied }`.
-2. **`razorpay-webhook`** (extend existing)
-   - Detect `notes.purpose === 'theme_purchase'`, look up intent, insert `theme_purchases`, clear `pending_premium_theme`, append to `purchased_themes`.
-3. **`theme-deploy-to-store`** — already correct; becomes meaningful once #2 RLS is locked.
+### 5. Admin UI
+- Extend `AdminRevenue`: add a "Collected vs accrued" column so we can see leakage.
+- New page `/admin/commissions`:
+  - Filter by store, status, period.
+  - Actions: mark paid manually (offline payment), waive (with reason → audit log), re-send invoice email, download PDF.
 
-## Onboarding path (StepTheme + StepGoLive)
+### 6. Edge functions (new)
+- `generate-commission-invoices` (cron)
+- `create-commission-payment` (callable from Billing)
+- `commission-pdf` (reuses invoice PDF code path from `next_invoice_number` / existing invoice generator)
 
-- `StepTheme`: badge premium themes with price + "Locked until paid". Selection allowed; sets `data.pendingPremiumTheme`.
-- New micro-step **after** StepGoLive when a premium theme is selected: a single screen "Your store is live — unlock your premium design" with Razorpay button. **Two CTAs**: `Pay ₹X now` (primary) and `Continue with free starter` (secondary, swaps to default theme).
-- If merchant clicks "Skip / pay later": store goes live with a **free fallback theme**, premium choice stored in `pending_premium_theme`, dashboard shows nudge.
+### 7. RLS
+- `order_commissions`: store owner can SELECT own rows; admin full; no INSERT/UPDATE from client.
+- `commission_invoices`: store owner SELECT + UPDATE only on the `razorpay_*` fields via edge function; admin full.
 
-## Dashboard nudge (when `pending_premium_theme` set)
+## Non-goals (explicit, so we don't scope-creep)
+- No retroactive commission on orders placed before this ships.
+- No partial refunds re-prorating commission (full refund → waive, partial refund → keep accrual). Documented in Terms.
+- No multi-currency — INR only.
+- Partner commission share (existing `partners` table) is unaffected; we'll wire partner payouts from this invoice in a follow-up.
 
-- New `<PremiumThemePendingCard />` at the top of dashboard, dismissible-for-24h:
-  - "Your **[Theme Name]** is reserved. Pay ₹X to activate." → opens Razorpay sheet inline (no page jump).
-  - Live countdown of the 24-hour launch discount.
-  - Mini-preview thumbnail.
+## Rollout
+- Migration (additive only, no destructive change).
+- Trigger goes live but only accrues from deploy time onward (no backfill).
+- First invoice run: 1st of next month. Send a heads-up email to all merchants 7 days before via existing newsletter engine.
+- Add to `mem://business/monetization-strategy`.
 
-## Customiser block (the "soft paywall")
+## Files touched (estimate, ~8 edits + 4 new)
+- Migration: `order_commissions`, `commission_invoices`, trigger, RLS.
+- Edge fns: `generate-commission-invoices`, `create-commission-payment`, `commission-pdf`; extend `razorpay-webhook`.
+- Frontend: `src/pages/Billing.tsx` (new tab), `src/pages/admin/AdminCommissions.tsx` (new), `src/pages/admin/AdminRevenue.tsx` (add collected column), `src/App.tsx` (route).
+- Memory: update monetization-strategy.
 
-- `Customise.tsx` checks: if active theme is premium AND not in `purchased_themes`, render existing `<PremiumGate>` over the whole editor with copy: *"This is a premium theme preview. Pay ₹X to unlock editing."* Inline Razorpay button — no redirect.
-- Storefront keeps working with the premium theme's **default content** (no overrides), so the merchant's store is live and beautiful but they can't customise until they pay. This is the core "make them pay now" lever.
+## One decision before I build
+GMV base — confirm: **subtotal only (excludes tax & shipping)**, or **order total (includes both)**? Subtotal is the industry default and what most merchants expect. I'll go with subtotal unless you say otherwise.
 
-## The "surprise" — convenience levers to drive instant payment
-
-1. **24-hour launch discount**: 30% off the moment the store goes live, visible countdown on dashboard + in Razorpay sheet. Computed server-side in `create-theme-purchase-order` (`hours_since_publish < 24 ? price * 0.7 : price`).
-2. **One-tap Razorpay** inline modal everywhere (onboarding, dashboard nudge, customiser gate) — no separate billing page, no redirects. Uses Razorpay's Standard Checkout JS overlay.
-3. **UPI-first**: pass `method: { upi: true }` preference + `prefill.contact` from store phone so UPI apps autosuggest. Median pay time drops to ~20s.
-4. **"Pay later" stays honest**: if merchant skips, store is live on a free theme — they get value first. Removes the "I'll never get my store live" anxiety that kills conversions.
-5. **Refund window**: 7-day no-questions refund via existing `razorpay-refund` function. Show this badge in the pay sheet — proven to lift conversion ~15%.
-6. **Bundle hint**: if total premium spend in cart would cross ₹1,499, offer the **Customise Pro** bundle (from the earlier `Pro themes and Customise` plan) at the same price — single payment, two unlocks.
-
-## Frontend files touched
-
-- `src/hooks/useThemePacks.ts` — `usePurchaseTheme` becomes `useStartThemePurchase` → calls edge fn, opens Razorpay.
-- `src/hooks/usePremiumThemeStatus.ts` (new) — returns `{ isPremium, isPurchased, price, discountedPrice, pendingIntent }`.
-- `src/components/billing/RazorpayThemeSheet.tsx` (new) — shared inline checkout.
-- `src/components/dashboard/PremiumThemePendingCard.tsx` (new).
-- `src/components/onboarding/StepPremiumUnlock.tsx` (new) — shown only when premium selected.
-- `src/pages/Customise.tsx` — wrap with premium gate.
-- `src/pages/StoreDesign.tsx` — replace toast stub with `RazorpayThemeSheet`.
-- `src/components/onboarding/StepTheme.tsx` — premium badge + price chip.
-
-## Out of scope (kept for later)
-
-- Coupon codes beyond the 24h launch discount.
-- Theme gifting / transfer between stores.
-- Multi-store volume discounts.
-
-## Risks
-
-- Webhook delivery delay → handle via 10s client poll on `theme_purchases` after Razorpay success callback as fast path; webhook remains the source of truth.
-- Refund must also revert `purchased_themes` and `theme_overrides` — extend `razorpay-refund`.
-- Hardcoded `THEME_TEMPLATES` prices must migrate to `theme_master_projects.price_inr` to avoid drift.
