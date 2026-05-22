@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Crown, Check, X, Loader2, Zap, Sparkles } from 'lucide-react';
+import { CommissionPanel } from '@/components/billing/CommissionPanel';
 
 declare global {
   interface Window { Razorpay: any; }
