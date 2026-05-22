@@ -151,7 +151,7 @@ const StorefrontCheckout = () => {
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store?.id, /* form.phone read below */]);
+  }, [store?.id, form.phone]);
   function finalTotalForCheck() { return Math.max(0, totalPrice - (appliedCoupon?.discount || 0)); }
 
 
