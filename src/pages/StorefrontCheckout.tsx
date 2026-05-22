@@ -150,7 +150,6 @@ const StorefrontCheckout = () => {
       if (!cancelled) setPhoneCodBlocked(!!data);
     })();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store?.id, form.phone]);
   function finalTotalForCheck() { return Math.max(0, totalPrice - (appliedCoupon?.discount || 0)); }
 
