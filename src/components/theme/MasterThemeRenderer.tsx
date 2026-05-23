@@ -298,6 +298,8 @@ function Section({ s, dna, storeSlug, page }: any) {
       </section>
     );
     case "category_grid": return <CategoryBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "collections_grid": return <CollectionsBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "collection_detail": return <CollectionDetailBlock p={p} dna={dna} storeSlug={storeSlug} />;
     case "trending":
     case "product_grid": return <ProductBlock p={p} dna={dna} storeSlug={storeSlug} page={page} />;
 
