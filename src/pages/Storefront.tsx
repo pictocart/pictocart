@@ -403,6 +403,17 @@ const Storefront = ({ page = 'home' }: { page?: string } = {}) => {
     return <DedicatedThemeView slug={slug || ''} themeId={resolvedThemeId} seo={seo} store={store} />;
   }
 
+  // Classic theme: simple Collections page fallback
+  if (page === 'collections' || page === 'collection_detail') {
+    return (
+      <StorefrontLayout store={store} products={products} footerConfig={footerConfig}>
+        <SEOHead title={`Collections · ${store.name}`} description={store.description || `Shop collections at ${store.name}`} url={`${window.location.origin}/store/${slug}/collections`} />
+        <ClassicCollections slug={slug || ''} storeId={store.id} colors={colors} fonts={fonts} borderRadius={borderRadius} />
+      </StorefrontLayout>
+    );
+  }
+
+
   return (
     <StorefrontLayout store={store} products={products} footerConfig={footerConfig}>
       <SEOHead title={seo.meta_title || store.name} description={seo.meta_description || store.description || `Shop at ${store.name}`} ogImage={seo.og_image || store.banner_url || undefined} url={`${window.location.origin}/store/${slug}`} />
@@ -515,16 +526,23 @@ const DedicatedThemeView = ({ slug, themeId, seo, store }: { slug: string; theme
 const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }: { slug: string; themeId: string; seo: any; store: any; products: any[]; page?: string }) => {
   const { data: manifest, isLoading } = useThemeManifest(themeId);
   const { data: sellerCategories = [] } = useQuery({
-    queryKey: ['storefront-categories', store?.id],
+    queryKey: ['storefront-categories-full', store?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('name, image_url, parent_id, sort_order')
+        .select('id, name, image_url, description, parent_id, sort_order')
         .eq('store_id', store.id)
-        .is('parent_id', null)
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return (data ?? []).map((c: any) => ({ name: c.name, image_url: c.image_url }));
+      const rows = (data ?? []) as any[];
+      const parents = rows.filter((c) => !c.parent_id);
+      return parents.map((p) => ({
+        id: p.id,
+        name: p.name,
+        image_url: p.image_url,
+        description: p.description,
+        subs: rows.filter((c) => c.parent_id === p.id).map((c) => ({ id: c.id, name: c.name, image_url: c.image_url })),
+      }));
     },
     enabled: !!store?.id,
   });
@@ -557,6 +575,56 @@ const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }:
         sellerCategories={sellerCategories}
       />
     </>
+  );
+};
+
+
+const ClassicCollections = ({ slug, storeId, colors, fonts, borderRadius }: { slug: string; storeId: string; colors: any; fonts: any; borderRadius: number }) => {
+  const { data: cats = [] } = useQuery({
+    queryKey: ['classic-collections', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, image_url, description, parent_id, sort_order')
+        .eq('store_id', storeId)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []) as any[];
+      return rows.filter((c) => !c.parent_id).map((p) => ({
+        ...p,
+        subs: rows.filter((c) => c.parent_id === p.id),
+      }));
+    },
+  });
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10">
+      <h1 className="text-2xl md:text-3xl font-bold mb-6" style={{ fontFamily: fonts.heading }}>Collections</h1>
+      {cats.length === 0 ? (
+        <p className="text-sm opacity-60">No collections yet.</p>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-6">
+          {cats.map((c: any) => (
+            <article key={c.id} className="overflow-hidden border" style={{ borderRadius, backgroundColor: colors.card, borderColor: colors.secondary }}>
+              <Link to={`/store/${slug}/shop?category=${encodeURIComponent(c.name)}`} className="block aspect-[16/9]" style={{ backgroundColor: colors.secondary }}>
+                {c.image_url && <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />}
+              </Link>
+              <div className="p-4">
+                <h2 className="text-lg font-bold mb-1" style={{ fontFamily: fonts.heading }}>{c.name}</h2>
+                {c.description && <p className="text-sm opacity-70 mb-3">{c.description}</p>}
+                {c.subs.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {c.subs.map((s: any) => (
+                      <Link key={s.id} to={`/store/${slug}/shop?category=${encodeURIComponent(s.name)}`} className="text-[11px] px-2.5 py-1 rounded-full border" style={{ borderColor: colors.secondary }}>{s.name}</Link>
+                    ))}
+                  </div>
+                )}
+                <Link to={`/store/${slug}/shop?category=${encodeURIComponent(c.name)}`} className="text-sm font-medium" style={{ color: colors.primary }}>Shop {c.name} →</Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 };
 

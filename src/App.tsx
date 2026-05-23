@@ -255,7 +255,8 @@ const AppRoutes = () => {
             <Route path="/store/preview-theme" element={<ThemePreview />} />
             <Route path="/store/:slug" element={<Storefront />} />
             <Route path="/store/:slug/shop" element={<Storefront page="shop" />} />
-            <Route path="/store/:slug/collections" element={<Storefront page="shop" />} />
+            <Route path="/store/:slug/collections" element={<Storefront page="collections" />} />
+            <Route path="/store/:slug/collections/:categoryId" element={<Storefront page="collection_detail" />} />
             <Route path="/store/:slug/about" element={<Storefront page="about" />} />
             <Route path="/store/:slug/contact" element={<Storefront page="contact" />} />
             <Route path="/store/:slug/product/:productId" element={<StorefrontProduct />} />

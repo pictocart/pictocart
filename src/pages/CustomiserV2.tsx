@@ -21,6 +21,7 @@ import {
 const PAGES = [
   { id: "home", label: "Home" },
   { id: "shop", label: "Shop" },
+  { id: "collections", label: "Collections" },
   { id: "product", label: "Product" },
   { id: "cart", label: "Cart" },
   { id: "checkout", label: "Checkout" },
@@ -50,6 +51,7 @@ const ICON_OPTIONS = ["truck", "shield", "refresh", "headphones", "lock", "tag",
 const NAV_PAGE_OPTIONS = [
   { value: "home", label: "Home" },
   { value: "shop", label: "Shop" },
+  { value: "collections", label: "Collections" },
   { value: "about", label: "About" },
   { value: "contact", label: "Contact" },
   { value: "blog", label: "Journal / Blog" },
@@ -342,7 +344,8 @@ export default function CustomiserV2() {
           <ScrollArea className="flex-1">
             <div className="px-2 pb-3 space-y-0.5">
               {PAGES.map((p) => {
-                const exists = !!(manifest as any)?.pages?.[p.id];
+                // 'collections' is auto-synthesized from the Categories the seller defines, so it's always available.
+                const exists = p.id === "collections" ? true : !!(manifest as any)?.pages?.[p.id];
                 const edited = !!overrides?.pages?.[p.id];
                 return (
                   <button
@@ -514,7 +517,7 @@ function InspectorHeader({ selected, headerOv, footerOv, sections, sectionOverri
 
 function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload }: { headerOv: any; storeName: string; onChange: (k: string, v: any) => void; onLogoUpload: (f: File) => void }) {
   const links: Array<{ label: string; page: string }> = headerOv.nav_links ?? [
-    { label: "Shop", page: "shop" }, { label: "About", page: "about" }, { label: "Journal", page: "blog" }, { label: "Contact", page: "contact" },
+    { label: "Shop", page: "shop" }, { label: "Collections", page: "collections" }, { label: "About", page: "about" }, { label: "Journal", page: "blog" }, { label: "Contact", page: "contact" },
   ];
   const updateLinks = (next: typeof links) => onChange("nav_links", next);
   return (

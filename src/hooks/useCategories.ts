@@ -10,6 +10,7 @@ export interface Category {
   parent_id: string | null;
   sort_order: number;
   image_url: string | null;
+  description: string | null;
   created_at: string;
 }
 
@@ -51,10 +52,11 @@ export const useCategories = () => {
   });
 
   const updateCategory = useMutation({
-    mutationFn: async ({ id, name, image_url }: { id: string; name?: string; image_url?: string | null }) => {
+    mutationFn: async ({ id, name, image_url, description }: { id: string; name?: string; image_url?: string | null; description?: string | null }) => {
       const patch: any = {};
       if (name !== undefined) patch.name = name;
       if (image_url !== undefined) patch.image_url = image_url;
+      if (description !== undefined) patch.description = description;
       const { error } = await supabase.from('categories').update(patch).eq('id', id);
       if (error) throw error;
     },

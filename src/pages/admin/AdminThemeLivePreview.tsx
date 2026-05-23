@@ -63,10 +63,21 @@ export default function AdminThemeLivePreview() {
       }
       const [{ data: prods }, { data: cats }] = await Promise.all([
         supabase.from("products").select("id, title, price, compare_at_price, images, category").eq("store_id", store.id).eq("is_active", true).order("created_at", { ascending: false }),
-        supabase.from("categories").select("name, image_url, parent_id, sort_order").eq("store_id", store.id).is("parent_id", null).order("sort_order", { ascending: true }),
+        supabase.from("categories").select("id, name, image_url, description, parent_id, sort_order").eq("store_id", store.id).order("sort_order", { ascending: true }),
       ]);
       setProducts((prods ?? []) as any[]);
-      setSellerCategories(((cats ?? []) as any[]).map((c) => ({ name: c.name, image_url: c.image_url })));
+      const allCats = (cats ?? []) as any[];
+      setSellerCategories(
+        allCats
+          .filter((c) => !c.parent_id)
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            image_url: p.image_url,
+            description: p.description,
+            subs: allCats.filter((c) => c.parent_id === p.id).map((c) => ({ id: c.id, name: c.name, image_url: c.image_url })),
+          })),
+      );
     })();
   }, [storeSlug]);
 

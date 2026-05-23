@@ -4,9 +4,10 @@ import { useStore } from '@/hooks/useStore';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ChevronRight, Edit2, Check, X, FolderTree, ImagePlus, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Edit2, Check, X, FolderTree, ImagePlus, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CategoryImage = ({ cat }: { cat: Category }) => {
@@ -78,6 +79,48 @@ const CategoryImage = ({ cat }: { cat: Category }) => {
           e.target.value = '';
         }}
       />
+    </div>
+  );
+};
+
+const CategoryDescription = ({ cat }: { cat: Category }) => {
+  const { updateCategory } = useCategories();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(cat.description ?? '');
+  const hasDesc = !!(cat.description && cat.description.trim());
+  const save = async () => {
+    await updateCategory.mutateAsync({ id: cat.id, description: value.trim() || null });
+    setOpen(false);
+  };
+  return (
+    <div className="mt-2 ml-7">
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => { setValue(cat.description ?? ''); setOpen(true); }}
+          className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          <FileText className="h-3 w-3" />
+          {hasDesc ? <span className="line-clamp-1 max-w-xl text-left">{cat.description}</span> : <span>Add description (shown on collection page)</span>}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <Textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            rows={3}
+            placeholder="Short description that customers see on the collection page (e.g. Freshly brewed espresso, lattes, and cold brew — all single-origin beans.)"
+            className="text-sm"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={save} disabled={updateCategory.isPending}>
+              <Check className="mr-1 h-3 w-3" /> Save
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -203,6 +246,8 @@ const Categories = () => {
                       </>
                     )}
                   </div>
+
+                  <CategoryDescription cat={parent} />
 
                   {isExpanded && (
                     <div className="mt-3 ml-6 space-y-2 border-l-2 border-muted pl-4">

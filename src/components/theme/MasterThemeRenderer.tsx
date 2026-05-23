@@ -65,8 +65,8 @@ interface Props {
   onNavigate?: (page: string) => void;
   /** Real catalog products to splice into product_grid sections. */
   products?: Array<{ id: string; title: string; price: number; compare_at_price?: number | null; images?: string[] | null; category?: string | null }>;
-  /** Seller-defined categories (with optional image) to splice into category_grid sections. */
-  sellerCategories?: Array<{ name: string; image_url?: string | null }>;
+  /** Seller-defined categories (with optional image / description / subs) to splice into category_grid and collections_grid sections. */
+  sellerCategories?: Array<{ id?: string; name: string; image_url?: string | null; description?: string | null; subs?: Array<{ id?: string; name: string; image_url?: string | null }> }>;
 }
 
 export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, onNavigate, products, sellerCategories }: Props) {
@@ -97,7 +97,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
     ["--hf" as any]: `${fonts.heading}, serif`,
   };
 
-  const sections = manifest?.pages?.[page]?.sections ?? [];
+  // (built-in collections synthesized below as renderedSections)
   // New shape: overrides.pages[page].sections[idx]. Legacy: overrides.sections[idx] (home-only).
   const sectionOverrides: Record<string, any> =
     (overrides as any)?.pages?.[page]?.sections ??
@@ -115,15 +115,23 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
 
   // Seller-defined categories override the theme's stock category tiles when present.
   const sellerCategoryItems = sellerCategories && sellerCategories.length > 0
-    ? sellerCategories.map((c) => ({ name: c.name, image: c.image_url || undefined }))
+    ? sellerCategories.map((c) => ({ id: c.id, name: c.name, image: c.image_url || undefined, description: c.description || undefined, subs: c.subs || [] }))
     : null;
+
+  // Synthesize a built-in Collections page if the manifest doesn't define one.
+  const collectionsItems = sellerCategoryItems ?? [];
+  const renderedSections: any[] = page === "collections" && (!manifest?.pages?.collections?.sections?.length)
+    ? [{ type: "page_title", props: { title: "Collections" } }, { type: "collections_grid", props: { items: collectionsItems } }]
+    : page === "collection_detail" && (!manifest?.pages?.collection_detail?.sections?.length)
+      ? [{ type: "collection_detail", props: { items: collectionsItems } }]
+      : (manifest?.pages?.[page]?.sections ?? []);
 
   return (
     <div style={style} className="min-h-screen">
       <div data-section-anchor="header" style={{ scrollMarginTop: 80 }}>
         <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={overrides?.header} />
       </div>
-      {sections.map((s: any, i: number) => {
+      {renderedSections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
         const mergedProps = { ...(s.props ?? {}), ...ov };
@@ -196,7 +204,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
     { label: "Contact", page: "contact" },
   ];
   const pageToPath: Record<string, string> = {
-    home: "", shop: "/shop", collections: "/shop", about: "/about", contact: "/contact",
+    home: "", shop: "/shop", collections: "/collections", about: "/about", contact: "/contact",
     journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
   };
   const links = (ov.nav_links && ov.nav_links.length > 0 ? ov.nav_links : defaultLinks)
@@ -298,6 +306,8 @@ function Section({ s, dna, storeSlug, page }: any) {
       </section>
     );
     case "category_grid": return <CategoryBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "collections_grid": return <CollectionsBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "collection_detail": return <CollectionDetailBlock p={p} dna={dna} storeSlug={storeSlug} />;
     case "trending":
     case "product_grid": return <ProductBlock p={p} dna={dna} storeSlug={storeSlug} page={page} />;
 
@@ -701,6 +711,128 @@ function CategoryBlock({ p, dna, storeSlug }: any) {
   );
 }
 
+// Industry-standard collections page: list every parent category with its image,
+// description, and a chip-row of its subcategories (drilling into the shop with that filter).
+function CollectionsBlock({ p, dna, storeSlug }: any) {
+  const items: any[] = p.items ?? [];
+  const collHref = (c: any) => storeSlug
+    ? (c.id ? `/store/${storeSlug}/collections/${c.id}` : `/store/${storeSlug}/shop?category=${encodeURIComponent(c.name || "")}`)
+    : "#";
+  const shopHref = (catName: string) => storeSlug ? `/store/${storeSlug}/shop?category=${encodeURIComponent(catName || "")}` : "#";
+  if (!items.length) {
+    return (
+      <section className="max-w-3xl mx-auto px-6 py-16 text-center">
+        <p style={{ color: dna.palette?.muted }}>No collections yet. Add categories from your dashboard to populate this page.</p>
+      </section>
+    );
+  }
+  return (
+    <section className="max-w-6xl mx-auto px-6 pb-20">
+      <div className="grid md:grid-cols-2 gap-8">
+        {items.map((c: any, i: number) => (
+          <article key={i} className="group flex flex-col" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", overflow: "hidden", border: `1px solid ${dna.palette?.border}` }}>
+            <Link to={collHref(c)} className="block aspect-[16/10] overflow-hidden" style={{ background: dna.palette?.bg }}>
+              {c.image
+                ? <img src={c.image} alt={c.name} className="w-full h-full object-cover transition-transform group-hover:scale-[1.03]" />
+                : <div className="w-full h-full" />}
+            </Link>
+            <div className="p-5 flex-1 flex flex-col">
+              <Link to={collHref(c)}>
+                <h3 className="text-2xl mb-2" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{c.name}</h3>
+              </Link>
+              {c.description && (
+                <p className="text-sm leading-relaxed mb-4" style={{ color: dna.palette?.muted }}>{c.description}</p>
+              )}
+              {Array.isArray(c.subs) && c.subs.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-auto pt-2">
+                  {c.subs.map((s: any, si: number) => (
+                    <Link
+                      key={si}
+                      to={shopHref(s.name)}
+                      className="text-xs px-3 py-1.5 border transition hover:opacity-80"
+                      style={{ borderColor: dna.palette?.border, borderRadius: "999px", color: dna.palette?.fg }}
+                    >
+                      {s.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <Link
+                to={collHref(c)}
+                className="mt-4 inline-flex items-center text-sm self-start"
+                style={{ color: dna.palette?.accent }}
+              >
+                Shop {c.name} →
+              </Link>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Single-collection page: header (image+description) then subcategory tiles, or
+// fall back to product list filtered by category if no subs.
+function CollectionDetailBlock({ p, dna, storeSlug }: any) {
+  const items: any[] = p.items ?? [];
+  // Path is /collections/:categoryId — pull from window since useParams is hard to reach here.
+  const segments = typeof window !== "undefined" ? window.location.pathname.split("/") : [];
+  const categoryId = segments[segments.indexOf("collections") + 1] || "";
+  const cat = items.find((c: any) => c.id === categoryId) || null;
+  if (!cat) {
+    return (
+      <section className="max-w-3xl mx-auto px-6 py-20 text-center">
+        <h1 className="text-3xl mb-3" style={{ fontFamily: "var(--hf)" }}>Collection not found</h1>
+        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-sm" style={{ color: dna.palette?.accent }}>← Back to all collections</Link>}
+      </section>
+    );
+  }
+  const shopHref = (name: string) => storeSlug ? `/store/${storeSlug}/shop?category=${encodeURIComponent(name)}` : "#";
+  return (
+    <>
+      <section className="max-w-6xl mx-auto px-6 pt-12 pb-6">
+        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>← All collections</Link>}
+        <div className="mt-4 grid md:grid-cols-[1.2fr_1fr] gap-8 items-center">
+          <div>
+            <h1 className="text-5xl mb-4" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{cat.name}</h1>
+            {cat.description && <p className="text-base leading-relaxed" style={{ color: dna.palette?.muted }}>{cat.description}</p>}
+            <Link to={shopHref(cat.name)} className="inline-block mt-6 px-5 py-2.5 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>
+              Shop all {cat.name.toLowerCase()}
+            </Link>
+          </div>
+          {cat.image && (
+            <img src={cat.image} alt={cat.name} className="w-full aspect-[4/3] object-cover" style={{ borderRadius: "var(--r)" }} />
+          )}
+        </div>
+      </section>
+      {Array.isArray(cat.subs) && cat.subs.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 pb-20">
+          <h2 className="text-xl mb-5" style={{ fontFamily: "var(--hf)" }}>Browse by type</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {cat.subs.map((s: any, i: number) => (
+              <Link
+                key={i}
+                to={shopHref(s.name)}
+                className="group relative aspect-square overflow-hidden border"
+                style={{ borderRadius: "var(--r)", borderColor: dna.palette?.border, background: dna.palette?.surface }}
+              >
+                {s.image_url && <img src={s.image_url} alt={s.name} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105" />}
+                <div className="absolute inset-0 flex items-end p-3" style={{ background: s.image_url ? "linear-gradient(180deg,transparent,rgba(0,0,0,0.65))" : "transparent" }}>
+                  <span className="text-sm font-medium" style={{ color: s.image_url ? "#fff" : dna.palette?.fg }}>{s.name}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+
+
+
 
 function ProductBlock({ p, dna, storeSlug, page }: any) {
   const v = p.style ?? "grid_clean";
@@ -835,7 +967,7 @@ function Footer({ footer, dna, brandName, storeSlug, onNavigate, footerOv }: any
   const ov: FooterOv = footerOv || {};
   const base = storeSlug ? `/store/${storeSlug}` : "";
   const pageToPath: Record<string, string> = {
-    home: "", shop: "/shop", collections: "/shop", about: "/about", contact: "/contact",
+    home: "", shop: "/shop", collections: "/collections", about: "/about", contact: "/contact",
     journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
     privacy: "/privacy-policy", terms: "/terms", refund: "/refund-policy",
     return: "/return-policy", shipping: "/shipping-policy",
