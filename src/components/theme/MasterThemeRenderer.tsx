@@ -65,8 +65,8 @@ interface Props {
   onNavigate?: (page: string) => void;
   /** Real catalog products to splice into product_grid sections. */
   products?: Array<{ id: string; title: string; price: number; compare_at_price?: number | null; images?: string[] | null; category?: string | null }>;
-  /** Seller-defined categories (with optional image) to splice into category_grid sections. */
-  sellerCategories?: Array<{ name: string; image_url?: string | null }>;
+  /** Seller-defined categories (with optional image / description / subs) to splice into category_grid and collections_grid sections. */
+  sellerCategories?: Array<{ id?: string; name: string; image_url?: string | null; description?: string | null; subs?: Array<{ id?: string; name: string; image_url?: string | null }> }>;
 }
 
 export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, onNavigate, products, sellerCategories }: Props) {
