@@ -515,16 +515,23 @@ const DedicatedThemeView = ({ slug, themeId, seo, store }: { slug: string; theme
 const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }: { slug: string; themeId: string; seo: any; store: any; products: any[]; page?: string }) => {
   const { data: manifest, isLoading } = useThemeManifest(themeId);
   const { data: sellerCategories = [] } = useQuery({
-    queryKey: ['storefront-categories', store?.id],
+    queryKey: ['storefront-categories-full', store?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('name, image_url, parent_id, sort_order')
+        .select('id, name, image_url, description, parent_id, sort_order')
         .eq('store_id', store.id)
-        .is('parent_id', null)
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return (data ?? []).map((c: any) => ({ name: c.name, image_url: c.image_url }));
+      const rows = (data ?? []) as any[];
+      const parents = rows.filter((c) => !c.parent_id);
+      return parents.map((p) => ({
+        id: p.id,
+        name: p.name,
+        image_url: p.image_url,
+        description: p.description,
+        subs: rows.filter((c) => c.parent_id === p.id).map((c) => ({ id: c.id, name: c.name, image_url: c.image_url })),
+      }));
     },
     enabled: !!store?.id,
   });
