@@ -516,7 +516,7 @@ function InspectorHeader({ selected, headerOv, footerOv, sections, sectionOverri
 
 function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload }: { headerOv: any; storeName: string; onChange: (k: string, v: any) => void; onLogoUpload: (f: File) => void }) {
   const links: Array<{ label: string; page: string }> = headerOv.nav_links ?? [
-    { label: "Shop", page: "shop" }, { label: "About", page: "about" }, { label: "Journal", page: "blog" }, { label: "Contact", page: "contact" },
+    { label: "Shop", page: "shop" }, { label: "Collections", page: "collections" }, { label: "About", page: "about" }, { label: "Journal", page: "blog" }, { label: "Contact", page: "contact" },
   ];
   const updateLinks = (next: typeof links) => onChange("nav_links", next);
   return (
