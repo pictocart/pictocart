@@ -2054,6 +2054,7 @@ export type Database = {
           display_name: string
           early_access: boolean
           email_branding: boolean
+          gst_percent: number
           id: string
           is_active: boolean
           multi_domain: boolean
@@ -2081,6 +2082,7 @@ export type Database = {
           display_name: string
           early_access?: boolean
           email_branding?: boolean
+          gst_percent?: number
           id?: string
           is_active?: boolean
           multi_domain?: boolean
@@ -2108,6 +2110,7 @@ export type Database = {
           display_name?: string
           early_access?: boolean
           email_branding?: boolean
+          gst_percent?: number
           id?: string
           is_active?: boolean
           multi_domain?: boolean
@@ -3388,11 +3391,18 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          blocked_notified_at: string | null
           cancelled_at: string | null
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
+          expiry_notified_at: string | null
+          grace_period_end: string | null
+          grace_warning_notified_at: string | null
           id: string
+          is_blocked: boolean
+          pending_plan: Database["public"]["Enums"]["subscription_plan"] | null
+          pending_plan_effective_at: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
           razorpay_plan_id: string | null
           razorpay_subscription_id: string | null
@@ -3401,11 +3411,18 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          blocked_notified_at?: string | null
           cancelled_at?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          expiry_notified_at?: string | null
+          grace_period_end?: string | null
+          grace_warning_notified_at?: string | null
           id?: string
+          is_blocked?: boolean
+          pending_plan?: Database["public"]["Enums"]["subscription_plan"] | null
+          pending_plan_effective_at?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           razorpay_plan_id?: string | null
           razorpay_subscription_id?: string | null
@@ -3414,11 +3431,18 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          blocked_notified_at?: string | null
           cancelled_at?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          expiry_notified_at?: string | null
+          grace_period_end?: string | null
+          grace_warning_notified_at?: string | null
           id?: string
+          is_blocked?: boolean
+          pending_plan?: Database["public"]["Enums"]["subscription_plan"] | null
+          pending_plan_effective_at?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           razorpay_plan_id?: string | null
           razorpay_subscription_id?: string | null
@@ -4286,6 +4310,10 @@ export type Database = {
         Args: { _coupon_id: string; _order_id: string }
         Returns: undefined
       }
+      cancel_pending_plan_change: {
+        Args: { _store_id: string }
+        Returns: undefined
+      }
       consume_credits: {
         Args: { _action_key: string; _cache_hit?: boolean; _store_id: string }
         Returns: number
@@ -4361,6 +4389,7 @@ export type Database = {
         Args: { _phone: string; _store_id: string }
         Returns: boolean
       }
+      is_store_access_blocked: { Args: { _store_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -4391,6 +4420,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      schedule_plan_change: {
+        Args: { _new_plan: string; _store_id: string }
+        Returns: Json
       }
     }
     Enums: {
