@@ -835,7 +835,7 @@ function Footer({ footer, dna, brandName, storeSlug, onNavigate, footerOv }: any
   const ov: FooterOv = footerOv || {};
   const base = storeSlug ? `/store/${storeSlug}` : "";
   const pageToPath: Record<string, string> = {
-    home: "", shop: "/shop", collections: "/shop", about: "/about", contact: "/contact",
+    home: "", shop: "/shop", collections: "/collections", about: "/about", contact: "/contact",
     journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
     privacy: "/privacy-policy", terms: "/terms", refund: "/refund-policy",
     return: "/return-policy", shipping: "/shipping-policy",
