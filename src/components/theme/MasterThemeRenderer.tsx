@@ -616,7 +616,7 @@ function HeroVideo({ video }: { video: any }) {
   );
 }
 
-function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overlay, kenBurns }: any) {
+function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overlay, kenBurns, buttons }: any) {
   const list = (slides ?? []).filter((s: any) => s);
   const [idx, setIdx] = useState(0);
   const autoplay = slider?.autoplay !== false;
@@ -659,8 +659,8 @@ function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overl
                 {s.sub && <p className="mt-4 text-base md:text-lg opacity-90 max-w-xl">{s.sub}</p>}
                 {(s.cta || s.cta_secondary) && (
                   <div className="mt-7 flex gap-3 flex-wrap" style={{ justifyContent: (contentAlign?.endsWith("-center") || !contentAlign) ? "center" : (contentAlign?.endsWith("-right") ? "flex-end" : "flex-start") }}>
-                    {s.cta && <a href={s.cta_href || shopHref} className="px-7 py-3 text-sm font-medium inline-block" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{s.cta}</a>}
-                    {s.cta_secondary && <a href={s.cta_secondary_href || shopHref} className="px-7 py-3 text-sm font-medium border inline-block" style={{ borderColor: "rgba(255,255,255,0.6)", color: "#fff", borderRadius: "var(--r)" }}>{s.cta_secondary}</a>}
+                    {s.cta && <HeroBtn kind="primary" label={s.cta} href={s.cta_href || shopHref} cfg={buttons?.primary} />}
+                    {s.cta_secondary && <HeroBtn kind="secondary" label={s.cta_secondary} href={s.cta_secondary_href || shopHref} cfg={buttons?.secondary} />}
                   </div>
                 )}
               </div>
@@ -685,6 +685,89 @@ function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overl
   );
 }
 
+// ---------- Hero button styling helpers ----------
+const HBTN_SIZES: Record<string, string> = {
+  sm: "px-4 py-2 text-xs",
+  md: "px-7 py-3 text-sm",
+  lg: "px-9 py-4 text-base",
+  xl: "px-12 py-5 text-lg",
+};
+const HBTN_SHADOWS: Record<string, string> = {
+  none: "none",
+  soft: "0 4px 14px rgba(0,0,0,0.15)",
+  medium: "0 10px 25px rgba(0,0,0,0.25)",
+  hard: "6px 6px 0 rgba(0,0,0,0.85)",
+  glow: "0 0 28px rgba(255,255,255,0.55)",
+  inset: "inset 0 -3px 0 rgba(0,0,0,0.2)",
+};
+const HBTN_ANIMS: Record<string, string> = {
+  none: "",
+  pulse: "animate-pulse",
+  bounce: "animate-bounce",
+  shine: "hbtn-shine",
+  float: "hbtn-float",
+  wobble: "hbtn-wobble",
+};
+const HBTN_HOVERS: Record<string, string> = {
+  none: "hover:opacity-90",
+  lift: "hover:-translate-y-0.5 hover:shadow-2xl",
+  scale: "hover:scale-105",
+  glow: "hover:brightness-110 hover:shadow-[0_0_30px_rgba(255,255,255,0.6)]",
+  invert: "hover:bg-white hover:text-black",
+};
+
+function HeroBtnStyles() {
+  return (
+    <style dangerouslySetInnerHTML={{ __html: `
+      @keyframes hbtn-shine-kf { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      .hbtn-shine { position: relative; overflow: hidden; }
+      .hbtn-shine::after { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%); background-size: 200% 100%; animation: hbtn-shine-kf 2.4s linear infinite; pointer-events: none; }
+      @keyframes hbtn-float-kf { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+      .hbtn-float { animation: hbtn-float-kf 2.6s ease-in-out infinite; }
+      @keyframes hbtn-wobble-kf { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
+      .hbtn-wobble { animation: hbtn-wobble-kf 1.8s ease-in-out infinite; }
+    `}} />
+  );
+}
+
+function HeroBtn({ kind, label, href, cfg, freePos }: { kind: "primary" | "secondary"; label: string; href: string; cfg?: any; freePos?: boolean }) {
+  const b = cfg || {};
+  const isPrimary = kind === "primary";
+  const size = HBTN_SIZES[b.size as string] || HBTN_SIZES.md;
+  const radius = b.radius != null ? `${b.radius}px` : "var(--r)";
+  const shadow = HBTN_SHADOWS[b.shadow as string] ?? (isPrimary ? HBTN_SHADOWS.soft : HBTN_SHADOWS.none);
+  const anim = HBTN_ANIMS[b.animation as string] || "";
+  const hover = HBTN_HOVERS[b.hover as string] || "hover:opacity-90";
+  const bg = b.bg || (isPrimary ? "var(--p)" : "transparent");
+  const color = b.color || (isPrimary ? "var(--pf)" : "#fff");
+  const borderColor = b.border_color || (isPrimary ? "transparent" : "rgba(255,255,255,0.65)");
+  const borderWidth = b.border_width != null ? Number(b.border_width) : (isPrimary ? 0 : 1);
+  const style: React.CSSProperties = {
+    background: bg, color, borderColor, borderWidth,
+    borderStyle: borderWidth ? "solid" : "none",
+    borderRadius: radius, boxShadow: shadow,
+    transition: "all 250ms ease",
+    letterSpacing: b.tracking != null ? `${b.tracking}em` : undefined,
+    textTransform: b.uppercase ? "uppercase" : undefined,
+    fontWeight: b.weight || 500,
+  };
+  if (freePos) {
+    const defX = isPrimary ? 35 : 65;
+    const defY = 78;
+    Object.assign(style, {
+      position: "absolute",
+      left: `${b.x ?? defX}%`,
+      top: `${b.y ?? defY}%`,
+      transform: "translate(-50%, -50%)",
+      zIndex: 5,
+      pointerEvents: "auto",
+    } as React.CSSProperties);
+  }
+  return (
+    <a href={href} className={`${size} inline-block ${hover} ${anim}`} style={style}>{label}</a>
+  );
+}
+
 function Hero({ p, dna, storeSlug }: any) {
   const v = p.style ?? "centered";
   const headingFont = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 } as React.CSSProperties;
@@ -695,12 +778,28 @@ function Hero({ p, dna, storeSlug }: any) {
   const contentAlign = p.content_align;
   const parallax = effects.parallax;
   const kenBurns = effects.ken_burns;
+  const buttons = p.buttons || {};
+  const freePos = !!buttons.free_position && v !== "slider";
 
-  const Btns = (
+  const Btns = freePos ? null : (
     <div className="mt-8 flex gap-3 flex-wrap">
-      {p.cta && <a href={p.cta_href || shopHref} className="px-7 py-3 text-sm font-medium inline-block" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta}</a>}
-      {p.cta_secondary && <a href={p.cta_secondary_href || shopHref} className="px-7 py-3 text-sm font-medium border inline-block" style={{ borderColor: "var(--bd)", color: "var(--fg)", borderRadius: "var(--r)" }}>{p.cta_secondary}</a>}
+      {p.cta && <HeroBtn kind="primary" label={p.cta} href={p.cta_href || shopHref} cfg={buttons.primary} />}
+      {p.cta_secondary && <HeroBtn kind="secondary" label={p.cta_secondary} href={p.cta_secondary_href || shopHref} cfg={buttons.secondary} />}
     </div>
+  );
+
+  const FreeLayer = freePos ? (
+    <div className="absolute inset-0 pointer-events-none z-20">
+      {p.cta && <HeroBtn kind="primary" label={p.cta} href={p.cta_href || shopHref} cfg={buttons.primary} freePos />}
+      {p.cta_secondary && <HeroBtn kind="secondary" label={p.cta_secondary} href={p.cta_secondary_href || shopHref} cfg={buttons.secondary} freePos />}
+    </div>
+  ) : null;
+
+  const wrap = (node: JSX.Element) => (
+    <>
+      <HeroBtnStyles />
+      {freePos ? (<div className="relative">{node}{FreeLayer}</div>) : node}
+    </>
   );
 
   // --- SLIDER ---------------------------------------------------------------
@@ -708,12 +807,12 @@ function Hero({ p, dna, storeSlug }: any) {
     const slides = (p.slides && p.slides.length > 0)
       ? p.slides
       : [{ image: p.image, title: p.title, sub: p.sub, kicker: p.kicker, cta: p.cta, cta_href: p.cta_href, cta_secondary: p.cta_secondary, cta_secondary_href: p.cta_secondary_href }];
-    return <HeroSlider slides={slides} slider={p.slider} dna={dna} shopHref={shopHref} height={height} contentAlign={contentAlign} overlay={overlay} kenBurns={kenBurns} />;
+    return (<><HeroBtnStyles /><HeroSlider slides={slides} slider={p.slider} dna={dna} shopHref={shopHref} height={height} contentAlign={contentAlign} overlay={overlay} kenBurns={kenBurns} buttons={buttons} /></>);
   }
 
   // --- VIDEO BACKGROUND -----------------------------------------------------
   if (v === "video") {
-    return (
+    return wrap(
       <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[80vh]"}`} style={{ background: "#000" }}>
         <HeroVideo video={p.video} />
         <Overlay overlay={overlay} />
@@ -731,8 +830,8 @@ function Hero({ p, dna, storeSlug }: any) {
 
   // --- HALF BANNER ----------------------------------------------------------
   if (v === "half_banner") {
-    return (
-      <section className="grid md:grid-cols-2" style={{ background: dna.palette?.surface, minHeight: "40vh" }}>
+    return wrap(
+      <section className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface, minHeight: "40vh" }}>
         <div className="px-6 md:px-12 py-12 md:py-16 flex flex-col justify-center">
           {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
           <h1 className="text-3xl md:text-5xl leading-tight" style={headingFont}>{p.title}</h1>
@@ -746,7 +845,7 @@ function Hero({ p, dna, storeSlug }: any) {
 
   // --- GRADIENT (no image) --------------------------------------------------
   if (v === "gradient") {
-    return (
+    return wrap(
       <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[60vh]"}`} style={{ background: `linear-gradient(135deg, ${dna.palette?.primary} 0%, ${dna.palette?.accent} 100%)`, color: dna.palette?.primary_fg || "#fff" }}>
         <div className={`relative h-full w-full flex ${alignClass(contentAlign)} px-6 py-24`}>
           <div className="max-w-3xl">
@@ -761,8 +860,8 @@ function Hero({ p, dna, storeSlug }: any) {
   }
 
   if (v === "split") {
-    return (
-      <section className="grid md:grid-cols-2" style={{ background: dna.palette?.surface }}>
+    return wrap(
+      <section className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface }}>
         <div className="px-6 md:px-12 py-20 md:py-32 flex flex-col justify-center">
           {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
           <h1 className="text-5xl md:text-6xl leading-tight" style={headingFont}>{p.title}</h1>
@@ -774,8 +873,8 @@ function Hero({ p, dna, storeSlug }: any) {
     );
   }
   if (v === "magazine" || v === "editorial_serif") {
-    return (
-      <section className="max-w-6xl mx-auto px-6 py-24">
+    return wrap(
+      <section className="max-w-6xl mx-auto px-6 py-24 relative">
         <div className="grid md:grid-cols-12 gap-8 items-end">
           <div className="md:col-span-7">
             {p.kicker && <div className="text-xs uppercase tracking-[0.4em] mb-6 border-b pb-2 inline-block" style={{ color: dna.palette?.accent, borderColor: dna.palette?.border }}>{p.kicker}</div>}
@@ -792,7 +891,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   if (v === "fullscreen_image" || v === "fixed") {
     const h = heightClass(height) || (v === "fixed" ? "min-h-[60vh]" : "min-h-[80vh]");
-    return (
+    return wrap(
       <section className={`relative overflow-hidden ${h}`}>
         {p.image && (
           <div className={`absolute inset-0 ${parallax ? "bg-fixed" : ""}`}>
@@ -816,8 +915,8 @@ function Hero({ p, dna, storeSlug }: any) {
     );
   }
   if (v === "minimal_left") {
-    return (
-      <section className="max-w-6xl mx-auto px-6 py-32">
+    return wrap(
+      <section className="max-w-6xl mx-auto px-6 py-32 relative">
         {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-6" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
         <h1 className="text-5xl md:text-7xl max-w-2xl" style={headingFont}>{p.title}</h1>
         {p.sub && <p className="mt-6 text-lg max-w-md" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
@@ -826,7 +925,7 @@ function Hero({ p, dna, storeSlug }: any) {
     );
   }
   if (v === "asymmetric") {
-    return (
+    return wrap(
       <section className="relative overflow-hidden" style={{ background: dna.palette?.surface }}>
         <div className="absolute -right-20 -top-10 w-2/3 h-full">{p.image && <img src={p.image} className="w-full h-full object-cover" style={{ clipPath: "polygon(20% 0, 100% 0, 100% 100%, 0% 100%)", objectPosition: p.focal || "50% 50%" }} />}</div>
         <div className="relative max-w-6xl mx-auto px-6 py-32 md:py-40">
@@ -839,7 +938,7 @@ function Hero({ p, dna, storeSlug }: any) {
     );
   }
   // centered (default)
-  return (
+  return wrap(
     <section className={`relative overflow-hidden ${heightClass(height)}`} style={{ background: dna.palette?.surface }}>
       {p.image && <img src={p.image} alt="" className={`absolute inset-0 w-full h-full object-cover opacity-60 ${kenBurns ? "animate-[ken-burns_18s_ease-out_infinite]" : ""}`} style={{ objectPosition: p.focal || "50% 50%" }} />}
       <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${dna.palette?.bg}00, ${dna.palette?.bg}cc)` }} />
