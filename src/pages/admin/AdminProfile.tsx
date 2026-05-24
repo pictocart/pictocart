@@ -94,7 +94,7 @@ const AdminProfile = () => {
     if (!file || !user) return;
     setAvatarUploading(true);
     const ext = file.name.split('.').pop();
-    const path = `avatars/${user.id}.${ext}`;
+    const path = `${user.id}/avatars/profile.${ext}`;
     const { error } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true });
     if (error) { toast.error('Upload failed'); setAvatarUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('store-assets').getPublicUrl(path);
