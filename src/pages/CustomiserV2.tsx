@@ -1352,3 +1352,174 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
     </div>
   );
 }
+
+// ---------- Hero Buttons Inspector ----------
+const BTN_SIZE_OPTS = [
+  { value: "sm", label: "S" }, { value: "md", label: "M" },
+  { value: "lg", label: "L" }, { value: "xl", label: "XL" },
+];
+const BTN_SHADOW_OPTS = [
+  { value: "none", label: "None" }, { value: "soft", label: "Soft" },
+  { value: "medium", label: "Medium" }, { value: "hard", label: "Hard" },
+  { value: "glow", label: "Glow" }, { value: "inset", label: "Inset" },
+];
+const BTN_ANIM_OPTS = [
+  { value: "none", label: "None" }, { value: "pulse", label: "Pulse" },
+  { value: "bounce", label: "Bounce" }, { value: "shine", label: "Shine" },
+  { value: "float", label: "Float" }, { value: "wobble", label: "Wobble" },
+];
+const BTN_HOVER_OPTS = [
+  { value: "none", label: "None" }, { value: "lift", label: "Lift" },
+  { value: "scale", label: "Scale" }, { value: "glow", label: "Glow" },
+  { value: "invert", label: "Invert" },
+];
+
+function ColorRow({ label, value, onChange, placeholder }: any) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Label className="text-[10px] w-16 shrink-0">{label}</Label>
+      <input type="color" value={value || "#000000"} onChange={(e) => onChange(e.target.value)} className="h-6 w-7 rounded border cursor-pointer shrink-0" />
+      <Input value={value || ""} placeholder={placeholder || "theme"} onChange={(e) => onChange(e.target.value)} className="h-6 text-[11px] font-mono" />
+      {value && <button onClick={() => onChange("")} className="text-[10px] text-muted-foreground hover:text-foreground"><RotateCcw className="h-3 w-3" /></button>}
+    </div>
+  );
+}
+
+function ButtonStyleEditor({ kind, cfg, onChange }: { kind: "primary" | "secondary"; cfg: any; onChange: (next: any) => void }) {
+  const set = (k: string, v: any) => onChange({ ...cfg, [k]: v });
+  const isPrimary = kind === "primary";
+  return (
+    <div className="border rounded-md p-2.5 space-y-2 bg-muted/30">
+      <div className="text-[11px] font-semibold uppercase tracking-wide">{isPrimary ? "Primary button" : "Secondary button"}</div>
+      <ColorRow label="BG" value={cfg.bg} onChange={(v: string) => set("bg", v)} placeholder={isPrimary ? "primary" : "transparent"} />
+      <ColorRow label="Text" value={cfg.color} onChange={(v: string) => set("color", v)} placeholder={isPrimary ? "on-primary" : "#fff"} />
+      <ColorRow label="Border" value={cfg.border_color} onChange={(v: string) => set("border_color", v)} placeholder="auto" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-[10px]">Border width</Label>
+          <Slider value={[Number(cfg.border_width ?? (isPrimary ? 0 : 1))]} min={0} max={6} step={1} onValueChange={([v]) => set("border_width", v)} className="mt-1.5" />
+        </div>
+        <div>
+          <Label className="text-[10px]">Radius</Label>
+          <Slider value={[Number(cfg.radius ?? 8)]} min={0} max={60} step={1} onValueChange={([v]) => set("radius", v)} className="mt-1.5" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-[10px]">Size</Label>
+          <Select value={cfg.size || "md"} onValueChange={(v) => set("size", v)}>
+            <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>{BTN_SIZE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-[10px]">Shadow</Label>
+          <Select value={cfg.shadow || (isPrimary ? "soft" : "none")} onValueChange={(v) => set("shadow", v)}>
+            <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>{BTN_SHADOW_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-[10px]">Animation</Label>
+          <Select value={cfg.animation || "none"} onValueChange={(v) => set("animation", v)}>
+            <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>{BTN_ANIM_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-[10px]">Hover</Label>
+          <Select value={cfg.hover || "lift"} onValueChange={(v) => set("hover", v)}>
+            <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>{BTN_HOVER_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center justify-between pt-1">
+        <Label className="text-[10px]">Uppercase</Label>
+        <Switch checked={!!cfg.uppercase} onCheckedChange={(v) => set("uppercase", v)} />
+      </div>
+    </div>
+  );
+}
+
+function ButtonPositionCanvas({ buttons, onMove }: { buttons: any; onMove: (kind: "primary" | "secondary", pos: { x: number; y: number }) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<null | "primary" | "secondary">(null);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const move = (e: PointerEvent) => {
+      const el = ref.current; if (!el) return;
+      const r = el.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+      const y = Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100));
+      onMove(dragging, { x: Math.round(x), y: Math.round(y) });
+    };
+    const up = () => setDragging(null);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+  }, [dragging, onMove]);
+
+  const p = buttons?.primary || {};
+  const s = buttons?.secondary || {};
+  return (
+    <div ref={ref} className="relative h-32 rounded-md border-2 border-dashed bg-gradient-to-br from-muted/40 to-muted/10 select-none touch-none overflow-hidden">
+      <div className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground pointer-events-none">Drag pills to position over hero</div>
+      <div
+        onPointerDown={(e) => { e.preventDefault(); setDragging("primary"); }}
+        className="absolute px-2 py-1 text-[10px] bg-primary text-primary-foreground rounded cursor-grab active:cursor-grabbing shadow font-medium"
+        style={{ left: `${p.x ?? 35}%`, top: `${p.y ?? 78}%`, transform: "translate(-50%, -50%)" }}
+      >Primary</div>
+      <div
+        onPointerDown={(e) => { e.preventDefault(); setDragging("secondary"); }}
+        className="absolute px-2 py-1 text-[10px] border border-foreground/60 rounded cursor-grab active:cursor-grabbing font-medium bg-background/70"
+        style={{ left: `${s.x ?? 65}%`, top: `${s.y ?? 78}%`, transform: "translate(-50%, -50%)" }}
+      >Secondary</div>
+    </div>
+  );
+}
+
+function HeroButtonsPanel({ buttons, hasPrimary, hasSecondary, onChange }: { buttons: any; hasPrimary: boolean; hasSecondary: boolean; onChange: (next: any) => void }) {
+  const primary = buttons.primary || {};
+  const secondary = buttons.secondary || {};
+  const freePos = !!buttons.free_position;
+  return (
+    <div className="border-t pt-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-[11px] font-semibold">Buttons design</Label>
+        <button
+          onClick={() => onChange({})}
+          className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"
+        ><RotateCcw className="h-3 w-3" /> reset</button>
+      </div>
+
+      <div className="flex items-center justify-between p-2 rounded-md border bg-muted/20">
+        <div>
+          <Label className="text-xs">Free position (drag anywhere)</Label>
+          <p className="text-[10px] text-muted-foreground">Place buttons anywhere over the hero.</p>
+        </div>
+        <Switch checked={freePos} onCheckedChange={(v) => onChange({ ...buttons, free_position: v })} />
+      </div>
+
+      {freePos && (
+        <ButtonPositionCanvas
+          buttons={buttons}
+          onMove={(kind, pos) => onChange({ ...buttons, [kind]: { ...(buttons[kind] || {}), ...pos } })}
+        />
+      )}
+
+      {hasPrimary && (
+        <ButtonStyleEditor kind="primary" cfg={primary} onChange={(next) => onChange({ ...buttons, primary: next })} />
+      )}
+      {hasSecondary && (
+        <ButtonStyleEditor kind="secondary" cfg={secondary} onChange={(next) => onChange({ ...buttons, secondary: next })} />
+      )}
+      {!hasPrimary && !hasSecondary && (
+        <p className="text-[11px] text-muted-foreground">Add a CTA label above to style buttons.</p>
+      )}
+    </div>
+  );
+}
