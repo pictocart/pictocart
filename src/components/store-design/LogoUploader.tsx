@@ -162,24 +162,47 @@ const LogoUploader = ({ logoUrl, logoName, onSave }: Props) => {
                 image={rawImage}
                 crop={crop}
                 zoom={zoom}
-                aspect={1}
+                aspect={aspect}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}
                 cropShape="rect"
                 showGrid={false}
+                restrictPosition={false}
+                objectFit="contain"
               />
             )}
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Zoom</Label>
-            <Slider
-              min={1}
-              max={3}
-              step={0.1}
-              value={[zoom]}
-              onValueChange={([v]) => setZoom(v)}
-            />
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Aspect ratio</Label>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {ASPECT_OPTIONS.map((o) => (
+                  <Button
+                    key={o.label}
+                    type="button"
+                    size="sm"
+                    variant={aspect === o.value ? 'default' : 'outline'}
+                    className="h-7 text-[11px]"
+                    onClick={() => setAspect(o.value)}
+                  >
+                    {o.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Zoom</Label>
+              <Slider
+                min={0.5}
+                max={3}
+                step={0.05}
+                value={[zoom]}
+                onValueChange={([v]) => setZoom(v)}
+                className="mt-2"
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground">Use "Free" to keep the logo's original shape. Resize it in the header inspector after upload.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseCropper}>Cancel</Button>
