@@ -375,8 +375,240 @@ function Section({ s, dna, storeSlug, page }: any) {
     case "account_panel":  return <AccountPanel p={p} dna={dna} storeSlug={storeSlug} />;
     case "contact_form":   return <ContactForm p={p} dna={dna} />;
     case "product_detail": return <ProductDetailStub p={p} dna={dna} />;
+    // --- Service industry (doctor / salon / clinic) sections -------------
+    case "provider_team":      return <ProviderTeamBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "service_menu":       return <ServiceMenuBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "booking_widget":     return <BookingWidgetBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "clinic_hours":       return <ClinicHoursBlock p={p} dna={dna} />;
+    case "service_packages":   return <ServicePackagesBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "faqs":               return <FaqsBlock p={p} dna={dna} />;
+    case "service_detail":     return <ServiceDetailBlock p={p} dna={dna} storeSlug={storeSlug} />;
+    case "appointments_panel": return <AppointmentsPanelBlock p={p} dna={dna} storeSlug={storeSlug} />;
     default: return null;
   }
+}
+
+// =============================================================================
+// SERVICE INDUSTRY BLOCKS (doctor / clinic / salon / spa / home-visit)
+// Renders provider profiles, service menus, slot booking, clinic hours,
+// packages, FAQs, and a customer appointment history panel.
+// =============================================================================
+function ProviderTeamBlock({ p, dna, storeSlug }: any) {
+  const items: any[] = p.items ?? [];
+  return (
+    <section className="py-20" style={{ background: dna.palette?.bg }}>
+      <div className="max-w-6xl mx-auto px-6">
+        {p.title && <h2 className="text-4xl mb-2" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>}
+        {p.subtitle && <p className="mb-10" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
+        <div className="grid md:grid-cols-3 gap-8">
+          {items.map((m: any, i: number) => (
+            <article key={i} className="overflow-hidden border" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+              {m.image && <img src={m.image} alt={m.name} className="w-full aspect-[4/5] object-cover" />}
+              <div className="p-5">
+                <div className="text-lg font-medium" style={{ fontFamily: "var(--hf)" }}>{m.name}</div>
+                <div className="text-xs uppercase tracking-wider mt-1" style={{ color: dna.palette?.accent }}>{m.role}{m.qualifications ? ` · ${m.qualifications}` : ""}</div>
+                {m.experience && <div className="text-xs mt-2" style={{ color: dna.palette?.muted }}>{m.experience}</div>}
+                {m.bio && <p className="text-sm mt-3 leading-relaxed" style={{ color: dna.palette?.muted }}>{m.bio}</p>}
+                {m.specialties && Array.isArray(m.specialties) && (
+                  <div className="flex flex-wrap gap-1 mt-3">
+                    {m.specialties.slice(0, 4).map((s: string, j: number) => (
+                      <span key={j} className="text-[10px] px-2 py-0.5 uppercase tracking-wider" style={{ background: dna.palette?.bg, color: dna.palette?.fg, borderRadius: "var(--r)" }}>{s}</span>
+                    ))}
+                  </div>
+                )}
+                {storeSlug && (
+                  <Link to={`/store/${storeSlug}/book?provider=${encodeURIComponent(m.name)}`} className="inline-block mt-4 text-sm px-4 py-2" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Book {m.role?.split(" ")[0] ?? "now"}</Link>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ServiceMenuBlock({ p, dna, storeSlug }: any) {
+  const groups: any[] = p.groups ?? [{ name: p.title ?? "Services", items: p.items ?? [] }];
+  return (
+    <section className="py-20" style={{ background: dna.palette?.surface }}>
+      <div className="max-w-5xl mx-auto px-6">
+        {p.title && <h2 className="text-4xl mb-2" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>}
+        {p.subtitle && <p className="mb-10" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
+        <div className="space-y-10">
+          {groups.map((g: any, gi: number) => (
+            <div key={gi}>
+              {groups.length > 1 && <h3 className="text-xl mb-4 pb-2 border-b" style={{ fontFamily: "var(--hf)", borderColor: dna.palette?.border, color: dna.palette?.accent }}>{g.name}</h3>}
+              <ul className="divide-y" style={{ borderColor: dna.palette?.border }}>
+                {(g.items ?? []).map((s: any, i: number) => (
+                  <li key={i} className="py-4 flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-3 flex-wrap">
+                        <span className="text-base font-medium">{s.name}</span>
+                        {s.duration_min && <span className="text-xs" style={{ color: dna.palette?.muted }}>{s.duration_min} min</span>}
+                        {s.badge && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{s.badge}</span>}
+                      </div>
+                      {s.description && <p className="text-sm mt-1" style={{ color: dna.palette?.muted }}>{s.description}</p>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-base font-semibold">₹{s.price}</div>
+                      {storeSlug && <Link to={`/store/${storeSlug}/book?service=${encodeURIComponent(s.name)}`} className="inline-block mt-1 text-xs px-3 py-1.5" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Book</Link>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BookingWidgetBlock({ p, dna, storeSlug }: any) {
+  return (
+    <section className="py-16" style={{ background: dna.palette?.bg }}>
+      <div className="max-w-3xl mx-auto px-6 p-8 text-center border" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+        <h2 className="text-3xl mb-3" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title ?? "Book your appointment"}</h2>
+        <p className="mb-6" style={{ color: dna.palette?.muted }}>{p.subtitle ?? "Choose a service, pick a provider and a slot — confirmation is instant."}</p>
+        <div className="grid sm:grid-cols-3 gap-3 mb-6 text-left text-sm">
+          {(p.steps ?? ["Pick a service", "Pick a provider & slot", "Confirm details"]).map((st: string, i: number) => (
+            <div key={i} className="p-3 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+              <div className="text-xs uppercase tracking-wider mb-1" style={{ color: dna.palette?.accent }}>Step {i + 1}</div>
+              <div>{st}</div>
+            </div>
+          ))}
+        </div>
+        {storeSlug
+          ? <Link to={`/store/${storeSlug}/book`} className="inline-block px-6 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta ?? "Book appointment"}</Link>
+          : <button className="px-6 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta ?? "Book appointment"}</button>}
+      </div>
+    </section>
+  );
+}
+
+function ClinicHoursBlock({ p, dna }: any) {
+  const hours: any[] = p.hours ?? [];
+  return (
+    <section className="py-16" style={{ background: dna.palette?.surface }}>
+      <div className="max-w-4xl mx-auto px-6 grid md:grid-cols-2 gap-10 items-start">
+        <div>
+          <h2 className="text-3xl mb-3" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title ?? "Visit us"}</h2>
+          {p.address && <p className="text-sm mb-2" style={{ color: dna.palette?.muted }}>{p.address}</p>}
+          {p.phone && <p className="text-sm" style={{ color: dna.palette?.muted }}>Call: {p.phone}</p>}
+          {p.note && <p className="text-sm mt-4" style={{ color: dna.palette?.accent }}>{p.note}</p>}
+        </div>
+        <ul className="divide-y" style={{ borderColor: dna.palette?.border }}>
+          {hours.map((h: any, i: number) => (
+            <li key={i} className="py-2 flex items-center justify-between text-sm">
+              <span className="font-medium">{h.day}</span>
+              <span style={{ color: dna.palette?.muted }}>{h.closed ? "Closed" : `${h.open} — ${h.close}`}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function ServicePackagesBlock({ p, dna, storeSlug }: any) {
+  const items: any[] = p.items ?? [];
+  return (
+    <section className="py-20" style={{ background: dna.palette?.bg }}>
+      <div className="max-w-6xl mx-auto px-6">
+        {p.title && <h2 className="text-4xl mb-2" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>}
+        {p.subtitle && <p className="mb-10" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
+        <div className="grid md:grid-cols-3 gap-6">
+          {items.map((pk: any, i: number) => (
+            <div key={i} className="p-6 border flex flex-col" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+              {pk.badge && <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: dna.palette?.accent }}>{pk.badge}</div>}
+              <div className="text-xl font-medium mb-1" style={{ fontFamily: "var(--hf)" }}>{pk.name}</div>
+              <div className="text-2xl font-semibold mb-1">₹{pk.price}</div>
+              <div className="text-xs mb-4" style={{ color: dna.palette?.muted }}>{pk.total_visits ? `${pk.total_visits} visits · ` : ""}{pk.validity_days ? `Valid ${pk.validity_days} days` : ""}</div>
+              <ul className="text-sm space-y-1 mb-5 flex-1">
+                {(pk.includes ?? []).map((it: string, j: number) => (
+                  <li key={j} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>✓</span><span style={{ color: dna.palette?.muted }}>{it}</span></li>
+                ))}
+              </ul>
+              {storeSlug && <Link to={`/store/${storeSlug}/book?package=${encodeURIComponent(pk.name)}`} className="text-center px-4 py-2 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Buy package</Link>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FaqsBlock({ p, dna }: any) {
+  const items: any[] = p.items ?? [];
+  return (
+    <section className="py-20" style={{ background: dna.palette?.surface }}>
+      <div className="max-w-3xl mx-auto px-6">
+        <h2 className="text-3xl mb-8" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title ?? "Frequently asked"}</h2>
+        <div className="space-y-4">
+          {items.map((f: any, i: number) => (
+            <details key={i} className="p-4 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+              <summary className="cursor-pointer text-sm font-medium">{f.q}</summary>
+              <p className="text-sm mt-2" style={{ color: dna.palette?.muted }}>{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ServiceDetailBlock({ p, dna, storeSlug }: any) {
+  const s = p.service ?? {};
+  return (
+    <section className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-12">
+      <div className="aspect-square overflow-hidden" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
+        {(p.image || s.image) && <img src={p.image || s.image} className="w-full h-full object-cover" />}
+      </div>
+      <div>
+        <div className="text-xs uppercase tracking-wider mb-2" style={{ color: dna.palette?.accent }}>{s.category ?? "Service"}</div>
+        <h1 className="text-4xl mb-3" style={{ fontFamily: "var(--hf)" }}>{s.name}</h1>
+        <div className="flex items-baseline gap-4 mb-4">
+          <div className="text-2xl font-semibold">₹{s.price}</div>
+          {s.duration_min && <div className="text-sm" style={{ color: dna.palette?.muted }}>{s.duration_min} minutes</div>}
+        </div>
+        <p className="mb-6 text-sm leading-relaxed" style={{ color: dna.palette?.muted }}>{s.description ?? "Detailed service information renders here."}</p>
+        {Array.isArray(s.includes) && s.includes.length > 0 && (
+          <ul className="text-sm space-y-1 mb-6">
+            {s.includes.map((it: string, i: number) => (<li key={i} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>✓</span>{it}</li>))}
+          </ul>
+        )}
+        {storeSlug
+          ? <Link to={`/store/${storeSlug}/book?service=${encodeURIComponent(s.name ?? "")}`} className="inline-block px-6 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Book appointment</Link>
+          : <button className="px-6 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Book appointment</button>}
+      </div>
+    </section>
+  );
+}
+
+function AppointmentsPanelBlock({ p, dna, storeSlug }: any) {
+  return (
+    <section className="max-w-5xl mx-auto px-6 py-12">
+      <h2 className="text-2xl mb-2" style={{ fontFamily: "var(--hf)" }}>{p.title ?? "My appointments"}</h2>
+      <p className="mb-6 text-sm" style={{ color: dna.palette?.muted }}>{p.subtitle ?? "Upcoming, past visits and prescriptions all in one place."}</p>
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
+        {(p.metrics ?? [
+          { label: "Upcoming", value: "—" },
+          { label: "Visits this year", value: "—" },
+          { label: "Active packages", value: "—" },
+        ]).map((m: any, i: number) => (
+          <div key={i} className="p-4 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.surface }}>
+            <div className="text-xs uppercase tracking-wider mb-1" style={{ color: dna.palette?.muted }}>{m.label}</div>
+            <div className="text-2xl font-semibold">{m.value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="p-6 border text-sm" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", color: dna.palette?.muted }}>
+        Your appointment history, prescriptions and family member visits will appear here once you sign in.
+        {storeSlug && <Link to={`/store/${storeSlug}/book`} className="ml-3 inline-block px-4 py-2 text-xs" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Book a new visit</Link>}
+      </div>
+    </section>
+  );
 }
 
 function pad(cls = "max-w-3xl mx-auto px-6 py-16") { return cls; }
