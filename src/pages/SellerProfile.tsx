@@ -86,7 +86,7 @@ const SellerProfile = () => {
     if (!file || !user) return;
     setAvatarUploading(true);
     const ext = file.name.split('.').pop();
-    const path = `avatars/${user.id}.${ext}`;
+    const path = `${user.id}/avatars/profile.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from('store-assets')
       .upload(path, file, { upsert: true });
