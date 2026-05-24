@@ -91,6 +91,7 @@ const navTree: NavEntry[] = [
       { label: 'Services', icon: HeartHandshake, path: '/services' },
       { label: 'Doctors / Staff', icon: Stethoscope, path: '/providers' },
       { label: 'Family Plans', icon: Users, path: '/family-plans' },
+      { label: 'Payouts', icon: WalletIcon, path: '/providers/payouts' },
     ],
   },
   {
@@ -173,7 +174,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   const filteredNavTree = useMemo<NavEntry[]>(() => {
     const fnbPaths = new Set(['/menu', '/kitchen', '/settings/qr']);
-    const servicePaths = new Set(['/appointments', '/services', '/providers', '/family-plans']);
+    const servicePaths = new Set(['/appointments', '/services', '/providers', '/providers/payouts', '/family-plans']);
     return navTree
       .map((entry) => {
         if (!isGroup(entry)) return entry;
