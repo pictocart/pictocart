@@ -43,7 +43,8 @@ const SECTION_LABEL: Record<string, string> = {
   checkout_stepper: "Checkout stepper", journal_strip: "Journal strip",
   journal_list: "Journal list", account_panel: "Account panel",
   contact_form: "Contact form", product_detail: "Product detail",
-};
+  collections_grid: "Collections grid", collection_detail: "Collection detail",
+
 
 const TEXT_KEYS = ["title", "sub", "kicker", "cta", "cta_secondary", "body", "email", "phone"];
 const ICON_OPTIONS = ["truck", "shield", "refresh", "headphones", "lock", "tag", "gift", "sparkles"];
