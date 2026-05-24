@@ -127,10 +127,21 @@ export default function CustomiserV2() {
   }, [overrides, page]);
 
   const isMaster = activeThemeId?.startsWith("theme-");
-  const sections: any[] = useMemo(
-    () => (manifest as any)?.pages?.[page]?.sections ?? [],
-    [manifest, page],
-  );
+  const sections: any[] = useMemo(() => {
+    const manifestSections = (manifest as any)?.pages?.[page]?.sections ?? [];
+    if (manifestSections.length > 0) return manifestSections;
+    // Mirror MasterThemeRenderer's synthesized pages so the seller can edit them.
+    if (page === "collections") {
+      return [
+        { type: "page_title", props: { title: "Collections" } },
+        { type: "collections_grid", props: {} },
+      ];
+    }
+    if (page === "collection_detail") {
+      return [{ type: "collection_detail", props: {} }];
+    }
+    return [];
+  }, [manifest, page]);
   const sectionOverrides: Record<string, any> =
     overrides?.pages?.[page]?.sections ?? {};
 
