@@ -44,6 +44,8 @@ const SECTION_LABEL: Record<string, string> = {
   journal_list: "Journal list", account_panel: "Account panel",
   contact_form: "Contact form", product_detail: "Product detail",
   collections_grid: "Collections grid", collection_detail: "Collection detail",
+};
+
 
 
 const TEXT_KEYS = ["title", "sub", "kicker", "cta", "cta_secondary", "body", "email", "phone"];
