@@ -114,12 +114,36 @@ Page guidance:
     }
 
     const data = await res.json();
-    const policies = JSON.parse(data.choices[0].message.content);
+    const raw: string = data?.choices?.[0]?.message?.content ?? "";
+    if (!raw) {
+      console.error("Empty AI response", JSON.stringify(data));
+      throw new Error("AI returned an empty response. Please retry.");
+    }
+
+    // Strip markdown code fences (```json ... ```) if present
+    let cleaned = raw.trim();
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    }
+    // Extract first {...} block as a fallback
+    if (!cleaned.startsWith("{")) {
+      const m = cleaned.match(/\{[\s\S]*\}/);
+      if (m) cleaned = m[0];
+    }
+
+    let policies: Record<string, string>;
+    try {
+      policies = JSON.parse(cleaned);
+    } catch (e) {
+      console.error("JSON parse failed. Raw content:", raw.slice(0, 500));
+      throw new Error("AI returned malformed JSON. Please try again.");
+    }
 
     return new Response(JSON.stringify({ policies, generated_at: new Date().toISOString() }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("generate-store-policies error:", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
