@@ -278,6 +278,7 @@ const AppRoutes = () => {
             <Route path="/store/:slug/menu/t/:tableToken" element={<StorefrontMenu forceMode="dine_in" />} />
             <Route path="/store/:slug/menu/takeaway" element={<StorefrontMenu forceMode="takeaway" />} />
             <Route path="/store/:slug/menu/delivery" element={<StorefrontMenu forceMode="delivery" />} />
+            <Route path="/store/:slug/book" element={<StorefrontBooking />} />
             <Route path="/track/:code" element={<OrderTracking />} />
             <Route path="/menu" element={<ProtectedRoute><DashboardLayout><Menu /></DashboardLayout></ProtectedRoute>} />
             <Route path="/kitchen" element={<ProtectedRoute><DashboardLayout><Kitchen /></DashboardLayout></ProtectedRoute>} />
