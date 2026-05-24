@@ -11,10 +11,61 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, Play, RefreshCw, SkipForward, Send, ExternalLink,
-  Sparkles, Search, CalendarPlus, Save, Wand2, Plus,
+  Sparkles, Search, CalendarPlus, Save, Wand2, Plus, Store, Briefcase, Filter, X,
 } from "lucide-react";
+
+// ── Industry taxonomy ────────────────────────────────────────────────────────
+// Map vertical → (kind, label, category-group). Verticals that ship services
+// are marked "service"; everything else is "sale". Category groups bundle
+// related professions/merchant types under a friendly umbrella.
+type Kind = "sale" | "service";
+const VERTICAL_META: Record<string, { kind: Kind; label: string; group: string }> = {
+  services:    { kind: "service", label: "Professional Services", group: "Healthcare, Beauty & Home Pros" },
+  food:        { kind: "sale",    label: "Food & Beverage",       group: "Cafés, Restaurants & Packaged Food" },
+  fashion:     { kind: "sale",    label: "Fashion & Apparel",     group: "Clothing, Footwear & Accessories" },
+  jewellery:   { kind: "sale",    label: "Jewellery",             group: "Fine, Designer & Fashion Jewellery" },
+  beauty:      { kind: "sale",    label: "Beauty & Personal Care",group: "Skincare, Haircare & Cosmetics" },
+  health:      { kind: "sale",    label: "Health & Wellness",     group: "Ayurveda, Supplements & Devices" },
+  home:        { kind: "sale",    label: "Home & Living",         group: "Décor, Furniture & Kitchenware" },
+  electronics: { kind: "sale",    label: "Electronics & Gadgets", group: "Mobiles, Audio & Smart Home" },
+  kids:        { kind: "sale",    label: "Kids & Baby",           group: "Toys, Clothing & Essentials" },
+  books:       { kind: "sale",    label: "Books & Stationery",    group: "Reading, Art & Office" },
+  sports:      { kind: "sale",    label: "Sports & Fitness",      group: "Athleisure, Gear & Outdoor" },
+  automotive:  { kind: "sale",    label: "Automotive",            group: "Accessories, Care & EV" },
+  pets:        { kind: "sale",    label: "Pet Care",              group: "Food, Toys & Grooming" },
+  handicraft:  { kind: "sale",    label: "Handicrafts & Art",     group: "Handmade, Folk & Heritage" },
+  gifts:       { kind: "sale",    label: "Gifting & Festive",     group: "Festivals, Weddings & Corporate" },
+  religious:   { kind: "sale",    label: "Religious & Spiritual", group: "Pooja, Idols & Spiritual Goods" },
+  agri:        { kind: "sale",    label: "Agriculture & Farming", group: "Seeds, Tools & Dairy" },
+  b2b:         { kind: "sale",    label: "B2B & Industrial",      group: "Packaging, Safety & Office" },
+  hobby:       { kind: "sale",    label: "Hobby & Collectibles",  group: "Music, Games & Crafts" },
+  general:     { kind: "sale",    label: "General Store",         group: "Mixed catalogue" },
+};
+
+// Search synonyms — typing "nursing" also matches doctor/clinic/hospital themes.
+const SYNONYMS: Record<string, string[]> = {
+  doctor: ["clinic", "nursing", "hospital", "physician", "medical", "health", "care"],
+  nursing: ["doctor", "clinic", "hospital", "medical", "care", "patient"],
+  clinic: ["doctor", "nursing", "hospital", "medical"],
+  dentist: ["dental", "doctor", "clinic"],
+  salon: ["barber", "stylist", "hairdresser", "beauty", "parlour", "spa"],
+  barber: ["salon", "stylist", "hairdresser", "shave"],
+  spa: ["wellness", "massage", "salon", "serenity", "luxury"],
+  cafe: ["coffee", "restaurant", "bakery", "bistro"],
+  restaurant: ["cafe", "dining", "kitchen", "bistro", "menu"],
+  bakery: ["cake", "patisserie", "cafe", "dessert"],
+  jewellery: ["jewelry", "gold", "diamond", "ornament"],
+  boutique: ["fashion", "apparel", "designer"],
+};
+function expandQuery(q: string): string[] {
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const out = new Set<string>(tokens);
+  tokens.forEach((t) => (SYNONYMS[t] ?? []).forEach((s) => out.add(s)));
+  return [...out];
+}
 
 type Slot = { id: string; slot_date: string; category: string | null; status: string; theme_brief: any };
 type Version = { id: string; theme_id: string; version: number; files_manifest: any; created_at: string };
