@@ -47,10 +47,19 @@ async function getCroppedImg(imageSrc: string, crop: Area): Promise<Blob> {
   });
 }
 
+const ASPECT_OPTIONS: Array<{ label: string; value: number | undefined }> = [
+  { label: 'Free', value: undefined },
+  { label: 'Square 1:1', value: 1 },
+  { label: 'Wide 3:1', value: 3 },
+  { label: 'Banner 4:1', value: 4 },
+  { label: 'Landscape 16:9', value: 16 / 9 },
+];
+
 const LogoUploader = ({ logoUrl, logoName, onSave }: Props) => {
   const [rawImage, setRawImage] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [aspect, setAspect] = useState<number | undefined>(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [uploading, setUploading] = useState(false);
   const persistedFileName = useMemo(() => logoName || getFileNameFromUrl(logoUrl), [logoName, logoUrl]);
