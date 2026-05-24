@@ -52,7 +52,7 @@ export default function Providers() {
     <div className="space-y-6">
       <PageHeader
         title={isHealth ? 'Doctors & Staff' : 'Stylists & Staff'}
-        description={isHealth ? 'Add the doctors who consult at your clinic' : 'Add the stylists who work at your salon'}
+        subtitle={isHealth ? 'Add the doctors who consult at your clinic' : 'Add the stylists who work at your salon'}
         actions={<Button onClick={() => { setForm(empty); setSpecInput(''); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add</Button>}
       />
 
