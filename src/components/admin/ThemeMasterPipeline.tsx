@@ -91,7 +91,10 @@ export default function ThemeMasterPipeline() {
   const [briefs, setBriefs] = useState<Array<{ vertical: string; subcategory: string; display_name: string }>>([]);
   const [layouts, setLayouts] = useState<Array<{ slug: string; name: string; description: string }>>([]);
   const [adhocLayout, setAdhocLayout] = useState<string>("auto");
+  const [adhocKind, setAdhocKind] = useState<Kind>("sale");
   const [searchQuery, setSearchQuery] = useState("");
+  const [libQuery, setLibQuery] = useState("");
+  const [libKind, setLibKind] = useState<"all" | Kind>("all");
   const pollRef = useRef<number | null>(null);
 
   async function loadAll() {
