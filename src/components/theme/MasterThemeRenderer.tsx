@@ -659,8 +659,8 @@ function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overl
                 {s.sub && <p className="mt-4 text-base md:text-lg opacity-90 max-w-xl">{s.sub}</p>}
                 {(s.cta || s.cta_secondary) && (
                   <div className="mt-7 flex gap-3 flex-wrap" style={{ justifyContent: (contentAlign?.endsWith("-center") || !contentAlign) ? "center" : (contentAlign?.endsWith("-right") ? "flex-end" : "flex-start") }}>
-                    {s.cta && <a href={s.cta_href || shopHref} className="px-7 py-3 text-sm font-medium inline-block" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{s.cta}</a>}
-                    {s.cta_secondary && <a href={s.cta_secondary_href || shopHref} className="px-7 py-3 text-sm font-medium border inline-block" style={{ borderColor: "rgba(255,255,255,0.6)", color: "#fff", borderRadius: "var(--r)" }}>{s.cta_secondary}</a>}
+                    {s.cta && <HeroBtn kind="primary" label={s.cta} href={s.cta_href || shopHref} cfg={buttons?.primary} />}
+                    {s.cta_secondary && <HeroBtn kind="secondary" label={s.cta_secondary} href={s.cta_secondary_href || shopHref} cfg={buttons?.secondary} />}
                   </div>
                 )}
               </div>
