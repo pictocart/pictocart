@@ -683,6 +683,23 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
   const items = merged.items ?? [];
   const updateItems = (next: any[]) => onUpdate(idx, "items", next);
 
+  // Hero gets its own rich inspector (slider/video/overlay/height/etc.)
+  if (section?.type === "hero") {
+    return (
+      <HeroInspector
+        idx={idx}
+        section={section}
+        sectionOv={sectionOv}
+        onUpdate={onUpdate}
+        onReset={onReset}
+        onUploadImage={onUploadImage}
+        onColorChange={onColorChange}
+        onResetColors={onResetColors}
+        previewUrl={previewUrl}
+      />
+    );
+  }
+
   return (
     <div className="p-4 space-y-4">
       {hasImage && (
