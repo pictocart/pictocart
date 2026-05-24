@@ -124,7 +124,7 @@ export default function StorefrontBooking() {
   const colors = theme.colors;
 
   return (
-    <StorefrontLayout store={store} theme={theme}>
+    <StorefrontLayout store={store}>
       <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
         <div className="flex items-center gap-2 mb-4">
           <Link to={`/store/${slug}`} className="text-sm text-muted-foreground hover:underline">← Back to store</Link>
