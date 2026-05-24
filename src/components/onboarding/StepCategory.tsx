@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Shirt, UtensilsCrossed, Cpu, Gem, Sparkles, ShoppingBasket, MoreHorizontal, Receipt } from 'lucide-react';
+import { Shirt, UtensilsCrossed, Cpu, Gem, Sparkles, ShoppingBasket, MoreHorizontal, Receipt, Stethoscope, Scissors } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { OnboardingData } from '@/pages/Onboarding';
@@ -13,6 +13,8 @@ interface Props {
 const categories = [
   { id: 'fashion', label: 'Fashion', desc: 'Clothing, accessories & more', icon: Shirt, gradient: 'from-pink-500/10 to-pink-500/5', iconColor: 'text-pink-600', ring: 'ring-pink-500/30' },
   { id: 'food', label: 'Food & Beverages', desc: 'Snacks, drinks & gourmet', icon: UtensilsCrossed, gradient: 'from-amber-500/10 to-amber-500/5', iconColor: 'text-amber-600', ring: 'ring-amber-500/30' },
+  { id: 'healthcare', label: 'Doctor / Clinic', desc: 'Appointments & prescriptions', icon: Stethoscope, gradient: 'from-teal-500/10 to-teal-500/5', iconColor: 'text-teal-600', ring: 'ring-teal-500/30' },
+  { id: 'beauty_services', label: 'Salon / Stylist', desc: 'Bookings & services', icon: Scissors, gradient: 'from-fuchsia-500/10 to-fuchsia-500/5', iconColor: 'text-fuchsia-600', ring: 'ring-fuchsia-500/30' },
   { id: 'electronics', label: 'Electronics', desc: 'Gadgets, devices & tech', icon: Cpu, gradient: 'from-blue-500/10 to-blue-500/5', iconColor: 'text-blue-600', ring: 'ring-blue-500/30' },
   { id: 'handmade', label: 'Handmade & Craft', desc: 'Artisan products & DIY', icon: Gem, gradient: 'from-purple-500/10 to-purple-500/5', iconColor: 'text-purple-600', ring: 'ring-purple-500/30' },
   { id: 'beauty', label: 'Beauty & Wellness', desc: 'Skincare, makeup & health', icon: Sparkles, gradient: 'from-rose-500/10 to-rose-500/5', iconColor: 'text-rose-600', ring: 'ring-rose-500/30' },

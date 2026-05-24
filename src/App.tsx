@@ -111,6 +111,11 @@ const AccountsInventory = lazy(() => import("@/pages/accounts/InventoryLedger"))
 const AccountsPnl = lazy(() => import("@/pages/accounts/ProfitLossReport"));
 const AccountsCashBook = lazy(() => import("@/pages/accounts/CashBook"));
 const AccountsGst = lazy(() => import("@/pages/accounts/GstSummary"));
+const Providers = lazy(() => import("@/pages/Providers"));
+const Services = lazy(() => import("@/pages/Services"));
+const Appointments = lazy(() => import("@/pages/Appointments"));
+const FamilyPlans = lazy(() => import("@/pages/FamilyPlans"));
+
 
 
 const queryClient = new QueryClient();
@@ -212,6 +217,10 @@ const AppRoutes = () => {
               <Route path="/google-reviews" element={<GoogleReviewsConnect />} />
               <Route path="/menu" element={<Menu />} />
               <Route path="/kitchen" element={<Kitchen />} />
+              <Route path="/providers" element={<Providers />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/appointments" element={<Appointments />} />
+              <Route path="/family-plans" element={<FamilyPlans />} />
             </Route>
 
             <Route path="/store-design" element={<Navigate to="/customise" replace />} />

@@ -421,6 +421,130 @@ export type Database = {
         }
         Relationships: []
       }
+      appointments: {
+        Row: {
+          address: Json | null
+          after_photos: string[] | null
+          appointment_number: string | null
+          before_photos: string[] | null
+          created_at: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_user_id: string | null
+          family_group_id: string | null
+          gst: number | null
+          id: string
+          mode: Database["public"]["Enums"]["appointment_mode"]
+          notes_customer: string | null
+          notes_internal: string | null
+          order_id: string | null
+          payment_mode: string | null
+          payment_status: string | null
+          price: number | null
+          provider_id: string | null
+          reminder_sent_at: string | null
+          service_id: string | null
+          service_name_snapshot: string | null
+          slot_end: string
+          slot_start: string
+          special_request: string | null
+          status: Database["public"]["Enums"]["appointment_status"]
+          store_id: string
+          total: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: Json | null
+          after_photos?: string[] | null
+          appointment_number?: string | null
+          before_photos?: string[] | null
+          created_at?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_user_id?: string | null
+          family_group_id?: string | null
+          gst?: number | null
+          id?: string
+          mode?: Database["public"]["Enums"]["appointment_mode"]
+          notes_customer?: string | null
+          notes_internal?: string | null
+          order_id?: string | null
+          payment_mode?: string | null
+          payment_status?: string | null
+          price?: number | null
+          provider_id?: string | null
+          reminder_sent_at?: string | null
+          service_id?: string | null
+          service_name_snapshot?: string | null
+          slot_end: string
+          slot_start: string
+          special_request?: string | null
+          status?: Database["public"]["Enums"]["appointment_status"]
+          store_id: string
+          total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: Json | null
+          after_photos?: string[] | null
+          appointment_number?: string | null
+          before_photos?: string[] | null
+          created_at?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_user_id?: string | null
+          family_group_id?: string | null
+          gst?: number | null
+          id?: string
+          mode?: Database["public"]["Enums"]["appointment_mode"]
+          notes_customer?: string | null
+          notes_internal?: string | null
+          order_id?: string | null
+          payment_mode?: string | null
+          payment_status?: string | null
+          price?: number | null
+          provider_id?: string | null
+          reminder_sent_at?: string | null
+          service_id?: string | null
+          service_name_snapshot?: string | null
+          slot_end?: string
+          slot_start?: string
+          special_request?: string | null
+          status?: Database["public"]["Enums"]["appointment_status"]
+          store_id?: string
+          total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           body: string | null
@@ -1197,6 +1321,188 @@ export type Database = {
           },
           {
             foreignKeyName: "expenses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_groups: {
+        Row: {
+          created_at: string
+          family_name: string
+          free_visits_used: number | null
+          head_customer_id: string | null
+          head_user_id: string | null
+          id: string
+          notes: string | null
+          plan_id: string | null
+          status: Database["public"]["Enums"]["family_plan_status"]
+          store_id: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          family_name: string
+          free_visits_used?: number | null
+          head_customer_id?: string | null
+          head_user_id?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["family_plan_status"]
+          store_id: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          family_name?: string
+          free_visits_used?: number | null
+          head_customer_id?: string | null
+          head_user_id?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["family_plan_status"]
+          store_id?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_groups_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "family_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_groups_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_members: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          dob: string | null
+          gender: string | null
+          group_id: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          relation: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          dob?: string | null
+          gender?: string | null
+          group_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          relation?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          dob?: string | null
+          gender?: string | null
+          group_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          relation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_pct: number | null
+          free_visits_per_year: number | null
+          home_visit_included: boolean | null
+          id: string
+          included_service_ids: string[] | null
+          is_active: boolean | null
+          max_families: number | null
+          max_members_per_family: number | null
+          monthly_fee: number | null
+          name: string
+          provider_id: string | null
+          store_id: string
+          updated_at: string
+          yearly_fee: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_pct?: number | null
+          free_visits_per_year?: number | null
+          home_visit_included?: boolean | null
+          id?: string
+          included_service_ids?: string[] | null
+          is_active?: boolean | null
+          max_families?: number | null
+          max_members_per_family?: number | null
+          monthly_fee?: number | null
+          name: string
+          provider_id?: string | null
+          store_id: string
+          updated_at?: string
+          yearly_fee?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_pct?: number | null
+          free_visits_per_year?: number | null
+          home_visit_included?: boolean | null
+          id?: string
+          included_service_ids?: string[] | null
+          is_active?: boolean | null
+          max_families?: number | null
+          max_members_per_family?: number | null
+          monthly_fee?: number | null
+          name?: string
+          provider_id?: string | null
+          store_id?: string
+          updated_at?: string
+          yearly_fee?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_plans_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_plans_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -2354,6 +2660,66 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_schedules: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          id: string
+          is_off: boolean | null
+          notes: string | null
+          override_date: string | null
+          provider_id: string
+          slot_buffer_min: number | null
+          start_time: string | null
+          store_id: string
+          updated_at: string
+          weekday: number | null
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          is_off?: boolean | null
+          notes?: string | null
+          override_date?: string | null
+          provider_id: string
+          slot_buffer_min?: number | null
+          start_time?: string | null
+          store_id: string
+          updated_at?: string
+          weekday?: number | null
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          is_off?: boolean | null
+          notes?: string | null
+          override_date?: string | null
+          provider_id?: string
+          slot_buffer_min?: number | null
+          start_time?: string | null
+          store_id?: string
+          updated_at?: string
+          weekday?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_schedules_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_schedules_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provision_job_logs: {
         Row: {
           created_at: string
@@ -2836,6 +3202,157 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "seller_push_tokens_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_providers: {
+        Row: {
+          accepts_home_visit: boolean | null
+          accepts_teleconsult: boolean | null
+          bio: string | null
+          commission_pct: number | null
+          created_at: string
+          experience_years: number | null
+          gender: string | null
+          id: string
+          is_active: boolean | null
+          languages: string[] | null
+          max_families_cap: number | null
+          name: string
+          photo_url: string | null
+          registration_number: string | null
+          role_label: string | null
+          sort_order: number | null
+          specialization: string[] | null
+          store_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepts_home_visit?: boolean | null
+          accepts_teleconsult?: boolean | null
+          bio?: string | null
+          commission_pct?: number | null
+          created_at?: string
+          experience_years?: number | null
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          languages?: string[] | null
+          max_families_cap?: number | null
+          name: string
+          photo_url?: string | null
+          registration_number?: string | null
+          role_label?: string | null
+          sort_order?: number | null
+          specialization?: string[] | null
+          store_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepts_home_visit?: boolean | null
+          accepts_teleconsult?: boolean | null
+          bio?: string | null
+          commission_pct?: number | null
+          created_at?: string
+          experience_years?: number | null
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          languages?: string[] | null
+          max_families_cap?: number | null
+          name?: string
+          photo_url?: string | null
+          registration_number?: string | null
+          role_label?: string | null
+          sort_order?: number | null
+          specialization?: string[] | null
+          store_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_providers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          allowed_provider_ids: string[] | null
+          category: string | null
+          created_at: string
+          deposit_pct: number | null
+          description: string | null
+          duration_min: number
+          gst_pct: number | null
+          home_visit_addon: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          max_parallel: number | null
+          name: string
+          price: number
+          requires_room: boolean | null
+          sort_order: number | null
+          store_id: string
+          teleconsult_enabled: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          allowed_provider_ids?: string[] | null
+          category?: string | null
+          created_at?: string
+          deposit_pct?: number | null
+          description?: string | null
+          duration_min?: number
+          gst_pct?: number | null
+          home_visit_addon?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          max_parallel?: number | null
+          name: string
+          price?: number
+          requires_room?: boolean | null
+          sort_order?: number | null
+          store_id: string
+          teleconsult_enabled?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          allowed_provider_ids?: string[] | null
+          category?: string | null
+          created_at?: string
+          deposit_pct?: number | null
+          description?: string | null
+          duration_min?: number
+          gst_pct?: number | null
+          home_visit_addon?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          max_parallel?: number | null
+          name?: string
+          price?: number
+          requires_room?: boolean | null
+          sort_order?: number | null
+          store_id?: string
+          teleconsult_enabled?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -4427,7 +4944,23 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "seller" | "customer" | "freelancer"
+      app_role:
+        | "admin"
+        | "seller"
+        | "customer"
+        | "freelancer"
+        | "provider"
+        | "front_desk"
+        | "pharmacist"
+      appointment_mode: "in_store" | "home_visit" | "teleconsult"
+      appointment_status:
+        | "pending"
+        | "confirmed"
+        | "en_route"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "no_show"
       bill_payment_status: "paid" | "partial" | "unpaid"
       commission_invoice_status: "pending" | "paid" | "overdue" | "waived"
       commission_status: "accrued" | "invoiced" | "waived"
@@ -4439,6 +4972,7 @@ export type Database = {
         | "loyalty"
         | "referral"
       credit_txn_type: "debit" | "credit" | "bonus" | "refund" | "grant"
+      family_plan_status: "active" | "expired" | "cancelled" | "waitlist"
       fulfillment_mode: "dine_in" | "takeaway" | "delivery"
       inv_movement_type:
         | "opening"
@@ -4599,7 +5133,25 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "seller", "customer", "freelancer"],
+      app_role: [
+        "admin",
+        "seller",
+        "customer",
+        "freelancer",
+        "provider",
+        "front_desk",
+        "pharmacist",
+      ],
+      appointment_mode: ["in_store", "home_visit", "teleconsult"],
+      appointment_status: [
+        "pending",
+        "confirmed",
+        "en_route",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "no_show",
+      ],
       bill_payment_status: ["paid", "partial", "unpaid"],
       commission_invoice_status: ["pending", "paid", "overdue", "waived"],
       commission_status: ["accrued", "invoiced", "waived"],
@@ -4612,6 +5164,7 @@ export const Constants = {
         "referral",
       ],
       credit_txn_type: ["debit", "credit", "bonus", "refund", "grant"],
+      family_plan_status: ["active", "expired", "cancelled", "waitlist"],
       fulfillment_mode: ["dine_in", "takeaway", "delivery"],
       inv_movement_type: [
         "opening",
