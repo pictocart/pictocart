@@ -492,7 +492,8 @@ export default function ThemeMasterPipeline() {
                 );
               })}
             </div>
-          )}
+            );
+          })()}
         </TabsContent>
 
         {/* CALENDAR */}
