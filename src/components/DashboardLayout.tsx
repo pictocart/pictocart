@@ -34,6 +34,10 @@ import {
   ChefHat,
   Receipt,
   Wallet as WalletIcon,
+  CalendarClock,
+  Stethoscope,
+  Scissors,
+  HeartHandshake,
 } from 'lucide-react';
 
 
