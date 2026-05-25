@@ -136,11 +136,13 @@ const Customise = () => {
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                <Crown className="h-3.5 w-3.5" /> Premium theme — preview mode
+                <Crown className="h-3.5 w-3.5" /> {trial.expired ? 'Free trial ended' : 'Premium theme — preview mode'}
               </div>
               <h3 className="text-lg font-bold mt-1">{themeMeta.name}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Your store is <span className="font-medium text-foreground">already live</span> on this design. Pay <span className="font-bold text-foreground">₹{themeMeta.price}</span> to unlock editing, save customisations, and get a 7-day refund window.
+                {trial.expired
+                  ? <>Your 14-day free trial has ended. Pay <span className="font-bold text-foreground">₹{themeMeta.price}</span> to restore editing &amp; keep this design live — or switch to a free theme.</>
+                  : <>Your store is <span className="font-medium text-foreground">already live</span> on this design. Pay <span className="font-bold text-foreground">₹{themeMeta.price}</span> to unlock editing, save customisations, and get a 7-day refund window.</>}
               </p>
             </div>
             <Button size="lg" onClick={handleUnlock} disabled={paying} className="gap-2 shadow-lg shadow-amber-500/20">
