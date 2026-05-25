@@ -113,6 +113,39 @@ export default function CustomiserV2() {
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
 
+  // Resizable side panels — persist widths per user across sessions.
+  const [leftWidth, setLeftWidth] = useState<number>(() => {
+    const v = Number(localStorage.getItem("customiser_left_w"));
+    return v >= 160 && v <= 480 ? v : 176;
+  });
+  const [rightWidth, setRightWidth] = useState<number>(() => {
+    const v = Number(localStorage.getItem("customiser_right_w"));
+    return v >= 260 && v <= 640 ? v : 360;
+  });
+  useEffect(() => { localStorage.setItem("customiser_left_w", String(leftWidth)); }, [leftWidth]);
+  useEffect(() => { localStorage.setItem("customiser_right_w", String(rightWidth)); }, [rightWidth]);
+
+  const startDrag = (side: "left" | "right") => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = side === "left" ? leftWidth : rightWidth;
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      if (side === "left") setLeftWidth(Math.max(160, Math.min(480, startW + delta)));
+      else setRightWidth(Math.max(260, Math.min(640, startW - delta)));
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   useEffect(() => {
     if (!store?.id || hydrated === store.id) return;
     const s = (store.settings as any) || {};
@@ -394,7 +427,7 @@ export default function CustomiserV2() {
 
       <div className="flex flex-1 min-h-0">
         {/* Left: Pages + Sections */}
-        <aside className="w-44 border-r flex flex-col">
+        <aside className="border-r flex flex-col shrink-0" style={{ width: leftWidth }}>
           <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">Pages</div>
           <ScrollArea className="flex-1">
             <div className="px-2 pb-3 space-y-0.5">
@@ -476,6 +509,15 @@ export default function CustomiserV2() {
           </ScrollArea>
         </aside>
 
+        {/* Drag handle — left panel */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onMouseDown={startDrag("left")}
+          className="w-1 cursor-col-resize bg-border/40 hover:bg-primary/60 active:bg-primary transition-colors shrink-0"
+          title="Drag to resize"
+        />
+
         {/* Middle: Live preview */}
         <main className="flex-1 bg-muted/40 flex items-center justify-center overflow-hidden p-4">
           <div
@@ -490,8 +532,17 @@ export default function CustomiserV2() {
           </div>
         </main>
 
+        {/* Drag handle — right panel */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onMouseDown={startDrag("right")}
+          className="w-1 cursor-col-resize bg-border/40 hover:bg-primary/60 active:bg-primary transition-colors shrink-0"
+          title="Drag to resize"
+        />
+
         {/* Right: Inspector */}
-        <aside className="w-80 border-l flex flex-col">
+        <aside className="border-l flex flex-col shrink-0" style={{ width: rightWidth }}>
           <InspectorHeader selected={selected} headerOv={headerOv} footerOv={footerOv} sections={sections} sectionOverrides={sectionOverrides}
             onResetHeader={resetHeader} onResetFooter={resetFooter} onResetSection={resetSection} />
           <ScrollArea className="flex-1">
