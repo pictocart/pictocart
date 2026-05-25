@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useStore } from "@/hooks/useStore";
 import { useThemeManifest } from "@/hooks/useThemeManifest";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,8 +17,10 @@ import { toast } from "sonner";
 import {
   Loader2, RotateCcw, Save, Upload, Trash2, Image as ImageIcon,
   Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown,
-  PanelTop, PanelBottom, Palette,
+  PanelTop, PanelBottom, Palette, Megaphone,
 } from "lucide-react";
+import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from "@/components/store-design/PromoTickerEditor";
+import type { PromoTickerConfig } from "@/components/storefront/PromoTicker";
 
 const PAGES = [
   { id: "home", label: "Home" },
