@@ -12,12 +12,14 @@ import BottomNav from './BottomNav';
 import SearchOverlay from './SearchOverlay';
 import StorefrontFooter from './StorefrontFooter';
 import StorefrontAssistant from './StorefrontAssistant';
+import PremiumTrialTicker from './PremiumTrialTicker';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
 
 interface Props {
   children: ReactNode;
   store: {
     id?: string;
+    user_id?: string | null;
     name: string;
     slug: string;
     logo_url?: string | null;
