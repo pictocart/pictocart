@@ -50,47 +50,61 @@ const PromoTicker = ({ storeSlug, config }: Props) => {
         : `/store/${storeSlug}/${config.link_url}`)
     : null;
 
+  const isExternal = !!linkHref && linkHref.startsWith('http');
+
+  const inner = (
+    <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 py-1.5">
+      <Megaphone className="h-3.5 w-3.5 shrink-0 opacity-80" />
+      <div className="flex-1 overflow-hidden">
+        <div
+          className="flex whitespace-nowrap will-change-transform"
+          style={{ animation: `pt-marquee ${speed}s linear infinite`, gap: '3rem' }}
+        >
+          {items.map((m, i) => (
+            <span key={i} className="inline-flex items-center gap-2">
+              <span className="opacity-60">•</span>
+              <span>{m}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      {linkHref && config?.link_label && (
+        <span className="shrink-0 underline underline-offset-2 text-[11px] sm:text-xs font-semibold">
+          {config.link_label} →
+        </span>
+      )}
+      {config?.dismissible && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setHidden(true);
+            try { sessionStorage.setItem(dismissKey, '1'); } catch {}
+          }}
+          className="shrink-0 p-0.5 rounded hover:bg-white/10 transition relative z-10"
+          aria-label="Dismiss"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="relative overflow-hidden text-xs sm:text-sm font-medium" style={{ backgroundColor: bg, color: fg }}>
-      <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 py-1.5">
-        <Megaphone className="h-3.5 w-3.5 shrink-0 opacity-80" />
-        <div className="flex-1 overflow-hidden">
-          <div
-            className="flex whitespace-nowrap will-change-transform"
-            style={{ animation: `pt-marquee ${speed}s linear infinite`, gap: '3rem' }}
-          >
-            {items.map((m, i) => (
-              <span key={i} className="inline-flex items-center gap-2">
-                <span className="opacity-60">•</span>
-                <span>{m}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-        {linkHref && config?.link_label && (
-          linkHref.startsWith('http') ? (
-            <a href={linkHref} target="_blank" rel="noopener noreferrer" className="shrink-0 underline underline-offset-2 hover:opacity-80 text-[11px] sm:text-xs font-semibold">
-              {config.link_label}
-            </a>
-          ) : (
-            <Link to={linkHref} className="shrink-0 underline underline-offset-2 hover:opacity-80 text-[11px] sm:text-xs font-semibold">
-              {config.link_label}
-            </Link>
-          )
-        )}
-        {config?.dismissible && (
-          <button
-            onClick={() => {
-              setHidden(true);
-              try { sessionStorage.setItem(dismissKey, '1'); } catch {}
-            }}
-            className="shrink-0 p-0.5 rounded hover:bg-white/10 transition"
-            aria-label="Dismiss"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
+      {linkHref ? (
+        isExternal ? (
+          <a href={linkHref} target="_blank" rel="noopener noreferrer" className="block hover:opacity-95 cursor-pointer">
+            {inner}
+          </a>
+        ) : (
+          <Link to={linkHref} className="block hover:opacity-95 cursor-pointer">
+            {inner}
+          </Link>
+        )
+      ) : (
+        inner
+      )}
       <style>{`
         @keyframes pt-marquee {
           0% { transform: translateX(0); }
