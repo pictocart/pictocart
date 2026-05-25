@@ -509,6 +509,15 @@ export default function CustomiserV2() {
           </ScrollArea>
         </aside>
 
+        {/* Drag handle — left panel */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onMouseDown={startDrag("left")}
+          className="w-1 cursor-col-resize bg-border/40 hover:bg-primary/60 active:bg-primary transition-colors shrink-0"
+          title="Drag to resize"
+        />
+
         {/* Middle: Live preview */}
         <main className="flex-1 bg-muted/40 flex items-center justify-center overflow-hidden p-4">
           <div
