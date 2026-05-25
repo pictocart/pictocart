@@ -285,6 +285,21 @@ Deno.serve(async (req) => {
         },
       };
 
+      // Resolve layout archetype for service themes (mirrors product branch)
+      let layoutSlug: string | null = brief.layout_slug ?? null;
+      let archetype: any = null;
+      if (layoutSlug) {
+        const { data } = await supabase.from("theme_layout_archetypes").select("*").eq("slug", layoutSlug).eq("is_active", true).maybeSingle();
+        archetype = data;
+      }
+      if (!archetype) {
+        const { data } = await supabase.from("theme_layout_archetypes").select("*").eq("is_active", true).limit(1).maybeSingle();
+        archetype = data;
+        layoutSlug = archetype?.slug ?? null;
+      }
+
+
+
       const homeSections = [
         { type: "hero", props: { ...dna.hero, image: heroUrl, style: "fullscreen_image" } },
         { type: "usp_strip", props: { items: dna.usps } },
