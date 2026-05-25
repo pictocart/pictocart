@@ -18,6 +18,8 @@ import WishlistButton from '@/components/storefront/WishlistButton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { THEMES, ThemeRenderer } from '@/themes';
 import MasterThemeRenderer from '@/components/theme/MasterThemeRenderer';
+import PromoTicker from '@/components/storefront/PromoTicker';
+import PremiumTrialTicker from '@/components/storefront/PremiumTrialTicker';
 import { useThemeManifest } from '@/hooks/useThemeManifest';
 import { useFulfillment } from '@/hooks/useFulfillment';
 
@@ -567,6 +569,10 @@ const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }:
         ogImage={seo.og_image || store.banner_url || undefined}
         url={`${window.location.origin}/store/${slug}${page !== 'home' ? '/' + page : ''}`}
       />
+      {/* Customer-facing promotional ticker — also visible on master-theme storefronts */}
+      <PromoTicker storeSlug={slug} config={(store.settings as any)?.promo_ticker} />
+      {/* Owner-only premium-theme free-trial countdown */}
+      <PremiumTrialTicker storeId={store.id} storeUserId={(store as any).user_id} settings={store.settings} />
       <MasterThemeRenderer
         manifest={manifest}
         page={page}

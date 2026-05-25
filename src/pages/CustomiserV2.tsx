@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useStore } from "@/hooks/useStore";
 import { useThemeManifest } from "@/hooks/useThemeManifest";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,8 +17,10 @@ import { toast } from "sonner";
 import {
   Loader2, RotateCcw, Save, Upload, Trash2, Image as ImageIcon,
   Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown,
-  PanelTop, PanelBottom, Palette,
+  PanelTop, PanelBottom, Palette, Megaphone,
 } from "lucide-react";
+import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from "@/components/store-design/PromoTickerEditor";
+import type { PromoTickerConfig } from "@/components/storefront/PromoTicker";
 
 const PAGES = [
   { id: "home", label: "Home" },
@@ -67,6 +70,7 @@ type Selection =
   | { kind: "section"; index: number }
   | { kind: "header" }
   | { kind: "footer" }
+  | { kind: "ticker" }
   | { kind: "palette" };
 
 const PALETTE_PRESETS: Array<{ name: string; colors: Record<string, string> }> = [
@@ -99,18 +103,28 @@ export default function CustomiserV2() {
   const { data: manifest, isLoading } = useThemeManifest(activeThemeId);
 
   const [overrides, setOverrides] = useState<any>(settings.theme_overrides || {});
+  const [promoTicker, setPromoTicker] = useState<PromoTickerConfig>({ ...DEFAULT_PROMO_TICKER, ...(settings.promo_ticker || {}) });
   const [page, setPage] = useState("home");
   const [selected, setSelected] = useState<Selection | null>(null);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
 
   useEffect(() => {
     if (!store?.id || hydrated === store.id) return;
-    setOverrides((store.settings as any)?.theme_overrides || {});
+    const s = (store.settings as any) || {};
+    setOverrides(s.theme_overrides || {});
+    setPromoTicker({ ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) });
     setHydrated(store.id);
   }, [store, hydrated]);
+
+  // Deep-link ?tab=ticker from sidebar opens the Promo Ticker inspector directly.
+  useEffect(() => {
+    if (tabParam === "ticker") setSelected({ kind: "ticker" });
+  }, [tabParam]);
 
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage(
@@ -334,7 +348,7 @@ export default function CustomiserV2() {
   const save = async () => {
     if (!store) return;
     setSaving(true);
-    const newSettings = { ...settings, theme_overrides: overrides };
+    const newSettings = { ...settings, theme_overrides: overrides, promo_ticker: promoTicker };
     const { error } = await supabase.from("stores").update({ settings: newSettings }).eq("id", store.id);
     if (error) toast.error("Failed to save");
     else {
@@ -449,6 +463,15 @@ export default function CustomiserV2() {
                 <span className="flex items-center gap-1.5"><PanelBottom className="h-3 w-3" /> Footer</span>
                 {Object.keys(footerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
               </button>
+
+              {/* Promo Ticker (storefront-wide marquee) */}
+              <button
+                onClick={() => setSelected({ kind: "ticker" })}
+                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "ticker" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+              >
+                <span className="flex items-center gap-1.5"><Megaphone className="h-3 w-3" /> Promo Ticker</span>
+                {promoTicker.enabled && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              </button>
             </div>
           </ScrollArea>
         </aside>
@@ -489,6 +512,15 @@ export default function CustomiserV2() {
 
             {selected?.kind === "footer" && (
               <FooterInspector footerOv={footerOv} onChange={updateFooter} />
+            )}
+
+            {selected?.kind === "ticker" && (
+              <div className="p-3">
+                <PromoTickerEditor config={promoTicker} onChange={setPromoTicker} />
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Click <span className="font-semibold">Save</span> in the top bar to publish the ticker to your live storefront.
+                </p>
+              </div>
             )}
 
             {selected?.kind === "palette" && (
@@ -537,6 +569,8 @@ function InspectorHeader({ selected, headerOv, footerOv, sections, sectionOverri
     if (Object.keys(footerOv).length > 0) {
       resetBtn = <Button size="sm" variant="ghost" onClick={onResetFooter}><RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset</Button>;
     }
+  } else if (selected?.kind === "ticker") {
+    title = "Promo Ticker";
   } else if (selected?.kind === "section") {
     const s = sections[selected.index];
     title = SECTION_LABEL[s?.type] || s?.type || "Section";
