@@ -113,6 +113,39 @@ export default function CustomiserV2() {
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
 
+  // Resizable side panels — persist widths per user across sessions.
+  const [leftWidth, setLeftWidth] = useState<number>(() => {
+    const v = Number(localStorage.getItem("customiser_left_w"));
+    return v >= 160 && v <= 480 ? v : 176;
+  });
+  const [rightWidth, setRightWidth] = useState<number>(() => {
+    const v = Number(localStorage.getItem("customiser_right_w"));
+    return v >= 260 && v <= 640 ? v : 360;
+  });
+  useEffect(() => { localStorage.setItem("customiser_left_w", String(leftWidth)); }, [leftWidth]);
+  useEffect(() => { localStorage.setItem("customiser_right_w", String(rightWidth)); }, [rightWidth]);
+
+  const startDrag = (side: "left" | "right") => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = side === "left" ? leftWidth : rightWidth;
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      if (side === "left") setLeftWidth(Math.max(160, Math.min(480, startW + delta)));
+      else setRightWidth(Math.max(260, Math.min(640, startW - delta)));
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   useEffect(() => {
     if (!store?.id || hydrated === store.id) return;
     const s = (store.settings as any) || {};
