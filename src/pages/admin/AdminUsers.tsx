@@ -87,11 +87,12 @@ const AdminUsers = () => {
         const roles = isCustomer
           ? Array.from(new Set([...rawRoles.filter((r) => r !== 'seller'), 'customer']))
           : rawRoles;
+        const cust = customerMap.get(p.user_id);
         return {
           ...p,
-          email: meta.customer_email || (aliasStoreSlug ? auth?.email?.split('@')[0]?.replace('-at-', '@') : auth?.email) || null,
-          full_name: p.full_name || meta.full_name || null,
-          phone: p.phone || meta.phone || null,
+          email: meta.customer_email || cust?.email || (aliasStoreSlug ? auth?.email?.split('@')[0]?.replace('-at-', '@') : auth?.email) || null,
+          full_name: p.full_name || meta.full_name || cust?.name || null,
+          phone: p.phone || meta.phone || cust?.phone || null,
           last_sign_in_at: auth?.last_sign_in_at || null,
           email_confirmed_at: auth?.email_confirmed_at || null,
           roles,
