@@ -41,15 +41,23 @@ const AdminUsers = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users-full'],
     queryFn: async () => {
-      // Fetch profiles, roles, stores, and auth users in parallel
-      const [profilesRes, rolesRes, storesRes, authRes] = await Promise.all([
+      // Fetch profiles, roles, stores, customers, and auth users in parallel
+      const [profilesRes, rolesRes, storesRes, customersRes, authRes] = await Promise.all([
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('user_roles').select('*'),
         supabase.from('stores').select('user_id, name, slug'),
+        supabase.from('customers').select('user_id, name, email, phone'),
         supabase.functions.invoke('admin-manage-user', { body: { action: 'list_users' } }),
       ]);
 
       if (profilesRes.error) throw profilesRes.error;
+
+      const customerMap = new Map<string, { name: string | null; email: string | null; phone: string | null }>();
+      (customersRes.data || []).forEach((c: any) => {
+        if (c.user_id && !customerMap.has(c.user_id)) {
+          customerMap.set(c.user_id, { name: c.name, email: c.email, phone: c.phone });
+        }
+      });
 
       const roleMap = new Map<string, string[]>();
       (rolesRes.data || []).forEach((r) => {
@@ -79,11 +87,12 @@ const AdminUsers = () => {
         const roles = isCustomer
           ? Array.from(new Set([...rawRoles.filter((r) => r !== 'seller'), 'customer']))
           : rawRoles;
+        const cust = customerMap.get(p.user_id);
         return {
           ...p,
-          email: meta.customer_email || (aliasStoreSlug ? auth?.email?.split('@')[0]?.replace('-at-', '@') : auth?.email) || null,
-          full_name: p.full_name || meta.full_name || null,
-          phone: p.phone || meta.phone || null,
+          email: meta.customer_email || cust?.email || (aliasStoreSlug ? auth?.email?.split('@')[0]?.replace('-at-', '@') : auth?.email) || null,
+          full_name: p.full_name || meta.full_name || cust?.name || null,
+          phone: p.phone || meta.phone || cust?.phone || null,
           last_sign_in_at: auth?.last_sign_in_at || null,
           email_confirmed_at: auth?.email_confirmed_at || null,
           roles,
@@ -105,14 +114,15 @@ const AdminUsers = () => {
           const store = storeSlugMap.get(meta.store_slug || aliasStoreSlug);
           const rawRoles = roleMap.get(auth.id) || ['customer'];
           const roles = Array.from(new Set([...rawRoles.filter((r) => r !== 'seller'), 'customer']));
+          const cust = customerMap.get(auth.id);
           return {
             id: auth.id,
             user_id: auth.id,
-            full_name: meta.full_name || null,
-            phone: meta.phone || null,
+            full_name: meta.full_name || cust?.name || null,
+            phone: meta.phone || cust?.phone || null,
             avatar_url: meta.avatar_url || null,
             created_at: auth.created_at,
-            email: meta.customer_email || (aliasStoreSlug ? auth.email?.split('@')[0]?.replace('-at-', '@') : auth.email) || null,
+            email: meta.customer_email || cust?.email || (aliasStoreSlug ? auth.email?.split('@')[0]?.replace('-at-', '@') : auth.email) || null,
             last_sign_in_at: auth.last_sign_in_at || null,
             email_confirmed_at: auth.email_confirmed_at || null,
             roles,
