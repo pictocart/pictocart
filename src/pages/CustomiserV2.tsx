@@ -497,14 +497,6 @@ export default function CustomiserV2() {
                 {Object.keys(footerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
               </button>
 
-              {/* Promo Ticker (storefront-wide marquee) */}
-              <button
-                onClick={() => setSelected({ kind: "ticker" })}
-                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "ticker" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
-              >
-                <span className="flex items-center gap-1.5"><Megaphone className="h-3 w-3" /> Promo Ticker</span>
-                {promoTicker.enabled && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-              </button>
             </div>
           </ScrollArea>
         </aside>
