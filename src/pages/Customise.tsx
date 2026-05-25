@@ -47,6 +47,7 @@ const Customise = () => {
     setHomepageSections(s.homepage_sections || []);
     setHeaderConfig({ ...DEFAULT_HEADER, ...(s.header || {}) });
     setFooterConfig({ ...DEFAULT_FOOTER, ...(s.footer || {}) });
+    setPromoTicker({ ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) });
     setShowAllProductsGrid(s.show_all_products_grid !== false);
     setThemeOverrides(s.theme_overrides || {});
     setFeatures({
