@@ -152,6 +152,7 @@ const StoreDesign = () => {
               <TabsTrigger value="homepage"><LayoutDashboard className="mr-1 h-3.5 w-3.5" /> Homepage</TabsTrigger>
               <TabsTrigger value="header"><PanelTop className="mr-1 h-3.5 w-3.5" /> Header</TabsTrigger>
               <TabsTrigger value="footer"><PanelBottom className="mr-1 h-3.5 w-3.5" /> Footer</TabsTrigger>
+              <TabsTrigger value="ticker"><Megaphone className="mr-1 h-3.5 w-3.5" /> Ticker</TabsTrigger>
             </TabsList>
 
             <TabsContent value="packs" className="space-y-4">
