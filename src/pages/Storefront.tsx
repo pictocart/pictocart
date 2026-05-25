@@ -18,6 +18,8 @@ import WishlistButton from '@/components/storefront/WishlistButton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { THEMES, ThemeRenderer } from '@/themes';
 import MasterThemeRenderer from '@/components/theme/MasterThemeRenderer';
+import PromoTicker from '@/components/storefront/PromoTicker';
+import PremiumTrialTicker from '@/components/storefront/PremiumTrialTicker';
 import { useThemeManifest } from '@/hooks/useThemeManifest';
 import { useFulfillment } from '@/hooks/useFulfillment';
 
