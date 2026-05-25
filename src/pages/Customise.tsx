@@ -5,14 +5,16 @@ import HomepageBuilder, { type HomepageSection } from '@/components/store-design
 import HeaderEditor, { DEFAULT_HEADER, type HeaderConfig } from '@/components/store-design/HeaderEditor';
 import FooterEditor, { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
 import ThemeSectionsEditor from '@/components/store-design/ThemeSectionsEditor';
+import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from '@/components/store-design/PromoTickerEditor';
+import type { PromoTickerConfig } from '@/components/storefront/PromoTicker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { LayoutDashboard, PanelTop, PanelBottom, ToggleLeft, Lock, ExternalLink, Sparkles, Crown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { LayoutDashboard, PanelTop, PanelBottom, ToggleLeft, Lock, ExternalLink, Sparkles, Crown, Megaphone } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { usePremiumThemePurchase } from '@/hooks/usePremiumThemePurchase';
 import { applyMasterTheme } from '@/lib/applyMasterTheme';
