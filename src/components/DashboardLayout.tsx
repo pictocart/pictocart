@@ -130,7 +130,8 @@ const navTree: NavEntry[] = [
     key: 'storefront',
     children: [
       { label: 'Themes', icon: Palette, path: '/themes' },
-      { label: 'Customise', icon: SettingsIcon, path: '/customise' },
+      { label: 'Store Design', icon: SettingsIcon, path: '/customise' },
+      { label: 'Promo Ticker', icon: Megaphone, path: '/customise?tab=ticker' },
       { label: 'Policies & Pages', icon: FileText, path: '/policies' },
       { label: 'Analytics', icon: TrendingUp, path: '/analytics' },
     ],
