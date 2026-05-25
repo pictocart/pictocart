@@ -104,6 +104,8 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: colors.background, color: colors.text, fontFamily: fonts.body }}>
+      {/* Customer-facing promotional ticker (merchant-configurable) */}
+      <PromoTicker storeSlug={store.slug} config={(store.settings as any)?.promo_ticker} />
       {/* Owner-only premium-theme free-trial countdown */}
       <PremiumTrialTicker storeId={store.id} storeUserId={store.user_id} settings={store.settings} />
       {/* Navigation */}
