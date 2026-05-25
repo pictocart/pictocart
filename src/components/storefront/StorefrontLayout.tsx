@@ -103,6 +103,8 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: colors.background, color: colors.text, fontFamily: fonts.body }}>
+      {/* Owner-only premium-theme free-trial countdown */}
+      <PremiumTrialTicker storeId={store.id} storeUserId={store.user_id} settings={store.settings} />
       {/* Navigation */}
       <header className="sticky top-0 z-50 border-b backdrop-blur-sm" style={{ borderColor: colors.secondary + '80', backgroundColor: colors.card + 'ee' }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
