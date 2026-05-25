@@ -103,18 +103,28 @@ export default function CustomiserV2() {
   const { data: manifest, isLoading } = useThemeManifest(activeThemeId);
 
   const [overrides, setOverrides] = useState<any>(settings.theme_overrides || {});
+  const [promoTicker, setPromoTicker] = useState<PromoTickerConfig>({ ...DEFAULT_PROMO_TICKER, ...(settings.promo_ticker || {}) });
   const [page, setPage] = useState("home");
   const [selected, setSelected] = useState<Selection | null>(null);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
 
   useEffect(() => {
     if (!store?.id || hydrated === store.id) return;
-    setOverrides((store.settings as any)?.theme_overrides || {});
+    const s = (store.settings as any) || {};
+    setOverrides(s.theme_overrides || {});
+    setPromoTicker({ ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) });
     setHydrated(store.id);
   }, [store, hydrated]);
+
+  // Deep-link ?tab=ticker from sidebar opens the Promo Ticker inspector directly.
+  useEffect(() => {
+    if (tabParam === "ticker") setSelected({ kind: "ticker" });
+  }, [tabParam]);
 
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage(
