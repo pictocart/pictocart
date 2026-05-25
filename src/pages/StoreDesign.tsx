@@ -37,6 +37,7 @@ const StoreDesign = () => {
   const [homepageSections, setHomepageSections] = useState<HomepageSection[]>(storeSettings.homepage_sections || []);
   const [headerConfig, setHeaderConfig] = useState<HeaderConfig>({ ...DEFAULT_HEADER, ...(storeSettings.header || {}) });
   const [footerConfig, setFooterConfig] = useState<FooterConfig>({ ...DEFAULT_FOOTER, ...(storeSettings.footer || {}) });
+  const [promoTicker, setPromoTicker] = useState<PromoTickerConfig>({ ...DEFAULT_PROMO_TICKER, ...(storeSettings.promo_ticker || {}) });
   const [showAllProductsGrid, setShowAllProductsGrid] = useState<boolean>(storeSettings.show_all_products_grid !== false);
   const [hydratedStoreId, setHydratedStoreId] = useState<string | null>(null);
 
