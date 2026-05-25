@@ -55,6 +55,7 @@ const StoreDesign = () => {
     setHomepageSections(nextSettings.homepage_sections || []);
     setHeaderConfig({ ...DEFAULT_HEADER, ...(nextSettings.header || {}) });
     setFooterConfig({ ...DEFAULT_FOOTER, ...(nextSettings.footer || {}) });
+    setPromoTicker({ ...DEFAULT_PROMO_TICKER, ...(nextSettings.promo_ticker || {}) });
     setShowAllProductsGrid(nextSettings.show_all_products_grid !== false);
     setHydratedStoreId(store.id);
   }, [store, hydratedStoreId]);
