@@ -58,9 +58,36 @@ export default function Sourcing() {
   const [viral, setViral] = useState<SourcingProduct[]>([]);
   const [saved, setSaved] = useState<SourcingProduct[]>([]);
   const [selected, setSelected] = useState<SourcingProduct | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [categoryProducts, setCategoryProducts] = useState<SourcingProduct[]>([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
 
   useEffect(() => { loadViral(); }, []);
   useEffect(() => { if (store?.id) loadSaved(); }, [store?.id]);
+
+  async function loadCategory(key: string) {
+    setActiveCategory(key);
+    setCategoryLoading(true);
+    const { data } = await supabase
+      .from("sourcing_products")
+      .select("*")
+      .eq("is_active", true)
+      .eq("category", key)
+      .order("ai_score", { ascending: false })
+      .limit(24);
+    setCategoryProducts((data as any) ?? []);
+    setCategoryLoading(false);
+  }
+
+  async function refreshCategory(key: string) {
+    toast("Refreshing in the background — this takes ~60s");
+    supabase.functions.invoke("sourcing-prewarm", { body: { category_key: key } })
+      .then(({ data, error }) => {
+        if (error) { toast.error(error.message); return; }
+        toast.success(`Updated ${data?.inserted ?? 0} products`);
+        loadCategory(key);
+      });
+  }
 
   async function loadViral() {
     const { data } = await supabase
@@ -254,20 +281,47 @@ export default function Sourcing() {
           )}
         </TabsContent>
 
-        <TabsContent value="categories" className="mt-6">
+        <TabsContent value="categories" className="mt-6 space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {CATEGORIES.map((c) => (
               <Card
                 key={c.key}
-                onClick={() => { setQuery(c.label.split("&")[0].trim()); runSearch(c.label.split("&")[0].trim()); }}
-                className="p-4 cursor-pointer hover:shadow-md hover:border-primary transition-all"
+                onClick={() => loadCategory(c.key)}
+                className={`p-4 cursor-pointer hover:shadow-md transition-all ${activeCategory === c.key ? "border-primary shadow-md" : ""}`}
               >
                 <div className="text-3xl mb-2">{c.emoji}</div>
                 <div className="font-medium text-sm">{c.label}</div>
-                <div className="text-xs text-muted-foreground mt-1">Tap to source</div>
+                <div className="text-xs text-muted-foreground mt-1">Tap to view</div>
               </Card>
             ))}
           </div>
+
+          {activeCategory && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">
+                  {CATEGORIES.find((c) => c.key === activeCategory)?.label}
+                  <span className="text-sm text-muted-foreground font-normal ml-2">
+                    {categoryProducts.length} cached
+                  </span>
+                </h2>
+                <Button size="sm" variant="outline" onClick={() => refreshCategory(activeCategory!)}>
+                  <Sparkles className="w-4 h-4 mr-1" /> Refresh
+                </Button>
+              </div>
+              {categoryLoading ? (
+                <Card className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin" /></Card>
+              ) : categoryProducts.length === 0 ? (
+                <Card className="p-8 text-center text-muted-foreground">
+                  No cached products yet. Tap <strong>Refresh</strong> to scrape this category.
+                </Card>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {categoryProducts.map((p) => <ProductCard key={p.id} p={p} />)}
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="saved" className="mt-6">
