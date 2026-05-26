@@ -1209,6 +1209,107 @@ export type Database = {
           },
         ]
       }
+      dropship_orders: {
+        Row: {
+          courier: string | null
+          created_at: string
+          delivered_at: string | null
+          forwarded_at: string | null
+          id: string
+          margin: number
+          metadata: Json
+          notes: string | null
+          order_id: string | null
+          product_id: string | null
+          quantity: number
+          retail_price: number
+          shipping_address: Json
+          status: string
+          store_id: string
+          supplier_id: string
+          supplier_invoice_url: string | null
+          tracking_number: string | null
+          updated_at: string
+          user_id: string
+          wholesale_cost: number
+        }
+        Insert: {
+          courier?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          forwarded_at?: string | null
+          id?: string
+          margin?: number
+          metadata?: Json
+          notes?: string | null
+          order_id?: string | null
+          product_id?: string | null
+          quantity?: number
+          retail_price?: number
+          shipping_address: Json
+          status?: string
+          store_id: string
+          supplier_id: string
+          supplier_invoice_url?: string | null
+          tracking_number?: string | null
+          updated_at?: string
+          user_id: string
+          wholesale_cost?: number
+        }
+        Update: {
+          courier?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          forwarded_at?: string | null
+          id?: string
+          margin?: number
+          metadata?: Json
+          notes?: string | null
+          order_id?: string | null
+          product_id?: string | null
+          quantity?: number
+          retail_price?: number
+          shipping_address?: Json
+          status?: string
+          store_id?: string
+          supplier_id?: string
+          supplier_invoice_url?: string | null
+          tracking_number?: string | null
+          updated_at?: string
+          user_id?: string
+          wholesale_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dropship_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dropship_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dropship_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dropship_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1913,6 +2014,100 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merchant_sourcing_saved: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          product_id: string
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id: string
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_sourcing_saved_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_sourcing_saved_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merchant_supplier_unlocks: {
+        Row: {
+          created_at: string
+          credits_charged: number
+          id: string
+          product_id: string | null
+          store_id: string
+          supplier_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_charged?: number
+          id?: string
+          product_id?: string | null
+          store_id: string
+          supplier_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_charged?: number
+          id?: string
+          product_id?: string | null
+          store_id?: string
+          supplier_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_supplier_unlocks_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_supplier_unlocks_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_supplier_unlocks_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -3557,6 +3752,451 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sourcing_inquiries: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          message: string | null
+          product_id: string | null
+          quantity: number | null
+          replied_at: string | null
+          reply: string | null
+          status: string
+          store_id: string
+          supplier_id: string
+          target_price: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          replied_at?: string | null
+          reply?: string | null
+          status?: string
+          store_id: string
+          supplier_id: string
+          target_price?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          replied_at?: string | null
+          reply?: string | null
+          status?: string
+          store_id?: string
+          supplier_id?: string
+          target_price?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_inquiries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sourcing_inquiries_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sourcing_inquiries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sourcing_products: {
+        Row: {
+          ai_insight: string | null
+          ai_score: number
+          category: string | null
+          created_at: string
+          currency: string
+          dedupe_hash: string | null
+          description: string | null
+          estimated_margin_pct: number | null
+          external_id: string | null
+          hero_image: string | null
+          id: string
+          images: string[]
+          is_active: boolean
+          lead_time_days: number | null
+          moq: number | null
+          price_max: number | null
+          price_min: number | null
+          rating: number | null
+          raw_json: Json | null
+          reviews_count: number | null
+          ships_pan_india: boolean
+          source: string
+          source_url: string | null
+          subcategory: string | null
+          suggested_retail_price: number | null
+          supplier_city_cached: string | null
+          supplier_email_full: string | null
+          supplier_id: string | null
+          supplier_name_cached: string | null
+          supplier_phone_full: string | null
+          supplier_phone_masked: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ai_insight?: string | null
+          ai_score?: number
+          category?: string | null
+          created_at?: string
+          currency?: string
+          dedupe_hash?: string | null
+          description?: string | null
+          estimated_margin_pct?: number | null
+          external_id?: string | null
+          hero_image?: string | null
+          id?: string
+          images?: string[]
+          is_active?: boolean
+          lead_time_days?: number | null
+          moq?: number | null
+          price_max?: number | null
+          price_min?: number | null
+          rating?: number | null
+          raw_json?: Json | null
+          reviews_count?: number | null
+          ships_pan_india?: boolean
+          source: string
+          source_url?: string | null
+          subcategory?: string | null
+          suggested_retail_price?: number | null
+          supplier_city_cached?: string | null
+          supplier_email_full?: string | null
+          supplier_id?: string | null
+          supplier_name_cached?: string | null
+          supplier_phone_full?: string | null
+          supplier_phone_masked?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          ai_insight?: string | null
+          ai_score?: number
+          category?: string | null
+          created_at?: string
+          currency?: string
+          dedupe_hash?: string | null
+          description?: string | null
+          estimated_margin_pct?: number | null
+          external_id?: string | null
+          hero_image?: string | null
+          id?: string
+          images?: string[]
+          is_active?: boolean
+          lead_time_days?: number | null
+          moq?: number | null
+          price_max?: number | null
+          price_min?: number | null
+          rating?: number | null
+          raw_json?: Json | null
+          reviews_count?: number | null
+          ships_pan_india?: boolean
+          source?: string
+          source_url?: string | null
+          subcategory?: string | null
+          suggested_retail_price?: number | null
+          supplier_city_cached?: string | null
+          supplier_email_full?: string | null
+          supplier_id?: string | null
+          supplier_name_cached?: string | null
+          supplier_phone_full?: string | null
+          supplier_phone_masked?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sourcing_supplier_payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json
+          notes: string | null
+          period_end: string | null
+          period_start: string | null
+          reference: string | null
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          reference?: string | null
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          reference?: string | null
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_supplier_payouts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sourcing_supplier_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          store_id: string
+          supplier_id: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          store_id: string
+          supplier_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          store_id?: string
+          supplier_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_supplier_reviews_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sourcing_supplier_reviews_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sourcing_suppliers: {
+        Row: {
+          address: string | null
+          bank_account_name: string | null
+          bank_account_number: string | null
+          bank_ifsc: string | null
+          banner_url: string | null
+          categories: string[]
+          city: string | null
+          commission_pct: number
+          company_name: string
+          contact_name: string | null
+          country: string
+          created_at: string
+          default_lead_time_days: number | null
+          description: string | null
+          email: string | null
+          gst_verified: boolean
+          gstin: string | null
+          id: string
+          logo_url: string | null
+          metadata: Json
+          min_order_value: number | null
+          phone: string | null
+          pincode: string | null
+          rating: number
+          reviews_count: number
+          ships_pan_india: boolean
+          source: string
+          source_url: string | null
+          state: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          website: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
+          banner_url?: string | null
+          categories?: string[]
+          city?: string | null
+          commission_pct?: number
+          company_name: string
+          contact_name?: string | null
+          country?: string
+          created_at?: string
+          default_lead_time_days?: number | null
+          description?: string | null
+          email?: string | null
+          gst_verified?: boolean
+          gstin?: string | null
+          id?: string
+          logo_url?: string | null
+          metadata?: Json
+          min_order_value?: number | null
+          phone?: string | null
+          pincode?: string | null
+          rating?: number
+          reviews_count?: number
+          ships_pan_india?: boolean
+          source?: string
+          source_url?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          website?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
+          banner_url?: string | null
+          categories?: string[]
+          city?: string | null
+          commission_pct?: number
+          company_name?: string
+          contact_name?: string | null
+          country?: string
+          created_at?: string
+          default_lead_time_days?: number | null
+          description?: string | null
+          email?: string | null
+          gst_verified?: boolean
+          gstin?: string | null
+          id?: string
+          logo_url?: string | null
+          metadata?: Json
+          min_order_value?: number | null
+          phone?: string | null
+          pincode?: string | null
+          rating?: number
+          reviews_count?: number
+          ships_pan_india?: boolean
+          source?: string
+          source_url?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          website?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      sourcing_viral_products: {
+        Row: {
+          category: string | null
+          created_at: string
+          growth_pct: number | null
+          id: string
+          product_id: string | null
+          rank: number
+          reason: string | null
+          trend_score: number
+          week_of: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          growth_pct?: number | null
+          id?: string
+          product_id?: string | null
+          rank: number
+          reason?: string | null
+          trend_score?: number
+          week_of?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          growth_pct?: number | null
+          id?: string
+          product_id?: string | null
+          rank?: number
+          reason?: string | null
+          trend_score?: number
+          week_of?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_viral_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_products"
             referencedColumns: ["id"]
           },
         ]
