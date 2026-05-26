@@ -168,23 +168,8 @@ export async function scrapeProductsFromSource(opts: {
   if (first.error) errors.push(first.error);
   all.push(...first.products);
 
-  if ((opts.source === "indiamart" || opts.source === "justdial") && all.length < opts.limit) {
-    for (let p = 2; p <= 2 && all.length < opts.limit; p++) {
-      const url = buildSourceUrl(opts.source, opts.query, opts.city, p);
-      const next = await scrapeOnce({
-        source: opts.source,
-        url,
-        prompt: buildPrompt({ ...opts, limit: opts.limit - all.length }),
-        apiKey,
-      });
-      if (next.error) {
-        errors.push(`p${p}: ${next.error}`);
-        break;
-      }
-      if (next.products.length === 0) break;
-      all.push(...next.products);
-    }
-  }
+  // Note: page-2 pagination removed to stay within edge function 150s budget.
+
 
   return {
     products: all.slice(0, opts.limit),
