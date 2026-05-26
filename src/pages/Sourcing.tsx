@@ -429,28 +429,12 @@ function ProductDrawer({ product, onClose, storeId }: { product: SourcingProduct
           {/* Supplier card */}
           <Card className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="font-semibold">{product.supplier_name_cached ?? "Supplier"}</div>
+              <div className="font-semibold">{product.supplier_name_cached ?? "Verified Supplier"}</div>
               {product.supplier_city_cached && <Badge variant="outline"><MapPin className="w-3 h-3 mr-1" />{product.supplier_city_cached}</Badge>}
             </div>
-            {unlocked ? (
-              <div className="space-y-1 text-sm">
-                {unlocked.phone && <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary" /><a href={`tel:${unlocked.phone}`}>{unlocked.phone}</a></div>}
-                {unlocked.email && <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /><a href={`mailto:${unlocked.email}`}>{unlocked.email}</a></div>}
-                {unlocked.website && <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><a href={unlocked.website} target="_blank" rel="noreferrer">Website</a></div>}
-                {unlocked.gstin && <div className="flex items-center gap-2 text-xs"><Check className="w-3 h-3 text-emerald-600" />GSTIN {unlocked.gstin}</div>}
-              </div>
-            ) : (
-              <>
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  {product.supplier_phone_masked ?? "Contact hidden"}
-                </div>
-                <Button onClick={reveal} disabled={busy} variant="outline" className="w-full">
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Lock className="w-4 h-4 mr-1" />}
-                  Reveal supplier contact · 5 credits
-                </Button>
-              </>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Import this product to your store and we'll handle sourcing & fulfilment for you.
+            </p>
           </Card>
 
           <Button onClick={importToStore} disabled={importing} className="w-full" size="lg">
