@@ -203,7 +203,7 @@ const PaymentSettings = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-tour="pay-razorpay-key">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <IndianRupee className="h-5 w-5" /> Razorpay Configuration

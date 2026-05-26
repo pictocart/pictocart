@@ -174,7 +174,7 @@ const ShippingSettings = () => {
       </div>
 
       {/* Status banner */}
-      <Card>
+      <Card data-tour="ship-credentials">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

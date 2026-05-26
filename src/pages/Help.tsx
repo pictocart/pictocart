@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, BookOpen, ArrowLeft } from 'lucide-react';
 import { renderMarkdown } from '@/lib/markdown';
+import TourReplayList from '@/components/TourReplayList';
 
 interface HelpArticle {
   id: string; slug: string; title: string; body_md: string; category: string; sort: number;
@@ -70,6 +71,9 @@ const Help = () => {
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
         <Input className="pl-9" placeholder="Search help…" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
+
+      <TourReplayList />
+
       {Object.entries(grouped).map(([cat, list]) => (
         <div key={cat}>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">{cat}</h2>

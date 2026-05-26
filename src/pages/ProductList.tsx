@@ -66,14 +66,14 @@ const ProductList = () => {
           <h1 className="text-2xl font-bold tracking-tight">Products</h1>
           <p className="text-sm text-muted-foreground">{products.length} product{products.length !== 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={() => navigate('/products/new')}>
+        <Button data-tour="products-new" onClick={() => navigate('/products/new')}>
           <Plus className="mr-1 h-4 w-4" /> Add Product
         </Button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+        <div data-tour="products-search" className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search products..."

@@ -1,68 +1,109 @@
-# Product Sourcing Hub — "SourceIndia" (updated)
+# Guided Onboarding Tour — Full Merchant Handholding
 
-Same scope as previously approved, with one refinement: the scraper logic for **Google Maps + JustDial** will be ported directly from your **India Data Explorer** project (`src/server/firecrawl.server.ts` — Firecrawl v2 + JSON-schema extraction, with click-to-reveal phone actions for JustDial), while **IndiaMART, TradeIndia, Meesho Supply** keep using the same Firecrawl pattern with product-shaped schemas.
+A first-time user walkthrough that lights up every important control on every dashboard/settings page with a tooltip whose arrow points **precisely** at the element it describes. Users can skip, replay from Help, or resume where they left off.
 
-## What's new vs. the prior plan
+## Approach
 
-- Reuse the proven `buildSourceUrl` + `scrapeOnce` + JSON-schema extraction pattern from India Data Explorer, adapted from "lead" shape → "product" shape (title, image, MOQ, price tier, supplier_name, supplier_phone, listing_url, rating, reviews, location).
-- Two-step reveal pattern, per your spec:
-  1. **Search (2 credits)** — returns product cards with title, image, price band, MOQ, supplier *name + city only* (no phone, no email, blurred contact chip).
-  2. **Reveal supplier contact (5 credits)** — unlocks phone/email/website and saves a permanent unlock row so the merchant never pays twice for the same supplier.
-- Daily viral cron at 6am IST (was weekly).
-- Supplier portal scaffolded fully (signup → dashboard → admin moderation).
+Use **driver.js** (lightweight, ~10kb, no deps, MIT). It supports:
+- Precise SVG-cutout highlight around a real DOM element (arrow always pinned to the anchor — no drift)
+- Step-by-step popovers with Next / Back / Skip / Done
+- Per-route tours (start on mount when not yet completed)
+- Auto-scrolls element into view, repositions on resize/scroll
+
+Why not Shopify-style custom popover? driver.js already solves arrow precision, viewport collision and scroll-locking — building this from scratch is weeks of edge-case work.
 
 ## Architecture
 
-Edge functions (Deno) — port the India Data Explorer helpers as `_shared/firecrawl.ts`:
+```text
+src/tours/
+  TourProvider.tsx        // wraps app, exposes useTour()
+  useRouteTour.ts         // hook: starts tour for current pathname if unseen
+  registry.ts             // pathname -> Tour definition
+  tours/
+    dashboard.ts
+    products-list.ts
+    product-form.ts       // post-AI: "Now fill inventory", "Set variants"...
+    orders.ts
+    order-detail.ts
+    customise.ts
+    store-design.ts
+    themes.ts
+    shipping.ts
+    payments.ts
+    cod.ts
+    domain.ts
+    seo.ts
+    email-branding.ts
+    coupons.ts
+    categories.ts
+    blog.ts
+    customers.ts
+    analytics.ts
+    sourcing.ts
+    wallet.ts
+    accounts.ts           // covers cash book, khata, expenses, GST, P&L, suppliers, inventory ledger
+    onboarding.ts         // overlay on each wizard step
+```
 
-- `sourcing-search` — query + city + filters → Firecrawl Google/JustDial/IndiaMART → dedupe → score → return masked rows. Debits 2 credits via `consume_credits`.
-- `sourcing-reveal-contact` — unlocks supplier contact for one product. Debits 5 credits, writes `merchant_supplier_unlocks` row (idempotent — re-reveals are free).
-- `sourcing-import` — AI rewrite (Lovable AI Gemini) + push to `products`. Debits 1 credit.
-- `sourcing-viral-cron` — daily 6am IST; scrapes trending categories on IndiaMART + Google Trends shopping IN; clusters & scores with Gemini; writes to `sourcing_viral_products`.
-- `dropship-forward` — fan-out new merchant orders to supplier APIs (manual/email by default).
-- `supplier-inquiry-send` — Resend email to supplier (when contact present) + DB record.
+Each tour = array of `{ element: '[data-tour="..."]', title, description, side, align }`.
 
-## Database (one migration)
+## Anchoring (precision arrow)
 
-Tables: `suppliers`, `sourcing_products`, `sourcing_viral_products`, `merchant_sourcing_saved`, `merchant_supplier_unlocks` *(new)*, `supplier_inquiries`, `dropship_orders`, `supplier_reviews`, `supplier_payouts`.
+Add `data-tour="<id>"` attributes directly on the target element in each page — never on a wrapper, so the arrow lands on the exact button/input. Examples:
 
-Credit costs seeded into `ai_action_costs`:
-- `sourcing_search` — 2
-- `sourcing_reveal_contact` — 5
-- `sourcing_import` — 1
-- `sourcing_deep_scrape` — 5 (premium "verify GST + competitor pricing" run)
+- `HeroGreeting` "Add product with AI" → `data-tour="hero-add-product"`
+- `Dashboard` View store ribbon → `data-tour="dash-view-store"`
+- `ProductForm` inventory field → `data-tour="product-inventory"`, variants section → `data-tour="product-variants"`, shipping weight → `data-tour="product-shipping"`, SEO accordion → `data-tour="product-seo"`
+- `OrderList` first row actions → `data-tour="order-row-actions"`
+- `ShippingSettings` Shiprocket creds card → `data-tour="ship-credentials"`
+- `PaymentSettings` Razorpay key field → `data-tour="pay-razorpay-key"`
+- `DomainSettings` DNS records table → `data-tour="domain-dns"`
+- …(one per highlighted step across the listed pages)
 
-RLS: public read of approved suppliers, store-owner scoped on saved/unlocks/inquiries/dropship, supplier-self-managed via `suppliers.user_id = auth.uid()`, admin bypass via existing `has_role()`. No enum changes — supplier "role" is implicit through ownership of a `suppliers` row.
+driver.js receives the selector string, queries it live, and renders the SVG overlay around the element's bounding box, so the pointer arrow is always correctly aligned even after scroll/resize.
 
-## Merchant UI
+## Persistence
 
-`/sourcing` (sidebar entry "Source Products" with 🔥 badge) — tabs:
-- **Viral Today** (gradient orange→pink) — animated trend cards, sparkline, rank, growth %
-- **Search** — natural-language + filters; cards show masked supplier; "Reveal Contact · 5 credits" CTA
-- **Categories** — Beauty / Home / Fashion / Kitchen / Festive / Tech / Toys / Wellness
-- **Saved** & **Imported**
+`tour_progress` table:
+```sql
+user_id uuid pk, tour_key text pk, completed_at timestamptz, skipped boolean
+```
+RLS: user can read/write own rows. Hook `useRouteTour` checks this before auto-starting; "Replay tour" button in Help page wipes the row.
 
-Drawer per product: image carousel, price tiers, MOQ, supplier card (locked until reveal), AI "Why this sells", margin calculator, Add-to-store / Request sample / Enable dropship.
+Fallback before the row syncs: `localStorage["tour:<key>"] = "done"` for instant UX.
 
-## Supplier portal
+## Special flows
 
-- `/suppliers/signup` — public registration (GSTIN, categories, contact, bank, sample images)
-- `/suppliers/dashboard` — products CRUD with bulk CSV, inquiries inbox, dropship queue, reviews, payouts
-- `/admin/suppliers` — approve / GST-verify / set commission / suspend
+1. **Onboarding wizard** — each of the 7 steps gets a 1–2 step intro tour (e.g. StepUploadImage: "Tap to upload — AI will write title, price, description"). Tours are step-scoped, not route-scoped.
+2. **ProductForm after AI fill** — when AI completion event fires, trigger `product-form-postai` tour that walks: Inventory → Variants → Shipping weight → SEO → Save. Exactly the "Fill the inventory / left spaces" example from the request.
+3. **Empty states** — if OrderList has 0 orders, run the "share your store" tour variant instead of order-row tour.
+4. **Mobile** — driver.js handles small viewports; popovers auto-flip side. Bottom-nav steps use `side: top`.
 
-## Daily seed for "wow" demo
+## Help/Replay
 
-50 hand-picked Indian wholesale products + 8 sample suppliers seeded so day-1 merchants see a populated feed before the first cron runs.
+`src/pages/Help.tsx` gets a "Take the tour again" section listing every tour with a Replay button (clears progress + navigates + starts).
 
-## Build order
+## Files to create
 
-1. Migration (all tables + RLS + ai_action_costs seed + sample data)
-2. `_shared/firecrawl.ts` ported from India Data Explorer
-3. Edge functions: search → reveal-contact → import → viral-cron → dropship-forward → supplier-inquiry-send
-4. `/sourcing` merchant UI (tabs, cards, drawer, masking, credit gating)
-5. Supplier portal (`/suppliers/signup`, `/suppliers/dashboard`)
-6. Admin `/admin/suppliers`
-7. Sidebar + routes + daily cron wiring
-8. End-to-end sanity (sample search, reveal, import, dropship form)
+- `src/tours/TourProvider.tsx`, `useRouteTour.ts`, `registry.ts`, 20+ tour definition files
+- `supabase/migrations/<ts>_tour_progress.sql`
+- Add `<TourProvider>` in `src/App.tsx`
+- Add `useRouteTour()` call inside `DashboardShell` and inside `Onboarding.tsx` step renderer
 
-Out of scope (this build): live Shiprocket-Wholesale API, real payout disbursement, cross-border sourcing, in-app negotiation chat.
+## Files to edit (add `data-tour` anchors only — zero logic change)
+
+Dashboard.tsx, HeroGreeting.tsx, SmartActions.tsx, ProductList.tsx, ProductForm.tsx, OrderList.tsx, OrderDetail.tsx, Customise.tsx, StoreDesign.tsx, Themes.tsx, ShippingSettings.tsx, PaymentSettings.tsx, CodSettings.tsx, DomainSettings.tsx, SEOSettings.tsx, EmailBrandingSettings.tsx, CouponList.tsx, Categories.tsx, BlogPosts.tsx, Customers.tsx, StoreAnalytics.tsx, Sourcing.tsx, Wallet.tsx, accounts/* (7 files), Onboarding step components (8 files), DashboardLayout.tsx (sidebar item anchors), Help.tsx.
+
+## Dependency
+
+`bun add driver.js` (≈10kb gz, MIT).
+
+## Out of scope
+
+- Storefront customer pages (request is about merchant handholding)
+- Admin panel (super-admin only, not a "new user")
+
+## Open questions
+
+1. Auto-start every tour on first visit, or surface a single "Start guided tour" banner on the dashboard that opens them on demand? (default: auto-start once per page, dismissible)
+2. Allow language localization now or English-only for v1? (default: English only)

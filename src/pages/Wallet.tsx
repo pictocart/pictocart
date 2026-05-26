@@ -27,13 +27,13 @@ const Wallet = () => {
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Power every AI feature in your store</p>
         </div>
-        <Button onClick={() => setRechargeOpen(true)} className="gap-1.5">
+        <Button data-tour="wallet-recharge" onClick={() => setRechargeOpen(true)} className="gap-1.5">
           <Plus className="h-4 w-4" /> Recharge
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
+        <Card data-tour="wallet-balance" className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
           <CardContent className="p-5">
             <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Balance</div>
             <div className="text-3xl font-bold flex items-center gap-2">

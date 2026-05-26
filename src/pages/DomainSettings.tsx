@@ -198,7 +198,7 @@ function EmailDomainSection({ store }: { store: any }) {
             <>
               <div className="space-y-2">
                 <Label>Domain Name</Label>
-                <Input placeholder="yourstore.com" value={emailDomain} onChange={(e) => setEmailDomain(e.target.value)} />
+                <Input data-tour="domain-input" placeholder="yourstore.com" value={emailDomain} onChange={(e) => setEmailDomain(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Sender Prefix</Label>

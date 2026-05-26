@@ -220,7 +220,7 @@ export default function Sourcing() {
           Discover viral wholesale products from trusted Indian suppliers — import in one click.
         </p>
 
-        <div className="mt-5 flex flex-col md:flex-row gap-2 bg-white rounded-xl p-2 shadow-xl">
+        <div data-tour="sourcing-search" className="mt-5 flex flex-col md:flex-row gap-2 bg-white rounded-xl p-2 shadow-xl">
           <div className="flex-1 flex items-center gap-2 px-3">
             <Search className="w-5 h-5 text-muted-foreground" />
             <Input

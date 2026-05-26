@@ -66,7 +66,7 @@ const StoreAnalytics = () => {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div data-tour="analytics-overview" className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Products', value: products.length, icon: BarChart3 },
           { label: 'Blog Posts', value: posts.length, icon: TrendingUp },

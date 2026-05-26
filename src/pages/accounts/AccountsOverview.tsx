@@ -75,7 +75,7 @@ const AccountsOverview = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div data-tour="accounts-cards" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {kpis.map((k) => (
           <Card key={k.label}>
             <CardContent className="p-4">

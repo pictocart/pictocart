@@ -31,7 +31,7 @@ const BlogPosts = () => {
           <p className="text-sm text-muted-foreground">Create and manage blog content for your store</p>
         </div>
         <Link to="/blog-posts/new">
-          <Button><Plus className="h-4 w-4 mr-1" /> New Post</Button>
+          <Button data-tour="blog-new"><Plus className="h-4 w-4 mr-1" /> New Post</Button>
         </Link>
       </div>
 

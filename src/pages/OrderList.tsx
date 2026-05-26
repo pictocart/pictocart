@@ -161,7 +161,7 @@ const OrderList = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div data-tour="orders-filters" className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -274,8 +274,8 @@ const OrderList = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((order) => (
-                  <TableRow key={order.id} className={cn(selected.has(order.id) && 'bg-accent/30')}>
+                {filtered.map((order, idx) => (
+                  <TableRow key={order.id} data-tour={idx === 0 ? 'orders-row' : undefined} className={cn(selected.has(order.id) && 'bg-accent/30')}>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selected.has(order.id)}

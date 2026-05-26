@@ -88,7 +88,7 @@ const CodSettings = () => {
         </p>
       </div>
 
-      <Card>
+      <Card data-tour="cod-toggle">
         <CardHeader>
           <CardTitle className="text-base">Availability</CardTitle>
           <CardDescription>Turn COD on or off for the storefront.</CardDescription>
@@ -107,7 +107,7 @@ const CodSettings = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-tour="cod-limits">
         <CardHeader>
           <CardTitle className="text-base">Order limits</CardTitle>
         </CardHeader>

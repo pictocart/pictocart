@@ -127,7 +127,7 @@ const Customers = () => {
         </CardContent></Card>
       </div>
 
-      <Card>
+      <Card data-tour="customers-table">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-base">All customers</CardTitle>

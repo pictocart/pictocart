@@ -187,7 +187,7 @@ const Categories = () => {
               placeholder="e.g. Coffee, Sandwiches"
               onKeyDown={(e) => e.key === 'Enter' && addParent()}
             />
-            <Button onClick={addParent} disabled={createCategory.isPending}>
+            <Button data-tour="cats-new" onClick={addParent} disabled={createCategory.isPending}>
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>

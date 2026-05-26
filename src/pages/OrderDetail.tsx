@@ -200,6 +200,7 @@ const OrderDetail = () => {
         <div className="flex items-center gap-2 flex-wrap">
           {!(order as any).invoice_number && (
             <Button
+              data-tour="order-invoice"
               variant="outline"
               size="sm"
               onClick={async () => {
@@ -217,7 +218,7 @@ const OrderDetail = () => {
             </Button>
           )}
           {!order.tracking_number && store && (
-            <Button variant="outline" size="sm" onClick={() => setShipDialogOpen(true)}>
+            <Button data-tour="order-ship" variant="outline" size="sm" onClick={() => setShipDialogOpen(true)}>
               <Truck className="h-4 w-4 mr-1" /> Ship Order
             </Button>
           )}

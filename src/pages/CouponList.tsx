@@ -79,7 +79,7 @@ const CouponList = () => {
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1" /> New Coupon</Button>
+            <Button data-tour="coupons-new" size="sm"><Plus className="h-4 w-4 mr-1" /> New Coupon</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>

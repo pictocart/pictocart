@@ -52,7 +52,7 @@ const HeroGreeting = ({ todayRevenue, todayOrders, pendingOrders, storeName }: P
   }, [user?.id]);
 
   return (
-    <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-primary/10 via-background to-indigo-500/5 p-5 sm:p-6">
+    <Card data-tour="hero-greeting" className="relative overflow-hidden border-0 bg-gradient-to-br from-primary/10 via-background to-indigo-500/5 p-5 sm:p-6">
       <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-indigo-400/15 blur-3xl" />
 
@@ -97,7 +97,7 @@ const HeroGreeting = ({ todayRevenue, todayOrders, pendingOrders, storeName }: P
       </div>
 
       <div className="relative mt-5 flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => navigate('/products/new')} className="gap-1.5">
+        <Button data-tour="hero-add-product" size="sm" onClick={() => navigate('/products/new')} className="gap-1.5">
           <Sparkles className="h-3.5 w-3.5" /> Add product with AI
         </Button>
         <Button size="sm" variant="outline" onClick={() => navigate('/orders')}>View orders</Button>

@@ -110,7 +110,7 @@ const Dashboard = () => {
 
       {/* View store / copy url ribbon */}
       {store?.is_published && storeUrl && (
-        <Card className="border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 to-background">
+        <Card data-tour="dash-view-store" className="border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 to-background">
           <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3.5 px-4">
             <div className="min-w-0 flex items-center gap-3">
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -133,20 +133,22 @@ const Dashboard = () => {
       )}
 
       {/* Smart contextual actions */}
-      <SmartActions
-        pendingOrders={stats.pendingCount}
-        productCount={products.length}
-        lowStockCount={lowStockCount}
-        hasCustomDomain={!!settings.custom_domain}
-        hasShipping={!!settings.shipping_enabled}
-        isPublished={!!store?.is_published}
-      />
+      <div data-tour="smart-actions">
+        <SmartActions
+          pendingOrders={stats.pendingCount}
+          productCount={products.length}
+          lowStockCount={lowStockCount}
+          hasCustomDomain={!!settings.custom_domain}
+          hasShipping={!!settings.shipping_enabled}
+          isPublished={!!store?.is_published}
+        />
+      </div>
 
       {/* AI Wallet */}
-      <WalletCard />
+      <div data-tour="wallet-card"><WalletCard /></div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div data-tour="kpi-grid" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Today's Revenue"
           value={stats.todayRevenue}

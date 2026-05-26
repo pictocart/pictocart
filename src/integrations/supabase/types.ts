@@ -5567,6 +5567,27 @@ export type Database = {
           },
         ]
       }
+      tour_progress: {
+        Row: {
+          completed_at: string
+          skipped: boolean
+          tour_key: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          skipped?: boolean
+          tour_key: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          skipped?: boolean
+          tour_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trial_reminders_sent: {
         Row: {
           id: string

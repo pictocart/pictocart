@@ -74,6 +74,7 @@ const SEOSettings = () => {
             <div className="space-y-1.5">
               <Label className="text-xs">Meta Title</Label>
               <Input
+                data-tour="seo-title"
                 value={form.meta_title}
                 onChange={(e) => setForm({ ...form, meta_title: e.target.value })}
                 placeholder="Your store name"
@@ -84,6 +85,7 @@ const SEOSettings = () => {
             <div className="space-y-1.5">
               <Label className="text-xs">Meta Description</Label>
               <Textarea
+                data-tour="seo-desc"
                 value={form.meta_description}
                 onChange={(e) => setForm({ ...form, meta_description: e.target.value })}
                 placeholder="Describe your store in 160 characters"
