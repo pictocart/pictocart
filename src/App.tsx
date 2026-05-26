@@ -26,6 +26,7 @@ import CustomerRoute from "@/components/storefront/CustomerRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import NotFound from "./pages/NotFound.tsx";
 import { useStoreByHost, isPlatformHost } from "@/hooks/useStoreByHost";
+import { TourProvider } from "@/tours/TourProvider";
 
 // Lazy-load heavy / less-frequent pages to shrink initial bundle.
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
