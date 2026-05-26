@@ -268,7 +268,7 @@ export default function Sourcing() {
           {loading && (
             <Card className="p-8 flex flex-col items-center gap-2 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin" />
-              Scraping IndiaMART &amp; JustDial… this takes 30-60s
+              Finding wholesale suppliers… this takes 30-60s
             </Card>
           )}
           {!loading && products.length === 0 && (
