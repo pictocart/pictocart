@@ -113,6 +113,7 @@ async function scrapeOnce(opts: {
   url: string;
   prompt: string;
   apiKey: string;
+  timeoutMs?: number;
 }): Promise<{ products: RawSourcedProduct[]; error?: string }> {
   const actions =
     opts.source === "justdial"
@@ -123,12 +124,13 @@ async function scrapeOnce(opts: {
         ]
       : undefined;
 
+  const defaultTimeout = opts.source === "gmaps" ? 60000 : 45000;
   const body: Record<string, unknown> = {
     url: opts.url,
     formats: [{ type: "json", schema: productJsonSchema, prompt: opts.prompt }],
     onlyMainContent: true,
     waitFor: opts.source === "gmaps" ? 3000 : 1500,
-    timeout: opts.source === "gmaps" ? 60000 : 45000,
+    timeout: opts.timeoutMs ?? defaultTimeout,
   };
   if (actions) body.actions = actions;
 
@@ -155,6 +157,7 @@ export async function scrapeProductsFromSource(opts: {
   query: string;
   city: string | null;
   limit: number;
+  timeoutMs?: number;
 }): Promise<{ products: RawSourcedProduct[]; sourceUrl: string; error?: string }> {
   const apiKey = Deno.env.get("FIRECRAWL_API_KEY");
   if (!apiKey) throw new Error("FIRECRAWL_API_KEY is not configured");
@@ -164,12 +167,11 @@ export async function scrapeProductsFromSource(opts: {
 
   const all: RawSourcedProduct[] = [];
   const errors: string[] = [];
-  const first = await scrapeOnce({ source: opts.source, url: firstUrl, prompt, apiKey });
+  const first = await scrapeOnce({ source: opts.source, url: firstUrl, prompt, apiKey, timeoutMs: opts.timeoutMs });
   if (first.error) errors.push(first.error);
   all.push(...first.products);
 
   // Note: page-2 pagination removed to stay within edge function 150s budget.
-
 
   return {
     products: all.slice(0, opts.limit),

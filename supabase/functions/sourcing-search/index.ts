@@ -121,34 +121,44 @@ Deno.serve(async (req) => {
         }
 
         const score = scoreProduct(raw);
-        const { data: row } = await supabaseAdmin
-          .from("sourcing_products").upsert({
-            supplier_id: supplierId,
-            source: r.source,
-            source_url: r.sourceUrl,
-            title,
-            description: raw.description ?? null,
-            category: raw.category ?? query,
-            tags: raw.tags ?? [query],
-            images: raw.images ?? [],
-            hero_image: raw.hero_image ?? (raw.images?.[0] ?? null),
-            moq: raw.moq ?? null,
-            price_min: raw.price_min ?? null,
-            price_max: raw.price_max ?? null,
-            supplier_name_cached: raw.supplier_name ?? null,
-            supplier_city_cached: raw.supplier_city ?? null,
-            supplier_phone_masked: maskPhone(raw.supplier_phone),
-            supplier_phone_full: raw.supplier_phone ?? null,
-            supplier_email_full: raw.supplier_email ?? null,
-            rating: raw.rating ?? null,
-            reviews_count: raw.reviews_count ?? null,
-            ai_score: score,
-            raw_json: raw as any,
-            dedupe_hash: hash,
-            is_active: true,
-          }, { onConflict: "dedupe_hash" })
-          .select("id, supplier_id, source, title, description, category, hero_image, images, moq, price_min, price_max, currency, supplier_name_cached, supplier_city_cached, supplier_phone_masked, rating, reviews_count, ai_score")
-          .single();
+        const rowData = {
+          supplier_id: supplierId,
+          source: r.source,
+          source_url: r.sourceUrl,
+          title,
+          description: raw.description ?? null,
+          category: raw.category ?? query,
+          tags: raw.tags ?? [query],
+          images: raw.images ?? [],
+          hero_image: raw.hero_image ?? (raw.images?.[0] ?? null),
+          moq: raw.moq ?? null,
+          price_min: raw.price_min ?? null,
+          price_max: raw.price_max ?? null,
+          supplier_name_cached: raw.supplier_name ?? null,
+          supplier_city_cached: raw.supplier_city ?? null,
+          supplier_phone_masked: maskPhone(raw.supplier_phone),
+          supplier_phone_full: raw.supplier_phone ?? null,
+          supplier_email_full: raw.supplier_email ?? null,
+          rating: raw.rating ?? null,
+          reviews_count: raw.reviews_count ?? null,
+          ai_score: score,
+          raw_json: raw as any,
+          dedupe_hash: hash,
+          is_active: true,
+        };
+        const selectCols = "id, supplier_id, source, title, description, category, hero_image, images, moq, price_min, price_max, currency, supplier_name_cached, supplier_city_cached, supplier_phone_masked, rating, reviews_count, ai_score";
+        const { data: existingProd } = await supabaseAdmin
+          .from("sourcing_products").select("id").eq("dedupe_hash", hash).maybeSingle();
+        let row: any = null;
+        if (existingProd?.id) {
+          const { data } = await supabaseAdmin
+            .from("sourcing_products").update(rowData).eq("id", existingProd.id).select(selectCols).single();
+          row = data;
+        } else {
+          const { data } = await supabaseAdmin
+            .from("sourcing_products").insert(rowData).select(selectCols).single();
+          row = data;
+        }
         if (row) inserted.push(row);
       }
     }
