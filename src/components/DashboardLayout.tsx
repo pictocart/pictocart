@@ -227,6 +227,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         to={item.path}
         onClick={() => setMobileOpen(false)}
         title={collapsed ? item.label : undefined}
+        data-tour={item.path === '/products' ? 'sidebar-products' : item.path === '/orders' ? 'sidebar-orders' : undefined}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
           isActive
