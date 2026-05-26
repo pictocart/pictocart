@@ -217,7 +217,7 @@ export default function Sourcing() {
         </div>
         <h1 className="text-2xl md:text-4xl font-bold mb-1">SourceIndia 🇮🇳</h1>
         <p className="text-white/90 text-sm md:text-base">
-          Discover viral wholesale products from IndiaMART, JustDial &amp; trusted suppliers — import in one click.
+          Discover viral wholesale products from trusted Indian suppliers — import in one click.
         </p>
 
         <div className="mt-5 flex flex-col md:flex-row gap-2 bg-white rounded-xl p-2 shadow-xl">
@@ -268,7 +268,7 @@ export default function Sourcing() {
           {loading && (
             <Card className="p-8 flex flex-col items-center gap-2 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin" />
-              Scraping IndiaMART &amp; JustDial… this takes 30-60s
+              Finding wholesale suppliers… this takes 30-60s
             </Card>
           )}
           {!loading && products.length === 0 && (
@@ -345,31 +345,14 @@ export default function Sourcing() {
 }
 
 function ProductDrawer({ product, onClose, storeId }: { product: SourcingProduct | null; onClose: () => void; storeId: string | null }) {
-  const [unlocked, setUnlocked] = useState<any>(null);
-  const [busy, setBusy] = useState(false);
   const [importing, setImporting] = useState(false);
   const [marginPct, setMarginPct] = useState(60);
 
-  useEffect(() => { setUnlocked(null); setMarginPct(60); }, [product?.id]);
+  useEffect(() => { setMarginPct(60); }, [product?.id]);
 
   if (!product) return null;
 
   const retail = product.price_min ? Math.round(product.price_min * (1 + marginPct / 100)) : null;
-
-  async function reveal() {
-    if (!storeId) return;
-    setBusy(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("sourcing-reveal-contact", {
-        body: { store_id: storeId, product_id: product!.id },
-      });
-      if (error) throw error;
-      if (data?.error === "INSUFFICIENT_CREDITS") { toast.error("Not enough credits"); return; }
-      setUnlocked(data.supplier);
-      toast.success(data.already_unlocked ? "Already unlocked" : "Contact unlocked!");
-    } catch (e: any) { toast.error(e.message); }
-    finally { setBusy(false); }
-  }
 
   async function importToStore() {
     if (!storeId) return;
@@ -398,7 +381,6 @@ function ProductDrawer({ product, onClose, storeId }: { product: SourcingProduct
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">{product.source.toUpperCase()}</Badge>
             {product.category && <Badge variant="outline">{product.category}</Badge>}
             <Badge className="bg-orange-100 text-orange-700 border-orange-200">
               <Sparkles className="w-3 h-3 mr-1" /> Score {Math.round(product.ai_score)}
@@ -430,28 +412,12 @@ function ProductDrawer({ product, onClose, storeId }: { product: SourcingProduct
           {/* Supplier card */}
           <Card className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="font-semibold">{product.supplier_name_cached ?? "Supplier"}</div>
+              <div className="font-semibold">{product.supplier_name_cached ?? "Verified Supplier"}</div>
               {product.supplier_city_cached && <Badge variant="outline"><MapPin className="w-3 h-3 mr-1" />{product.supplier_city_cached}</Badge>}
             </div>
-            {unlocked ? (
-              <div className="space-y-1 text-sm">
-                {unlocked.phone && <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary" /><a href={`tel:${unlocked.phone}`}>{unlocked.phone}</a></div>}
-                {unlocked.email && <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /><a href={`mailto:${unlocked.email}`}>{unlocked.email}</a></div>}
-                {unlocked.website && <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><a href={unlocked.website} target="_blank" rel="noreferrer">Website</a></div>}
-                {unlocked.gstin && <div className="flex items-center gap-2 text-xs"><Check className="w-3 h-3 text-emerald-600" />GSTIN {unlocked.gstin}</div>}
-              </div>
-            ) : (
-              <>
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  {product.supplier_phone_masked ?? "Contact hidden"}
-                </div>
-                <Button onClick={reveal} disabled={busy} variant="outline" className="w-full">
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Lock className="w-4 h-4 mr-1" />}
-                  Reveal supplier contact · 5 credits
-                </Button>
-              </>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Import this product to your store and we'll handle sourcing & fulfilment for you.
+            </p>
           </Card>
 
           <Button onClick={importToStore} disabled={importing} className="w-full" size="lg">
