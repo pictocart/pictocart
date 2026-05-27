@@ -44,7 +44,7 @@ const ThemeDetail = () => {
         title={`${theme.name} — Theme Marketplace | Pic to Cart`}
         description={theme.description || `Premium storefront theme for Indian sellers. Apply in one click.`}
         url={`https://pictocart.in/marketplace/${theme.theme_id}`}
-        image={theme.preview_image || undefined}
+        ogImage={theme.preview_image || undefined}
       />
 
       {/* Nav */}
