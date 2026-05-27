@@ -290,12 +290,16 @@ const LandingPage = () => {
 
 
             {/* Desktop Links */}
-            <div className="hidden md:flex items-center gap-8">
-              {['features', 'how-it-works', 'pricing', 'themes'].map(id => (
+            <div className="hidden md:flex items-center gap-6">
+              <FeaturesMegaMenu scrolled={scrolled} />
+              {['how-it-works', 'pricing'].map(id => (
                 <button key={id} onClick={() => scrollTo(id)} className={`text-sm font-medium capitalize transition-colors hover:text-indigo-500 ${scrolled ? 'text-slate-600' : 'text-white/80 hover:text-white'}`}>
                   {id.replace('-', ' ')}
                 </button>
               ))}
+              <Link to="/marketplace" className={`text-sm font-medium transition-colors hover:text-indigo-500 ${scrolled ? 'text-slate-600' : 'text-white/80 hover:text-white'}`}>
+                Themes
+              </Link>
             </div>
 
             {/* CTA */}
