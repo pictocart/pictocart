@@ -416,6 +416,11 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* ─── EVERY SOLUTION GRID — "what to sell + where to sell" ─── */}
+      <EverySolutionGrid />
+
+
+
       {/* ─── HOW IT WORKS ─── */}
       <section
         id="how-it-works"
