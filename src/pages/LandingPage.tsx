@@ -268,8 +268,16 @@ const LandingPage = () => {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 glass-nav shadow-sm border-b border-slate-100' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo */}
-            <PicToCartLogo size={40} withWordmark wordmarkClassName={`text-lg ${scrolled ? 'text-slate-900' : 'text-white'}`} />
+            {/* Logo with glow flare for readability on dark hero */}
+            <div className="relative inline-flex items-center">
+              {!scrolled && (
+                <>
+                  <span aria-hidden className="pointer-events-none absolute -inset-x-6 -inset-y-3 rounded-full bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.55),_rgba(255,255,255,0.18)_45%,_transparent_70%)] blur-xl" />
+                  <span aria-hidden className="pointer-events-none absolute -inset-x-3 -inset-y-1 rounded-full bg-white/40 blur-md" />
+                </>
+              )}
+              <PicToCartLogo size={44} className="relative z-10" />
+            </div>
 
 
             {/* Desktop Links */}
