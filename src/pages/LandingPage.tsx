@@ -649,35 +649,7 @@ const LandingPage = () => {
             </div>
           </RevealSection>
 
-          {/* Horizontal scroll */}
-          <div className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide cursor-grab">
-            <div className="flex gap-6 min-w-max">
-              {[
-                { name: 'Luxe Fashion', cat: 'Fashion', img: themeFashion },
-                { name: 'Fresh Market', cat: 'Food', img: themeFood },
-                { name: 'Tech Hub', cat: 'Electronics', img: themeElectronics },
-                { name: 'Glow Beauty', cat: 'Beauty', img: themeBeauty },
-                { name: 'Artisan Craft', cat: 'Handcraft', img: themeHandcraft },
-                { name: 'Book Nook', cat: 'Books', img: themeBooks },
-              ].map((theme, i) => (
-                <RevealSection key={i} delay={i * 100}>
-                  <div className="w-72 rounded-2xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 group">
-                    <div className="h-44 relative overflow-hidden">
-                      <img src={theme.img} alt={`${theme.name} theme preview`} loading="lazy" className="w-full object-cover object-top transition-all duration-[3s] ease-in-out group-hover:object-bottom" style={{ height: '200%', minHeight: '200%' }} />
-                      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
-                      <div className="absolute bottom-3 left-3 z-10">
-                        <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium">{theme.cat}</span>
-                      </div>
-                    </div>
-                    <div className="p-4 bg-white">
-                      <h3 className="font-bold text-slate-900">{theme.name}</h3>
-                      <p className="text-sm text-slate-400 mt-1">5 pages • Full customization</p>
-                    </div>
-                  </div>
-                </RevealSection>
-              ))}
-            </div>
-          </div>
+          <LiveThemeShowcase />
         </div>
       </section>
 
