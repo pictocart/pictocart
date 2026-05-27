@@ -167,6 +167,9 @@ const AppRoutes = () => {
             <Route path="/q/:slug" element={<QRRedirect />} />
             <Route path="/investors" element={<Investors />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/features/:slug" element={<FeatureDetail />} />
+            <Route path="/marketplace" element={<ThemeMarketplacePublic />} />
+            <Route path="/marketplace/:slug" element={<ThemeMarketplaceDetail />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route
