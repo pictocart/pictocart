@@ -268,15 +268,21 @@ const LandingPage = () => {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 glass-nav shadow-sm border-b border-slate-100' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo with glow flare for readability on dark hero */}
-            <div className="relative inline-flex items-center">
+            {/* Logo — sits on a soft white pill on the dark hero so the navy wordmark stays readable */}
+            <div
+              className={`relative inline-flex items-center rounded-2xl transition-all duration-300 ${
+                scrolled
+                  ? 'bg-transparent px-0 py-0 shadow-none'
+                  : 'bg-white/95 px-3 py-1.5 shadow-[0_8px_30px_-8px_rgba(99,102,241,0.55)] ring-1 ring-white/60 backdrop-blur'
+              }`}
+            >
               {!scrolled && (
-                <>
-                  <span aria-hidden className="pointer-events-none absolute -inset-x-6 -inset-y-3 rounded-full bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.55),_rgba(255,255,255,0.18)_45%,_transparent_70%)] blur-xl" />
-                  <span aria-hidden className="pointer-events-none absolute -inset-x-3 -inset-y-1 rounded-full bg-white/40 blur-md" />
-                </>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -inset-3 rounded-3xl bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.55),_transparent_70%)] blur-xl"
+                />
               )}
-              <PicToCartLogo size={44} className="relative z-10" />
+              <PicToCartLogo size={48} className="relative z-10" />
             </div>
 
 
