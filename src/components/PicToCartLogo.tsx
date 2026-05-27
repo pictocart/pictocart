@@ -9,9 +9,9 @@ interface Props {
   wordmarkClassName?: string;
 }
 
-const PicToCartLogo = ({ className, size = 48, withWordmark, wordmarkClassName }: Props) => {
-  // Wordmark is part of the logo artwork itself, so the image is wider than tall (~3:1).
-  const width = withWordmark ? Math.round(size * 3) : Math.round(size * 3);
+const PicToCartLogo = ({ className, size = 48 }: Props) => {
+  // Logo artwork is ~5:2 wide (wordmark baked in).
+  const width = Math.round(size * 2.5);
   return (
     <span className={cn('inline-flex items-center', className)}>
       <img

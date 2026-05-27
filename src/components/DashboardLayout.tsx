@@ -262,8 +262,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         )}
       >
         {/* Logo */}
-        <div className={cn('flex h-16 items-center border-b border-sidebar-border px-3', collapsed && 'justify-center px-2')}>
-          <PicToCartLogo size={collapsed ? 22 : 44} />
+        <div className={cn('flex h-16 items-center border-b border-sidebar-border px-2', collapsed && 'justify-center')}>
+          <PicToCartLogo size={collapsed ? 24 : 56} className="w-full justify-center" />
         </div>
 
         {/* Nav */}
