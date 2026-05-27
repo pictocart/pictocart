@@ -1,14 +1,13 @@
-/* Shared content for the merchant journey + FAQ — used by LandingPage and /how-it-works */
+/* Shared content for the merchant journey + FAQ — used by LandingPage and /how-it-works.
+   The journey mirrors the actual onboarding flow: sign-up + 4 mandatory wizard steps. */
 import {
-  Camera, Palette, Rocket, Store, Globe, Users, TrendingUp, type LucideIcon,
+  Palette, Rocket, Store, Tag, Users, type LucideIcon,
 } from 'lucide-react';
 import flow01 from '@/assets/flow/01-signup.jpg';
 import flow02 from '@/assets/flow/02-onboarding.jpg';
-import flow03 from '@/assets/flow/03-products.jpg';
 import flow04 from '@/assets/flow/04-theme.jpg';
-import flow05 from '@/assets/flow/05-domain-payments.jpg';
 import flow06 from '@/assets/flow/06-golive.jpg';
-import flow07 from '@/assets/flow/07-grow.jpg';
+import flow03 from '@/assets/flow/03-products.jpg';
 
 export interface JourneyStep {
   step: string;
@@ -33,45 +32,31 @@ export const merchantJourney: JourneyStep[] = [
   },
   {
     step: '02', icon: Store, title: 'Tell Us About Your Store',
-    desc: 'Pick a name, category and language. Our wizard guides you through 7 quick steps — no jargon.',
-    long: 'A short onboarding wizard collects your store name, category (fashion, food, electronics, etc.), language, currency and target market. We use this to pre-pick fonts, colors and themes that match your audience.',
-    bullets: ['7-step guided wizard', 'Auto language & currency detection', 'India-first defaults (₹, GST-ready)'],
+    desc: 'Pick a name and a free .pictocart.in URL. That\'s it — one minute, one screen.',
+    long: 'Type your store name, we check the slug live, and reserve a free `yourstore.pictocart.in` URL. You can attach a custom domain anytime later.',
+    bullets: ['Live slug availability', 'Free subdomain reserved', 'Custom domain ready to plug in'],
     image: flow02, accent: 'from-orange-500 to-amber-500', bg: 'bg-orange-50', iconText: 'text-orange-600',
   },
   {
-    step: '03', icon: Camera, title: 'Snap & Add Products',
-    desc: 'Take a photo. AI generates the title, description, pricing and SEO tags. Edit if you want — or just publish.',
-    long: 'Open the product uploader on your phone, take photos (or pick from gallery), and our AI writes the product title, description, suggested price, category and SEO tags. You can keep, tweak or replace anything in one tap.',
-    bullets: ['6 photos per product', 'AI-written titles + descriptions', 'Smart pricing suggestions', 'Auto SEO tags'],
+    step: '03', icon: Tag, title: 'Choose Your Category',
+    desc: 'Fashion, food, electronics, beauty, services… pick what you sell. We tune themes, taxes & layouts for you.',
+    long: 'Tap your category (and optional subcategory). We pre-pick fonts, colour palette, GST defaults and product fields that fit your trade — so every later step is shorter.',
+    bullets: ['15+ categories with subcategories', 'GST & HSN defaults applied', 'Industry-tuned theme picks'],
     image: flow03, accent: 'from-rose-500 to-pink-500', bg: 'bg-rose-50', iconText: 'text-rose-600',
   },
   {
     step: '04', icon: Palette, title: 'Pick a Beautiful Theme',
-    desc: 'Choose from 50+ AI-crafted themes built for Indian shoppers. Customize colors, fonts, layout in clicks.',
-    long: 'Browse our theme marketplace — 50+ AI-generated themes, each a complete 5-page design. Apply with one click, then change colors, fonts, hero images or whole sections without writing code.',
-    bullets: ['50+ premium themes', 'Drag-and-drop section editor', 'Live preview on mobile + desktop'],
+    desc: 'A theme is auto-suggested for your category from 50+ AI-crafted designs. Keep it or swap in one tap.',
+    long: 'We pre-select the best-rated theme for your category from our marketplace of 50+ AI-generated 5-page designs. Browse trending or latest, live-preview any, and apply with one click.',
+    bullets: ['Auto-suggested for your category', '50+ premium themes', 'Live preview before you commit'],
     image: flow04, accent: 'from-violet-500 to-indigo-500', bg: 'bg-violet-50', iconText: 'text-violet-600',
   },
   {
-    step: '05', icon: Globe, title: 'Connect Domain & Payments',
-    desc: 'Bring your own domain (or use a free one), wire up Razorpay, UPI & COD. Verified in minutes.',
-    long: 'Use your free `yourstore.pictocart.in` URL or connect your own .com / .in domain via DNS. Plug in Razorpay (with your own keys, so payouts go straight to your bank) and enable COD or UPI in one toggle.',
-    bullets: ['Free subdomain or your own domain', 'Razorpay, UPI, COD supported', 'Direct payouts to your bank', 'Auto SSL certificates'],
-    image: flow05, accent: 'from-sky-500 to-blue-500', bg: 'bg-sky-50', iconText: 'text-sky-600',
-  },
-  {
-    step: '06', icon: Rocket, title: 'Go Live',
-    desc: 'Hit publish. Share your store link on WhatsApp, Instagram, Facebook — with one tap.',
-    long: 'One "Publish" button takes your store live. Share buttons generate WhatsApp, Instagram, Facebook and short links — with rich preview cards already attached.',
-    bullets: ['One-click publish', 'Pre-built share cards (OG / Twitter)', 'WhatsApp & Instagram CTAs'],
+    step: '05', icon: Rocket, title: 'Your Store Goes Live',
+    desc: 'One tap publishes the store. Share to WhatsApp, Instagram or Facebook with rich preview cards already attached.',
+    long: 'Hit "Go Live" — we provision the storefront, generate share cards, enable COD by default, and drop you on the dashboard with a ready-to-share link.',
+    bullets: ['One-click publish', 'COD enabled by default', 'WhatsApp / Instagram / Facebook share cards'],
     image: flow06, accent: 'from-fuchsia-500 to-purple-500', bg: 'bg-fuchsia-50', iconText: 'text-fuchsia-600',
-  },
-  {
-    step: '07', icon: TrendingUp, title: 'Grow With Insights',
-    desc: 'Track orders, revenue and visitors. AI suggests coupons, abandoned-cart wins and theme upgrades weekly.',
-    long: 'Your dashboard shows orders, revenue, top products and visitor funnels. We email a weekly digest, flag abandoned carts and suggest coupons, blog posts and theme tweaks based on your traffic.',
-    bullets: ['Real-time analytics', 'Weekly AI insights email', 'Abandoned-cart recovery', 'Coupon + blog recommendations'],
-    image: flow07, accent: 'from-indigo-500 to-blue-600', bg: 'bg-indigo-50', iconText: 'text-indigo-600',
   },
 ];
 
@@ -84,7 +69,7 @@ export const merchantFAQs: FAQ[] = [
   },
   {
     q: 'How long does setup actually take?',
-    a: 'Most merchants are live in 5–15 minutes: 30 seconds to sign up, 2 minutes for onboarding, 5 minutes to add 3–5 products with AI, 1 minute to pick a theme, and 2 minutes to connect payments. Custom domains take an extra 5–60 minutes to verify DNS.',
+    a: 'Most merchants are live in 5 minutes flat: 30 seconds to sign up, 1 minute to name your store, 30 seconds to pick a category, 1 minute to choose a theme (or accept the auto-suggested one) and one tap to go live. You can add products, payments and your custom domain right after — but you\'re selling from minute five.',
   },
   {
     q: 'Do I need a developer or designer?',
