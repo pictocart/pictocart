@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { ImagePlus, X, Loader2, Camera } from 'lucide-react';
+import { ImagePlus, X, Loader2, Camera, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { compressImage } from '@/lib/imageCompression';
@@ -53,9 +52,17 @@ const ImageUploader = ({ images, onChange, maxImages = 6 }: ImageUploaderProps) 
     }
   };
 
-
   const removeImage = (index: number) => {
     onChange(images.filter((_, i) => i !== index));
+  };
+
+  const setAsMain = (index: number) => {
+    if (index === 0) return;
+    const next = [...images];
+    const [picked] = next.splice(index, 1);
+    next.unshift(picked);
+    onChange(next);
+    toast.success('Main image updated');
   };
 
   return (
@@ -68,19 +75,27 @@ const ImageUploader = ({ images, onChange, maxImages = 6 }: ImageUploaderProps) 
               type="button"
               onClick={() => removeImage(i)}
               className="absolute right-1 top-1 rounded-full bg-background/80 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+              aria-label="Remove image"
             >
               <X className="h-3 w-3" />
             </button>
-            {i === 0 && (
-              <span className="absolute bottom-1 left-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
-                Main
+            {i === 0 ? (
+              <span className="absolute bottom-1 left-1 inline-flex items-center gap-0.5 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                <Star className="h-2.5 w-2.5 fill-current" /> Main
               </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAsMain(i)}
+                className="absolute bottom-1 left-1 rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-medium opacity-0 transition-opacity hover:bg-primary hover:text-primary-foreground group-hover:opacity-100"
+              >
+                Set main
+              </button>
             )}
           </div>
         ))}
         {images.length < maxImages && (
           <div className="flex aspect-square flex-col gap-1.5">
-            {/* Gallery / file picker */}
             <label
               className={cn(
                 'flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-primary/50 hover:bg-accent/50',
@@ -104,7 +119,6 @@ const ImageUploader = ({ images, onChange, maxImages = 6 }: ImageUploaderProps) 
                 disabled={uploading}
               />
             </label>
-            {/* Camera capture */}
             <label
               className={cn(
                 'flex cursor-pointer items-center justify-center gap-1 rounded-lg border border-primary/30 bg-primary/5 py-1.5 transition-colors hover:bg-primary/10',
@@ -126,6 +140,11 @@ const ImageUploader = ({ images, onChange, maxImages = 6 }: ImageUploaderProps) 
           </div>
         )}
       </div>
+      {images.length > 1 && (
+        <p className="text-[11px] text-muted-foreground">
+          Hover any image and tap <strong>Set main</strong> to choose the cover photo.
+        </p>
+      )}
     </div>
   );
 };
