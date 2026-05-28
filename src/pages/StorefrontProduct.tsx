@@ -18,8 +18,9 @@ import { useEffect } from 'react';
 import { useProductReviews, getAverageRating } from '@/hooks/useReviews';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { Loader2, Minus, Plus, ChevronRight, ShoppingBag, Check, Star, Zap } from 'lucide-react';
+import { Loader2, Minus, Plus, ChevronRight, ShoppingBag, Check, Star, Zap, Play } from 'lucide-react';
 import { toast } from 'sonner';
+import { pickVariantImages, pickVariantVideos, type VariantOption } from '@/lib/productMedia';
 
 const StorefrontProduct = () => {
   const { slug, productId } = useParams<{ slug: string; productId: string }>();
@@ -63,15 +64,26 @@ const StorefrontProduct = () => {
 
   const theme = resolveTheme(store.theme);
   const { colors, fonts, borderRadius } = theme;
-  const images = product.images || [];
+  const productImages = (product.images as string[]) || [];
   const { average, count } = getAverageRating(reviews);
   const isOutOfStock = product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0;
-  const variants = Array.isArray(product.variants) ? product.variants as { name: string; values: string[] }[] : [];
+  const variants = (Array.isArray(product.variants) ? product.variants : []) as VariantOption[];
   const aiData = (product.ai_generated_data || {}) as Record<string, any>;
+  const productVideos: string[] = Array.isArray(aiData.product_videos) ? aiData.product_videos : [];
   const highlights = aiData.highlights as string[] | undefined;
   const metadata = Object.fromEntries(
-    Object.entries(aiData).filter(([k]) => !['highlights', 'product_type'].includes(k)).map(([k, v]) => [k, String(v)])
+    Object.entries(aiData).filter(([k]) => !['highlights', 'product_type', 'product_videos', 'product_hint'].includes(k)).map(([k, v]) => [k, String(v)])
   );
+
+  // Swap gallery to selected variant's media when available.
+  const variantImages = pickVariantImages(variants, selectedVariants);
+  const variantVideos = pickVariantVideos(variants, selectedVariants);
+  const images = variantImages.length > 0 ? variantImages : productImages;
+  const videos = variantVideos.length > 0 ? variantVideos : productVideos;
+
+  // Reset selected thumbnail when gallery source changes.
+  useEffect(() => { setSelectedImage(0); }, [variantImages.join('|')]);
+
   const discount = product.compare_at_price && product.compare_at_price > product.price
     ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
     : 0;
