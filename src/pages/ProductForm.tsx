@@ -273,6 +273,20 @@ const ProductForm = () => {
             </CardContent>
           </Card>
 
+          {/* Product Video & Voiceover */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Video & Voiceover</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <VideoUploader videos={productVideos} onChange={setProductVideos} maxVideos={2} />
+              <VoiceVideoRecorder
+                videoUrl={productVideos[0] || null}
+                onMerged={(url) => setProductVideos((prev) => [url, ...prev.slice(1)])}
+              />
+            </CardContent>
+          </Card>
+
           {/* Basic info */}
           <Card>
             <CardHeader className="pb-3">

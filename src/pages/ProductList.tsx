@@ -5,17 +5,18 @@ import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Grid3X3, List, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Grid3X3, List, Trash2, Package, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
 
 const ProductList = () => {
   const navigate = useNavigate();
-  const { products, loading, toggleActive, deleteProduct, bulkDelete } = useProducts();
+  const { products, loading, toggleActive, deleteProduct, bulkDelete, createProduct } = useProducts();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -49,6 +50,33 @@ const ProductList = () => {
   const handleBulkDelete = () => {
     if (selected.size === 0) return;
     bulkDelete.mutate(Array.from(selected), { onSuccess: () => setSelected(new Set()) });
+  };
+
+  const handleDuplicate = async (p: typeof products[number]) => {
+    try {
+      await createProduct.mutateAsync({
+        title: `${p.title} (Copy)`,
+        description: p.description,
+        short_description: p.short_description,
+        price: p.price,
+        compare_at_price: p.compare_at_price,
+        category: p.category,
+        sku: null,
+        tags: p.tags,
+        images: [],
+        variants: p.variants as any,
+        inventory_count: 0,
+        cost_price: p.cost_price,
+        tax_rate: (p as any).tax_rate,
+        is_active: false,
+        seo_title: p.seo_title,
+        seo_description: p.seo_description,
+        ai_generated_data: p.ai_generated_data as any,
+      });
+      toast.success('Product duplicated as draft');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to duplicate');
+    }
   };
 
   if (loading) {
@@ -222,6 +250,9 @@ const ProductList = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => navigate(`/products/${product.id}`)}>
                           <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicate(product)}>
+                          <Copy className="mr-2 h-3.5 w-3.5" /> Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => deleteProduct.mutate(product.id)} className="text-destructive">
                           <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
