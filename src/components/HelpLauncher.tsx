@@ -14,9 +14,30 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   HelpCircle, MessageCircle, Search, Sparkles, Plus, Trash2, Send, Loader2, BookOpen,
+  Mic, MicOff, Volume2, VolumeX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Sarvam supported languages + speakers
+const LANGUAGES: Array<{ code: string; label: string }> = [
+  { code: 'hi-IN', label: 'हिन्दी' },
+  { code: 'en-IN', label: 'English' },
+  { code: 'bn-IN', label: 'বাংলা' },
+  { code: 'ta-IN', label: 'தமிழ்' },
+  { code: 'te-IN', label: 'తెలుగు' },
+  { code: 'mr-IN', label: 'मराठी' },
+  { code: 'gu-IN', label: 'ગુજરાતી' },
+  { code: 'kn-IN', label: 'ಕನ್ನಡ' },
+  { code: 'ml-IN', label: 'മലയാളം' },
+  { code: 'pa-IN', label: 'ਪੰਜਾਬੀ' },
+  { code: 'od-IN', label: 'ଓଡ଼ିଆ' },
+];
+const VOICES = ['shubh', 'anushka', 'manisha', 'vidya', 'arya', 'abhilash', 'karun', 'hitesh'];
+const LS_LANG = 'pica2_lang';
+const LS_VOICE = 'pica2_voice';
+const LS_TTS = 'pica2_tts_on';
 
 interface HelpArticle { id: string; slug: string; title: string; body_md: string; category: string }
 interface ChatThread { id: string; title: string; last_message_at: string }
