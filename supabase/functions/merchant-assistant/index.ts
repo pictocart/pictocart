@@ -12,6 +12,7 @@ type ChatMsg = { role: 'user' | 'assistant'; content: string };
 interface ReqBody {
   thread_id?: string | null;
   message: string;
+  language?: string; // BCP-47 like "hi-IN"
 }
 
 Deno.serve(async (req) => {
