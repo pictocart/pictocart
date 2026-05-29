@@ -12,6 +12,7 @@ type ChatMsg = { role: 'user' | 'assistant'; content: string };
 interface ReqBody {
   thread_id?: string | null;
   message: string;
+  language?: string; // BCP-47 like "hi-IN"
 }
 
 Deno.serve(async (req) => {
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
       .filter((m: any) => m.role === 'user' || m.role === 'assistant')
       .map((m: any) => ({ role: m.role, content: m.content }));
 
-    const systemPrompt = buildSystemPrompt(ctx);
+    const systemPrompt = buildSystemPrompt(ctx, body.language);
 
     // Primary: Sarvam (multilingual, India-first). Fallback: Lovable AI Gateway.
     const useSarvam = !!SARVAM_API_KEY;
@@ -224,9 +225,26 @@ async function loadMerchantContext(admin: any, userId: string) {
   };
 }
 
-function buildSystemPrompt(ctx: any): string {
+const LANG_LABEL: Record<string, string> = {
+  'hi-IN': 'Hindi (हिन्दी, Devanagari script)',
+  'en-IN': 'English',
+  'bn-IN': 'Bengali (বাংলা)',
+  'ta-IN': 'Tamil (தமிழ்)',
+  'te-IN': 'Telugu (తెలుగు)',
+  'mr-IN': 'Marathi (मराठी)',
+  'gu-IN': 'Gujarati (ગુજરાતી)',
+  'kn-IN': 'Kannada (ಕನ್ನಡ)',
+  'ml-IN': 'Malayalam (മലയാളം)',
+  'pa-IN': 'Punjabi (ਪੰਜਾਬੀ, Gurmukhi)',
+  'od-IN': 'Odia (ଓଡ଼ିଆ)',
+};
+
+function buildSystemPrompt(ctx: any, language?: string): string {
+  const langInstr = language && LANG_LABEL[language]
+    ? `\n\n**Preferred language:** Reply in ${LANG_LABEL[language]} unless the merchant clearly writes in another language. Keep dashboard route names like /payment-settings in English.`
+    : '';
   if (!ctx.store) {
-    return `You are PicToCart's merchant support assistant. This user has not finished creating a store yet. Warmly guide them to complete the 7-step onboarding wizard at /onboarding (Store name → Category → Logo → AI Product → Theme → Payment Setup → Go Live). Keep replies under 5 sentences. Use markdown bullets when listing steps. ALWAYS reply in the same language and script the merchant writes in — fully supports English, हिन्दी, Hinglish, বাংলা, தமிழ், తెలుగు, मराठी, ગુજરાતી, ಕನ್ನಡ, മലയാളം, ਪੰਜਾਬੀ, ଓଡ଼ିଆ, and اردو. Keep route names like /onboarding in English.`;
+    return `You are PicToCart's merchant support assistant. This user has not finished creating a store yet. Warmly guide them to complete the 7-step onboarding wizard at /onboarding (Store name → Category → Logo → AI Product → Theme → Payment Setup → Go Live). Keep replies under 5 sentences. Use markdown bullets when listing steps. ALWAYS reply in the same language and script the merchant writes in — fully supports English, हिन्दी, Hinglish, বাংলা, தமிழ், తెలుగు, मराठी, ગુજરાતી, ಕನ್ನಡ, മലയാളം, ਪੰਜਾਬੀ, ଓଡ଼ିଆ, and اردو. Keep route names like /onboarding in English.${langInstr}`;
   }
 
   const isFoodService = ['food', 'grocery'].includes((ctx.store.category || '').toLowerCase());
@@ -285,5 +303,5 @@ ${isFoodService
 ## Merchant snapshot (JSON)
 ${JSON.stringify(ctx, null, 2)}
 
-Always cite the snapshot when answering, and never invent numbers that aren't there. If data is missing, say so and ask the merchant to confirm.`;
+Always cite the snapshot when answering, and never invent numbers that aren't there. If data is missing, say so and ask the merchant to confirm.${langInstr}`;
 }

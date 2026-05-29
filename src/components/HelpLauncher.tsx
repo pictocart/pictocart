@@ -14,9 +14,30 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   HelpCircle, MessageCircle, Search, Sparkles, Plus, Trash2, Send, Loader2, BookOpen,
+  Mic, MicOff, Volume2, VolumeX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Sarvam supported languages + speakers
+const LANGUAGES: Array<{ code: string; label: string }> = [
+  { code: 'hi-IN', label: 'हिन्दी' },
+  { code: 'en-IN', label: 'English' },
+  { code: 'bn-IN', label: 'বাংলা' },
+  { code: 'ta-IN', label: 'தமிழ்' },
+  { code: 'te-IN', label: 'తెలుగు' },
+  { code: 'mr-IN', label: 'मराठी' },
+  { code: 'gu-IN', label: 'ગુજરાતી' },
+  { code: 'kn-IN', label: 'ಕನ್ನಡ' },
+  { code: 'ml-IN', label: 'മലയാളം' },
+  { code: 'pa-IN', label: 'ਪੰਜਾਬੀ' },
+  { code: 'od-IN', label: 'ଓଡ଼ିଆ' },
+];
+const VOICES = ['shubh', 'anushka', 'manisha', 'vidya', 'arya', 'abhilash', 'karun', 'hitesh'];
+const LS_LANG = 'pica2_lang';
+const LS_VOICE = 'pica2_voice';
+const LS_TTS = 'pica2_tts_on';
 
 interface HelpArticle { id: string; slug: string; title: string; body_md: string; category: string }
 interface ChatThread { id: string; title: string; last_message_at: string }
@@ -179,6 +200,29 @@ const ChatPane = () => {
     },
   });
 
+  const [language, setLanguage] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'hi-IN';
+    return localStorage.getItem(LS_LANG) || 'hi-IN';
+  });
+  const [voice, setVoice] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'shubh';
+    return localStorage.getItem(LS_VOICE) || 'shubh';
+  });
+  const [ttsOn, setTtsOn] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(LS_TTS) !== '0';
+  });
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const lastSpokenIdRef = useRef<string | null>(null);
+
+  useEffect(() => { localStorage.setItem(LS_LANG, language); }, [language]);
+  useEffect(() => { localStorage.setItem(LS_VOICE, voice); }, [voice]);
+  useEffect(() => { localStorage.setItem(LS_TTS, ttsOn ? '1' : '0'); }, [ttsOn]);
+
   const { data: messages = [], isLoading: msgsLoading } = useQuery({
     queryKey: ['mct-messages', activeId],
     enabled: !!activeId,
@@ -193,10 +237,38 @@ const ChatPane = () => {
     },
   });
 
+  const speak = async (text: string) => {
+    try {
+      setSpeaking(true);
+      const { data, error } = await supabase.functions.invoke('sarvam-tts', {
+        body: { text: text.replace(/[*_`#>\[\]()]/g, '').slice(0, 1500), language, speaker: voice },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const b64 = (data as any)?.audio_base64;
+      if (!b64) throw new Error('No audio');
+      const url = `data:audio/wav;base64,${b64}`;
+      const audio = new Audio(url);
+      audioElRef.current?.pause();
+      audioElRef.current = audio;
+      audio.onended = () => setSpeaking(false);
+      audio.onerror = () => setSpeaking(false);
+      await audio.play();
+    } catch (e: any) {
+      setSpeaking(false);
+      console.warn('TTS failed', e?.message);
+    }
+  };
+
+  const stopSpeaking = () => {
+    try { audioElRef.current?.pause(); } catch {}
+    setSpeaking(false);
+  };
+
   const sendMut = useMutation({
     mutationFn: async (msg: string) => {
       const { data, error } = await supabase.functions.invoke('merchant-assistant', {
-        body: { thread_id: activeId, message: msg },
+        body: { thread_id: activeId, message: msg, language },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -210,6 +282,7 @@ const ChatPane = () => {
       }
       qc.invalidateQueries({ queryKey: ['mct-threads'] });
       qc.invalidateQueries({ queryKey: ['mct-messages', data.thread_id] });
+      if (ttsOn) speak(data.reply);
     },
     onError: (err: any) => toast.error(err?.message || 'Assistant failed'),
   });
@@ -235,6 +308,19 @@ const ChatPane = () => {
 
   useEffect(() => { textareaRef.current?.focus(); }, [activeId]);
 
+  // Auto-speak newly loaded assistant message when switching threads
+  useEffect(() => {
+    if (!ttsOn || !messages?.length) return;
+    const last = messages[messages.length - 1];
+    if (last?.role === 'assistant' && last.id !== lastSpokenIdRef.current) {
+      lastSpokenIdRef.current = last.id;
+      // don't auto-speak historical loads — only when last is recent (<10s)
+      if (Date.now() - new Date(last.created_at).getTime() < 10_000) {
+        speak(last.content);
+      }
+    }
+  }, [messages, ttsOn]);
+
   const startNew = () => {
     const next = new URLSearchParams(params);
     next.delete('at');
@@ -243,11 +329,57 @@ const ChatPane = () => {
     textareaRef.current?.focus();
   };
 
-  const send = () => {
-    const msg = input.trim();
+  const send = (override?: string) => {
+    const msg = (override ?? input).trim();
     if (!msg || sendMut.isPending) return;
     setInput('');
+    stopSpeaking();
     sendMut.mutate(msg);
+  };
+
+  const startRecording = async () => {
+    try {
+      stopSpeaking();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      const chunks: Blob[] = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+        if (blob.size < 800) { setTranscribing(false); return; }
+        setTranscribing(true);
+        try {
+          const buf = await blob.arrayBuffer();
+          let binary = '';
+          const bytes = new Uint8Array(buf);
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+          const b64 = btoa(binary);
+          const { data, error } = await supabase.functions.invoke('sarvam-stt', {
+            body: { audio_base64: b64, mime: rec.mimeType || 'audio/webm', language },
+          });
+          if (error) throw error;
+          if ((data as any)?.error) throw new Error((data as any).error);
+          const text = ((data as any)?.transcript || '').trim();
+          if (text) send(text);
+        } catch (e: any) {
+          toast.error(e?.message || 'Could not transcribe audio');
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      mediaRecRef.current = rec;
+      rec.start();
+      setRecording(true);
+    } catch (e: any) {
+      toast.error('Microphone permission needed');
+    }
+  };
+
+  const stopRecording = () => {
+    try { mediaRecRef.current?.stop(); } catch {}
+    setRecording(false);
   };
 
   const optimisticMessages: Array<{ role: string; content: string; pending?: boolean }> = [...messages];
@@ -255,12 +387,21 @@ const ChatPane = () => {
     optimisticMessages.push({ role: 'user', content: sendMut.variables, pending: true });
   }
 
-  const quickPrompts = [
-    'What is the most important thing to fix in my store right now?',
-    'Why am I not getting any orders?',
-    'How do I enable Razorpay?',
-    'Help me ship my pending orders.',
-  ];
+  const quickPromptsByLang: Record<string, string[]> = {
+    'hi-IN': [
+      'मेरी दुकान में अभी सबसे ज़रूरी क्या ठीक करना है?',
+      'मुझे ऑर्डर क्यों नहीं मिल रहे?',
+      'Razorpay कैसे चालू करूँ?',
+      'पेंडिंग ऑर्डर शिप करने में मदद करो।',
+    ],
+    'en-IN': [
+      'What is the most important thing to fix in my store right now?',
+      'Why am I not getting any orders?',
+      'How do I enable Razorpay?',
+      'Help me ship my pending orders.',
+    ],
+  };
+  const quickPrompts = quickPromptsByLang[language] || quickPromptsByLang['en-IN'];
 
   return (
     <div className="flex h-full min-h-0">
@@ -304,6 +445,35 @@ const ChatPane = () => {
 
       {/* Conversation */}
       <div className="flex-1 min-w-0 flex flex-col">
+        {/* Language / Voice toolbar */}
+        <div className="border-b px-3 py-2 flex items-center gap-2 bg-muted/20 shrink-0 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Language</span>
+          <Select value={language} onValueChange={setLanguage}>
+            <SelectTrigger className="h-7 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {LANGUAGES.map((l) => <SelectItem key={l.code} value={l.code} className="text-xs">{l.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground ml-1">Voice</span>
+          <Select value={voice} onValueChange={setVoice}>
+            <SelectTrigger className="h-7 w-[100px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {VOICES.map((v) => <SelectItem key={v} value={v} className="text-xs capitalize">{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <button
+            onClick={() => { if (speaking) stopSpeaking(); setTtsOn(!ttsOn); }}
+            className={cn(
+              'ml-auto inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border',
+              ttsOn ? 'bg-primary/10 text-primary border-primary/30' : 'text-muted-foreground',
+            )}
+            aria-label="Toggle voice output"
+          >
+            {ttsOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            {speaking ? 'Speaking…' : ttsOn ? 'Voice on' : 'Voice off'}
+          </button>
+        </div>
+
         <ScrollArea className="flex-1" ref={scrollRef as any}>
           <div className="p-4 space-y-4">
             {!activeId && optimisticMessages.length === 0 && (
@@ -338,6 +508,12 @@ const ChatPane = () => {
                 ) : (
                   <div className="max-w-[90%] text-sm prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-a:text-primary">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                    <button
+                      onClick={() => speak(m.content)}
+                      className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary"
+                    >
+                      <Volume2 className="h-3 w-3" /> Play
+                    </button>
                   </div>
                 )}
               </div>
@@ -363,16 +539,27 @@ const ChatPane = () => {
                   send();
                 }
               }}
-              placeholder="Ask anything about your store…"
+              placeholder={recording ? 'Listening…' : transcribing ? 'Transcribing…' : 'Ask anything · type or tap mic'}
               className="min-h-[44px] max-h-32 resize-none text-sm"
               rows={1}
-              disabled={sendMut.isPending}
+              disabled={sendMut.isPending || recording || transcribing}
             />
-            <Button onClick={send} disabled={!input.trim() || sendMut.isPending} size="icon" className="shrink-0">
+            <Button
+              type="button"
+              onClick={recording ? stopRecording : startRecording}
+              disabled={sendMut.isPending || transcribing}
+              size="icon"
+              variant={recording ? 'destructive' : 'outline'}
+              className="shrink-0"
+              aria-label={recording ? 'Stop recording' : 'Start voice input'}
+            >
+              {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+            <Button type="button" onClick={() => send()} disabled={!input.trim() || sendMut.isPending} size="icon" className="shrink-0">
               {sendMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1.5">Enter to send · Shift+Enter for newline. AI may make mistakes.</p>
+          <p className="text-[10px] text-muted-foreground mt-1.5">Enter to send · Shift+Enter for newline · Mic for voice. AI may make mistakes.</p>
         </div>
       </div>
     </div>
