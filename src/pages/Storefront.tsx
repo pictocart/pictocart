@@ -472,7 +472,7 @@ const Storefront = ({ page = 'home' }: { page?: string } = {}) => {
             {filtered.map((product) => (
               <Link key={product.id} to={`/store/${slug}/product/${product.id}`} className="group overflow-hidden transition-all hover:shadow-lg active:scale-[0.98]" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
                 <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>
-                  {product.images?.[0] ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No image</div>}
+                  {product.images?.[0] ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No image</div>}
                   {(product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0) && (
                     <div className="absolute top-2 left-2 px-2 py-0.5 text-[10px] font-bold rounded" style={{ backgroundColor: '#ef4444', color: '#fff' }}>Out of Stock</div>
                   )}
