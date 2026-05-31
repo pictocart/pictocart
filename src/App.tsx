@@ -66,6 +66,7 @@ const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
+const Contact = lazy(() => import("@/pages/Contact"));
 const Billing = lazy(() => import("@/pages/Billing"));
 const Wallet = lazy(() => import("@/pages/Wallet"));
 const Returns = lazy(() => import("@/pages/Returns"));
@@ -274,6 +275,8 @@ const AppRoutes = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/contact-us" element={<Contact />} />
             {/* Public Storefront Routes */}
             <Route path="/store/preview-theme" element={<ThemePreview />} />
             <Route path="/store/:slug" element={<Storefront />} />
