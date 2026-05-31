@@ -27,6 +27,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import NotFound from "./pages/NotFound.tsx";
 import { useStoreByHost, isPlatformHost } from "@/hooks/useStoreByHost";
 import { TourProvider } from "@/tours/TourProvider";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
 
 // Lazy-load heavy / less-frequent pages to shrink initial bundle.
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
@@ -320,6 +321,7 @@ const App = () => (
             <TourProvider>
               <ErrorBoundary>
                 <AppRoutes />
+                <WhatsAppFloat />
               </ErrorBoundary>
             </TourProvider>
           </StoreProvider>
