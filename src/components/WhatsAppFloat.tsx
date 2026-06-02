@@ -1,9 +1,17 @@
 import { MessageCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const WHATSAPP_NUMBER = '919810189606';
 const DEFAULT_MESSAGE = 'Need Support? Contact Us';
 
 const WhatsAppFloat = () => {
+  const { user, loading } = useAuth();
+
+  // Hide for logged-in sellers — Pica 2 already has a WhatsApp CTA inside.
+  // Keep it visible for guests and customer-storefront visitors.
+  if (loading) return null;
+  if (user && !user.user_metadata?.is_customer) return null;
+
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(DEFAULT_MESSAGE)}`;
   return (
     <a
