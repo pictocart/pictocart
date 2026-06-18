@@ -493,6 +493,37 @@ const AdminPartners = () => {
                   </div>
                 </div>
 
+                <div className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-sm">Hierarchy</h3>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setPromoteForm({
+                          tier: selected.tier === "regional_head" ? "regional_head" : "state_head",
+                          override_pct: selected.override_commission_pct || 5,
+                          region_name: selected.region_name || "",
+                          state_name: selected.state_name || "",
+                        });
+                        setPromoteOpen(true);
+                      }}>Promote</Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setAssignParentId(selected.parent_partner_id || "");
+                        setAssignOpen(true);
+                      }}>Assign parent</Button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground grid grid-cols-2 gap-1">
+                    <div>Tier: <span className="font-medium capitalize text-foreground">{String(selected.tier || "partner").replace("_", " ")}</span></div>
+                    <div>Override: <span className="font-medium text-foreground">{selected.override_commission_pct || 0}%</span></div>
+                    <div>Region: <span className="text-foreground">{selected.region_name || "—"}</span></div>
+                    <div>State: <span className="text-foreground">{selected.state_name || "—"}</span></div>
+                    <div className="col-span-2">Parent: <span className="text-foreground">
+                      {selected.parent_partner_id ? (partnersQ.data?.find((p: any) => p.id === selected.parent_partner_id)?.name || "—") : "None"}
+                    </span></div>
+                  </div>
+                </div>
+
+
                 <div className="flex gap-2 pt-4 border-t">
                   {selected.invite_status === "active" ? (
                     <Button variant="destructive" size="sm" onClick={() => updateStatus.mutate({ id: selected.id, status: "suspended" })}>
