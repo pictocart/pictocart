@@ -2780,6 +2780,7 @@ export type Database = {
       plan_configs: {
         Row: {
           analytics: boolean
+          annual_price_inr: number
           blog: boolean
           commission_percent: number
           coupons: boolean
@@ -2808,6 +2809,7 @@ export type Database = {
         }
         Insert: {
           analytics?: boolean
+          annual_price_inr?: number
           blog?: boolean
           commission_percent?: number
           coupons?: boolean
@@ -2836,6 +2838,7 @@ export type Database = {
         }
         Update: {
           analytics?: boolean
+          annual_price_inr?: number
           blog?: boolean
           commission_percent?: number
           coupons?: boolean
@@ -5011,6 +5014,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_cycle: string
           blocked_notified_at: string | null
           cancelled_at: string | null
           created_at: string
@@ -5021,6 +5025,7 @@ export type Database = {
           grace_warning_notified_at: string | null
           id: string
           is_blocked: boolean
+          last_renewal_reminder_at: string | null
           pending_plan: Database["public"]["Enums"]["subscription_plan"] | null
           pending_plan_effective_at: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
@@ -5031,6 +5036,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_cycle?: string
           blocked_notified_at?: string | null
           cancelled_at?: string | null
           created_at?: string
@@ -5041,6 +5047,7 @@ export type Database = {
           grace_warning_notified_at?: string | null
           id?: string
           is_blocked?: boolean
+          last_renewal_reminder_at?: string | null
           pending_plan?: Database["public"]["Enums"]["subscription_plan"] | null
           pending_plan_effective_at?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
@@ -5051,6 +5058,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_cycle?: string
           blocked_notified_at?: string | null
           cancelled_at?: string | null
           created_at?: string
@@ -5061,6 +5069,7 @@ export type Database = {
           grace_warning_notified_at?: string | null
           id?: string
           is_blocked?: boolean
+          last_renewal_reminder_at?: string | null
           pending_plan?: Database["public"]["Enums"]["subscription_plan"] | null
           pending_plan_effective_at?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
@@ -6080,14 +6089,25 @@ export type Database = {
         Args: { _new_plan: string; _store_id: string }
         Returns: Json
       }
-      transfer_store_to_client: {
-        Args: {
-          _client_user_id: string
-          _handover_id: string
-          _store_id: string
-        }
-        Returns: undefined
-      }
+      transfer_store_to_client:
+        | {
+            Args: {
+              _client_user_id: string
+              _handover_id: string
+              _store_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _billing_cycle?: string
+              _client_user_id: string
+              _handover_id: string
+              _plan?: string
+              _store_id: string
+            }
+            Returns: undefined
+          }
     }
     Enums: {
       app_role:

@@ -7,6 +7,12 @@ project_id = "qxeyndsvkfsmkilkzmuc"
     verify_jwt = false
   [functions.partner-handover-accept]
     verify_jwt = false
+  [functions.handover-create-payment]
+    verify_jwt = false
+  [functions.handover-verify-payment]
+    verify_jwt = false
+  [functions.annual-plan-renewal-reminder]
+    verify_jwt = false
   [functions.auth-email-hook]
     verify_jwt = false
   [functions.customer-auth]
