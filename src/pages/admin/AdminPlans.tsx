@@ -14,6 +14,7 @@ interface PlanRow {
   plan: 'free' | 'starter' | 'growth' | 'scale';
   display_name: string;
   price_inr: number;
+  annual_price_inr: number;
   commission_percent: number;
   razorpay_plan_id: string | null;
   trial_days: number;
@@ -89,6 +90,21 @@ const PlanEditor = ({ plan }: { plan: PlanRow }) => {
           <div className="space-y-1">
             <Label className="text-xs">Price (₹/mo)</Label>
             <Input type="number" value={form.price_inr} onChange={(e) => set('price_inr', parseInt(e.target.value || '0'))} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Annual Price (₹/yr)</Label>
+            <Input
+              type="number"
+              value={form.annual_price_inr ?? 0}
+              onChange={(e) => set('annual_price_inr', parseInt(e.target.value || '0'))}
+              disabled={form.plan === 'free'}
+            />
+            {form.plan !== 'free' && form.price_inr > 0 && form.annual_price_inr > 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                ≈ ₹{Math.round(form.annual_price_inr / 12).toLocaleString('en-IN')}/mo (
+                {Math.max(0, Math.round(((form.price_inr * 12 - form.annual_price_inr) / (form.price_inr * 12)) * 100))}% off)
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Commission %</Label>

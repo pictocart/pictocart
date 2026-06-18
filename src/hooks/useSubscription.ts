@@ -29,6 +29,7 @@ export interface PlanConfig {
   is_active: boolean;
   signup_bonus_credits?: number;
   gst_percent?: number;
+  annual_price_inr?: number;
 }
 
 export interface Subscription {

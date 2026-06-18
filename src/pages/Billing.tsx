@@ -15,6 +15,14 @@ import { toast } from 'sonner';
 import { Crown, Check, X, Loader2, Zap, Sparkles, AlertTriangle, Lock } from 'lucide-react';
 import { CommissionPanel } from '@/components/billing/CommissionPanel';
 
+type BillingCycle = 'monthly' | 'annual';
+const annualMonthly = (annual: number) => Math.round((annual / 12) * 100) / 100;
+const annualSavingsPct = (monthly: number, annual: number) => {
+  if (!monthly || !annual) return 0;
+  const full = monthly * 12;
+  return Math.max(0, Math.round(((full - annual) / full) * 100));
+};
+
 declare global { interface Window { Razorpay: any; } }
 
 const FEATURE_ROWS: { key: keyof PlanConfig; label: string }[] = [
@@ -63,6 +71,7 @@ const Billing = () => {
   const { products } = useProducts();
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [downgradeTarget, setDowngradeTarget] = useState<PlanConfig | null>(null);
+  const [cycle, setCycle] = useState<BillingCycle>('monthly');
 
   const currentOrder = plans.find((p) => p.plan === plan)?.sort_order ?? 1;
 
@@ -70,6 +79,54 @@ const Billing = () => {
     if (!store) return;
     setPendingAction(target.plan);
     try {
+      if (cycle === 'annual') {
+        const { data, error } = await supabase.functions.invoke('create-annual-plan-payment', {
+          body: { store_id: store.id, plan: target.plan },
+        });
+        if (error || !data?.razorpay_order_id) throw new Error(error?.message || data?.error || 'Failed');
+
+        if (!(window as any).Razorpay) {
+          const s = document.createElement('script');
+          s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          document.body.appendChild(s);
+          await new Promise((res) => { s.onload = res; });
+        }
+        const rzp = new window.Razorpay({
+          key: data.razorpay_key_id,
+          order_id: data.razorpay_order_id,
+          amount: data.amount,
+          currency: data.currency,
+          name: 'Pic to Cart',
+          description: `${target.display_name} — Annual plan (₹${data.amount_inr})`,
+          theme: { color: '#F97316' },
+          handler: async (resp: any) => {
+            try {
+              const verify = await supabase.functions.invoke('verify-annual-plan-payment', {
+                body: {
+                  store_id: store.id,
+                  plan: target.plan,
+                  razorpay_order_id: resp.razorpay_order_id,
+                  razorpay_payment_id: resp.razorpay_payment_id,
+                  razorpay_signature: resp.razorpay_signature,
+                },
+              });
+              if (verify.error || (verify.data as any)?.error) {
+                throw new Error(verify.error?.message || (verify.data as any)?.error || 'Verification failed');
+              }
+              toast.success('Annual plan activated! 🎉');
+              setTimeout(() => window.location.reload(), 1500);
+            } catch (e: any) {
+              toast.error(e.message || 'Verification failed');
+            } finally {
+              setPendingAction(null);
+            }
+          },
+          modal: { ondismiss: () => setPendingAction(null) },
+        });
+        rzp.open();
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('create-razorpay-subscription', {
         body: { store_id: store.id, plan: target.plan },
       });
@@ -141,7 +198,7 @@ const Billing = () => {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Billing & Plan</h1>
         <p className="text-muted-foreground">
-          Monthly subscription. All prices exclude 18% GST. Upgrade anytime; downgrades apply at the end of your current billing cycle.
+          Pay monthly or save with an annual plan. All prices exclude 18% GST. Upgrade anytime; downgrades apply at the end of your current billing cycle.
         </p>
       </div>
 
@@ -200,11 +257,15 @@ const Billing = () => {
               <p className="text-sm text-muted-foreground">
                 {plan === 'free'
                   ? 'Limited features • Upgrade for more'
-                  : `₹${gstTotal(planConfig.price_inr, planConfig.gst_percent ?? 18).toFixed(2)} / month (incl. 18% GST) • Renews ${
-                      subscription?.current_period_end
+                  : (() => {
+                      const isAnnual = (subscription as any)?.billing_cycle === 'annual';
+                      const annual = Number((planConfig as any).annual_price_inr ?? 0);
+                      const base = isAnnual && annual > 0 ? annualMonthly(annual) : planConfig.price_inr;
+                      const renews = subscription?.current_period_end
                         ? new Date(subscription.current_period_end).toLocaleDateString('en-IN')
-                        : 'soon'
-                    }`}
+                        : 'soon';
+                      return `₹${gstTotal(base, planConfig.gst_percent ?? 18).toFixed(2)} / month (incl. 18% GST) • ${isAnnual ? 'Annual plan' : 'Monthly'} • Renews ${renews}`;
+                    })()}
               </p>
             </div>
           </div>
@@ -236,6 +297,28 @@ const Billing = () => {
         </Card>
       )}
 
+      {/* Billing cycle toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h3 className="text-base font-semibold">Choose a plan</h3>
+        <div className="inline-flex items-center rounded-full border bg-muted/40 p-1 text-sm self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setCycle('monthly')}
+            className={`px-4 py-1.5 rounded-full font-medium transition ${cycle === 'monthly' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setCycle('annual')}
+            className={`px-4 py-1.5 rounded-full font-medium transition flex items-center gap-1.5 ${cycle === 'annual' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+          >
+            Annual
+            <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">Save ~17%</span>
+          </button>
+        </div>
+      </div>
+
       {/* Plan cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {plans.map((p) => {
@@ -245,7 +328,11 @@ const Billing = () => {
           const isDowngrade = p.sort_order < currentOrder;
           const busy = pendingAction === p.plan;
           const gstPct = p.gst_percent ?? 18;
-          const total = gstTotal(p.price_inr, gstPct);
+          const annualPrice = Number(p.annual_price_inr ?? 0);
+          const showAnnual = cycle === 'annual' && !isFree && annualPrice > 0;
+          const displayMonthly = showAnnual ? annualMonthly(annualPrice) : p.price_inr;
+          const total = gstTotal(displayMonthly, gstPct);
+          const savings = showAnnual ? annualSavingsPct(p.price_inr, annualPrice) : 0;
 
           return (
             <Card key={p.id} className={`flex flex-col ${isCurrent ? 'border-primary ring-2 ring-primary/20' : ''}`}>
@@ -255,12 +342,14 @@ const Billing = () => {
                   {isCurrent && <Badge>Current</Badge>}
                 </div>
                 <div className="mt-2">
-                  <span className="text-3xl font-bold">₹{p.price_inr}</span>
+                  <span className="text-3xl font-bold">₹{Math.round(displayMonthly).toLocaleString('en-IN')}</span>
                   <span className="text-sm text-muted-foreground">/mo</span>
                 </div>
                 {!isFree && (
                   <p className="text-xs text-muted-foreground">
-                    ₹{total.toFixed(2)} incl. {gstPct}% GST
+                    {showAnnual
+                      ? <>Billed ₹{annualPrice.toLocaleString('en-IN')} yearly · incl. {gstPct}% GST{savings > 0 && <> · <span className="text-emerald-600 font-semibold">Save {savings}%</span></>}</>
+                      : <>₹{total.toFixed(2)} incl. {gstPct}% GST</>}
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
@@ -300,7 +389,7 @@ const Billing = () => {
                 ) : isUpgrade ? (
                   <Button onClick={() => startRazorpay(p)} disabled={!!pendingAction} className="w-full gap-2">
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
-                    Upgrade now
+                    {cycle === 'annual' && !isFree && annualPrice > 0 ? 'Pay yearly' : 'Upgrade now'}
                   </Button>
                 ) : (
                   <Button variant="outline" onClick={() => setDowngradeTarget(p)}
