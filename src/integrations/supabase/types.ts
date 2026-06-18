@@ -2405,6 +2405,149 @@ export type Database = {
           },
         ]
       }
+      partner_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          partner_id: string
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          partner_id: string
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          partner_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invites_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_license_batches: {
+        Row: {
+          created_at: string
+          id: string
+          invoice_ref: string | null
+          issued_by: string | null
+          notes: string | null
+          partner_id: string
+          qty: number
+          total_inr: number
+          unit_price_inr: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoice_ref?: string | null
+          issued_by?: string | null
+          notes?: string | null
+          partner_id: string
+          qty: number
+          total_inr?: number
+          unit_price_inr?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoice_ref?: string | null
+          issued_by?: string | null
+          notes?: string | null
+          partner_id?: string
+          qty?: number
+          total_inr?: number
+          unit_price_inr?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_license_batches_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_licenses: {
+        Row: {
+          batch_id: string | null
+          consumed_at: string | null
+          consumed_by_store_id: string | null
+          created_at: string
+          id: string
+          partner_id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          status: Database["public"]["Enums"]["partner_license_status"]
+        }
+        Insert: {
+          batch_id?: string | null
+          consumed_at?: string | null
+          consumed_by_store_id?: string | null
+          created_at?: string
+          id?: string
+          partner_id: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: Database["public"]["Enums"]["partner_license_status"]
+        }
+        Update: {
+          batch_id?: string | null
+          consumed_at?: string | null
+          consumed_by_store_id?: string | null
+          created_at?: string
+          id?: string
+          partner_id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: Database["public"]["Enums"]["partner_license_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_licenses_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "partner_license_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_licenses_consumed_by_store_id_fkey"
+            columns: ["consumed_by_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_licenses_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_payouts: {
         Row: {
           amount: number
@@ -2497,16 +2640,25 @@ export type Database = {
         Row: {
           commission_months: number
           commission_pct: number
+          company_name: string | null
           created_at: string
           email: string
           id: string
+          invite_status:
+            | Database["public"]["Enums"]["partner_invite_status"]
+            | null
+          invited_by_admin: string | null
           kyc_status: string
+          license_price_per_unit: number | null
           name: string
           notes: string | null
           pan: string | null
+          partner_type: Database["public"]["Enums"]["partner_type"] | null
           payout_email: string | null
           phone: string | null
           referral_code: string
+          total_amount_paid: number
+          total_licenses_purchased: number
           type: string
           updated_at: string
           upi_id: string | null
@@ -2515,16 +2667,25 @@ export type Database = {
         Insert: {
           commission_months?: number
           commission_pct?: number
+          company_name?: string | null
           created_at?: string
           email: string
           id?: string
+          invite_status?:
+            | Database["public"]["Enums"]["partner_invite_status"]
+            | null
+          invited_by_admin?: string | null
           kyc_status?: string
+          license_price_per_unit?: number | null
           name: string
           notes?: string | null
           pan?: string | null
+          partner_type?: Database["public"]["Enums"]["partner_type"] | null
           payout_email?: string | null
           phone?: string | null
           referral_code: string
+          total_amount_paid?: number
+          total_licenses_purchased?: number
           type?: string
           updated_at?: string
           upi_id?: string | null
@@ -2533,16 +2694,25 @@ export type Database = {
         Update: {
           commission_months?: number
           commission_pct?: number
+          company_name?: string | null
           created_at?: string
           email?: string
           id?: string
+          invite_status?:
+            | Database["public"]["Enums"]["partner_invite_status"]
+            | null
+          invited_by_admin?: string | null
           kyc_status?: string
+          license_price_per_unit?: number | null
           name?: string
           notes?: string | null
           pan?: string | null
+          partner_type?: Database["public"]["Enums"]["partner_type"] | null
           payout_email?: string | null
           phone?: string | null
           referral_code?: string
+          total_amount_paid?: number
+          total_licenses_purchased?: number
           type?: string
           updated_at?: string
           upi_id?: string | null
@@ -4495,6 +4665,75 @@ export type Database = {
           },
         ]
       }
+      store_handovers: {
+        Row: {
+          accepted_at: string | null
+          billing_cycle: string
+          client_email: string
+          created_at: string
+          expires_at: string
+          id: string
+          paid_at: string | null
+          partner_id: string
+          plan: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: Database["public"]["Enums"]["store_handover_status"]
+          store_id: string
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          billing_cycle?: string
+          client_email: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          paid_at?: string | null
+          partner_id: string
+          plan: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: Database["public"]["Enums"]["store_handover_status"]
+          store_id: string
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          billing_cycle?: string
+          client_email?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          paid_at?: string | null
+          partner_id?: string
+          plan?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: Database["public"]["Enums"]["store_handover_status"]
+          store_id?: string
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_handovers_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_handovers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_qr_codes: {
         Row: {
           created_at: string
@@ -4650,11 +4889,16 @@ export type Database = {
           downtime_notified_at: string | null
           id: string
           installed_theme_version: string | null
+          is_partner_build: boolean
           is_published: boolean | null
           layout_slug: string | null
           logo_url: string | null
           name: string
           onboarding_step: number | null
+          owned_by_partner_id: string | null
+          partner_handover_status:
+            | Database["public"]["Enums"]["store_handover_status"]
+            | null
           referred_by_code: string | null
           settings: Json | null
           slug: string
@@ -4672,11 +4916,16 @@ export type Database = {
           downtime_notified_at?: string | null
           id?: string
           installed_theme_version?: string | null
+          is_partner_build?: boolean
           is_published?: boolean | null
           layout_slug?: string | null
           logo_url?: string | null
           name: string
           onboarding_step?: number | null
+          owned_by_partner_id?: string | null
+          partner_handover_status?:
+            | Database["public"]["Enums"]["store_handover_status"]
+            | null
           referred_by_code?: string | null
           settings?: Json | null
           slug: string
@@ -4694,11 +4943,16 @@ export type Database = {
           downtime_notified_at?: string | null
           id?: string
           installed_theme_version?: string | null
+          is_partner_build?: boolean
           is_published?: boolean | null
           layout_slug?: string | null
           logo_url?: string | null
           name?: string
           onboarding_step?: number | null
+          owned_by_partner_id?: string | null
+          partner_handover_status?:
+            | Database["public"]["Enums"]["store_handover_status"]
+            | null
           referred_by_code?: string | null
           settings?: Json | null
           slug?: string
@@ -4707,7 +4961,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stores_owned_by_partner_id_fkey"
+            columns: ["owned_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_events: {
         Row: {
@@ -5697,6 +5959,10 @@ export type Database = {
         Args: { _action_key: string; _cache_hit?: boolean; _store_id: string }
         Returns: number
       }
+      consume_partner_license: {
+        Args: { _partner_id: string; _store_id: string }
+        Returns: string
+      }
       credit_wallet: {
         Args: {
           _credits: number
@@ -5783,6 +6049,15 @@ export type Database = {
         Args: { _prefix?: string; _store_id: string }
         Returns: string
       }
+      partner_license_summary: {
+        Args: { _partner_id: string }
+        Returns: {
+          available: number
+          consumed: number
+          revoked: number
+          total: number
+        }[]
+      }
       pnl_report: {
         Args: { _from: string; _store_id: string; _to: string }
         Returns: {
@@ -5815,6 +6090,7 @@ export type Database = {
         | "provider"
         | "front_desk"
         | "pharmacist"
+        | "partner"
       appointment_mode: "in_store" | "home_visit" | "teleconsult"
       appointment_status:
         | "pending"
@@ -5852,6 +6128,9 @@ export type Database = {
         | "delivered"
         | "cancelled"
         | "returned"
+      partner_invite_status: "pending" | "active" | "suspended"
+      partner_license_status: "available" | "consumed" | "revoked"
+      partner_type: "agency" | "freelancer" | "intern"
       payment_mode_t: "cash" | "upi" | "card" | "bank" | "credit" | "other"
       payment_status: "pending" | "paid" | "failed" | "refunded" | "cod"
       prep_status:
@@ -5862,6 +6141,12 @@ export type Database = {
         | "out_for_delivery"
         | "completed"
         | "cancelled"
+      store_handover_status:
+        | "pending"
+        | "accepted"
+        | "paid"
+        | "cancelled"
+        | "expired"
       subscription_plan: "free" | "premium" | "starter" | "growth" | "scale"
       subscription_status:
         | "active"
@@ -6004,6 +6289,7 @@ export const Constants = {
         "provider",
         "front_desk",
         "pharmacist",
+        "partner",
       ],
       appointment_mode: ["in_store", "home_visit", "teleconsult"],
       appointment_status: [
@@ -6046,6 +6332,9 @@ export const Constants = {
         "cancelled",
         "returned",
       ],
+      partner_invite_status: ["pending", "active", "suspended"],
+      partner_license_status: ["available", "consumed", "revoked"],
+      partner_type: ["agency", "freelancer", "intern"],
       payment_mode_t: ["cash", "upi", "card", "bank", "credit", "other"],
       payment_status: ["pending", "paid", "failed", "refunded", "cod"],
       prep_status: [
@@ -6056,6 +6345,13 @@ export const Constants = {
         "out_for_delivery",
         "completed",
         "cancelled",
+      ],
+      store_handover_status: [
+        "pending",
+        "accepted",
+        "paid",
+        "cancelled",
+        "expired",
       ],
       subscription_plan: ["free", "premium", "starter", "growth", "scale"],
       subscription_status: [
