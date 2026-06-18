@@ -257,11 +257,15 @@ const Billing = () => {
               <p className="text-sm text-muted-foreground">
                 {plan === 'free'
                   ? 'Limited features • Upgrade for more'
-                  : `₹${gstTotal(planConfig.price_inr, planConfig.gst_percent ?? 18).toFixed(2)} / month (incl. 18% GST) • Renews ${
-                      subscription?.current_period_end
+                  : (() => {
+                      const isAnnual = (subscription as any)?.billing_cycle === 'annual';
+                      const annual = Number((planConfig as any).annual_price_inr ?? 0);
+                      const base = isAnnual && annual > 0 ? annualMonthly(annual) : planConfig.price_inr;
+                      const renews = subscription?.current_period_end
                         ? new Date(subscription.current_period_end).toLocaleDateString('en-IN')
-                        : 'soon'
-                    }`}
+                        : 'soon';
+                      return `₹${gstTotal(base, planConfig.gst_percent ?? 18).toFixed(2)} / month (incl. 18% GST) • ${isAnnual ? 'Annual plan' : 'Monthly'} • Renews ${renews}`;
+                    })()}
               </p>
             </div>
           </div>
