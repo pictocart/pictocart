@@ -228,20 +228,6 @@ const HandoverButton = ({ storeId, storeName }: { storeId: string; storeName: st
   );
 };
 
-        <Card>
-          <CardHeader>
-            <CardTitle>How licenses work</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>• Each license you spend creates one client store you can build and customise completely.</p>
-            <p>• When ready, hand over the store to your client by entering their email and selecting a plan (Starter ₹5,500 / Growth ₹16,500 / Scale ₹55,000 per year).</p>
-            <p>• Your client pays Pic To Cart for the yearly plan directly. You charge them separately for your build & customisation work.</p>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
-  );
-};
 
 const StatCard = ({ label, value, icon, accent }: { label: string; value: number; icon?: React.ReactNode; accent?: boolean }) => (
   <Card className={accent ? "border-orange-200 bg-orange-50/50" : ""}>
