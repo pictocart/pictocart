@@ -1,0 +1,1 @@
+CREATE POLICY "Admin can update partners" ON public.partners FOR UPDATE TO authenticated USING (public.has_role(auth.uid(),'admin')) WITH CHECK (public.has_role(auth.uid(),'admin'));

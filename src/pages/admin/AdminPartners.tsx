@@ -11,7 +11,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Eye, IndianRupee, Mail, Loader2, Copy } from "lucide-react";
+import { Plus, Eye, IndianRupee, Mail, Loader2, Copy, Ban, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const AdminPartners = () => {
   const qc = useQueryClient();
@@ -131,6 +132,46 @@ const AdminPartners = () => {
     },
     onSuccess: () => {
       toast.success("Updated");
+      qc.invalidateQueries({ queryKey: ["admin-partners"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const revokeBatch = useMutation({
+    mutationFn: async (batchId: string) => {
+      const { error, count } = await supabase
+        .from("partner_licenses")
+        .update({ status: "revoked" }, { count: "exact" })
+        .eq("batch_id", batchId)
+        .eq("status", "available");
+      if (error) throw error;
+      return count ?? 0;
+    },
+    onSuccess: (count) => {
+      toast.success(`Revoked ${count} available license${count === 1 ? "" : "s"}`);
+      qc.invalidateQueries({ queryKey: ["partner-batches", selected.id] });
+      qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deletePartner = useMutation({
+    mutationFn: async (id: string) => {
+      // Block delete if partner already has consumed licenses / stores
+      const { data: stores } = await supabase.from("stores").select("id").eq("owned_by_partner_id", id).limit(1);
+      if (stores && stores.length > 0) {
+        throw new Error("Cannot delete: partner has client stores. Reassign or remove them first.");
+      }
+      // Remove dependents that may not cascade
+      await supabase.from("partner_licenses").delete().eq("partner_id", id);
+      await supabase.from("partner_license_batches").delete().eq("partner_id", id);
+      await supabase.from("partner_invites").delete().eq("partner_id", id);
+      const { error } = await supabase.from("partners").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Partner deleted");
+      setSelected(null);
       qc.invalidateQueries({ queryKey: ["admin-partners"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -349,13 +390,32 @@ const AdminPartners = () => {
                     {batchesQ.data?.length === 0 ? (
                       <div className="p-4 text-center text-muted-foreground">No batches yet</div>
                     ) : batchesQ.data?.map((b: any) => (
-                      <div key={b.id} className="p-3 flex justify-between">
+                      <div key={b.id} className="p-3 flex justify-between items-center gap-3">
                         <div>
                           <div className="font-medium">{b.qty} licenses @ ₹{Number(b.unit_price_inr).toLocaleString("en-IN")}</div>
                           <div className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString()}</div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex items-center gap-3">
                           <div className="font-semibold flex items-center"><IndianRupee className="w-3 h-3" />{Number(b.total_inr).toLocaleString("en-IN")}</div>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" title="Revoke remaining available licenses in this batch">
+                                <Ban className="w-3.5 h-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Revoke remaining licenses?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This marks all unused licenses in this batch as revoked. Already-consumed licenses (active client stores) are unaffected.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => revokeBatch.mutate(b.id)}>Revoke</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     ))}
@@ -393,6 +453,30 @@ const AdminPartners = () => {
                   ) : (
                     <Button variant="outline" size="sm" disabled><Mail className="w-3.5 h-3.5 mr-1" /> Invite pending</Button>
                   )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="ml-auto text-destructive hover:text-destructive">
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete partner
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {selected.name}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This permanently removes the partner along with all their licenses, batches and pending invites. Partners with active client stores cannot be deleted.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => deletePartner.mutate(selected.id)}
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </>
