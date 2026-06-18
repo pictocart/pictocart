@@ -1,121 +1,182 @@
-# Landing Page v2 — Plan
+# Partner Program v2 — License-Based Reseller Model
 
-A full marketing rebuild around four pillars: **(1)** a tighter 5-step merchant journey, **(2)** a live "Stores Live" counter sourced from real data, **(3)** a public ThemeForest-style theme marketplace, and **(4)** a Features mega-dropdown showing real merchant-portal screenshots. Plus a complete features catalog ("Now what to sell, where to sell — every solution") covering every shipping product feature.
-
----
-
-## 1. Hero — Live Store Counter
-
-Replace the static "10,000+ merchants" stat with **real-time numbers** pulled from the backend.
-
-- New edge function `get-public-stats` returns:
-  - `stores_live` — count of `stores` where `is_published = true`
-  - `products_listed` — count of `products` where `is_active = true`
-  - `orders_processed` — count of `orders` (lifetime)
-  - `themes_available` — count of `theme_master_projects` where `is_active = true`
-- Cached 60s in-memory; called with anon key (no auth needed).
-- Hero shows three pulsing-dot live counters: **Stores Live · Products Listed · Orders Processed**, with the existing `Counter` component animating from 0 to fetched value.
-- Adds a small "LIVE" badge with a pulsing emerald dot to convey real-time.
-- Rest everything will be untouched in the hero section. changing of card with glare should not be disturbed. 
+A complete pivot from the current referral/commission model to an **admin-issued license** model. Partners (Digital Marketing Agencies, Freelancers, Interns/Employees) get invited by admin with a fixed number of licenses at a custom price. Each license = 1 client store. Partners build the entire store, hand it to the client, and the client pays Pic To Cart the annual plan fee directly.
 
 ---
 
-## 2. Merchant Journey — Shortened from 7 → 5 Steps
+## Core Concepts
 
-Update `src/lib/merchantJourney.ts` to the new flow that matches actual onboarding:
+| Term | Meaning |
+|---|---|
+| **Partner** | Agency / Freelancer / Intern, onboarded by admin only |
+| **License** | A credit that lets a partner spin up 1 client store. Sold in bulk to partner at a negotiated price (₹0 for interns) |
+| **Client Store** | The actual seller store, billed annually at ₹5,500 / ₹16,500 / ₹55,000 (Starter / Growth / Scale) directly to the client |
+| **Partner Build Mode** | Partner creates & customizes the store under their own login, then transfers ownership to the client by entering the client's email |
+| **State Head / Regional Head** | (Phase 4) Sub-admins who can issue licenses from their own allotted pool |
 
+---
+
+## Phase 1 — Foundation: Schema & Admin Invite Flow
+
+**Goal:** Admin can create a partner, allocate N licenses at a custom price, and the partner receives a branded Pic To Cart invite email.
+
+### Database changes
+- New enum `partner_type`: `agency | freelancer | intern`
+- Extend `partners` table:
+  - `partner_type`, `invited_by_admin`, `invite_status` (`pending | active | suspended`), `total_licenses_purchased`, `license_price_per_unit`, `total_amount_paid`, `notes`
+  - Remove dependency on public signup (existing `PartnersSignup.tsx` route will be retired)
+- New table `partner_license_batches`: each admin allocation = one batch (qty, unit_price, total, invoice ref, issued_at, issued_by)
+- New table `partner_licenses`: one row per license unit (`partner_id`, `batch_id`, `status: available | consumed | revoked`, `consumed_by_store_id`, `consumed_at`)
+- New table `partner_invites`: secure token, email, expires_at, accepted_at
+- Helper: `has_role(uid, 'partner')` + new app_role `partner`
+
+### Admin UI (`/admin/partners` rebuild)
+- "Invite Partner" dialog: email, name, type (Agency/Freelancer/Intern), phone, # of licenses, price per license (auto ₹0 for intern), notes
+- Partners list: licenses purchased / used / available, total revenue, client stores
+- "Add more licenses" action on each partner (creates a new batch)
+- Suspend / revoke / view audit trail
+
+### Edge function `partner-invite`
+- Generates signed token, stores in `partner_invites`, sends email via Lovable transactional email
+- Email branded **Pic To Cart** only — no Lovable references, custom sender domain
+- CTA: "Accept invite & set password" → `/partner/accept?token=...`
+
+### Accept-invite flow (`/partner/accept`)
+- Validates token
+- Form: Password + Confirm Password (zod validation, HIBP enabled)
+- Creates auth user with `partner` role and links to `partners` row
+- Redirects to `/partner` dashboard
+
+---
+
+## Phase 2 — Partner Dashboard & Build Mode
+
+**Goal:** Partner can spend a license to spin up a new client store, fully customize it, then hand it over to the client.
+
+### Partner Dashboard (`/partner`)
+- Header: branded Pic To Cart (no Lovable badge for partner role)
+- Stats: Available licenses, Active client stores, Pending handovers, Total clients on each plan
+- "Create new client store" button (disabled when 0 licenses available)
+- Client store list with status: `Building | Awaiting client acceptance | Live | Plan expired`
+- License history (batches purchased, dates, prices) — read only
+
+### Create Client Store wizard
+1. Consume 1 license (atomic RPC `consume_partner_license`)
+2. Run the existing 7-step onboarding wizard **on behalf of** the client (store is owned by partner temporarily, flag `owned_by_partner = true`, `pending_client_email = null` yet)
+3. Partner can use all paid features regardless of plan during build (build-mode override)
+
+### Build Mode permissions
+- `stores.owned_by_partner_id` column added
+- RLS: partner can fully manage stores where `owned_by_partner_id = auth.uid()` AND `client_user_id IS NULL`
+- Hide billing/credits UI from partner inside build mode (they're not paying)
+- Plan selector shown but billed only on handover
+
+### Handover flow
+- "Send to client" → partner enters client email + selects plan (Starter/Growth/Scale)
+- Creates `store_handover` record + sends client an invite email (Pic To Cart branded) with set-password link
+- Once client accepts and pays the annual plan via Razorpay:
+  - `stores.user_id` re-assigned to client
+  - `stores.owned_by_partner_id` retained for analytics
+  - Subscription activated for 365 days
+  - Partner sees store status update to **Live**
+- Partner retains read-only "view as" access (toggle in admin settings)
+
+---
+
+## Phase 3 — Client Side & Billing
+
+**Goal:** Client pays Pic To Cart directly for the annual plan; partner gets nothing per-store (their margin is whatever they charged the client upfront for the build).
+
+### Client accept flow (`/store-invite/accept?token=...`)
+- Set password
+- Razorpay checkout for selected annual plan
+- On success: store goes live, plan = 365 days, COD/payment/shipping all activate
+- Welcome email with login link to their dashboard
+
+### Annual plan changes
+- Extend `plan_configs` with `annual_price_inr` (5500 / 16500 / 55000)
+- `subscriptions.billing_cycle` enum: `monthly | annual`
+- Annual plans get a single Razorpay one-time payment (not subscription) + 365-day expiry
+- Auto-renewal reminder 30/7/1 days before expiry (email + dashboard banner)
+
+### What changes for existing flow
+- Public signup at `/auth` continues to work (direct sellers)
+- Partner-issued stores skip onboarding payment screen (partner already chose plan)
+- Commission/referral tables kept but marked legacy (no new writes)
+
+---
+
+## Phase 4 — Hierarchy: State Head & Regional Head
+
+**Goal:** Admin allocates a license pool to a State Head; State Head allocates to Regional Heads or directly to Partners; full audit trail.
+
+### Schema
+- New table `license_allocations`: tree of allocations (admin → state_head → regional_head → partner)
+- New roles: `state_head`, `regional_head`
+- Each role has `parent_id` and `license_pool_balance`
+
+### UI
+- `/admin/hierarchy` — assign State Heads, view tree, set commission overrides
+- `/state-head` dashboard — allocate to Regional Heads + create partners directly
+- `/regional-head` dashboard — create partners only
+- Every license consumed bubbles analytics up the tree (no commission unless explicitly set)
+
+---
+
+## Phase 5 — Polish & White-Label
+
+- All partner-facing emails through Pic To Cart sender domain, custom React Email templates
+- Partner panel uses only Pic To Cart logo/colors; remove all Lovable badges via publish settings
+- Partner help center, T&C, license agreement PDF (signed at first login)
+- Audit log of every license issued / consumed / revoked
+- CSV export of partners, licenses, stores, revenue
+
+---
+
+## Technical Details
+
+### New tables (Phase 1)
 ```text
-01 — Sign Up Free
-02 — Tell Us About Your Store   (name, language, contact)
-03 — Choose Your Category       (with subcategories)
-04 — Pick a Theme               (auto-suggested from category)
-05 — Your Store Goes Live       (one-tap publish + share)
+partner_license_batches(id, partner_id, qty, unit_price_inr, total_inr, invoice_ref, notes, issued_by, issued_at)
+partner_licenses(id, partner_id, batch_id, status, consumed_by_store_id, consumed_at)
+partner_invites(id, partner_id, token_hash, email, expires_at, accepted_at)
+store_handovers(id, store_id, partner_id, client_email, plan, token_hash, status, accepted_at, paid_at)
 ```
 
-- Keep the existing image+bullets card layout on the landing page; the section heading changes from "in 7 Steps" to **"in 5 Steps"**.
-- The 7-step `HowItWorks.tsx` page is kept as a deeper "Behind the scenes" reference and de-emphasized in nav.
-- New copy emphasizes "auto-chosen theme" surprise to amaze first-time visitors.
+### New RPCs
+- `consume_partner_license(partner_id)` → returns license_id or raises
+- `transfer_store_to_client(store_id, client_user_id, plan, billing_cycle)`
+- `revoke_partner_license(license_id)` (admin only)
+
+### New edge functions
+- `partner-invite` — send branded invite
+- `partner-accept` — validate token, create user, link partner
+- `store-handover-invite` — send client invite
+- `store-handover-accept` — set password + Razorpay order
+- `annual-plan-renewal-reminder` (cron)
+
+### Routes
+- `/partner/accept` (public) — set password
+- `/partner` (partner role) — dashboard
+- `/partner/stores/new` — build wizard
+- `/partner/stores/:id` — manage store in build mode
+- `/store-invite/accept` (public) — client accept + pay
+- `/admin/partners` — rebuilt admin panel
+- `/admin/licenses` — global license ledger
+
+### Security
+- `partner` role cannot see other partners' stores or licenses
+- RLS on every new table; SECURITY DEFINER RPCs for license consumption
+- Token-based invites: SHA-256 hashed in DB, single-use, 7-day expiry
+- Service-role-only edge functions for all email + Razorpay flows
 
 ---
 
-## 3. Features Mega-Menu (Header Dropdown)
-
-The "Features" link in the landing nav becomes a **stylish 4-column dropdown** (CSS-only hover/focus, mobile = full-sheet) grouped by pillar, each row paired with a real merchant-portal screenshot thumbnail on hover.
-
-Groups & items (all link to a dedicated `/features/[slug]` page):
-
-- **Sell**: Snap-to-Product AI · Product Variants · Categories & Collections · Inventory & Low-Stock alerts · Digital Products
-- **Source**: **Source India** (B2B product sourcing) · Bulk CSV Import · Supplier Khata
-- **Design**: Theme Marketplace · Drag-and-Drop Builder · Custom Logo & Banner · Google Fonts · Custom Domain
-- **Sell Channels**: Storefront PWA · WhatsApp Share · QR Codes · Blog & SEO · Email Newsletter
-- **Operate**: Razorpay / UPI / COD · Shiprocket Shipping · GST Invoices · Coupons & Discounts · Reviews & Ratings
-- **Grow**: AI Engagement Report · Analytics Dashboard · Abandoned Cart Recovery · Weekly Digest · Pica2 AI Assistant
-
-Each `/features/[slug]` page uses a shared `FeatureDetailLayout` (hero · "What it does" · annotated screenshots from the merchant portal · "How to enable" CTA → onboarding). Screenshots will be captured fresh from the live portal and stored under `src/assets/features/`.
+## Out of Scope (this plan)
+- Migrating existing referral partners to license model (will be a one-off data script later)
+- Mobile app for partners
+- Partner-to-partner license trading
 
 ---
 
-## 4. "Every Solution" Catalog Section
-
-A new landing section titled **"Now what to sell, and where to sell — we have every solution."**
-
-A 3×4 bento grid of capability cards, each with icon + 2-line description + "Learn more →" linking to the features page above. Cards:
-
-1. **Source India** — Find verified manufacturers & wholesale catalogs
-2. **AI Product Listings** — Photo → title, description, price, SEO in 5s
-3. **50+ Premium Themes** — Industry-tuned, mobile-first, swap anytime
-4. **WhatsApp & Instagram** — One-tap share cards with rich OG previews
-5. **Custom Domain + SSL** — yourbrand.in in 5 minutes
-6. **All Payments** — Razorpay, UPI, COD, direct payouts
-7. **Shiprocket Shipping** — 29,000+ pincodes, 17+ couriers
-8. **GST-Ready Invoices** — Auto HSN, bulk export for CA
-9. **Coupons & Loyalty** — Usage caps, min-order rules
-10. **Reviews with Photos** — Verified-purchase badges
-11. **Blog + Newsletter** — Built-in CMS, subscriber manager
-12. **AI Growth Coach** — Weekly score 0-100 + roadmap
-
----
-
-## 5. Theme Marketplace — ThemeForest Style
-
-A new public route `**/themes**` (replaces current minimal Themes page for public viewing) modeled on themeforest.net.
-
-Sections:
-
-- **Hero**: search bar + "Browse 50+ themes built for Indian sellers" + filter pills (Fashion, Food, Electronics, Beauty, Handicraft, Services, Books)
-- **Top filters bar**: Category · Price (Free / Premium) · Style (Minimal / Bold / Luxury) · Sort (Trending / Newest / Most Sold)
-- **Theme grid**: 3-column cards with: preview image, name, category badge, ★ rating (placeholder until reviews), price (Free or ₹500 Crown badge), "Live Preview" + "Use This Theme" CTAs
-- **Theme detail page** `/themes/:slug`: full-page hero with large preview, 5 page-by-page screenshots (Home/Category/Product/Cart/Checkout), feature list, "Use this theme" → routes to signup with `?theme=slug` so onboarding auto-selects it
-- **Auto-select on signup**: `Onboarding.tsx` reads `?theme=` from URL and pre-fills `selectedThemeId`, jumping straight past the theme step → 5-step flow feels like 4 steps for marketplace visitors (the "amaze" moment).
-- Marketplace data pulled from existing `theme_master_projects` table — no schema change required.
-- Page is SEO-optimized (per theme: title, meta, OG image from `preview_image`) for future standalone promotion.
-
----
-
-## 6. Technical Notes
-
-- **New edge function**: `get-public-stats` (`verify_jwt = false`, 60s cache). Uses service role only to `count` published stores/products/orders/themes.
-- **New routes** in `src/App.tsx`:
-  - `/themes` (public marketplace, lazy)
-  - `/themes/:slug` (theme detail)
-  - `/features/:slug` (12+ feature detail pages, single dynamic component)
-- **New components**:
-  - `src/components/landing/LiveStatsBar.tsx`
-  - `src/components/landing/FeaturesMegaMenu.tsx`
-  - `src/components/landing/EverySolutionGrid.tsx`
-  - `src/pages/marketplace/ThemeMarketplace.tsx`
-  - `src/pages/marketplace/ThemeDetail.tsx`
-  - `src/pages/features/FeatureDetail.tsx` + `featureCatalog.ts` (data)
-- **Edits**:
-  - `src/lib/merchantJourney.ts` → cut to 5 steps
-  - `src/pages/LandingPage.tsx` → swap stats, add mega menu, add solution grid, link new sections, change "7 Steps" → "5 Steps"
-  - `src/pages/Onboarding.tsx` → read `?theme=` query and preselect
-- **No DB migration** required for v1; feature screenshots will be added to `src/assets/features/` as we capture them (placeholder gradients in interim).
-
----
-
-## Out of Scope (for this pass)
-
-- Real theme ratings/reviews system (uses static placeholder)
-- Building all 25+ feature detail pages with real screenshots (we ship the layout + 6-8 pages with placeholders; the rest reuse the layout with copy until screenshots are captured)
-- Theme purchase flow changes (existing premium-theme purchase keeps working)
+**Recommended execution:** Build Phase 1 + Phase 2 first (MVP that proves the model end-to-end with 1 pilot agency), then Phase 3 billing, then Phase 4 hierarchy, then Phase 5 polish.
