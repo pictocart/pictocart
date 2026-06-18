@@ -123,7 +123,7 @@ const PartnerDashboard = () => {
             ) : (
               <div className="divide-y">
                 {storesQ.data!.map((store: any) => (
-                  <div key={store.id} className="py-3 flex items-center justify-between">
+                  <div key={store.id} className="py-3 flex items-center justify-between gap-3 flex-wrap">
                     <div>
                       <div className="font-medium">{store.name || store.slug}</div>
                       <div className="text-xs text-muted-foreground">/{store.slug}</div>
@@ -133,6 +133,9 @@ const PartnerDashboard = () => {
                       <Button size="sm" variant="outline" asChild>
                         <Link to={`/dashboard?store=${store.id}`}>Manage</Link>
                       </Button>
+                      {!store.partner_handover_status && (
+                        <HandoverButton storeId={store.id} storeName={store.name || store.slug} />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -140,6 +143,90 @@ const PartnerDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>How licenses work</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground space-y-2">
+            <p>• Each license you spend creates one client store you can build and customise completely.</p>
+            <p>• When ready, hand over the store to your client by entering their email and selecting a plan (Starter ₹5,500 / Growth ₹16,500 / Scale ₹55,000 per year).</p>
+            <p>• Your client pays Pic To Cart for the yearly plan directly. You charge them separately for your build & customisation work.</p>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+};
+
+const HandoverButton = ({ storeId, storeName }: { storeId: string; storeName: string }) => {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [plan, setPlan] = useState("starter");
+  const [submitting, setSubmitting] = useState(false);
+
+  const send = async () => {
+    if (!email.includes("@")) { toast.error("Enter a valid client email"); return; }
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("partner-handover-invite", {
+        body: { store_id: storeId, client_email: email, plan },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Failed");
+      toast.success(`Invite sent to ${email}`);
+      qc.invalidateQueries({ queryKey: ["partner-stores"] });
+      setOpen(false);
+      setEmail("");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send invite");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+          <Send className="w-3.5 h-3.5 mr-1" /> Send to client
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Hand over "{storeName}"</DialogTitle>
+          <DialogDescription>
+            Your client will get an email to set a password and take ownership of the store.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Client email</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="client@example.com" />
+          </div>
+          <div>
+            <Label>Plan</Label>
+            <Select value={plan} onValueChange={setPlan}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="starter">Starter — ₹5,500 / year</SelectItem>
+                <SelectItem value="growth">Growth — ₹16,500 / year</SelectItem>
+                <SelectItem value="scale">Scale — ₹55,000 / year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={send} disabled={submitting} className="bg-orange-600 hover:bg-orange-700">
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send invite"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
         <Card>
           <CardHeader>
