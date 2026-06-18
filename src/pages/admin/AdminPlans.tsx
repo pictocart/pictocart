@@ -14,6 +14,7 @@ interface PlanRow {
   plan: 'free' | 'starter' | 'growth' | 'scale';
   display_name: string;
   price_inr: number;
+  annual_price_inr: number;
   commission_percent: number;
   razorpay_plan_id: string | null;
   trial_days: number;
