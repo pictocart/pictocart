@@ -2573,6 +2573,7 @@ export type Database = {
       partner_payouts: {
         Row: {
           amount: number
+          commission_count: number
           created_at: string
           id: string
           method: string | null
@@ -2580,11 +2581,13 @@ export type Database = {
           paid_at: string | null
           partner_id: string
           period: string | null
+          period_month: string | null
           status: string
           utr: string | null
         }
         Insert: {
           amount: number
+          commission_count?: number
           created_at?: string
           id?: string
           method?: string | null
@@ -2592,11 +2595,13 @@ export type Database = {
           paid_at?: string | null
           partner_id: string
           period?: string | null
+          period_month?: string | null
           status?: string
           utr?: string | null
         }
         Update: {
           amount?: number
+          commission_count?: number
           created_at?: string
           id?: string
           method?: string | null
@@ -2604,6 +2609,7 @@ export type Database = {
           paid_at?: string | null
           partner_id?: string
           period?: string | null
+          period_month?: string | null
           status?: string
           utr?: string | null
         }
@@ -2660,6 +2666,9 @@ export type Database = {
       }
       partners: {
         Row: {
+          bank_account_holder: string | null
+          bank_account_number: string | null
+          bank_ifsc: string | null
           commission_months: number
           commission_pct: number
           company_name: string | null
@@ -2692,6 +2701,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          bank_account_holder?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
           commission_months?: number
           commission_pct?: number
           company_name?: string | null
@@ -2724,6 +2736,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          bank_account_holder?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
           commission_months?: number
           commission_pct?: number
           company_name?: string | null
@@ -6014,6 +6029,28 @@ export type Database = {
         Args: { _parent_id: string; _partner_id: string }
         Returns: undefined
       }
+      admin_mark_payout_paid: {
+        Args: { _method?: string; _payout_id: string; _utr?: string }
+        Returns: undefined
+      }
+      admin_pending_payouts_summary: {
+        Args: { _period_month?: string }
+        Returns: {
+          bank_account_holder: string
+          bank_account_number: string
+          bank_ifsc: string
+          commission_count: number
+          direct_amount: number
+          override_amount: number
+          pan: string
+          partner_email: string
+          partner_id: string
+          partner_name: string
+          pending_amount: number
+          tier: Database["public"]["Enums"]["partner_tier"]
+          upi_id: string
+        }[]
+      }
       admin_promote_partner: {
         Args: {
           _override_pct: number
@@ -6023,6 +6060,13 @@ export type Database = {
           _tier: string
         }
         Returns: undefined
+      }
+      admin_run_payout_batch: {
+        Args: { _method?: string; _period_month: string }
+        Returns: {
+          payouts_created: number
+          total_amount: number
+        }[]
       }
       apply_coupon_to_recent_order: {
         Args: { _coupon_id: string; _order_id: string }
@@ -6140,6 +6184,24 @@ export type Database = {
         Args: { _prefix?: string; _store_id: string }
         Returns: string
       }
+      partner_leaderboard: {
+        Args: {
+          _from: string
+          _head_partner_id?: string
+          _metric?: string
+          _to: string
+        }
+        Returns: {
+          commission: number
+          gmv: number
+          licenses: number
+          partner_id: string
+          partner_name: string
+          rank: number
+          state_name: string
+          tier: Database["public"]["Enums"]["partner_tier"]
+        }[]
+      }
       partner_license_summary: {
         Args: { _partner_id: string }
         Returns: {
@@ -6147,6 +6209,17 @@ export type Database = {
           consumed: number
           revoked: number
           total: number
+        }[]
+      }
+      partner_self_stats: {
+        Args: { _partner_id: string }
+        Returns: {
+          gmv: number
+          lifetime_commission: number
+          paid_out: number
+          pending_payout: number
+          this_month_commission: number
+          total_licenses: number
         }[]
       }
       pnl_report: {

@@ -41,6 +41,8 @@ const adminNavItems = [
   { label: 'Health', icon: Activity, path: '/admin/health' },
   { label: 'Disputes', icon: ShieldAlert, path: '/admin/disputes' },
   { label: 'Partners', icon: Handshake, path: '/admin/partners' },
+  { label: 'Partner Payouts', icon: IndianRupee, path: '/admin/partner-payouts' },
+  { label: 'Partner Analytics', icon: Activity, path: '/admin/partner-analytics' },
   { label: 'Security', icon: Lock, path: '/admin/security' },
   { label: 'Platform Settings', icon: Settings, path: '/admin/settings' },
 ];

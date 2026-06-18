@@ -89,6 +89,9 @@ const PartnerDashboard = () => {
                 <Link to="/partner/hierarchy">Hierarchy</Link>
               </Button>
             )}
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/partner/payouts">My Payouts</Link>
+            </Button>
             <div className="text-right text-sm">
               <div className="font-semibold">{partner.name}</div>
               <div className="text-muted-foreground capitalize">
