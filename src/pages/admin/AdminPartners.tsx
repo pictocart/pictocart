@@ -328,6 +328,7 @@ const AdminPartners = () => {
                 <thead className="text-left text-xs uppercase text-muted-foreground border-b">
                   <tr>
                     <th className="py-2">Partner</th>
+                    <th>Tier</th>
                     <th>Type</th>
                     <th>Status</th>
                     <th>Licenses</th>
@@ -341,6 +342,15 @@ const AdminPartners = () => {
                       <td className="py-3">
                         <div className="font-medium">{p.name || "—"}</div>
                         <div className="text-xs text-muted-foreground">{p.email}</div>
+                      </td>
+                      <td>
+                        {p.tier && p.tier !== "partner" ? (
+                          <Badge className={p.tier === "regional_head" ? "bg-purple-600" : "bg-blue-600"}>
+                            {String(p.tier).replace("_", " ")} • {p.override_commission_pct}%
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Partner</span>
+                        )}
                       </td>
                       <td className="capitalize">{p.partner_type}</td>
                       <td>
