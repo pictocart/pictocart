@@ -274,7 +274,8 @@ const AppRoutes = () => {
             <Route path="/partners/dashboard" element={<PartnersDashboard />} />
             <Route path="/partner/accept" element={<PartnerAccept />} />
             <Route path="/partner" element={<PartnerDashboard />} />
-            <Route path="/partner/stores/new" element={<Navigate to="/onboarding?partner_build=1" replace />} />
+            <Route path="/partner/stores/new" element={<NewClientStore />} />
+            <Route path="/store-invite/accept" element={<StoreInviteAccept />} />
             {/* Help Center */}
             <Route path="/help" element={<Help />} />
             <Route path="/help/:slug" element={<Help />} />
