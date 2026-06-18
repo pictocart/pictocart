@@ -276,6 +276,7 @@ const AppRoutes = () => {
             <Route path="/partner/accept" element={<PartnerAccept />} />
             <Route path="/partner" element={<PartnerDashboard />} />
             <Route path="/partner/stores/new" element={<NewClientStore />} />
+            <Route path="/partner/hierarchy" element={<PartnerHierarchy />} />
             <Route path="/store-invite/accept" element={<StoreInviteAccept />} />
             {/* Help Center */}
             <Route path="/help" element={<Help />} />
