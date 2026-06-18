@@ -137,6 +137,46 @@ const AdminPartners = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const revokeBatch = useMutation({
+    mutationFn: async (batchId: string) => {
+      const { error, count } = await supabase
+        .from("partner_licenses")
+        .update({ status: "revoked" }, { count: "exact" })
+        .eq("batch_id", batchId)
+        .eq("status", "available");
+      if (error) throw error;
+      return count ?? 0;
+    },
+    onSuccess: (count) => {
+      toast.success(`Revoked ${count} available license${count === 1 ? "" : "s"}`);
+      qc.invalidateQueries({ queryKey: ["partner-batches", selected.id] });
+      qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deletePartner = useMutation({
+    mutationFn: async (id: string) => {
+      // Block delete if partner already has consumed licenses / stores
+      const { data: stores } = await supabase.from("stores").select("id").eq("owned_by_partner_id", id).limit(1);
+      if (stores && stores.length > 0) {
+        throw new Error("Cannot delete: partner has client stores. Reassign or remove them first.");
+      }
+      // Remove dependents that may not cascade
+      await supabase.from("partner_licenses").delete().eq("partner_id", id);
+      await supabase.from("partner_license_batches").delete().eq("partner_id", id);
+      await supabase.from("partner_invites").delete().eq("partner_id", id);
+      const { error } = await supabase.from("partners").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Partner deleted");
+      setSelected(null);
+      qc.invalidateQueries({ queryKey: ["admin-partners"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between">
