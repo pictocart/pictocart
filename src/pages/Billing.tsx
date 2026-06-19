@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner';
 import { Crown, Check, X, Loader2, Zap, Sparkles, AlertTriangle, Lock } from 'lucide-react';
 import { CommissionPanel } from '@/components/billing/CommissionPanel';
+import { usePlanOffer, isOfferActive } from '@/hooks/useSiteOffer';
 
 type BillingCycle = 'monthly' | 'annual';
 const annualMonthly = (annual: number) => Math.round((annual / 12) * 100) / 100;
@@ -69,9 +70,19 @@ const Billing = () => {
   const { data: plans = [] } = usePlanConfigs();
   const { store } = useStore();
   const { products } = useProducts();
+  const { data: planOffer } = usePlanOffer();
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [downgradeTarget, setDowngradeTarget] = useState<PlanConfig | null>(null);
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
+
+  const offerActive = isOfferActive(planOffer);
+  const offerPctFor = (c: BillingCycle) => {
+    if (!offerActive) return 0;
+    if (c === 'monthly' && !planOffer!.applies_to_monthly) return 0;
+    if (c === 'annual' && !planOffer!.applies_to_annual) return 0;
+    return Number(planOffer!.percent_off);
+  };
+  const currentOffer = offerPctFor(cycle);
 
   const currentOrder = plans.find((p) => p.plan === plan)?.sort_order ?? 1;
 
@@ -201,6 +212,26 @@ const Billing = () => {
           Pay monthly or save with an annual plan. All prices exclude 18% GST. Upgrade anytime; downgrades apply at the end of your current billing cycle.
         </p>
       </div>
+
+      {offerActive && planOffer!.show_banner && (
+        <div
+          className="rounded-lg px-4 py-2.5 text-sm font-semibold flex items-center gap-2"
+          style={{
+            backgroundColor: planOffer!.banner_bg_color || '#F97316',
+            color: planOffer!.banner_text_color || '#FFFFFF',
+          }}
+        >
+          <Sparkles className="h-4 w-4" />
+          {planOffer!.banner_text ||
+            `${planOffer!.label || 'Limited offer'} — Flat ${planOffer!.percent_off}% off${
+              planOffer!.applies_to_monthly && planOffer!.applies_to_annual
+                ? ' all plans'
+                : planOffer!.applies_to_annual
+                ? ' annual plans'
+                : ' monthly plans'
+            }!`}
+        </div>
+      )}
 
       {/* Lifecycle banners */}
       {isBlocked && (
@@ -333,6 +364,11 @@ const Billing = () => {
           const displayMonthly = showAnnual ? annualMonthly(annualPrice) : p.price_inr;
           const total = gstTotal(displayMonthly, gstPct);
           const savings = showAnnual ? annualSavingsPct(p.price_inr, annualPrice) : 0;
+          const offerPct = isFree ? 0 : currentOffer;
+          const discountedMonthly = offerPct > 0 ? displayMonthly * (1 - offerPct / 100) : displayMonthly;
+          const discountedAnnual = showAnnual && offerPct > 0
+            ? annualPrice * (1 - offerPct / 100)
+            : annualPrice;
 
           return (
             <Card key={p.id} className={`flex flex-col ${isCurrent ? 'border-primary ring-2 ring-primary/20' : ''}`}>
@@ -340,16 +376,26 @@ const Billing = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{p.display_name}</CardTitle>
                   {isCurrent && <Badge>Current</Badge>}
+                  {offerPct > 0 && !isCurrent && (
+                    <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
+                      -{offerPct}%
+                    </Badge>
+                  )}
                 </div>
-                <div className="mt-2">
-                  <span className="text-3xl font-bold">₹{Math.round(displayMonthly).toLocaleString('en-IN')}</span>
+                <div className="mt-2 flex items-baseline gap-2 flex-wrap">
+                  <span className="text-3xl font-bold">₹{Math.round(discountedMonthly).toLocaleString('en-IN')}</span>
                   <span className="text-sm text-muted-foreground">/mo</span>
+                  {offerPct > 0 && (
+                    <span className="text-sm text-muted-foreground line-through">
+                      ₹{Math.round(displayMonthly).toLocaleString('en-IN')}
+                    </span>
+                  )}
                 </div>
                 {!isFree && (
                   <p className="text-xs text-muted-foreground">
                     {showAnnual
-                      ? <>Billed ₹{annualPrice.toLocaleString('en-IN')} yearly · incl. {gstPct}% GST{savings > 0 && <> · <span className="text-emerald-600 font-semibold">Save {savings}%</span></>}</>
-                      : <>₹{total.toFixed(2)} incl. {gstPct}% GST</>}
+                      ? <>Billed ₹{Math.round(discountedAnnual).toLocaleString('en-IN')} yearly{offerPct > 0 && <> <span className="line-through">₹{annualPrice.toLocaleString('en-IN')}</span></>} · incl. {gstPct}% GST{savings > 0 && <> · <span className="text-emerald-600 font-semibold">Save {savings}%</span></>}</>
+                      : <>₹{total.toFixed(2)} incl. {gstPct}% GST{offerPct > 0 && cycle === 'monthly' && <span className="block text-orange-600">Festive offer shown on first invoice</span>}</>}
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
