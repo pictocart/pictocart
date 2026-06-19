@@ -448,7 +448,8 @@ export default function CustomiserV2() {
                     <span>{p.label}</span>
                     {edited && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
                   </button>
-                );
+                 );
+              })}
             </div>
           </ScrollArea>
           <Separator />
