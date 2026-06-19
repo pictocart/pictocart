@@ -195,6 +195,7 @@ const Customise = () => {
           )}
 
           <TabsContent value="homepage" className="space-y-4">
+            <HomeSourcePicker store={store} onStoreUpdated={(patch) => store && setStore({ ...store, ...patch })} />
             <Card>
               <CardHeader><CardTitle className="text-base">Homepage Sections</CardTitle></CardHeader>
               <CardContent>
