@@ -77,15 +77,23 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE);
 
-    // Load the draft page + store
+    // Load the draft page
     const { data: page, error: pErr } = await admin
       .from("store_custom_pages")
-      .select("*, stores!inner(id, user_id, name, slug, theme, settings)")
+      .select("*")
       .eq("id", page_id)
       .maybeSingle();
-    if (pErr || !page) return json({ error: "Page not found" }, 404);
-    const store = (page as any).stores;
-    if (store.user_id !== userId) return json({ error: "Forbidden" }, 403);
+    if (pErr) return json({ error: `Page lookup failed: ${pErr.message}` }, 500);
+    if (!page) return json({ error: "Page not found" }, 404);
+
+    const { data: store, error: sErr } = await admin
+      .from("stores")
+      .select("id, user_id, name, slug, theme, settings")
+      .eq("id", (page as any).store_id)
+      .maybeSingle();
+    if (sErr || !store) return json({ error: "Store not found" }, 404);
+    if ((store as any).user_id !== userId) return json({ error: "Forbidden" }, 403);
+
 
     // Charge credits (atomic; returns -1 if insufficient)
     const actionKey = regenerate ? "regenerate_custom_page_section" : "generate_custom_page";
