@@ -314,6 +314,15 @@ const Onboarding = () => {
             onboarding_step: TOTAL_STEPS,
             settings: currentSettings,
           }).eq('id', store.id);
+          // Update the context cache synchronously so the dashboard's
+          // "Your store is live at … View" ribbon renders immediately on
+          // first paint instead of waiting for a refetch.
+          setStore({
+            ...store,
+            is_published: true,
+            onboarding_step: TOTAL_STEPS,
+            settings: currentSettings,
+          } as any);
         }
         navigate('/dashboard', { replace: true });
       }} />;
