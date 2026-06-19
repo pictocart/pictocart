@@ -1336,6 +1336,7 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(idx, f); }} />
                 </label>
               </Button>
+              <HeroAiImageButton idx={idx} merged={merged} onUpdate={onUpdate} />
               {merged.image && <Button size="sm" variant="outline" onClick={() => onUpdate(idx, "image", "")}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remove</Button>}
             </div>
           </div>
