@@ -52,24 +52,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    const fields = "name,formatted_address,url,rating,user_ratings_total,reviews";
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=${fields}&reviews_sort=newest&key=${apiKey}`;
-    const r = await fetch(url);
+    // Places API (New) - GET /v1/places/{placeId}
+    const fieldMask = "id,displayName,formattedAddress,googleMapsUri,rating,userRatingCount,reviews";
+    const url = `https://places.googleapis.com/v1/places/${encodeURIComponent(place_id)}`;
+    const r = await fetch(url, {
+      headers: {
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": fieldMask,
+      },
+    });
     const data = await r.json();
-    if (data.status !== "OK") {
-      throw new Error(`Google Places error: ${data.status} ${data.error_message ?? ""}`);
+    if (!r.ok) {
+      const msg = data?.error?.message || JSON.stringify(data);
+      throw new Error(`Google Places error: ${r.status} ${msg}`);
     }
-    const res = data.result;
-    const reviews = (res.reviews || []).map((rv: any, idx: number) => ({
-      google_review_id: `${place_id}-${rv.time}-${idx}`,
-      author_name: rv.author_name,
-      author_photo_url: rv.profile_photo_url,
-      rating: rv.rating,
-      text: rv.text,
-      relative_time: rv.relative_time_description,
-      time_unix: rv.time,
-      language: rv.language || null,
-    }));
+    const res = {
+      name: data.displayName?.text ?? data.displayName ?? "",
+      formatted_address: data.formattedAddress ?? "",
+      url: data.googleMapsUri ?? "",
+      rating: data.rating ?? null,
+      user_ratings_total: data.userRatingCount ?? 0,
+      reviews: data.reviews ?? [],
+    };
+    const reviews = (res.reviews || []).map((rv: any, idx: number) => {
+      const timeUnix = rv.publishTime ? Math.floor(new Date(rv.publishTime).getTime() / 1000) : idx;
+      return {
+        google_review_id: `${place_id}-${timeUnix}-${idx}`,
+        author_name: rv.authorAttribution?.displayName ?? "Anonymous",
+        author_photo_url: rv.authorAttribution?.photoUri ?? null,
+        rating: rv.rating,
+        text: rv.text?.text ?? rv.originalText?.text ?? "",
+        relative_time: rv.relativePublishTimeDescription ?? "",
+        time_unix: timeUnix,
+        language: rv.text?.languageCode ?? rv.originalText?.languageCode ?? null,
+      };
+    });
 
     if (connection) {
       // Clear cache and reinsert (Google only returns 5 latest anyway)
