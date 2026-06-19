@@ -62,7 +62,8 @@ export const merchantJourney: JourneyStep[] = [
 
 export interface FAQ { q: string; a: string }
 
-export const merchantFAQs: FAQ[] = [
+/* Top 5 questions Indian merchants ask before signing up — shown on the landing page. */
+export const topMerchantFAQs: FAQ[] = [
   {
     q: 'Is it really free? What\'s the catch?',
     a: 'Yes. The Free plan lets you sell unlimited products, take orders, and use COD/UPI forever. We charge a small 3% convenience fee on Free, which drops to 2% on Starter (₹499) and 1% on Growth (₹1499). Premium themes, custom domains and advanced analytics are paid features — but you never need a credit card to start.',
@@ -72,24 +73,29 @@ export const merchantFAQs: FAQ[] = [
     a: 'Most merchants are live in 5 minutes flat: 30 seconds to sign up, 1 minute to name your store, 30 seconds to pick a category, 1 minute to choose a theme (or accept the auto-suggested one) and one tap to go live. You can add products, payments and your custom domain right after — but you\'re selling from minute five.',
   },
   {
-    q: 'Do I need a developer or designer?',
-    a: 'No. Everything — themes, sections, products, payments, domain, SEO — is point-and-click. Our 50+ AI-generated themes are professionally designed, and the section editor is drag-and-drop.',
+    q: 'How does payment work? Where does the money go?',
+    a: 'You connect your own Razorpay account, so customer payments land directly in your bank — we never hold your money. We also support COD and UPI Intent. The convenience fee is invoiced separately, never deducted from customer payments.',
+  },
+  {
+    q: 'What about GST and invoices?',
+    a: 'Every order generates a GST-ready PDF invoice with your business details, GSTIN and HSN codes. You can download all invoices in bulk for your CA at month-end.',
   },
   {
     q: 'Can I use my own domain like mybrand.in?',
     a: 'Yes — on Starter (₹499) and above. You point an A or CNAME record at our servers, and we issue an SSL certificate automatically. Multi-domain support comes on the Growth plan.',
   },
+];
+
+/* Full FAQ set — shown on /how-it-works. Includes the top 5 plus deeper questions. */
+export const merchantFAQs: FAQ[] = [
+  ...topMerchantFAQs,
   {
-    q: 'How does payment work? Where does the money go?',
-    a: 'You connect your own Razorpay account, so customer payments land directly in your bank — we never hold your money. We also support COD and UPI Intent. The convenience fee is invoiced separately, never deducted from customer payments.',
+    q: 'Do I need a developer or designer?',
+    a: 'No. Everything — themes, sections, products, payments, domain, SEO — is point-and-click. Our 50+ AI-generated themes are professionally designed, and the section editor is drag-and-drop.',
   },
   {
     q: 'Can I sell physical products and digital products?',
     a: 'Yes to both. Physical products integrate with Shiprocket (17+ couriers, 29,000+ pincodes) for shipping label generation and tracking. Digital products (PDFs, courses, templates) can be delivered via secure download links after purchase.',
-  },
-  {
-    q: 'What about GST and invoices?',
-    a: 'Every order generates a GST-ready PDF invoice with your business details, GSTIN and HSN codes. You can download all invoices in bulk for your CA at month-end.',
   },
   {
     q: 'Can I migrate from Shopify / WooCommerce / Instagram?',
@@ -103,4 +109,29 @@ export const merchantFAQs: FAQ[] = [
     q: 'Is my store mobile-friendly?',
     a: 'Every theme is mobile-first. We also ship a Progressive Web App so customers can install your store as an app on their phone with one tap.',
   },
+  {
+    q: 'Does Pic to Cart support Hindi and regional Indian languages?',
+    a: 'Yes. Our in-dashboard AI assistant speaks 10+ Indian languages (Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia) using Sarvam AI for voice and text. Your storefront can also display product titles, descriptions and checkout in your preferred language.',
+  },
+  {
+    q: 'Can I take orders on WhatsApp and send order updates there?',
+    a: 'Yes. Every order auto-generates a WhatsApp share link with the invoice, and shipping updates are sent over WhatsApp + email so your customers always know where their parcel is — exactly how Indian buyers expect to be notified.',
+  },
+  {
+    q: 'I am not good with writing — can AI create my product listings?',
+    a: 'Just snap up to 6 photos per product and our AI writes the title, description, category tags and SEO meta for you in seconds. You can edit anything before publishing, or use the voice assistant in your language to dictate corrections.',
+  },
+  {
+    q: 'Can I run sales, coupons and festive offers like Diwali or Holi?',
+    a: 'Yes. Create % or flat coupons with usage limits and minimum-order rules, schedule site-wide festive discounts (Diwali, Holi, Republic Day) in advance, and bundle products into combo offers — all from the dashboard, no coding needed.',
+  },
+  {
+    q: 'How does shipping work? Do I need my own courier tie-up?',
+    a: 'No tie-up needed. We are integrated with Shiprocket out of the box — 17+ courier partners covering 29,000+ Indian pincodes. Print labels, schedule pickups and track every shipment from inside Pic to Cart.',
+  },
+  {
+    q: 'What if I get stuck? Is there support in my language?',
+    a: 'Yes. Free plan gets email + chatbot support, paid plans get priority WhatsApp support during business hours, and Scale plan customers get a dedicated success manager. Our AI assistant inside the dashboard can also walk you through any feature in your regional language.',
+  },
 ];
+
