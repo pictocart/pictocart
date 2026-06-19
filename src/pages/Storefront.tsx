@@ -119,6 +119,11 @@ const Storefront = ({ page = 'home' }: { page?: string } = {}) => {
   const theme = resolveTheme(themeData);
   const { colors, fonts, borderRadius } = theme;
 
+  // Custom-page home override
+  if (page === 'home' && (store as any).home_page_kind === 'custom' && (store as any).home_page_id) {
+    return <CustomHomePage store={store} themeData={themeData} />;
+  }
+
   // If the resolved theme has a dedicated React theme component (bazaar, etc),
   // render via ThemeRenderer using the storefront bundle. Falls back to the
   // generic section renderer below when the theme_id isn't registered.
