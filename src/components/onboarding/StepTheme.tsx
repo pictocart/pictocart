@@ -24,6 +24,29 @@ interface ThemeMaster {
   price?: number;
 }
 
+// Map merchant onboarding category slugs → theme master category verticals.
+// Keeps the two taxonomies in sync without a DB join. Anything not listed
+// falls through unfiltered (e.g. "other").
+const CATEGORY_ALIASES: Record<string, string[]> = {
+  fashion: ['fashion', 'apparel', 'clothing'],
+  food: ['food', 'restaurant', 'cafe', 'bakery'],
+  grocery: ['grocery', 'food'],
+  electronics: ['electronics', 'gadgets', 'tech'],
+  beauty: ['beauty', 'cosmetics', 'wellness'],
+  beauty_services: ['services', 'beauty', 'salon'],
+  healthcare: ['services', 'health', 'doctor', 'clinic'],
+  handmade: ['home-decor', 'crafts', 'handmade'],
+  other: [],
+};
+
+const matchesCategory = (themeCategory: string | null, merchantCategory: string) => {
+  if (!themeCategory) return false;
+  const tc = themeCategory.toLowerCase();
+  const aliases = CATEGORY_ALIASES[merchantCategory] || [merchantCategory];
+  if (aliases.length === 0) return false;
+  return aliases.some((a) => tc.includes(a));
+};
+
 const StepTheme = ({ data, setData }: Props) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setTimeout(() => setMounted(true), 100); }, []);
@@ -42,15 +65,23 @@ const StepTheme = ({ data, setData }: Props) => {
     },
   });
 
-  // Auto-pick the first (trending/default) theme so Continue isn't blocked.
-  useEffect(() => {
-    if (!data.selectedThemeId && themes.length > 0) {
-      setData((d) => ({ ...d, selectedThemeId: themes[0].theme_id }));
-    }
-  }, [themes, data.selectedThemeId, setData]);
+  // Split into recommended/trending/other based on chosen onboarding category.
+  const recommended = data.category && data.category !== 'other'
+    ? themes.filter((t) => matchesCategory(t.category, data.category))
+    : [];
+  const recommendedIds = new Set(recommended.map((t) => t.id));
+  const trending = themes.filter((t) => t.is_default && !recommendedIds.has(t.id));
+  const trendingIds = new Set([...recommendedIds, ...trending.map((t) => t.id)]);
+  const others = themes.filter((t) => !trendingIds.has(t.id));
 
-  const trending = themes.filter((t) => t.is_default);
-  const latest = themes.filter((t) => !t.is_default);
+  // Auto-pick the first recommended theme (falls back to trending → first overall)
+  // so Continue isn't blocked and the default matches the chosen vertical.
+  useEffect(() => {
+    if (data.selectedThemeId || themes.length === 0) return;
+    const first = recommended[0] || trending[0] || themes[0];
+    if (first) setData((d) => ({ ...d, selectedThemeId: first.theme_id }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themes, data.selectedThemeId, data.category]);
 
   return (
     <div className={`space-y-8 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -60,7 +91,9 @@ const StepTheme = ({ data, setData }: Props) => {
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Choose a theme</h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Pick a starting look. New themes are added to the marketplace regularly — you can switch anytime.
+          {recommended.length > 0
+            ? <>Themes picked for <span className="font-semibold capitalize text-foreground">{data.category}</span> appear first. Switch anytime later.</>
+            : 'Pick a starting look. New themes are added to the marketplace regularly — you can switch anytime.'}
         </p>
       </div>
 
@@ -75,6 +108,13 @@ const StepTheme = ({ data, setData }: Props) => {
         </div>
       ) : (
         <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6 -mr-2">
+          {recommended.length > 0 && (
+            <Section title={`Recommended for ${data.category}`} icon={<Sparkles className="h-3.5 w-3.5" />}>
+              {recommended.map((t) => (
+                <ThemeCard key={t.id} theme={t} selected={data.selectedThemeId === t.theme_id} onClick={() => setData((d) => ({ ...d, selectedThemeId: t.theme_id }))} />
+              ))}
+            </Section>
+          )}
           {trending.length > 0 && (
             <Section title="Trending" icon={<Flame className="h-3.5 w-3.5" />}>
               {trending.map((t) => (
@@ -82,9 +122,9 @@ const StepTheme = ({ data, setData }: Props) => {
               ))}
             </Section>
           )}
-          {latest.length > 0 && (
-            <Section title="Latest" icon={<Sparkles className="h-3.5 w-3.5" />}>
-              {latest.map((t) => (
+          {others.length > 0 && (
+            <Section title={recommended.length > 0 ? 'More themes' : 'Latest'} icon={<Sparkles className="h-3.5 w-3.5" />}>
+              {others.map((t) => (
                 <ThemeCard key={t.id} theme={t} selected={data.selectedThemeId === t.theme_id} onClick={() => setData((d) => ({ ...d, selectedThemeId: t.theme_id }))} />
               ))}
             </Section>
