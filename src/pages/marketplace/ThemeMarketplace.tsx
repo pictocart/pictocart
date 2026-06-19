@@ -22,9 +22,10 @@ interface ThemeMaster {
   created_at: string;
 }
 
-const CATEGORIES = ['All', 'Fashion', 'Food', 'Electronics', 'Beauty', 'Handcraft', 'Services', 'Books', 'Jewelry', 'Home', 'Other'];
+const CATEGORIES = ['All', 'Fashion', 'Food', 'Electronics', 'Beauty', 'Handloom', 'Handcraft', 'Services', 'Books', 'Jewellery', 'Home', 'Hobby', 'Gifts', 'Luxury', 'Religious', 'Creative', 'General'];
 const PRICE_FILTERS = ['All', 'Free', 'Premium'] as const;
 const SORTS = ['Trending', 'Newest', 'Price ↑', 'Price ↓'] as const;
+
 
 const ThemeMarketplace = () => {
   const [search, setSearch] = useState('');
