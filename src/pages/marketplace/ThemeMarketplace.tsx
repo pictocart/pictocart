@@ -28,10 +28,10 @@ const SORTS = ['Trending', 'Newest', 'Price ↑', 'Price ↓'] as const;
 
 
 const ThemeMarketplace = () => {
-  const [search, setSearch] = useState('');
   const [cat, setCat] = useState('All');
   const [price, setPrice] = useState<typeof PRICE_FILTERS[number]>('All');
   const [sort, setSort] = useState<typeof SORTS[number]>('Trending');
+
 
   const { data: themes = [], isLoading } = useQuery({
     queryKey: ['marketplace-themes'],
