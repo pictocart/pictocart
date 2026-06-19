@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Crown, Sparkles, Search, Eye, ArrowRight, Flame, Filter, Star } from 'lucide-react';
+import { Crown, Sparkles, Eye, ArrowRight, Flame, Filter, Star, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import SEOHead from '@/components/storefront/SEOHead';
 import PicToCartLogo from '@/components/PicToCartLogo';
+import FeaturesMegaMenu from '@/components/landing/FeaturesMegaMenu';
+
 
 interface ThemeMaster {
   id: string;
@@ -21,15 +22,16 @@ interface ThemeMaster {
   created_at: string;
 }
 
-const CATEGORIES = ['All', 'Fashion', 'Food', 'Electronics', 'Beauty', 'Handcraft', 'Services', 'Books', 'Jewelry', 'Home', 'Other'];
+const CATEGORIES = ['All', 'Fashion', 'Food', 'Electronics', 'Beauty', 'Handloom', 'Handcraft', 'Services', 'Books', 'Jewellery', 'Home', 'Hobby', 'Gifts', 'Luxury', 'Religious', 'Creative', 'General'];
 const PRICE_FILTERS = ['All', 'Free', 'Premium'] as const;
 const SORTS = ['Trending', 'Newest', 'Price ↑', 'Price ↓'] as const;
 
+
 const ThemeMarketplace = () => {
-  const [search, setSearch] = useState('');
   const [cat, setCat] = useState('All');
   const [price, setPrice] = useState<typeof PRICE_FILTERS[number]>('All');
   const [sort, setSort] = useState<typeof SORTS[number]>('Trending');
+
 
   const { data: themes = [], isLoading } = useQuery({
     queryKey: ['marketplace-themes'],
@@ -45,12 +47,15 @@ const ThemeMarketplace = () => {
 
   const filtered = useMemo(() => {
     let out = [...themes];
-    if (search) {
-      const s = search.toLowerCase();
-      out = out.filter((t) => t.name.toLowerCase().includes(s) || (t.description || '').toLowerCase().includes(s));
-    }
     if (cat !== 'All') {
-      out = out.filter((t) => (t.category || '').toLowerCase() === cat.toLowerCase());
+      const needle = cat.toLowerCase();
+      out = out.filter((t) => {
+        const c = (t.category || '').toLowerCase();
+        // match against the top-level slug (e.g. "fashion/mens-western" → "fashion")
+        // and any sub-segment so "luxury", "handloom", etc. work even without a parent slug.
+        const parts = c.split('/').map((p) => p.trim()).filter(Boolean);
+        return parts.some((p) => p === needle || p.startsWith(needle));
+      });
     }
     if (price === 'Free') out = out.filter((t) => !t.is_premium);
     if (price === 'Premium') out = out.filter((t) => t.is_premium);
@@ -69,7 +74,8 @@ const ThemeMarketplace = () => {
         out.sort((a, b) => Number(!!b.is_default) - Number(!!a.is_default));
     }
     return out;
-  }, [themes, search, cat, price, sort]);
+  }, [themes, cat, price, sort]);
+
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -79,20 +85,28 @@ const ThemeMarketplace = () => {
         url="https://pictocart.in/marketplace"
       />
 
-      {/* Nav */}
-      <nav className="bg-white border-b border-slate-100 sticky top-0 z-30 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      {/* Nav — matches the landing site nav so users don't feel they've left the site */}
+      <nav className="bg-white/90 backdrop-blur border-b border-slate-100 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <PicToCartLogo size={36} />
+            <PicToCartLogo size={44} />
           </Link>
-          <div className="hidden md:flex items-center gap-6 text-sm">
-            <Link to="/" className="text-slate-600 hover:text-indigo-600 font-medium">Home</Link>
-            <Link to="/marketplace" className="text-indigo-600 font-semibold">Marketplace</Link>
-            <Link to="/features/source-india" className="text-slate-600 hover:text-indigo-600 font-medium">Features</Link>
+          <div className="hidden md:flex items-center gap-6">
+            <FeaturesMegaMenu scrolled />
+            <Link to="/#how-it-works" className="text-sm font-medium text-slate-600 hover:text-indigo-600">How it works</Link>
+            <Link to="/#pricing" className="text-sm font-medium text-slate-600 hover:text-indigo-600">Pricing</Link>
+            <Link to="/marketplace" className="text-sm font-semibold text-indigo-600">Themes</Link>
           </div>
-          <Link to="/auth">
-            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">Start Free</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/auth" className="hidden sm:block">
+              <Button variant="ghost" className="text-slate-700 hover:text-indigo-600">Login</Button>
+            </Link>
+            <Link to="/auth">
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-md shadow-emerald-500/25">
+                Start Free <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -112,20 +126,9 @@ const ThemeMarketplace = () => {
               {themes.length}+ AI-crafted 5-page themes across fashion, food, electronics, beauty, services and more. Apply with one tap — go live in minutes.
             </p>
 
-            {/* Search */}
-            <div className="relative max-w-xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search themes (e.g., minimal, luxury, restaurant)…"
-                className="pl-12 h-14 rounded-2xl bg-white text-slate-900 border-0 shadow-2xl shadow-indigo-900/40"
-              />
-            </div>
-
-            {/* Quick filter pills */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
-              {CATEGORIES.slice(0, 9).map((c) => (
+            {/* Category pills (search removed — categories cover discovery and avoid empty-state confusion) */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {CATEGORIES.map((c) => (
                 <button
                   key={c}
                   onClick={() => setCat(c)}
@@ -142,6 +145,7 @@ const ThemeMarketplace = () => {
           </div>
         </div>
       </section>
+
 
       {/* Sub-filter bar */}
       <div className="bg-white border-b border-slate-200 sticky top-16 z-20">
@@ -182,7 +186,7 @@ const ThemeMarketplace = () => {
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-slate-500">
             <p className="font-semibold">No themes match those filters.</p>
-            <button onClick={() => { setSearch(''); setCat('All'); setPrice('All'); }} className="text-indigo-600 hover:underline text-sm mt-2">
+            <button onClick={() => { setCat('All'); setPrice('All'); }} className="text-indigo-600 hover:underline text-sm mt-2">
               Clear filters
             </button>
           </div>
@@ -195,22 +199,46 @@ const ThemeMarketplace = () => {
         )}
       </section>
 
-      {/* Bottom CTA */}
-      <section className="bg-white border-t border-slate-100 py-16">
+      {/* "Nothing fits?" CTA — invites users with niche businesses to sign up and build their own */}
+      <section className="bg-gradient-to-br from-indigo-50 via-white to-emerald-50 border-y border-slate-100 py-14">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-4">
+            <Wand2 className="h-3 w-3" /> Your business, your theme
+          </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-3">
-            Like one? Sign up and we'll auto-apply it.
+            None of these suit you?
           </h2>
-          <p className="text-slate-500 mb-6">
-            Click any theme above, then "Use This Theme" — onboarding pre-selects it and you go from sign-up to live store in 4 taps.
+          <p className="text-slate-600 mb-6 text-base sm:text-lg">
+            Sign up for free and we'll craft your <span className="font-semibold text-slate-900">first custom theme absolutely free</span> — tailored to your business, your colours, your vibe.
           </p>
           <Link to="/auth">
             <Button size="lg" className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-6 text-base font-bold shadow-lg shadow-emerald-500/30">
+              Create my free theme <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+          <p className="text-xs text-slate-400 mt-4">
+            Want it exclusive to your store? Choose <span className="font-semibold">Private</span> on creation (paid). Choose <span className="font-semibold">Public</span> and it's free — we may showcase it for other sellers too.
+          </p>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="bg-white border-t border-slate-100 py-12">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3">
+            Like one above? Sign up and we'll auto-apply it.
+          </h2>
+          <p className="text-slate-500 mb-6">
+            Click any theme, then "Use This Theme" — onboarding pre-selects it and you go from sign-up to live store in 4 taps.
+          </p>
+          <Link to="/auth">
+            <Button size="lg" variant="outline" className="px-8">
               Start free <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
         </div>
       </section>
+
     </div>
   );
 };
