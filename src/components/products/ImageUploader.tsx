@@ -1,18 +1,55 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ImagePlus, X, Loader2, Camera, Star } from 'lucide-react';
+import { ImagePlus, X, Loader2, Camera, Star, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { compressImage } from '@/lib/imageCompression';
+import { useAICredits } from '@/hooks/useAICredits';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface ImageUploaderProps {
   images: string[];
   onChange: (images: string[]) => void;
   maxImages?: number;
+  /** When true, shows a "Generate with AI" tile that creates a product photo (costs credits). */
+  enableAI?: boolean;
+  aiContext?: { productName?: string; category?: string; storeName?: string };
+  onInsufficientCredits?: () => void;
 }
 
-const ImageUploader = ({ images, onChange, maxImages = 6 }: ImageUploaderProps) => {
+const ImageUploader = ({ images, onChange, maxImages = 6, enableAI = false, aiContext, onInsufficientCredits }: ImageUploaderProps) => {
   const [uploading, setUploading] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiCredits = useAICredits({ onInsufficient: onInsufficientCredits });
+
+  const generateAI = async () => {
+    if (!aiPrompt.trim()) { toast.error('Describe what to generate'); return; }
+    setAiLoading(true);
+    try {
+      const { data, insufficient } = await aiCredits.invoke<{ imageUrl: string }>('generate-product-image', {
+        prompt: aiPrompt.trim(),
+        productName: aiContext?.productName,
+        category: aiContext?.category,
+        storeName: aiContext?.storeName,
+      });
+      if (insufficient) return;
+      if (!data?.imageUrl) { toast.error('No image returned'); return; }
+      onChange([...images, data.imageUrl]);
+      toast.success('AI photo added!');
+      setAiOpen(false);
+      setAiPrompt('');
+    } catch (e: any) {
+      toast.error(e?.message || 'AI generation failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const uploadImage = useCallback(async (original: File) => {
     if (original.size > 30 * 1024 * 1024) {
