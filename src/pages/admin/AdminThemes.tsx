@@ -178,7 +178,7 @@ const ThemeMasterForm = ({ initial, onClose }: { initial: Partial<ThemeMaster>; 
           <Select value={form.category || 'general'} onValueChange={(v) => setForm({ ...form, category: v })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {CATEGORIES.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
+              {verticals.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
