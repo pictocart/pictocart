@@ -41,7 +41,8 @@ const Dashboard = () => {
   const { stats } = useDashboardStats(store?.id);
 
   useEffect(() => {
-    if (!loading && !store) {
+    if (loading || !user) return;
+    if (!store) {
       const isCustomer = user?.user_metadata?.is_customer === true;
       if (!isCustomer) navigate('/onboarding', { replace: true });
     }
