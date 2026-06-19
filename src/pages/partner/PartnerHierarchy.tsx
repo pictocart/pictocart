@@ -140,7 +140,7 @@ const PartnerHierarchy = () => {
                       <tr key={p.id} className="border-b last:border-0">
                         <td className="py-3">
                           <div className="font-medium">{p.name}</div>
-                          <div className="text-xs text-muted-foreground">{p.email}</div>
+                          <div className="text-xs text-muted-foreground">{p.email_masked}</div>
                         </td>
                         <td className="capitalize">{String(p.tier).replace("_", " ")}</td>
                         <td>{p.region_name || p.state_name || "—"}</td>
