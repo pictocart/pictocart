@@ -32,18 +32,19 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
+  // Track which user id we've fetched the store for. Without this, right after
+  // a fresh sign-in consumers briefly see `loading=false, store=null` from the
+  // previous (signed-out) state and incorrectly redirect to /onboarding.
+  const [fetchedForUserId, setFetchedForUserId] = useState<string | null>(null);
 
   const fetchStore = useCallback(async () => {
     if (!user) {
       setStore(null);
+      setFetchedForUserId(null);
       setLoading(false);
       return;
     }
     setLoading(true);
-    // Use order+limit instead of .maybeSingle() so a user who somehow ended up
-    // with more than one store row (test fixtures, race during onboarding,
-    // legacy data) still loads their original store instead of being bounced
-    // back to /onboarding.
     const { data, error } = await supabase
       .from('stores')
       .select('*')
@@ -53,27 +54,35 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
     if (error) {
       console.error('[StoreContext] fetch error:', error);
-      // Don't clobber existing store on transient error
       setLoading(false);
       return;
     }
     setStore(((data as Store[] | null)?.[0]) ?? null);
+    setFetchedForUserId(user.id);
     setLoading(false);
   }, [user]);
 
   useEffect(() => {
-    // Wait until auth has finished restoring the session before deciding
-    // whether the user has a store. Otherwise we briefly see user=null and
-    // incorrectly redirect to onboarding.
     if (authLoading) {
       setLoading(true);
       return;
     }
+    // User changed (login/logout) — reset synchronously so consumers don't
+    // render the previous user's empty state while the new fetch runs.
+    if (user?.id !== fetchedForUserId) {
+      setStore(null);
+      setLoading(true);
+    }
     fetchStore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, fetchStore]);
 
+  // Treat as loading until we've actually fetched for the current user.
+  const effectiveLoading =
+    loading || authLoading || (!!user && fetchedForUserId !== user.id);
+
   return (
-    <StoreContext.Provider value={{ store, loading: loading || authLoading, setStore, refetchStore: fetchStore }}>
+    <StoreContext.Provider value={{ store, loading: effectiveLoading, setStore, refetchStore: fetchStore }}>
       {children}
     </StoreContext.Provider>
   );
