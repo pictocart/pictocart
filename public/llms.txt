@@ -1,0 +1,14 @@
+# Pic to Cart
+
+> Pic to Cart is an India-first e-commerce platform that lets small merchants launch a fully-featured online store in 5 minutes by just snapping product photos. AI generates titles, descriptions, prices, SEO, and a themed storefront — with COD, UPI, Razorpay, Shiprocket, GST invoices, and multilingual support built in.
+
+## Pages
+
+- [Home](/): Product overview, pricing tiers, top FAQs, and links to start a free store.
+- [How It Works](/how-it-works): 5-step merchant journey from sign-up to first sale, plus the full FAQ covering pricing, payments, GST, shipping, languages, and migration.
+- [Theme Marketplace](/marketplace): Browse 50+ AI-generated store themes by category; preview live before applying.
+- [Investors](/investors): Investor and partnership information for Pic to Cart.
+
+## Optional
+
+- [Sign in / Sign up](/auth): Create a free merchant account or sign in.
