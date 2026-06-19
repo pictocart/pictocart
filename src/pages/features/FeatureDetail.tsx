@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import { ArrowRight, Check, ChevronLeft, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
