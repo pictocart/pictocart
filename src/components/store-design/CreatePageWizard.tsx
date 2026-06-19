@@ -38,10 +38,13 @@ export default function CreatePageWizard({ storeId, open, onOpenChange }: { stor
     if (!files?.length) return;
     setUploading(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) throw new Error("Please sign in to upload images");
       const next: string[] = [];
       for (const file of Array.from(files).slice(0, 8 - images.length)) {
         const ext = file.name.split(".").pop() || "jpg";
-        const path = `custom-pages/${storeId}/${crypto.randomUUID()}.${ext}`;
+        const path = `${uid}/stores/${storeId}/custom-pages/${crypto.randomUUID()}.${ext}`;
         const { error } = await supabase.storage.from("store-assets").upload(path, file, { upsert: false, contentType: file.type });
         if (error) throw error;
         const { data } = supabase.storage.from("store-assets").getPublicUrl(path);
@@ -54,6 +57,7 @@ export default function CreatePageWizard({ storeId, open, onOpenChange }: { stor
       setUploading(false);
     }
   };
+
 
   const slugError = (() => {
     if (!slug) return "Slug is required";
