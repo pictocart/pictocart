@@ -59,14 +59,6 @@ const EverySolutionGrid = () => {
           ))}
         </div>
 
-        <div className="text-center mt-10">
-          <Link
-            to="/features/source-india"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-indigo-600"
-          >
-            See the full feature catalog <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
       </div>
     </section>
   );
