@@ -282,10 +282,11 @@ const ThemeCard = ({ theme }: { theme: ThemeMaster }) => {
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-bold text-slate-900 leading-tight">{theme.name}</h3>
-          <div className="flex items-center gap-0.5 text-amber-500 shrink-0">
-            <Star className="h-3.5 w-3.5 fill-current" />
-            <span className="text-xs font-semibold text-slate-700">4.8</span>
-          </div>
+          {theme.is_premium && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full shrink-0">
+              <Star className="h-3 w-3 fill-current" /> Premium
+            </span>
+          )}
         </div>
         {theme.category && (
           <p className="text-[11px] uppercase tracking-wider text-slate-400 mt-1">{theme.category}</p>
