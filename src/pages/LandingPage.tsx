@@ -331,7 +331,7 @@ const LandingPage = () => {
             </div>
 
             {/* Mobile menu toggle */}
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2">
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu">
               <div className={`space-y-1.5 transition-all ${mobileMenuOpen ? 'rotate-45' : ''}`}>
                 <span className={`block w-6 h-0.5 transition-all ${scrolled ? 'bg-slate-800' : 'bg-white'} ${mobileMenuOpen ? 'rotate-90 translate-y-2' : ''}`} />
                 <span className={`block w-6 h-0.5 transition-all ${scrolled ? 'bg-slate-800' : 'bg-white'} ${mobileMenuOpen ? 'opacity-0' : ''}`} />

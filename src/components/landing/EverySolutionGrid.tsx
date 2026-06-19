@@ -53,7 +53,7 @@ const EverySolutionGrid = () => {
               </div>
               <p className="text-sm text-slate-600 leading-relaxed mb-3 line-clamp-2">{f.short}</p>
               <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 group-hover:text-indigo-700">
-                Learn more <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                Explore this feature <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </Link>
           ))}
