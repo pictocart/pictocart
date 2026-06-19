@@ -65,7 +65,7 @@ export interface FAQ { q: string; a: string }
 export const merchantFAQs: FAQ[] = [
   {
     q: 'Is it really free? What\'s the catch?',
-    a: 'Yes. The Free plan lets you sell unlimited products, take orders, and use COD/UPI forever. We charge a small 3% platform commission on Free, which drops to 2% on Starter (₹499) and 1% on Growth (₹1499). Premium themes, custom domains and advanced analytics are paid features — but you never need a credit card to start.',
+    a: 'Yes. The Free plan lets you sell unlimited products, take orders, and use COD/UPI forever. We charge a small 3% convenience fee on Free, which drops to 2% on Starter (₹499) and 1% on Growth (₹1499). Premium themes, custom domains and advanced analytics are paid features — but you never need a credit card to start.',
   },
   {
     q: 'How long does setup actually take?',
@@ -81,7 +81,7 @@ export const merchantFAQs: FAQ[] = [
   },
   {
     q: 'How does payment work? Where does the money go?',
-    a: 'You connect your own Razorpay account, so customer payments land directly in your bank — we never hold your money. We also support COD and UPI Intent. The platform commission is invoiced separately, never deducted from customer payments.',
+    a: 'You connect your own Razorpay account, so customer payments land directly in your bank — we never hold your money. We also support COD and UPI Intent. The convenience fee is invoiced separately, never deducted from customer payments.',
   },
   {
     q: 'Can I sell physical products and digital products?',

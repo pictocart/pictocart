@@ -21,8 +21,8 @@ const TermsOfService = () => (
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground">4. Platform Commission</h2>
-          <p>Pic to Cart charges a 2% platform commission on each transaction processed through the platform. Additional fees may apply for premium features as outlined in our pricing page.</p>
+          <h2 className="text-xl font-semibold text-foreground">4. Convenience Fee</h2>
+          <p>Pic to Cart charges a 2% convenience fee on each transaction processed through the platform. Additional fees may apply for premium features as outlined in our pricing page.</p>
         </section>
 
         <section>
