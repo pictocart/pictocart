@@ -6366,6 +6366,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      head_downline_partners: {
+        Args: { _head_partner_id: string }
+        Returns: {
+          created_at: string
+          email_masked: string
+          id: string
+          invite_status: string
+          name: string
+          partner_type: string
+          region_name: string
+          state_name: string
+          tier: Database["public"]["Enums"]["partner_tier"]
+          total_amount_paid: number
+          total_licenses_purchased: number
+        }[]
+      }
       head_downline_summary: {
         Args: { _head_partner_id: string }
         Returns: {
