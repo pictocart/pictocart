@@ -93,66 +93,7 @@ export default function PagesTab({ store, onStoreUpdated }: { store: any; onStor
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><Home className="h-4 w-4" /> Home page</CardTitle>
-          <p className="text-xs text-muted-foreground">Choose what visitors see at /store/{store?.slug}. Like WordPress — any page can be your front page.</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <RadioGroup
-            value={currentRadioValue}
-            onValueChange={(v) => {
-              if (v.startsWith("custom:")) { setHomeKind("custom"); setHomePageId(v.replace("custom:", "")); }
-              else { setHomeKind(v as Kind); setHomePageId(null); }
-            }}
-            className="space-y-2"
-          >
-            {BUILTIN_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
-              return (
-                <label key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                  <RadioGroupItem value={opt.id} className="mt-1" />
-                  <Icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{opt.label}</div>
-                    <div className="text-xs text-muted-foreground">{opt.description}</div>
-                    {opt.id === "product" && homeKind === "product" && (
-                      <div className="mt-2" onClick={(e) => e.preventDefault()}>
-                        <Select value={homeProductId || ""} onValueChange={(v) => setHomeProductId(v)}>
-                          <SelectTrigger className="h-9 w-full max-w-sm">
-                            <SelectValue placeholder={products.length ? "Pick a product…" : "No products yet"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map((p: any) => (
-                              <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                </label>
-              );
-            })}
-            {publishedPages.map((p) => (
-              <label key={p.id} className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                <RadioGroupItem value={`custom:${p.id}`} className="mt-1" />
-                <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div className="flex-1">
-                  <div className="font-medium text-sm flex items-center gap-2">{p.title} <Badge variant="secondary" className="text-[10px]">Custom</Badge></div>
-                  <div className="text-xs text-muted-foreground">{p.description || `/p/${p.slug}`}</div>
-                </div>
-              </label>
-            ))}
-            {publishedPages.length === 0 && (
-              <p className="text-xs text-muted-foreground italic px-2">Tip: publish a custom AI-generated page below to make it your home page.</p>
-            )}
-          </RadioGroup>
-          <Button size="sm" onClick={saveHome} disabled={savingHome}>
-            {savingHome ? "Saving…" : "Save home page"}
-          </Button>
-        </CardContent>
-      </Card>
+
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
