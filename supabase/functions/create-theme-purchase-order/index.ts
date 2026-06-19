@@ -72,13 +72,18 @@ Deno.serve(async (req) => {
       if (purchased.includes(theme_ref)) return json({ error: "Already purchased" }, 409);
     }
 
-    // 24h launch discount based on store created_at... we don't have it; use a flat 30% if not yet published OR within first 24h of publish.
-    // For simplicity, apply 30% launch offer if store has zero prior theme purchases.
-    const { count: prevPurchases } = await admin.from("theme_purchase_intents")
-      .select("id", { count: "exact", head: true }).eq("store_id", store_id).eq("status", "paid");
-    const isLaunch = (prevPurchases ?? 0) === 0;
-    const discountInr = isLaunch ? Math.round(basePrice * 0.30) : 0;
+    // Discount comes ONLY from the admin-configured platform plan offer
+    // (platform_plan_offers via get_active_plan_offer_pct). No silent
+    // launch discounts — what admin sets is what merchant pays.
+    let offerPct = 0;
+    try {
+      const { data: pct } = await admin.rpc("get_active_plan_offer_pct", { _cycle: "annual" });
+      offerPct = Math.max(0, Math.min(90, Number(pct || 0)));
+    } catch (_) { offerPct = 0; }
+    const discountInr = offerPct > 0 ? Math.round(basePrice * (offerPct / 100)) : 0;
     const finalAmount = Math.max(basePrice - discountInr, 1);
+    const isLaunch = offerPct > 0;
+
 
     // Create Razorpay order
     const receipt = `theme_${store_id.slice(0, 8)}_${Date.now()}`;
