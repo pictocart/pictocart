@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from "@/components/store-design/PromoTickerEditor";
 import type { PromoTickerConfig } from "@/components/storefront/PromoTicker";
+import PagesTab from "@/components/store-design/PagesTab";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sparkles, FileText as FileTextIcon } from "lucide-react";
 
 const PAGES = [
   { id: "home", label: "Home" },
