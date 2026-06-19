@@ -94,7 +94,7 @@ const ThemeDetail = () => {
                   Use this theme <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <a href={`/admin/themes/preview-live/${theme.theme_id}`} target="_blank" rel="noreferrer" className="flex-1">
+              <a href={`/themes/preview/${theme.theme_id}`} target="_blank" rel="noreferrer" className="flex-1">
                 <Button size="lg" variant="outline" className="w-full py-6 font-semibold">
                   <Eye className="mr-2 h-4 w-4" /> Live preview
                 </Button>

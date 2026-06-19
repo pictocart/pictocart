@@ -278,6 +278,8 @@ const AppRoutes = () => {
             </Route>
             <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
             <Route path="/admin/themes/preview-live/:themeId" element={<AdminThemeLivePreview />} />
+            {/* Public alias — same renderer, no admin-looking URL for marketplace visitors */}
+            <Route path="/themes/preview/:themeId" element={<AdminThemeLivePreview />} />
 
             {/* Partner program (license-based, admin-invited) */}
             <Route path="/partners" element={<PartnersSignup />} />
