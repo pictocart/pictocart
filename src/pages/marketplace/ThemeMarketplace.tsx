@@ -85,20 +85,28 @@ const ThemeMarketplace = () => {
         url="https://pictocart.in/marketplace"
       />
 
-      {/* Nav */}
-      <nav className="bg-white border-b border-slate-100 sticky top-0 z-30 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      {/* Nav — matches the landing site nav so users don't feel they've left the site */}
+      <nav className="bg-white/90 backdrop-blur border-b border-slate-100 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <PicToCartLogo size={36} />
+            <PicToCartLogo size={44} />
           </Link>
-          <div className="hidden md:flex items-center gap-6 text-sm">
-            <Link to="/" className="text-slate-600 hover:text-indigo-600 font-medium">Home</Link>
-            <Link to="/marketplace" className="text-indigo-600 font-semibold">Marketplace</Link>
-            <Link to="/features/source-india" className="text-slate-600 hover:text-indigo-600 font-medium">Features</Link>
+          <div className="hidden md:flex items-center gap-6">
+            <FeaturesMegaMenu scrolled />
+            <Link to="/#how-it-works" className="text-sm font-medium text-slate-600 hover:text-indigo-600">How it works</Link>
+            <Link to="/#pricing" className="text-sm font-medium text-slate-600 hover:text-indigo-600">Pricing</Link>
+            <Link to="/marketplace" className="text-sm font-semibold text-indigo-600">Themes</Link>
           </div>
-          <Link to="/auth">
-            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">Start Free</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/auth" className="hidden sm:block">
+              <Button variant="ghost" className="text-slate-700 hover:text-indigo-600">Login</Button>
+            </Link>
+            <Link to="/auth">
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-md shadow-emerald-500/25">
+                Start Free <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -118,20 +126,9 @@ const ThemeMarketplace = () => {
               {themes.length}+ AI-crafted 5-page themes across fashion, food, electronics, beauty, services and more. Apply with one tap — go live in minutes.
             </p>
 
-            {/* Search */}
-            <div className="relative max-w-xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search themes (e.g., minimal, luxury, restaurant)…"
-                className="pl-12 h-14 rounded-2xl bg-white text-slate-900 border-0 shadow-2xl shadow-indigo-900/40"
-              />
-            </div>
-
-            {/* Quick filter pills */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
-              {CATEGORIES.slice(0, 9).map((c) => (
+            {/* Category pills (search removed — categories cover discovery and avoid empty-state confusion) */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {CATEGORIES.map((c) => (
                 <button
                   key={c}
                   onClick={() => setCat(c)}
@@ -148,6 +145,7 @@ const ThemeMarketplace = () => {
           </div>
         </div>
       </section>
+
 
       {/* Sub-filter bar */}
       <div className="bg-white border-b border-slate-200 sticky top-16 z-20">
