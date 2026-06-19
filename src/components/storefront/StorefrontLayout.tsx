@@ -120,7 +120,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
       <header className="sticky top-0 z-50 border-b backdrop-blur-sm" style={{ borderColor: colors.secondary + '80', backgroundColor: colors.card + 'ee' }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            {headerConfig.nav_links?.length > 0 && (
+            {mergedNavLinks.length > 0 && (
               <button className="md:hidden p-1" onClick={() => setMobileMenuOpen((v) => !v)}>
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
@@ -134,9 +134,9 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
           </div>
 
           {/* Desktop nav links */}
-          {headerConfig.nav_links?.length > 0 && (
+          {mergedNavLinks.length > 0 && (
             <nav className="hidden md:flex items-center" style={{ gap: `${headerConfig.nav_gap ?? 16}px` }}>
-              {headerConfig.nav_links.map((link: any, i: number) => (
+              {mergedNavLinks.map((link: any, i: number) => (
                 <Link key={i} to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`} className="text-sm opacity-70 hover:opacity-100 transition-opacity" style={{ fontFamily: headerConfig.nav_font || 'inherit', fontWeight: Number(headerConfig.nav_weight || 500) }}>
                   {link.label}
                 </Link>
@@ -206,18 +206,18 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
         </div>
 
         {/* Mobile nav drawer */}
-        {headerConfig.nav_links?.length > 0 && (
+        {mergedNavLinks.length > 0 && (
           <div
             className="md:hidden overflow-hidden transition-all duration-300 ease-in-out"
             style={{
-              maxHeight: mobileMenuOpen ? `${(headerConfig.nav_links.length * 44) + 24}px` : '0px',
+              maxHeight: mobileMenuOpen ? `${(mergedNavLinks.length * 44) + 24}px` : '0px',
               opacity: mobileMenuOpen ? 1 : 0,
               borderTop: mobileMenuOpen ? `1px solid ${colors.secondary}80` : 'none',
               backgroundColor: colors.card,
             }}
           >
             <nav className="px-4 py-3 flex flex-col gap-1">
-              {headerConfig.nav_links.map((link: any, i: number) => (
+              {mergedNavLinks.map((link: any, i: number) => (
                 <Link
                   key={i}
                   to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`}
