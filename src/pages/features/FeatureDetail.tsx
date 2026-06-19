@@ -77,7 +77,7 @@ const FeatureDetail = () => {
                 {feature.cta || 'Try it free'} <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </Link>
-            <Link to="/" className="text-sm font-semibold text-slate-600 hover:text-indigo-600">
+            <Link to="/#features" className="text-sm font-semibold text-slate-600 hover:text-indigo-600">
               See full feature list →
             </Link>
           </div>
