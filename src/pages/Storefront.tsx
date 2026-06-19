@@ -647,4 +647,36 @@ const ClassicCollections = ({ slug, storeId, colors, fonts, borderRadius }: { sl
   );
 };
 
+const CustomHomePage = ({ store, themeData }: { store: any; themeData: any }) => {
+  const { data: page, isLoading } = useQuery({
+    queryKey: ['storefront-custom-home', store.id, store.home_page_id],
+    enabled: !!store.home_page_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('store_custom_pages' as any)
+        .select('*')
+        .eq('id', store.home_page_id)
+        .eq('status', 'published')
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+  });
+  const theme = resolveTheme(themeData);
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  if (!page) return <StorefrontLayout store={store}><div className="py-24 text-center text-sm text-muted-foreground">Home page is being prepared.</div></StorefrontLayout>;
+  const seo = page.seo || {};
+  return (
+    <StorefrontLayout store={store}>
+      <SEOHead
+        title={seo.meta_title || store.name}
+        description={seo.meta_description || page.description || store.description || ''}
+        url={`${window.location.origin}/store/${store.slug}`}
+      />
+      <CustomPageSections sections={page.sections || []} theme={theme} storeSlug={store.slug} />
+    </StorefrontLayout>
+  );
+};
+
+
 export default Storefront;
