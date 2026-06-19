@@ -252,7 +252,15 @@ const ProductForm = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div data-tour="product-image"><ImageUploader images={images} onChange={setImages} /></div>
+              <div data-tour="product-image">
+                <ImageUploader
+                  images={images}
+                  onChange={setImages}
+                  enableAI={/food|beverage|restaurant|cafe|bakery|cloud kitchen/i.test(String(store?.category || ''))}
+                  aiContext={{ productName: title, category: category || store?.category, storeName: store?.name }}
+                  onInsufficientCredits={() => setRechargeOpen(true)}
+                />
+              </div>
               {images.length > 0 && images.length < 4 && (
                 <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                   💡 Upload 4–5 photos from different angles for much better AI-generated details and a richer product page.
