@@ -176,12 +176,56 @@ const ImageUploader = ({ images, onChange, maxImages = 6, enableAI = false, aiCo
             </label>
           </div>
         )}
+        {enableAI && images.length < maxImages && (
+          <button
+            type="button"
+            onClick={() => setAiOpen(true)}
+            className="group flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-violet-400/50 bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-950/30 dark:to-fuchsia-950/30 transition-all hover:border-violet-500 hover:shadow-sm"
+            aria-label="Generate product photo with AI"
+          >
+            <Sparkles className="h-5 w-5 text-violet-600 group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-semibold text-violet-700 dark:text-violet-300">AI Photo</span>
+            <span className="text-[9px] text-violet-600/70">10 credits</span>
+          </button>
+        )}
       </div>
+      {enableAI && (
+        <p className="text-[11px] text-violet-700/80 dark:text-violet-300/80">
+          ✨ Food &amp; beverage merchants: generate appetizing product photos with AI when your shots all look similar.
+        </p>
+      )}
       {images.length > 1 && (
         <p className="text-[11px] text-muted-foreground">
           Hover any image and tap <strong>Set main</strong> to choose the cover photo.
         </p>
       )}
+
+      <Dialog open={aiOpen} onOpenChange={setAiOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-600" /> Generate product photo</DialogTitle>
+            <DialogDescription>
+              Describe the dish or item in 1–2 sentences. We'll generate a studio-quality photo. Costs 10 credits per image.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              autoFocus
+              placeholder={aiContext?.productName ? `e.g. ${aiContext.productName} with garnish, served hot…` : 'e.g. Chocolate truffle cake with cherries on a wooden board'}
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              disabled={aiLoading}
+            />
+            <p className="text-[11px] text-muted-foreground">Tip: mention ingredients, plating, mood (warm/rustic/luxurious).</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAiOpen(false)} disabled={aiLoading}>Cancel</Button>
+            <Button onClick={generateAI} disabled={aiLoading || !aiPrompt.trim()} className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:opacity-90">
+              {aiLoading ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Generating…</> : <><Sparkles className="h-3.5 w-3.5 mr-1" /> Generate (10 cr)</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
