@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { LayoutDashboard, PanelTop, PanelBottom, ToggleLeft, Lock, ExternalLink, Sparkles, Crown, Megaphone, FileText } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PagesTab from '@/components/store-design/PagesTab';
+import HomeSourcePicker from '@/components/store-design/HomeSourcePicker';
 import { useQuery } from '@tanstack/react-query';
 import { usePremiumThemePurchase } from '@/hooks/usePremiumThemePurchase';
 import { applyMasterTheme } from '@/lib/applyMasterTheme';
@@ -194,6 +195,7 @@ const Customise = () => {
           )}
 
           <TabsContent value="homepage" className="space-y-4">
+            <HomeSourcePicker store={store} onStoreUpdated={(patch) => store && setStore({ ...store, ...patch })} />
             <Card>
               <CardHeader><CardTitle className="text-base">Homepage Sections</CardTitle></CardHeader>
               <CardContent>
