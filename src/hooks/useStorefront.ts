@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useStoreSiteOffer, isOfferActive, applyOfferToProduct } from '@/hooks/useSiteOffer';
 
 export const useStorefront = (slug: string, ownerPreview = false) => {
   const storeQuery = useQuery({
     queryKey: ['storefront', slug, ownerPreview],
     queryFn: async () => {
       if (ownerPreview) {
-        // Owner preview mode: fetch store by slug without is_published check
-        // RLS will ensure only the owner can see their own unpublished store
         const { data, error } = await supabase
           .from('stores')
           .select('*')
@@ -31,8 +30,11 @@ export const useStorefront = (slug: string, ownerPreview = false) => {
     enabled: !!slug,
   });
 
+  const { data: offer } = useStoreSiteOffer(storeQuery.data?.id);
+  const offerPct = isOfferActive(offer) ? Number(offer!.percent_off) : 0;
+
   const productsQuery = useQuery({
-    queryKey: ['storefront-products', storeQuery.data?.id],
+    queryKey: ['storefront-products', storeQuery.data?.id, offerPct],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
@@ -41,7 +43,8 @@ export const useStorefront = (slug: string, ownerPreview = false) => {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data || [];
+      const rows = data || [];
+      return offerPct > 0 ? rows.map((p) => applyOfferToProduct(p as any, offerPct)) : rows;
     },
     enabled: !!storeQuery.data?.id,
   });
@@ -55,8 +58,11 @@ export const useStorefront = (slug: string, ownerPreview = false) => {
 };
 
 export const useStorefrontProduct = (storeId: string | undefined, productId: string) => {
+  const { data: offer } = useStoreSiteOffer(storeId);
+  const offerPct = isOfferActive(offer) ? Number(offer!.percent_off) : 0;
+
   return useQuery({
-    queryKey: ['storefront-product', storeId, productId],
+    queryKey: ['storefront-product', storeId, productId, offerPct],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
@@ -67,7 +73,7 @@ export const useStorefrontProduct = (storeId: string | undefined, productId: str
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error('Product not found');
-      return data;
+      return offerPct > 0 ? applyOfferToProduct(data as any, offerPct) : data;
     },
     enabled: !!storeId && !!productId,
   });

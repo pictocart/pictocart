@@ -120,6 +120,7 @@ const navTree: NavEntry[] = [
     icon: Megaphone,
     key: 'marketing',
     children: [
+      { label: 'Site-wide Offer', icon: Sparkles, path: '/site-offer' },
       { label: 'Blog Posts', icon: FileText, path: '/blog-posts' },
       { label: 'Testimonials', icon: Star, path: '/testimonials' },
       { label: 'Google Reviews', icon: Star, path: '/google-reviews' },

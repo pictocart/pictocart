@@ -34,6 +34,7 @@ const adminNavItems = [
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Themes', icon: Palette, path: '/admin/themes' },
   { label: 'Plans', icon: Crown, path: '/admin/plans' },
+  { label: 'Plan Offer', icon: Sparkles, path: '/admin/plan-offer' },
   { label: 'Revenue', icon: IndianRupee, path: '/admin/revenue' },
   { label: 'Commissions', icon: Receipt, path: '/admin/commissions' },
   { label: 'Credits Economy', icon: Sparkles, path: '/admin/credits-economy' },

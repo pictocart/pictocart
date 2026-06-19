@@ -69,6 +69,8 @@ const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
 const Contact = lazy(() => import("@/pages/Contact"));
 const Billing = lazy(() => import("@/pages/Billing"));
+const SiteOffer = lazy(() => import("@/pages/SiteOffer"));
+const AdminPlanOffer = lazy(() => import("@/pages/admin/AdminPlanOffer"));
 const Wallet = lazy(() => import("@/pages/Wallet"));
 const Returns = lazy(() => import("@/pages/Returns"));
 const Policies = lazy(() => import("@/pages/Policies"));
@@ -233,6 +235,7 @@ const AppRoutes = () => {
               <Route path="/analytics" element={<StoreAnalytics />} />
               <Route path="/themes" element={<Themes />} />
               <Route path="/billing" element={<Billing />} />
+              <Route path="/site-offer" element={<SiteOffer />} />
               <Route path="/wallet" element={<Wallet />} />
               <Route path="/profile" element={<SellerProfile />} />
               <Route path="/policies" element={<Policies />} />
@@ -262,6 +265,7 @@ const AppRoutes = () => {
               <Route path="/admin/security" element={<AdminSecurity />} />
               <Route path="/admin/provisioning" element={<AdminProvisioning />} />
               <Route path="/admin/plans" element={<AdminPlans />} />
+              <Route path="/admin/plan-offer" element={<AdminPlanOffer />} />
               <Route path="/admin/launch" element={<AdminLaunchChecklist />} />
               <Route path="/admin/credits-economy" element={<AdminCreditsEconomy />} />
               <Route path="/admin/health" element={<AdminHealth />} />
