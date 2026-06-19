@@ -22,29 +22,43 @@ export const TourProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const location = useLocation();
   const [completed, setCompleted] = useState<Set<string>>(new Set());
+  const [completedLoaded, setCompletedLoaded] = useState(false);
   const driverRef = useRef<Driver | null>(null);
   const runningRef = useRef<string | null>(null);
 
-  // Load progress when the user is known
+  // Load progress when the user is known. Until this resolves we MUST NOT
+  // auto-start any tour, otherwise users who've already seen a tooltip see it
+  // again on every login (race between empty initial state and async fetch).
   useEffect(() => {
     let cancelled = false;
-    if (!user?.id) { setCompleted(new Set()); return; }
+    setCompletedLoaded(false);
+    if (!user?.id) { setCompleted(new Set()); setCompletedLoaded(true); return; }
+    // Seed from localStorage synchronously so a returning user on the same
+    // device never sees a flash of the tour while the DB round-trip is in
+    // flight.
+    const seed = new Set<string>();
+    try {
+      for (const k of Object.keys(localStorage)) {
+        if (k.startsWith(`pic2cart:tour:${user.id}:`)) {
+          seed.add(k.split(':').pop()!);
+        }
+      }
+    } catch { /* noop */ }
+    setCompleted(seed);
     (async () => {
       const { data } = await supabase
         .from('tour_progress')
         .select('tour_key')
         .eq('user_id', user.id);
       if (cancelled) return;
-      const fromDb = new Set((data ?? []).map((r: any) => r.tour_key as string));
-      // Merge in localStorage cache
+      const merged = new Set(seed);
+      for (const r of (data ?? []) as any[]) merged.add(r.tour_key as string);
+      // Backfill localStorage so future loads are instant.
       try {
-        for (const k of Object.keys(localStorage)) {
-          if (k.startsWith(`pic2cart:tour:${user.id}:`)) {
-            fromDb.add(k.split(':').pop()!);
-          }
-        }
+        for (const k of merged) localStorage.setItem(lsKey(user.id, k), '1');
       } catch { /* noop */ }
-      setCompleted(fromDb);
+      setCompleted(merged);
+      setCompletedLoaded(true);
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
