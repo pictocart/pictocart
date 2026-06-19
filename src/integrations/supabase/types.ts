@@ -3035,6 +3035,57 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_plan_offers: {
+        Row: {
+          applies_to_annual: boolean
+          applies_to_monthly: boolean
+          banner_bg_color: string | null
+          banner_text: string | null
+          banner_text_color: string | null
+          created_at: string
+          enabled: boolean
+          ends_at: string | null
+          id: string
+          label: string | null
+          percent_off: number
+          show_banner: boolean
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          applies_to_annual?: boolean
+          applies_to_monthly?: boolean
+          banner_bg_color?: string | null
+          banner_text?: string | null
+          banner_text_color?: string | null
+          created_at?: string
+          enabled?: boolean
+          ends_at?: string | null
+          id?: string
+          label?: string | null
+          percent_off?: number
+          show_banner?: boolean
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          applies_to_annual?: boolean
+          applies_to_monthly?: boolean
+          banner_bg_color?: string | null
+          banner_text?: string | null
+          banner_text_color?: string | null
+          created_at?: string
+          enabled?: boolean
+          ends_at?: string | null
+          id?: string
+          label?: string | null
+          percent_off?: number
+          show_banner?: boolean
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           ai_generated_data: Json | null
@@ -4892,6 +4943,62 @@ export type Database = {
           },
         ]
       }
+      store_site_offers: {
+        Row: {
+          banner_bg_color: string | null
+          banner_text: string | null
+          banner_text_color: string | null
+          created_at: string
+          enabled: boolean
+          ends_at: string | null
+          id: string
+          label: string | null
+          percent_off: number
+          show_banner: boolean
+          starts_at: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          banner_bg_color?: string | null
+          banner_text?: string | null
+          banner_text_color?: string | null
+          created_at?: string
+          enabled?: boolean
+          ends_at?: string | null
+          id?: string
+          label?: string | null
+          percent_off?: number
+          show_banner?: boolean
+          starts_at?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          banner_bg_color?: string | null
+          banner_text?: string | null
+          banner_text_color?: string | null
+          created_at?: string
+          enabled?: boolean
+          ends_at?: string | null
+          id?: string
+          label?: string | null
+          percent_off?: number
+          show_banner?: boolean
+          starts_at?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_site_offers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_testimonials: {
         Row: {
           content: string
@@ -6109,6 +6216,11 @@ export type Database = {
       }
       family_plan_slots_left: { Args: { _plan_id: string }; Returns: number }
       generate_referral_code: { Args: never; Returns: string }
+      get_active_plan_offer_pct: { Args: { _cycle?: string }; Returns: number }
+      get_active_store_offer_pct: {
+        Args: { _store_id: string }
+        Returns: number
+      }
       get_order_by_tracking: {
         Args: { tracking_code: string }
         Returns: {
