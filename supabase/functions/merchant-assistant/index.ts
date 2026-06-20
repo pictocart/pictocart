@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     } else {
       headers['Authorization'] = `Bearer ${LOVABLE_API_KEY}`;
     }
-    const modelName = useSarvam ? 'sarvam-m' : 'google/gemini-3-flash-preview';
+    const modelName = useSarvam ? 'sarvam-30b' : 'google/gemini-3-flash-preview';
 
     const res = await fetch(endpoint, {
       method: 'POST',
