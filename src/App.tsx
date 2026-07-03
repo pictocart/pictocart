@@ -291,6 +291,7 @@ const AppRoutes = () => {
             <Route path="/partner/hierarchy" element={<PartnerHierarchy />} />
             <Route path="/partner/payouts" element={<PartnerPayouts />} />
             <Route path="/store-invite/accept" element={<StoreInviteAccept />} />
+            <Route path="/store-invite/accept" element={<StoreInviteAccept />} />
             {/* Help Center */}
             <Route path="/help" element={<Help />} />
             <Route path="/help/:slug" element={<Help />} />
