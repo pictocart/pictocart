@@ -48,6 +48,26 @@ const ProductTypeFields = ({ productType, metadata, onChange }: Props) => {
       <Label>{label}</Label>
       {multiline ? (
         <Textarea value={metadata[key] || ''} onChange={(e) => onChange(key, e.target.value)} placeholder={placeholder} rows={3} />
+      ) : key === 'fssai_license' ? (
+        <div className="space-y-1">
+          <Input
+            value={metadata[key] || ''}
+            onChange={(e) => onChange(key, e.target.value.replace(/[^0-9]/g, '').slice(0, 14))}
+            placeholder={placeholder}
+            className="font-mono"
+            maxLength={14}
+            inputMode="numeric"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            {(metadata[key] || '').length}/14 digits
+            {(metadata[key] || '').length > 0 && (metadata[key] || '').length < 14 && (
+              <span className="text-amber-600 ml-1">— needs {14 - (metadata[key] || '').length} more</span>
+            )}
+            {(metadata[key] || '').length === 14 && (
+              <span className="text-emerald-600 ml-1">✓ saved to your store</span>
+            )}
+          </p>
+        </div>
       ) : (
         <Input value={metadata[key] || ''} onChange={(e) => onChange(key, e.target.value)} placeholder={placeholder} />
       )}

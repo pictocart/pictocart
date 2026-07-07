@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +31,9 @@ const ThemeMarketplace = () => {
   const [cat, setCat] = useState('All');
   const [price, setPrice] = useState<typeof PRICE_FILTERS[number]>('All');
   const [sort, setSort] = useState<typeof SORTS[number]>('Trending');
+
+  // Scroll to top when page mounts
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
 
 
   const { data: themes = [], isLoading } = useQuery({

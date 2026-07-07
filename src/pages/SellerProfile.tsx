@@ -25,7 +25,13 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
+  Receipt,
 } from 'lucide-react';
+
+/* Food-like categories that require FSSAI */
+const FOOD_CATEGORIES = ['food', 'grocery', 'bakery', 'restaurant', 'cafe', 'cloud kitchen', 'beverage', 'organic', 'catering', 'dairy', 'snacks', 'sweets'];
+const isFoodStore = (category?: string | null) =>
+  FOOD_CATEGORIES.some((k) => category?.toLowerCase().includes(k));
 
 const SellerProfile = () => {
   const { user } = useAuth();
@@ -41,6 +47,8 @@ const SellerProfile = () => {
   // Store name edit
   const [storeName, setStoreName] = useState('');
   const [storeNameLoading, setStoreNameLoading] = useState(false);
+  const [fssai, setFssai] = useState('');
+  const [fssaiLoading, setFssaiLoading] = useState(false);
 
   // Password change
   const [showPassword, setShowPassword] = useState(false);
@@ -63,7 +71,10 @@ const SellerProfile = () => {
       }
     };
     fetchProfile();
-    if (store) setStoreName(store.name);
+    if (store) {
+      setStoreName(store.name);
+      setFssai((store.settings as any)?.fssai || '');
+    }
   }, [user, store]);
 
   const handleSaveProfile = async () => {
@@ -100,6 +111,21 @@ const SellerProfile = () => {
     await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('user_id', user.id);
     toast.success('Avatar updated');
     setAvatarUploading(false);
+  };
+
+  const handleSaveFssai = async () => {
+    if (!store) return;
+    if (fssai && fssai.length !== 14) { toast.error('FSSAI number must be exactly 14 digits'); return; }
+    setFssaiLoading(true);
+    const updatedSettings = { ...((store.settings as any) || {}), fssai: fssai || null };
+    const { error } = await supabase.from('stores').update({ settings: updatedSettings }).eq('id', store.id);
+    if (error) {
+      toast.error('Failed to update FSSAI number');
+    } else {
+      setStore({ ...store, settings: updatedSettings });
+      toast.success('FSSAI number saved — it will now prefill when adding food products');
+    }
+    setFssaiLoading(false);
   };
 
   const handlePasswordChange = async () => {
@@ -273,6 +299,52 @@ const SellerProfile = () => {
             >
               {storeNameLoading ? 'Saving...' : 'Save Store Name'}
             </Button>
+
+            {/* FSSAI — only visible for food-related stores */}
+            {isFoodStore(store.category) && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5 text-amber-600" />
+                    FSSAI License Number
+                    <span className="text-muted-foreground font-normal">(14 digits)</span>
+                  </Label>
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1 space-y-1">
+                      <Input
+                        value={fssai}
+                        onChange={(e) => setFssai(e.target.value.replace(/[^0-9]/g, '').slice(0, 14))}
+                        placeholder="e.g. 10012345000123"
+                        className="font-mono"
+                        maxLength={14}
+                        inputMode="numeric"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        {fssai.length}/14 digits
+                        {fssai.length > 0 && fssai.length < 14 && (
+                          <span className="text-amber-600 ml-1">— needs {14 - fssai.length} more</span>
+                        )}
+                        {fssai.length === 14 && (
+                          <span className="text-emerald-600 ml-1">✓ valid length</span>
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleSaveFssai}
+                      disabled={fssaiLoading || fssai === ((store.settings as any)?.fssai || '') || (fssai.length > 0 && fssai.length !== 14)}
+                      variant="outline"
+                      className="shrink-0"
+                    >
+                      {fssaiLoading ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                    This will auto-fill when you add food products, so you don't need to enter it each time.
+                  </p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

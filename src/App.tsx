@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -28,6 +28,13 @@ import NotFound from "./pages/NotFound.tsx";
 import { useStoreByHost, isPlatformHost } from "@/hooks/useStoreByHost";
 import { TourProvider } from "@/tours/TourProvider";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+
+/* Scroll to top on every route change */
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]);
+  return null;
+};
 
 // Lazy-load heavy / less-frequent pages to shrink initial bundle.
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
@@ -175,6 +182,7 @@ const AppRoutes = () => {
 
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Loading…</div>}>
+    <ScrollToTop />
     <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/q/:slug" element={<QRRedirect />} />

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useProducts, useProduct } from '@/hooks/useProducts';
 import { useStore } from '@/hooks/useStore';
+import { supabase } from '@/integrations/supabase/client';
 import { useCategories } from '@/hooks/useCategories';
 import { useSubscription, PLAN_LIMITS } from '@/hooks/useSubscription';
-import { supabase } from '@/integrations/supabase/client';
 import ImageUploader from '@/components/products/ImageUploader';
 import VideoUploader from '@/components/products/VideoUploader';
 import VoiceVideoRecorder from '@/components/products/VoiceVideoRecorder';
@@ -29,7 +29,7 @@ const ProductForm = () => {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
-  const { store } = useStore();
+  const { store, setStore } = useStore();
   const { parentCategories, getSubcategories, loading: loadingCategories } = useCategories();
   const { products, createProduct, updateProduct } = useProducts();
   const { plan, limits } = useSubscription();
@@ -59,6 +59,26 @@ const ProductForm = () => {
   const [saving, setSaving] = useState(false);
   const [productType, setProductType] = useState<ProductType>(getDefaultProductType(store?.category));
   const [typeMetadata, setTypeMetadata] = useState<Record<string, any>>({});
+
+  // Pre-fill FSSAI license from store settings once store is loaded (new product only)
+  useEffect(() => {
+    if (!isEdit && store) {
+      const fssai = (store.settings as any)?.fssai;
+      if (fssai) {
+        setTypeMetadata((prev) => ({ fssai_license: fssai, ...prev }));
+      }
+    }
+  }, [store, isEdit]);
+
+  // When user fills FSSAI in product form, persist it back to store settings so it prefills next time
+  const handleTypeMetadataChange = async (key: string, value: any) => {
+    setTypeMetadata((prev) => ({ ...prev, [key]: value }));
+    if (key === 'fssai_license' && store && value && String(value).length === 14) {
+      const updatedSettings = { ...((store.settings as any) || {}), fssai: value };
+      const { error } = await supabase.from('stores').update({ settings: updatedSettings }).eq('id', store.id);
+      if (!error) setStore({ ...store, settings: updatedSettings });
+    }
+  };
   const [highlights, setHighlights] = useState<string[]>([]);
   const [highlightInput, setHighlightInput] = useState('');
   const [descriptionTab, setDescriptionTab] = useState('plain');
@@ -195,15 +215,15 @@ const ProductForm = () => {
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-20 md:pb-0">
       <RechargeSheet open={rechargeOpen} onOpenChange={setRechargeOpen} />
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — sticky below the dashboard top bar (h-14 = 56px) */}
+      <div className="sticky top-14 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/products')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="text-xl font-bold">{isEdit ? 'Edit Product' : 'Add Product'}</h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground hidden sm:block">
               {isEdit ? 'Update product details' : 'Upload an image and let AI do the rest'}
             </p>
           </div>
@@ -359,7 +379,7 @@ const ProductForm = () => {
                 <ProductTypeFields
                   productType={productType}
                   metadata={typeMetadata}
-                  onChange={(key, value) => setTypeMetadata((prev) => ({ ...prev, [key]: value }))}
+                  onChange={handleTypeMetadataChange}
                 />
               </CardContent>
             </Card>

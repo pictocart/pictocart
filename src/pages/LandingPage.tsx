@@ -368,7 +368,11 @@ const LandingPage = () => {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-violet-500/15 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-3xl" />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+        {/* Diagonal accent lines */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-950/50 to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left - Copy */}
             <div className="text-center lg:text-left">
@@ -408,11 +412,19 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Wave divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0 50L60 42C120 34 240 18 360 14C480 10 600 18 720 30C840 42 960 58 1080 62C1200 66 1320 58 1380 54L1440 50V100H1380C1320 100 1200 100 1080 100C960 100 840 100 720 100C600 100 480 100 360 100C240 100 120 100 60 100H0V50Z" fill="white"/>
-          </svg>
+        {/* Bottom geometric divider - clean lines without overflow */}
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
+          <div className="relative h-24">
+            {/* Gradient fade */}
+            <div className="absolute inset-x-0 top-0 h-full bg-gradient-to-b from-transparent via-slate-950/40 to-slate-950/80" />
+            
+            {/* Geometric accent bars */}
+            <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-1 px-4 pb-6">
+              <div className="h-1 w-12 bg-gradient-to-r from-indigo-500/40 to-indigo-500/20 rounded-full" />
+              <div className="h-1 w-20 bg-gradient-to-r from-emerald-500/50 to-emerald-500/30 rounded-full" />
+              <div className="h-1 w-12 bg-gradient-to-r from-violet-500/40 to-violet-500/20 rounded-full" />
+            </div>
+          </div>
         </div>
       </section>
 
