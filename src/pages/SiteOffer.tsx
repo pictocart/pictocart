@@ -10,6 +10,9 @@ import { Sparkles, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import SiteOfferBanner from '@/components/storefront/SiteOfferBanner';
 
+
+
+
 interface OfferRow {
   enabled: boolean;
   percent_off: number;
@@ -20,6 +23,7 @@ interface OfferRow {
   banner_bg_color: string | null;
   banner_text_color: string | null;
   show_banner: boolean;
+  
 }
 
 const DEFAULTS: OfferRow = {

@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 
 declare global { interface Window { Razorpay: any } }
 
+
 type Invoice = {
   id: string;
   invoice_number: string | null;
@@ -73,6 +74,7 @@ export function CommissionPanel({ storeId, storeName, storeSettings, commissionP
 
   useEffect(() => {
     if (storeId) load();
+        //changes for test 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId]);
 
