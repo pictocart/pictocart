@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, Search, User, Menu, X, Utensils, ChevronRight } from 'lucide-react';
 
@@ -24,12 +24,22 @@ const TopNav = ({
   mergedNavLinks, headerConfig, onSearchOpen,
 }: NavProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const slug = store.slug;
   const br = `${borderRadius}px`;
 
+  // Add shadow on scroll for better visual separation
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <header
-      className="sticky top-0 z-50 border-b backdrop-blur-sm"
+      className={`sticky top-0 z-50 border-b backdrop-blur-sm transition-shadow ${scrolled ? 'shadow-md' : ''}`}
       style={{ borderColor: colors.secondary + '80', backgroundColor: colors.card + 'ee' }}
     >
       <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
@@ -146,13 +156,23 @@ const HamburgerNav = ({
   mergedNavLinks, headerConfig, onSearchOpen,
 }: NavProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const slug = store.slug;
   const location = useLocation();
+
+  // Add shadow on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <>
       <header
-        className="sticky top-0 z-50"
+        className={`sticky top-0 z-50 transition-shadow ${scrolled ? 'shadow-lg' : ''}`}
         style={{ backgroundColor: colors.card + 'f5', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${colors.secondary}60` }}
       >
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3.5">

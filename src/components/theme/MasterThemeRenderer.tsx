@@ -218,7 +218,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   const { totalItems } = useCart(storeSlug || "");
   const { user } = useCustomerAuth(storeSlug || "");
   const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split("@")[0] || "Account";
-  const wrap = "sticky top-0 z-50 border-b backdrop-blur";
+  const wrap = "sticky top-0 z-50 border-b backdrop-blur transition-shadow hover:shadow-md";
   const bg = { background: `${dna.palette?.bg}ee`, borderColor: dna.palette?.border };
   const brandSize = variant === "bold_serif" ? 32 : variant === "minimal_thin" ? 16 : 22;
   const brandStyle: React.CSSProperties = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700, fontSize: brandSize, color: dna.palette?.fg, cursor: (storeSlug || onNavigate) ? "pointer" : "default" };
