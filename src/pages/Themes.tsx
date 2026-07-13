@@ -4,7 +4,7 @@ import { useStore } from '@/hooks/useStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Check, Sparkles, Loader2 } from 'lucide-react';
+import { ExternalLink, Check, Sparkles, Loader2, Crown, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { THEME_TEMPLATES } from '@/lib/themes';
 import { ThemeUpdateBanner } from '@/components/ThemeUpdateBanner';
@@ -18,6 +18,8 @@ interface ThemeMaster {
   preview_image: string | null;
   is_default: boolean;
   is_active: boolean;
+  is_premium?: boolean;
+  price?: number;
 }
 
 const swatchFor = (theme_id: string) => {
@@ -37,13 +39,29 @@ const Themes = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('theme_master_projects')
-        .select('*')
+        .select('id, theme_id, name, description, category, preview_image, is_default, is_active, is_premium, price')
         .eq('is_active', true)
         .order('is_default', { ascending: false });
       if (error) throw error;
       return (data || []) as ThemeMaster[];
     },
   });
+
+  // Fetch purchased premium themes for this store
+  const { data: purchases = [] } = useQuery({
+    queryKey: ['theme-purchases-ids', store?.id],
+    enabled: !!store?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('theme_purchases' as any)
+        .select('theme_pack_id')
+        .eq('store_id', store!.id);
+      if (error) return [];
+      return (data || []).map((p: any) => p.theme_pack_id as string);
+    },
+  });
+
+  const purchasedIds = new Set(purchases);
 
   const installTheme = async (theme: ThemeMaster) => {
     if (!store) return;
@@ -82,7 +100,7 @@ const Themes = () => {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Themes</h1>
         <p className="text-sm text-muted-foreground">
-          All themes are free for every Pic to Cart store. Switch any time — your products and content stay intact.
+          Browse free and premium themes. Switch any time — your products and content stay intact.
         </p>
       </div>
 
@@ -184,6 +202,9 @@ const Themes = () => {
             {themes.map((theme) => {
               const isActive = activeThemeId === theme.theme_id;
               const swatches = swatchFor(theme.theme_id);
+              const isPremium = theme.is_premium === true;
+              const isOwned = !isPremium || purchasedIds.has(theme.id);
+              const isLocked = isPremium && !isOwned;
               return (
                 <Card
                   key={theme.id}
@@ -209,18 +230,36 @@ const Themes = () => {
                         <span className="text-xs font-medium text-muted-foreground">{theme.name}</span>
                       </div>
                     )}
+                    {/* Active badge */}
                     {isActive && (
                       <Badge className="absolute top-2 right-2 bg-green-500 text-white border-0">
                         <Check className="mr-1 h-3 w-3" /> Active
                       </Badge>
                     )}
+                    {/* Recommended badge */}
                     {theme.is_default && !isActive && (
                       <Badge className="absolute top-2 left-2" variant="secondary">Recommended</Badge>
+                    )}
+                    {/* Premium badge */}
+                    {isPremium && (
+                      <Badge className="absolute top-2 right-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
+                     
+                        {isOwned ? 'Owned' : `₹${theme.price ?? ''}`}
+                      </Badge>
+                    )}
+                    {/* Lock overlay for unowned premium */}
+                    {isLocked && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <Lock className="h-8 w-8 text-white drop-shadow-md" />
+                      </div>
                     )}
                   </div>
                   <CardContent className="p-4 flex-1 flex flex-col gap-3">
                     <div>
-                      <h3 className="font-semibold">{theme.name}</h3>
+                      <h3 className="font-semibold flex items-center gap-1.5">
+                        {isPremium }
+                        {theme.name}
+                      </h3>
                       <p className="text-xs text-muted-foreground capitalize">{theme.category || 'general'}</p>
                     </div>
                     {theme.description && (
@@ -233,16 +272,26 @@ const Themes = () => {
                         className="flex-1"
                         onClick={() => window.open(previewUrl(theme), '_blank')}
                       >
-                        <ExternalLink className="mr-1 h-3.5 w-3.5" /> Live Preview
+                        <ExternalLink className="mr-1 h-3.5 w-3.5" /> Preview
                       </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        disabled={isActive}
-                        onClick={() => installTheme(theme)}
-                      >
-                        {isActive ? 'Active' : 'Install'}
-                      </Button>
+                      {isLocked ? (
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0"
+                          onClick={() => toast.info(`Purchase "${theme.name}" for ₹${theme.price} to unlock it.`)}
+                        >
+                          <Crown className="mr-1 h-3.5 w-3.5" /> Purchase
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          disabled={isActive}
+                          onClick={() => installTheme(theme)}
+                        >
+                          {isActive ? 'Active' : 'Install'}
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

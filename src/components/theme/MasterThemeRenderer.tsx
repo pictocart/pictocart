@@ -133,10 +133,9 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
       : (manifest?.pages?.[page]?.sections ?? []);
 
   return (
-    <div style={style} className="min-h-screen">
-      <div data-section-anchor="header" style={{ scrollMarginTop: 80 }}>
-        <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} />
-      </div>
+    <div style={style} data-master-theme>
+      {/* Header is first child — sticky top-0 works against window scroll */}
+      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} />
       {renderedSections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
@@ -219,7 +218,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   const { totalItems } = useCart(storeSlug || "");
   const { user } = useCustomerAuth(storeSlug || "");
   const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split("@")[0] || "Account";
-  const wrap = "sticky top-0 z-10 border-b backdrop-blur";
+  const wrap = "sticky top-0 z-50 border-b backdrop-blur";
   const bg = { background: `${dna.palette?.bg}ee`, borderColor: dna.palette?.border };
   const brandSize = variant === "bold_serif" ? 32 : variant === "minimal_thin" ? 16 : 22;
   const brandStyle: React.CSSProperties = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700, fontSize: brandSize, color: dna.palette?.fg, cursor: (storeSlug || onNavigate) ? "pointer" : "default" };

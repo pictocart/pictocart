@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ArrowLeft, Sparkles, Loader2, X, Save, Plus, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAICredits } from '@/hooks/useAICredits';
@@ -30,7 +31,7 @@ const ProductForm = () => {
   const isEdit = !!id;
   const navigate = useNavigate();
   const { store, setStore } = useStore();
-  const { parentCategories, getSubcategories, loading: loadingCategories } = useCategories();
+  const { parentCategories, getSubcategories, createCategory, loading: loadingCategories } = useCategories();
   const { products, createProduct, updateProduct } = useProducts();
   const { plan, limits } = useSubscription();
   const { data: existingProduct, isLoading: loadingProduct } = useProduct(id);
@@ -83,6 +84,9 @@ const ProductForm = () => {
   const [highlightInput, setHighlightInput] = useState('');
   const [descriptionTab, setDescriptionTab] = useState('plain');
   const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [newCatDialogOpen, setNewCatDialogOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatSaving, setNewCatSaving] = useState(false);
   const aiCredits = useAICredits({ onInsufficient: () => setRechargeOpen(true) });
 
   // Populate form for edit
@@ -149,6 +153,22 @@ const ProductForm = () => {
     }
   };
 
+  const handleAddNewCategory = async () => {
+    const name = newCatName.trim();
+    if (!name) { toast.error('Category name is required'); return; }
+    setNewCatSaving(true);
+    try {
+      const result = await createCategory.mutateAsync({ name, parent_id: null });
+      setCategory(result.name);
+      setNewCatDialogOpen(false);
+      setNewCatName('');
+    } catch {
+      // error toasted by hook
+    } finally {
+      setNewCatSaving(false);
+    }
+  };
+
   const addTag = () => {
     const t = tagInput.trim();
     if (t && !tags.includes(t)) setTags([...tags, t]);
@@ -169,6 +189,8 @@ const ProductForm = () => {
     }
     if (!title.trim()) { toast.error('Product title is required'); return; }
     if (!price || Number(price) <= 0) { toast.error('Valid price is required'); return; }
+    if (!category.trim()) { toast.error('Category is required'); return; }
+    if (!sku.trim()) { toast.error('SKU is required'); return; }
     setSaving(true);
     const payload = {
       title: title.trim(),
@@ -215,6 +237,33 @@ const ProductForm = () => {
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-20 md:pb-0">
       <RechargeSheet open={rechargeOpen} onOpenChange={setRechargeOpen} />
+
+      {/* Add New Category Dialog */}
+      <Dialog open={newCatDialogOpen} onOpenChange={(o) => { setNewCatDialogOpen(o); if (!o) setNewCatName(''); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add New Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="new-cat-name">Category Name</Label>
+            <Input
+              id="new-cat-name"
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              placeholder="e.g. Electronics, Clothing..."
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleAddNewCategory()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setNewCatDialogOpen(false); setNewCatName(''); }}>Cancel</Button>
+            <Button onClick={handleAddNewCategory} disabled={!newCatName.trim() || newCatSaving}>
+              {newCatSaving && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+              Add Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Header — sticky below the dashboard top bar (h-14 = 56px) */}
       <div className="sticky top-14 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -521,32 +570,57 @@ const ProductForm = () => {
             <CardHeader className="pb-3"><CardTitle className="text-base">Organization</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <Label>Category <span className="text-destructive">*</span></Label>
+                <Select
+                  value={category}
+                  onValueChange={(v) => {
+                    if (v === '__add_new__') {
+                      setNewCatDialogOpen(true);
+                    } else {
+                      setCategory(v);
+                    }
+                  }}
+                >
+                  <SelectTrigger className={!category ? 'border-destructive/50' : ''}>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
                   <SelectContent>
-                    {parentCategories.length === 0 ? (
-                      <SelectItem value="__none" disabled>No categories — create them first</SelectItem>
-                    ) : (
-                      parentCategories.map((parent) => {
-                        const subs = getSubcategories(parent.id);
-                        if (subs.length === 0) return <SelectItem key={parent.id} value={parent.name}>{parent.name}</SelectItem>;
-                        return (
-                          <SelectGroup key={parent.id}>
-                            <SelectLabel className="text-xs font-semibold text-muted-foreground">{parent.name}</SelectLabel>
-                            {subs.map((sub) => (
-                              <SelectItem key={sub.id} value={`${parent.name} > ${sub.name}`}>{sub.name}</SelectItem>
-                            ))}
-                          </SelectGroup>
-                        );
-                      })
+                    {/* + Add new category always at top */}
+                    <SelectItem value="__add_new__" className="text-primary font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <Plus className="h-3.5 w-3.5" /> Add new category
+                      </span>
+                    </SelectItem>
+                    {parentCategories.length > 0 && (
+                      <>
+                        {parentCategories.map((parent) => {
+                          const subs = getSubcategories(parent.id);
+                          if (subs.length === 0) return <SelectItem key={parent.id} value={parent.name}>{parent.name}</SelectItem>;
+                          return (
+                            <SelectGroup key={parent.id}>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">{parent.name}</SelectLabel>
+                              {subs.map((sub) => (
+                                <SelectItem key={sub.id} value={`${parent.name} > ${sub.name}`}>{sub.name}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          );
+                        })}
+                      </>
                     )}
                   </SelectContent>
                 </Select>
+                {!category && <p className="text-xs text-destructive">Category is required</p>}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sku">SKU</Label>
-                <Input id="sku" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="ABC-123" />
+                <Label htmlFor="sku">SKU <span className="text-destructive">*</span></Label>
+                <Input
+                  id="sku"
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value)}
+                  placeholder="ABC-123"
+                  className={!sku.trim() ? 'border-destructive/50' : ''}
+                />
+                {!sku.trim() && <p className="text-xs text-destructive">SKU is required</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>Tags</Label>

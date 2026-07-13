@@ -34,7 +34,7 @@ const StorefrontCheckout = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { store, loading } = useStorefront(slug || '');
-  const { items, totalPrice, clearCart, fulfillmentMode, tableLabel } = useCart(slug || '');
+  const { items, totalPrice, clearCart, fulfillmentMode, tableLabel, appliedCoupon, setAppliedCoupon, clearCoupon } = useCart(slug || '');
   const { settings } = useFulfillment(store?.id);
   const { user } = useCustomerAuth(slug || '');
   const [placing, setPlacing] = useState(false);
@@ -45,15 +45,14 @@ const StorefrontCheckout = () => {
   const [priorOrders, setPriorOrders] = useState<number>(0);
   const [phoneCodBlocked, setPhoneCodBlocked] = useState(false);
   const { validateCoupon, incrementUsage, findBestAutoCoupon } = useValidateCoupon();
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
+  const [couponCode, setCouponCode] = useState(appliedCoupon?.code || '');
   const [couponLoading, setCouponLoading] = useState(false);
   const track = useTrackEvent();
   useEffect(() => {
     if (store?.id && items.length > 0) {
       track({ store_id: store.id, event_type: 'checkout_start', value: totalPrice, metadata: { item_count: items.length } });
     }
-    // Auto-apply best coupon (only if user hasn't applied one manually)
+    // Auto-apply best coupon only if none already applied (could have come from cart page)
     (async () => {
       if (!store?.id || items.length === 0 || appliedCoupon) return;
       const cartLines = items.map((i) => ({ productId: i.productId, price: i.price, quantity: i.quantity }));
@@ -187,7 +186,7 @@ const StorefrontCheckout = () => {
   };
 
   const removeCoupon = () => {
-    setAppliedCoupon(null);
+    clearCoupon();
     setCouponCode('');
   };
 

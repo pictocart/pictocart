@@ -274,6 +274,28 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
+      {/* Fixed scroll-down arrow — visible only at top of page */}
+      <button
+        onClick={() => window.scrollBy({ top: window.innerHeight, behavior: 'smooth' })}
+        aria-label="Scroll down"
+        className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center justify-center text-white/70 hover:text-white transition-all duration-500 pointer-events-auto ${scrolled ? 'opacity-0 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'}`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="animate-bounce drop-shadow-lg"
+        >
+          <path d="M12 5v14" />
+          <path d="m19 12-7 7-7-7" />
+        </svg>
+      </button>
       <SEOHead
         title="Pic to Cart — Launch Your Online Store in 5 Minutes"
         description="Create your online store instantly. Just snap a photo — AI generates product titles, descriptions, pricing & SEO. Free forever. 50+ premium themes."
@@ -381,10 +403,12 @@ const LandingPage = () => {
                 <span>AI-Powered Store Builder</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-[1.1] tracking-tight mb-6">
-                Launch Your Store<br />
-                for <Typewriter idx={showcaseIdx} />
-              </h1>
+              <div className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-[1.1] tracking-tight mb-6">
+                <div>Launch Your Store</div>
+                <div className="h-[2.4em] overflow-hidden max-w-[7em]">
+                  <span className="text-white">for </span><Typewriter idx={showcaseIdx} />
+                </div>
+              </div>
 
               <p className="text-lg sm:text-xl text-white/70 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
                 Just snap a photo. <span className="text-white font-medium">AI does the rest.</span> Product titles, descriptions, pricing, SEO — all generated in seconds.
@@ -412,19 +436,9 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Bottom geometric divider - clean lines without overflow */}
-        <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
-          <div className="relative h-24">
-            {/* Gradient fade */}
-            <div className="absolute inset-x-0 top-0 h-full bg-gradient-to-b from-transparent via-slate-950/40 to-slate-950/80" />
-            
-            {/* Geometric accent bars */}
-            <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-1 px-4 pb-6">
-              <div className="h-1 w-12 bg-gradient-to-r from-indigo-500/40 to-indigo-500/20 rounded-full" />
-              <div className="h-1 w-20 bg-gradient-to-r from-emerald-500/50 to-emerald-500/30 rounded-full" />
-              <div className="h-1 w-12 bg-gradient-to-r from-violet-500/40 to-violet-500/20 rounded-full" />
-            </div>
-          </div>
+        {/* Bottom gradient fade */}
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none h-24">
+          <div className="absolute inset-x-0 top-0 h-full bg-gradient-to-b from-transparent via-slate-950/40 to-slate-950/80" />
         </div>
       </section>
 

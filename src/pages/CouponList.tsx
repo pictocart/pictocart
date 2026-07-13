@@ -206,6 +206,7 @@ const CouponList = () => {
                 <Input
                   type="datetime-local"
                   value={form.expires_at}
+                  min={new Date().toISOString().slice(0, 16)}
                   onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
                 />
               </div>

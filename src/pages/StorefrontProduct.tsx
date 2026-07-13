@@ -80,8 +80,18 @@ const StorefrontProduct = () => {
   const { average, count } = getAverageRating(reviews);
   const isOutOfStock = product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0;
   const highlights = aiData.highlights as string[] | undefined;
+
+  // If user has deleted their FSSAI from store settings, hide fssai_license on storefront
+  const activeFssai = (store.settings as any)?.fssai as string | null | undefined;
   const metadata = Object.fromEntries(
-    Object.entries(aiData).filter(([k]) => !['highlights', 'product_type', 'product_videos', 'product_hint'].includes(k)).map(([k, v]) => [k, String(v)])
+    Object.entries(aiData)
+      .filter(([k]) => !['highlights', 'product_type', 'product_videos', 'product_hint'].includes(k))
+      .filter(([k]) => {
+        // Hide fssai_license if store owner has removed it
+        if (k === 'fssai_license' && !activeFssai) return false;
+        return true;
+      })
+      .map(([k, v]) => [k, String(v)])
   );
 
 

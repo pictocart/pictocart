@@ -36,6 +36,15 @@ export const useCategories = () => {
   const createCategory = useMutation({
     mutationFn: async (cat: { name: string; parent_id?: string | null }) => {
       if (!store?.id) throw new Error('No store found');
+
+      // Duplicate check — case-insensitive
+      const existing = (categoriesQuery.data ?? []).find(
+        (c) => c.name.trim().toLowerCase() === cat.name.trim().toLowerCase()
+      );
+      if (existing) {
+        throw new Error(`Category "${existing.name}" already exists`);
+      }
+
       const { data, error } = await supabase
         .from('categories')
         .insert({ store_id: store.id, name: cat.name, parent_id: cat.parent_id || null })

@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, MapPin, Phone, Mail, Package, Truck, Loader2, FileText, Printer, Banknote, Smartphone, CreditCard, CheckCircle2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, User, MapPin, Phone, Mail, Package, Truck, Loader2, FileText, Printer, Banknote, Smartphone, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -33,7 +34,12 @@ interface CustomerAddress {
   pincode?: string;
 }
 
+// Forward-only progression order (excluding terminal states)
 const STATUS_ORDER: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+// Terminal statuses — once reached, no further change allowed
+const TERMINAL_STATUSES: string[] = ['delivered', 'rejected', 'cancelled', 'returned'];
+// All selectable statuses in order (for dropdown)
+const SELECTABLE_STATUSES: OrderStatus[] = ['new', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'rejected', 'cancelled', 'returned'];
 
 const OrderDetail = () => {
   const { id } = useParams();
@@ -69,6 +75,10 @@ const OrderDetail = () => {
   const [collectMode, setCollectMode] = useState<string>(offlineModes[0]?.id || 'cash');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [collecting, setCollecting] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
 
   if (isLoading) {
     return (
@@ -112,7 +122,24 @@ const OrderDetail = () => {
   };
 
   const handleStatusChange = (status: string) => {
-    updateStatus.mutate({ id: order.id, status: status as OrderStatus });
+    // Intercept reject — open popup instead
+    if (status === 'rejected') {
+      setRejectDialogOpen(true);
+      return;
+    }
+
+    // Forward-only: block going back
+    const currentIdx = SELECTABLE_STATUSES.indexOf(order.status as OrderStatus);
+    const newIdx = SELECTABLE_STATUSES.indexOf(status as OrderStatus);
+    if (newIdx < currentIdx) {
+      toast.error('Cannot move order back to a previous status');
+      return;
+    }
+
+    updateStatus.mutate(
+      { id: order.id, status: status as OrderStatus },
+      { onSuccess: () => refetch() }
+    );
     const notificationType = STATUS_NOTIFICATION_MAP[status];
     if (notificationType) {
       sendOrderNotification(notificationType);
@@ -179,6 +206,26 @@ const OrderDetail = () => {
   };
 
 
+  const handleRejectConfirmed = async () => {
+    if (!rejectReason.trim()) {
+      toast.error('Please enter a rejection reason');
+      return;
+    }
+    setRejecting(true);
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'rejected', notes: rejectReason.trim() } as any)
+      .eq('id', order.id);
+    setRejecting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Order rejected');
+    setRejectConfirmOpen(false);
+    setRejectDialogOpen(false);
+    setRejectReason('');
+    qc.invalidateQueries({ queryKey: ['orders'] });
+    refetch();
+  };
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       {/* Header */}
@@ -210,7 +257,21 @@ const OrderDetail = () => {
                 });
                 if (error) { toast.error(error.message); return; }
                 await supabase.from('orders').update({ invoice_number: data } as any).eq('id', order.id);
-                toast.success(`Invoice ${data} generated`);
+                toast.success(`Invoice ${data} generated`, {
+                  description: (
+                    <span>
+                      View it in{' '}
+                      <a
+                        href="/invoices"
+                        className="underline font-medium text-primary"
+                        onClick={(e) => { e.preventDefault(); window.location.href = '/invoices'; }}
+                      >
+                        Accounts → Invoices
+                      </a>
+                    </span>
+                  ) as any,
+                  duration: 6000,
+                });
                 refetch();
               }}
             >
@@ -222,18 +283,48 @@ const OrderDetail = () => {
               <Truck className="h-4 w-4 mr-1" /> Ship Order
             </Button>
           )}
-          <Select value={order.status || 'pending'} onValueChange={handleStatusChange}>
+          <Select
+            value={(order.status as string) || 'pending'}
+            onValueChange={handleStatusChange}
+            disabled={TERMINAL_STATUSES.includes(order.status as string)}
+          >
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ORDER_STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              {ORDER_STATUSES.filter((s) => {
+                const currentIdx = SELECTABLE_STATUSES.indexOf(order.status as OrderStatus);
+                const sIdx = SELECTABLE_STATUSES.indexOf(s.value);
+                // Always show current status; for others only show forward + reject/cancel/returned
+                if (s.value === order.status) return true;
+                if (['rejected', 'cancelled', 'returned'].includes(s.value)) return true;
+                return sIdx > currentIdx;
+              }).map((s) => (
+                <SelectItem
+                  key={s.value}
+                  value={s.value}
+                  className={s.value === 'rejected' ? 'text-orange-600 focus:text-orange-600' : ''}
+                >
+                  {s.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
+
+      {/* Rejection reason banner */}
+      {order.status === 'rejected' && order.notes && (
+        <Card className="border-orange-300 bg-orange-50">
+          <CardContent className="py-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-orange-800">Order Rejected</p>
+              <p className="text-sm text-orange-700 mt-0.5"><span className="font-medium">Reason:</span> {order.notes}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Status timeline */}
       {!isCancelled && (
@@ -547,7 +638,7 @@ const OrderDetail = () => {
           </AlertDialog>
 
 
-          {order.notes && (
+          {order.notes && (order.status as string) !== 'rejected' && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Notes</CardTitle>
@@ -569,6 +660,67 @@ const OrderDetail = () => {
           onShipped={handleShipped}
         />
       )}
+
+      {/* Reject reason dialog */}
+      <AlertDialog open={rejectDialogOpen} onOpenChange={(o) => { setRejectDialogOpen(o); if (!o) setRejectReason(''); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Order #{order.order_number}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a reason for rejecting this order. This reason will be visible to the customer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Enter rejection reason (required)..."
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={3}
+            className="mt-2"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRejectReason('')}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={!rejectReason.trim()}
+              onClick={() => {
+                if (!rejectReason.trim()) { toast.error('Reason is required'); return; }
+                setRejectDialogOpen(false);
+                setRejectConfirmOpen(true);
+              }}
+            >
+              Continue
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject confirmation dialog */}
+      <AlertDialog open={rejectConfirmOpen} onOpenChange={setRejectConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to reject this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Order <span className="font-semibold">#{order.order_number}</span> will be marked as{' '}
+              <span className="font-semibold text-orange-700">Rejected</span> with reason:
+              <br />
+              <span className="mt-1 block italic text-foreground">"{rejectReason}"</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={rejecting} onClick={() => { setRejectConfirmOpen(false); setRejectDialogOpen(true); }}>
+              Go Back
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-orange-600 hover:bg-orange-700"
+              onClick={handleRejectConfirmed}
+              disabled={rejecting}
+            >
+              {rejecting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+              Yes, Reject Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

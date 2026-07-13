@@ -9,7 +9,11 @@ interface Props {
 }
 
 const ProductAccordion = ({ description, highlights, metadata, colors, fonts }: Props) => {
-  const metaEntries = metadata ? Object.entries(metadata).filter(([, v]) => v) : [];
+  // Separate fssai_license from other metadata so we can render it with a special badge
+  const fssaiLicense = metadata?.fssai_license || null;
+  const metaEntries = metadata
+    ? Object.entries(metadata).filter(([k, v]) => v && k !== 'fssai_license')
+    : [];
 
   return (
     <Accordion type="multiple" defaultValue={['description']} className="w-full">
@@ -34,6 +38,7 @@ const ProductAccordion = ({ description, highlights, metadata, colors, fonts }: 
         </AccordionItem>
       )}
 
+      {/* Additional info (excluding fssai_license — shown separately below) */}
       {metaEntries.length > 0 && (
         <AccordionItem value="additional" style={{ borderColor: colors.secondary }}>
           <AccordionTrigger className="text-sm font-semibold hover:no-underline" style={{ fontFamily: fonts.heading }}>
@@ -47,6 +52,33 @@ const ProductAccordion = ({ description, highlights, metadata, colors, fonts }: 
                   <span className="opacity-70">{value}</span>
                 </div>
               ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {/* FSSAI License — shown as a trust badge when active */}
+      {fssaiLicense && (
+        <AccordionItem value="fssai" style={{ borderColor: colors.secondary }}>
+          <AccordionTrigger className="text-sm font-semibold hover:no-underline" style={{ fontFamily: fonts.heading }}>
+            FSSAI License
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="flex items-start gap-3 rounded-lg p-3" style={{ backgroundColor: '#fefce8', border: '1px solid #fde68a' }}>
+              {/* FSSAI Logo placeholder */}
+              <div className="shrink-0 h-10 w-10 rounded-md bg-amber-100 flex items-center justify-center">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 12l2 2 4-4" />
+                  <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">FSSAI Licensed</p>
+                <p className="text-sm font-mono font-bold text-amber-900 mt-0.5">{fssaiLicense}</p>
+                <p className="text-[11px] text-amber-600 mt-1">
+                  Food Safety and Standards Authority of India
+                </p>
+              </div>
             </div>
           </AccordionContent>
         </AccordionItem>

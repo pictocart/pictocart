@@ -5,13 +5,11 @@ import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Grid3X3, List, Trash2, Package, Copy } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Plus, Search, Grid3X3, List, Trash2, Package, Copy, MoreVertical, Pencil } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ProductList = () => {
@@ -19,8 +17,10 @@ const ProductList = () => {
   const { products, loading, toggleActive, deleteProduct, bulkDelete, createProduct } = useProducts();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [view, setView] = useState<'grid' | 'list'>('list');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [zoomImg, setZoomImg] = useState<string | null>(null);
+  const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 });
 
   const categories = useMemo(() => {
     const cats = new Set(products.map((p) => p.category).filter(Boolean));
@@ -79,6 +79,14 @@ const ProductList = () => {
     }
   };
 
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>, src: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setZoomPos({ x: rect.right + 12, y: rect.top });
+    setZoomImg(src);
+  };
+
+  const handleImageMouseLeave = () => setZoomImg(null);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -123,20 +131,22 @@ const ProductList = () => {
         </Select>
         <div className="flex gap-1 rounded-lg border p-0.5">
           <Button
-            variant={view === 'grid' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setView('grid')}
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
             variant={view === 'list' ? 'secondary' : 'ghost'}
             size="icon"
             className="h-8 w-8"
             onClick={() => setView('list')}
+            title="List view"
           >
             <List className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={view === 'grid' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setView('grid')}
+            title="Grid view"
+          >
+            <Grid3X3 className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -213,7 +223,11 @@ const ProductList = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
+                      <div
+                        className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted relative cursor-zoom-in"
+                        onMouseMove={product.images?.[0] ? (e) => handleImageMouseMove(e, product.images[0]) : undefined}
+                        onMouseLeave={product.images?.[0] ? handleImageMouseLeave : undefined}
+                      >
                         {product.images?.[0] ? (
                           <img src={product.images[0]} alt="" className="h-full w-full object-cover" />
                         ) : (
@@ -254,7 +268,10 @@ const ProductList = () => {
                         <DropdownMenuItem onClick={() => handleDuplicate(product)}>
                           <Copy className="mr-2 h-3.5 w-3.5" /> Duplicate
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => deleteProduct.mutate(product.id)} className="text-destructive">
+                        <DropdownMenuItem
+                          onClick={() => deleteProduct.mutate(product.id)}
+                          className="text-destructive"
+                        >
                           <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -264,6 +281,16 @@ const ProductList = () => {
               ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* Hover zoom overlay */}
+      {zoomImg && (
+        <div
+          className="fixed z-50 pointer-events-none rounded-xl overflow-hidden shadow-2xl border border-border bg-white"
+          style={{ left: zoomPos.x, top: zoomPos.y, width: 220, height: 220 }}
+        >
+          <img src={zoomImg} alt="zoom preview" className="w-full h-full object-contain" />
         </div>
       )}
     </div>

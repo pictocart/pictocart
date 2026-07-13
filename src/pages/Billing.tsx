@@ -54,7 +54,7 @@ const renderCell = (plan: PlanConfig, key: keyof PlanConfig) => {
   if (key === 'commission_percent') return `${v}%`;
   if (key === 'signup_bonus_credits') {
     const n = Number(v ?? 0);
-    return n > 0 ? `${n.toLocaleString('en-IN')} cr` : '—';
+    return n > 0 ? `${n.toLocaleString('en-IN')} ` : '—';
   }
   if (typeof v === 'boolean') {
     return v

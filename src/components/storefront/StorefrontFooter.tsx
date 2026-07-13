@@ -36,7 +36,7 @@ const StorefrontFooter = ({ store, config, colors }: Props) => {
   const bgOpacity = (config.background_opacity ?? 30) / 100;
 
   return (
-    <footer className="border-t hidden md:block relative overflow-hidden" style={{ borderColor: colors.secondary + '40', backgroundColor: footerBg, color: footerText }}>
+    <footer className="border-t relative overflow-hidden" style={{ borderColor: colors.secondary + '40', backgroundColor: footerBg, color: footerText }}>
       {hasBgImage && (
         <div className="absolute inset-0 z-0" style={{ backgroundImage: `url(${config.background_image})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: bgOpacity }} />
       )}

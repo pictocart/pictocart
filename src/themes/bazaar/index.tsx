@@ -28,8 +28,8 @@ const BazaarTheme = ({ bundle }: { bundle: Bundle }) => {
   return (
     <div style={{ background: tokens.colors.background, color: tokens.colors.text, minHeight: '100vh' }}>
       <header
-        className="border-b"
-        style={{ borderColor: tokens.colors.border, background: tokens.colors.background }}
+        className="sticky top-0 z-50 border-b backdrop-blur-sm"
+        style={{ borderColor: tokens.colors.border, background: `${tokens.colors.background}ee` }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">

@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isPasswordRecovery: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -17,9 +18,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // When this is true, the user arrived via a password-reset link.
+  // ProtectedRoute and any auto-navigate-to-dashboard logic must NOT redirect
+  // so the ResetPassword page can be shown.
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Check URL hash for Supabase recovery token BEFORE any listener fires.
+    // Supabase puts #access_token=...&type=recovery in the URL.
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery')) {
+      setIsPasswordRecovery(true);
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        // Still set session so updateUser() works, but don't treat as normal login
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        return;
+      }
+      // On SIGNED_IN after a password update, clear the recovery flag
+      if (event === 'USER_UPDATED') {
+        setIsPasswordRecovery(false);
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -40,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/reset-password`,
       },
     });
     return { error };
@@ -56,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isPasswordRecovery, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,12 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingBag, Search, User, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/hooks/useCart';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useFulfillment } from '@/hooks/useFulfillment';
-import { Utensils } from 'lucide-react';
 import { THEME_TEMPLATES, type ThemeTemplate } from '@/lib/themes';
 import BottomNav from './BottomNav';
 import SearchOverlay from './SearchOverlay';
@@ -15,6 +12,7 @@ import StorefrontAssistant from './StorefrontAssistant';
 import PremiumTrialTicker from './PremiumTrialTicker';
 import PromoTicker from './PromoTicker';
 import SiteOfferBanner from './SiteOfferBanner';
+import ThemeNavbar from './ThemeNavbar';
 import { usePublicNavCustomPages } from '@/hooks/useCustomPages';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
 
@@ -66,7 +64,6 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
   const { enabledModes } = useFulfillment(store.id);
   const menuEnabled = enabledModes.includes('dine_in') || enabledModes.includes('takeaway');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split('@')?.[0] || 'Account';
 
   // Fallback: if parent did not pass products, fetch them so the search overlay still works on cart/account/etc.
@@ -116,128 +113,21 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
       <PromoTicker storeSlug={store.slug} config={(store.settings as any)?.promo_ticker} />
       {/* Owner-only premium-theme free-trial countdown */}
       <PremiumTrialTicker storeId={store.id} storeUserId={store.user_id} settings={store.settings} />
-      {/* Navigation */}
-      <header className="sticky top-0 z-50 border-b backdrop-blur-sm" style={{ borderColor: colors.secondary + '80', backgroundColor: colors.card + 'ee' }}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            {mergedNavLinks.length > 0 && (
-              <button className="md:hidden p-1" onClick={() => setMobileMenuOpen((v) => !v)}>
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
-            )}
-            <Link to={`/store/${store.slug}`} className={`flex items-center gap-2 ${headerConfig.logo_position === 'center' ? 'md:mx-auto' : ''}`}>
-              {(headerConfig.logo_url || store.logo_url) && <img src={headerConfig.logo_url || store.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />}
-              {headerConfig.show_store_name !== false && (
-                <span className="font-bold text-lg" style={{ fontFamily: fonts.heading }}>{store.name}</span>
-              )}
-            </Link>
-          </div>
-
-          {/* Desktop nav links */}
-          {mergedNavLinks.length > 0 && (
-            <nav className="hidden md:flex items-center" style={{ gap: `${headerConfig.nav_gap ?? 16}px` }}>
-              {mergedNavLinks.map((link: any, i: number) => (
-                <Link key={i} to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`} className="text-sm opacity-70 hover:opacity-100 transition-opacity" style={{ fontFamily: headerConfig.nav_font || 'inherit', fontWeight: Number(headerConfig.nav_weight || 500) }}>
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          )}
-
-          <div className="flex items-center gap-3">
-            {menuEnabled && (
-              <Link
-                to={`/store/${store.slug}/menu`}
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full"
-                style={{ backgroundColor: colors.primary, color: '#fff' }}
-              >
-                <Utensils className="h-4 w-4" /> Menu
-              </Link>
-            )}
-            <button onClick={() => setSearchOpen(true)} className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm opacity-60 hover:opacity-100 border rounded-full" style={{ borderColor: colors.secondary }}>
-              <Search className="h-4 w-4" /> Search
-            </button>
-            {user ? (
-              <Link
-                to={`/store/${store.slug}/account`}
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border transition-colors hover:opacity-80 max-w-40"
-                style={{ borderColor: colors.primary, color: colors.primary }}
-                aria-label="My account"
-              >
-                <User className="h-4 w-4 shrink-0" />
-                <span className="truncate">{customerName}</span>
-              </Link>
-            ) : (
-              <Link
-                to={`/store/${store.slug}/account/auth`}
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border transition-colors hover:opacity-80"
-                style={{ borderColor: colors.primary, color: colors.primary }}
-              >
-                <User className="h-4 w-4" /> Sign in
-              </Link>
-            )}
-            {user ? (
-              <Link
-                to={`/store/${store.slug}/account`}
-                className="md:hidden inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full max-w-28"
-                style={{ backgroundColor: colors.primary, color: '#fff' }}
-              >
-                <User className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{customerName}</span>
-              </Link>
-            ) : (
-              <Link
-                to={`/store/${store.slug}/account/auth`}
-                className="md:hidden inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full"
-                style={{ backgroundColor: colors.primary, color: '#fff' }}
-              >
-                <User className="h-3.5 w-3.5" /> Sign in
-              </Link>
-            )}
-            <Link to={`/store/${store.slug}/cart`} className="relative">
-              <ShoppingBag className="h-5 w-5" style={{ color: colors.text }} />
-              {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center" style={{ backgroundColor: colors.primary, color: '#fff' }}>
-                  {totalItems}
-                </span>
-              )}
-            </Link>
-          </div>
-        </div>
-
-        {/* Mobile nav drawer */}
-        {mergedNavLinks.length > 0 && (
-          <div
-            className="md:hidden overflow-hidden transition-all duration-300 ease-in-out"
-            style={{
-              maxHeight: mobileMenuOpen ? `${(mergedNavLinks.length * 44) + 24}px` : '0px',
-              opacity: mobileMenuOpen ? 1 : 0,
-              borderTop: mobileMenuOpen ? `1px solid ${colors.secondary}80` : 'none',
-              backgroundColor: colors.card,
-            }}
-          >
-            <nav className="px-4 py-3 flex flex-col gap-1">
-              {mergedNavLinks.map((link: any, i: number) => (
-                <Link
-                  key={i}
-                  to={link.href.startsWith('/') ? `/store/${store.slug}${link.href}` : link.href || `/store/${store.slug}`}
-                  className="text-sm py-2 px-2 rounded hover:bg-black/5 transition-colors"
-                  style={{
-                    fontFamily: headerConfig.nav_font || 'inherit',
-                    fontWeight: Number(headerConfig.nav_weight || 500),
-                    transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-10px)',
-                    opacity: mobileMenuOpen ? 1 : 0,
-                    transition: `transform 0.3s ease ${i * 0.05}s, opacity 0.3s ease ${i * 0.05}s`,
-                  }}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        )}
-      </header>
+      {/* Theme-aware sticky navbar */}
+      <ThemeNavbar
+        store={store}
+        colors={colors}
+        fonts={fonts}
+        borderRadius={theme.borderRadius}
+        navStyle={theme.preview?.navStyle ?? 'top'}
+        totalItems={totalItems}
+        user={user}
+        customerName={customerName}
+        menuEnabled={menuEnabled}
+        mergedNavLinks={mergedNavLinks}
+        headerConfig={headerConfig}
+        onSearchOpen={() => setSearchOpen(true)}
+      />
 
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
 

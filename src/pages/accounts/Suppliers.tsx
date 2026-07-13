@@ -52,8 +52,30 @@ const Suppliers = () => {
   };
 
   const save = async () => {
-    if (!form.name) return toast.error('Name required');
-    await upsert.mutateAsync(form);
+    if (!form.name?.trim()) return toast.error('Name is required');
+
+    // Phone — must be exactly 10 digits if provided
+    if (form.phone?.trim()) {
+      if (!/^\d{10}$/.test(form.phone.trim())) {
+        return toast.error('Phone must be a valid 10-digit number');
+      }
+    }
+
+    // Email — basic format check if provided
+    if (form.email?.trim()) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        return toast.error('Enter a valid email address');
+      }
+    }
+
+    // GSTIN — 15 characters, format: 2 digits + 10 alphanumeric + 1 digit + Z + alphanumeric
+    if (form.gstin?.trim()) {
+      if (!/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(form.gstin.trim().toUpperCase())) {
+        return toast.error('Enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV)');
+      }
+    }
+
+    await upsert.mutateAsync({ ...form, gstin: form.gstin?.trim().toUpperCase() || '' });
     toast.success('Supplier saved');
     setOpen(false);
   };
@@ -132,9 +154,26 @@ const Suppliers = () => {
           <DialogHeader><DialogTitle>{form.id ? 'Edit Supplier' : 'New Supplier'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Input placeholder="Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <Input placeholder="Phone" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            <Input placeholder="Email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-            <Input placeholder="GSTIN" value={form.gstin || ''} onChange={(e) => setForm({ ...form, gstin: e.target.value })} />
+            <Input
+              type="tel"
+              inputMode="numeric"
+              placeholder="Phone (10 digits)"
+              maxLength={10}
+              value={form.phone || ''}
+              onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })}
+            />
+            <Input
+              type="email"
+              placeholder="Email"
+              value={form.email || ''}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+            <Input
+              placeholder="GSTIN (e.g. 27AAPFU0939F1ZV)"
+              maxLength={15}
+              value={form.gstin || ''}
+              onChange={(e) => setForm({ ...form, gstin: e.target.value.toUpperCase() })}
+            />
             <div>
               <label className="text-xs text-muted-foreground">Opening balance (we owe)</label>
               <MoneyInput value={form.opening_balance || 0} onChange={(v) => setForm({ ...form, opening_balance: v })} />

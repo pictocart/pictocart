@@ -17,7 +17,14 @@ export interface CartItem {
 const CART_KEY = (storeSlug: string) => `cart_${storeSlug}`;
 const MODE_KEY = (storeSlug: string) => `cart_mode_${storeSlug}`;
 const TABLE_KEY = (storeSlug: string) => `cart_table_${storeSlug}`;
+const COUPON_KEY = (storeSlug: string) => `cart_coupon_${storeSlug}`;
 const CART_EVENT = 'cart:updated';
+
+export interface AppliedCoupon {
+  id: string;
+  code: string;
+  discount: number;
+}
 
 const emitCartUpdate = (storeSlug: string) => {
   try {
@@ -29,6 +36,7 @@ export const useCart = (storeSlug: string) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [fulfillmentMode, setFulfillmentModeState] = useState<FulfillmentMode>('delivery');
   const [tableLabel, setTableLabelState] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCouponState] = useState<AppliedCoupon | null>(null);
 
   const reloadFromStorage = useCallback(() => {
     try {
@@ -38,6 +46,8 @@ export const useCart = (storeSlug: string) => {
       if (m) setFulfillmentModeState(m);
       const t = localStorage.getItem(TABLE_KEY(storeSlug));
       setTableLabelState(t || null);
+      const c = localStorage.getItem(COUPON_KEY(storeSlug));
+      setAppliedCouponState(c ? JSON.parse(c) : null);
     } catch {}
   }, [storeSlug]);
 
@@ -100,8 +110,24 @@ export const useCart = (storeSlug: string) => {
     updateQuantity(productId, variant, 0);
   }, [updateQuantity]);
 
+  const setAppliedCoupon = useCallback((coupon: AppliedCoupon | null) => {
+    if (coupon) {
+      localStorage.setItem(COUPON_KEY(storeSlug), JSON.stringify(coupon));
+    } else {
+      localStorage.removeItem(COUPON_KEY(storeSlug));
+    }
+    setAppliedCouponState(coupon);
+  }, [storeSlug]);
+
+  const clearCoupon = useCallback(() => {
+    localStorage.removeItem(COUPON_KEY(storeSlug));
+    setAppliedCouponState(null);
+  }, [storeSlug]);
+
   const clearCart = useCallback(() => {
     persist([]);
+    localStorage.removeItem(COUPON_KEY(storeSlug));
+    setAppliedCouponState(null);
     // Don't clear table binding — server clears it when bill is paid; keep table sticky
   }, [storeSlug]);
 
@@ -129,9 +155,12 @@ export const useCart = (storeSlug: string) => {
 
   const totalItems = items.reduce((s, i) => s + i.quantity, 0);
   const totalPrice = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const discount = appliedCoupon?.discount || 0;
+  const finalPrice = Math.max(0, totalPrice - discount);
 
   return {
-    items, addItem, updateQuantity, removeItem, clearCart, totalItems, totalPrice,
+    items, addItem, updateQuantity, removeItem, clearCart, totalItems, totalPrice, finalPrice,
     fulfillmentMode, setFulfillmentMode, tableLabel, setTableLabel,
+    appliedCoupon, setAppliedCoupon, clearCoupon,
   };
 };

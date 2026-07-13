@@ -2,24 +2,48 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export const inr = (n: number | string | null | undefined) =>
   '₹' + (Number(n ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const MoneyInput = ({
   value, onChange, placeholder = '0.00', className,
-}: { value: number | string; onChange: (n: number) => void; placeholder?: string; className?: string }) => (
-  <Input
-    type="number"
-    inputMode="decimal"
-    step="0.01"
-    min={0}
-    className={className}
-    placeholder={placeholder}
-    value={value ?? ''}
-    onChange={(e) => onChange(Number(e.target.value || 0))}
-  />
-);
+}: { value: number | string; onChange: (n: number) => void; placeholder?: string; className?: string }) => {
+  // Keep an internal string so backspace can clear to empty without snapping back to 0
+  const [display, setDisplay] = useState(value === 0 || value === '' ? '' : String(value));
+
+  // Sync when parent resets value to 0 (e.g. form reset after save)
+  useEffect(() => {
+    if (value === 0 || value === '') setDisplay('');
+    else setDisplay(String(value));
+  }, [value]);
+
+  return (
+    <Input
+      type="number"
+      inputMode="decimal"
+      step="0.01"
+      min={0}
+      className={className}
+      placeholder={placeholder}
+      value={display}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setDisplay(raw);
+        // Only propagate a real number upward; empty → 0
+        onChange(raw === '' ? 0 : Number(raw));
+      }}
+      onBlur={() => {
+        // On blur: if empty show blank (placeholder shows), if has value normalise display
+        if (display === '' || display === undefined) {
+          setDisplay('');
+          onChange(0);
+        }
+      }}
+    />
+  );
+};
 
 export const PaymentModePicker = ({
   value, onChange, modes = ['cash', 'upi', 'card', 'bank', 'credit'],

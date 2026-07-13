@@ -1,17 +1,57 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Search, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { Search, ExternalLink, Eye, EyeOff, Receipt, ChevronDown, ChevronUp, CheckCircle2, XCircle } from 'lucide-react';
 import { useState } from 'react';
+import { useAdminFssaiHistory } from '@/hooks/useFssaiHistory';
+import { format } from 'date-fns';
+
+// Per-store FSSAI history expandable panel
+const FssaiHistoryPanel = ({ storeId }: { storeId: string }) => {
+  const { data: history = [], isLoading } = useAdminFssaiHistory(storeId);
+
+  if (isLoading) return <p className="text-xs text-muted-foreground px-1">Loading FSSAI history…</p>;
+  if (!history.length) return <p className="text-xs text-muted-foreground px-1">No FSSAI records for this store.</p>;
+
+  return (
+    <div className="space-y-1 mt-2">
+      {history.map((entry) => (
+        <div
+          key={entry.id}
+          className={`flex items-center justify-between rounded-md px-3 py-1.5 text-xs ${
+            entry.deleted_by_user ? 'bg-red-50 text-muted-foreground' : 'bg-emerald-50 text-emerald-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {entry.deleted_by_user
+              ? <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+              : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+            <span className="font-mono font-semibold">{entry.fssai_number}</span>
+            {!entry.deleted_by_user && (
+              <Badge className="text-[10px] h-4 bg-emerald-100 text-emerald-700 border-emerald-200">Active</Badge>
+            )}
+          </div>
+          <div className="text-right shrink-0 ml-4 space-y-0.5 opacity-70">
+            <p>Added: {format(new Date(entry.added_at), 'dd MMM yyyy')}</p>
+            {entry.deleted_by_user && entry.deleted_at && (
+              <p className="text-red-500">Removed: {format(new Date(entry.deleted_at), 'dd MMM yyyy')}</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const AdminStores = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [expandedFssai, setExpandedFssai] = useState<string | null>(null);
 
   const { data: stores, isLoading } = useQuery({
     queryKey: ['admin-stores'],
@@ -111,8 +151,35 @@ const AdminStores = () => {
                       <ExternalLink className="h-4 w-4" />
                     </Button>
                   )}
+                  {/* FSSAI history toggle — only for food-like stores */}
+                  {['food', 'grocery', 'bakery', 'restaurant', 'cafe', 'beverage', 'organic', 'dairy', 'snacks'].some(
+                    (k) => (store.category || '').toLowerCase().includes(k)
+                  ) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+                      onClick={() => setExpandedFssai(expandedFssai === store.id ? null : store.id)}
+                    >
+                      <Receipt className="h-3.5 w-3.5" />
+                      FSSAI
+                      {expandedFssai === store.id
+                        ? <ChevronUp className="h-3 w-3" />
+                        : <ChevronDown className="h-3 w-3" />}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
+
+              {/* FSSAI history panel */}
+              {expandedFssai === store.id && (
+                <CardContent className="pt-0 pb-4 border-t border-amber-100 bg-amber-50/30">
+                  <p className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5" /> FSSAI License History
+                  </p>
+                  <FssaiHistoryPanel storeId={store.id} />
+                </CardContent>
+              )}
             </Card>
           ))}
           {filtered.length === 0 && (
