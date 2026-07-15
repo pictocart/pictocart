@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import { Check, Palette, Loader2, Sparkles, Flame, Eye, Crown, Wand2, Zap, AlertTriangle } from 'lucide-react';
+import { Check, Palette, Loader2, Sparkles, Flame, Eye, Crown, Wand2, Zap, AlertTriangle, Paintbrush, Type, LayoutGrid } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { OnboardingData } from '@/pages/Onboarding';
 
@@ -76,6 +78,7 @@ const StepTheme = ({ data, setData }: Props) => {
   const [genTheme, setGenTheme]   = useState<ThemeMaster | null>(null);
   const [stepIdx,  setStepIdx]    = useState(0);
   const [pct,      setPct]        = useState(0);
+  const [userHints, setUserHints] = useState({ color: '', feel: '', extra: '' });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: themes = [], isLoading } = useQuery({
@@ -147,6 +150,13 @@ const StepTheme = ({ data, setData }: Props) => {
       const vibeInfo = CATEGORY_VIBE_MAP[data.category] || { vibe: 'clean modern retail' };
       const uniqueThemeId = `theme-user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+      // Build styleHints from user inputs
+      const hintParts: string[] = [];
+      if (userHints.color.trim())  hintParts.push(`Color preference: ${userHints.color.trim()}`);
+      if (userHints.feel.trim())   hintParts.push(`Mood/Feel: ${userHints.feel.trim()}`);
+      if (userHints.extra.trim())  hintParts.push(`Additional instructions: ${userHints.extra.trim()}`);
+      const styleHints = hintParts.length > 0 ? hintParts.join('. ') : undefined;
+
       const { data: fnData, error } = await supabase.functions.invoke('generate-and-ship-theme', {
         body: {
           theme_id: uniqueThemeId,
@@ -154,7 +164,8 @@ const StepTheme = ({ data, setData }: Props) => {
             category: data.category,
             subcategory: vibeInfo.subcategory ?? null,
             name: data.storeName || `${data.category} store`,
-            vibe: vibeInfo.vibe,
+            vibe: userHints.feel.trim() || vibeInfo.vibe,
+            ...(styleHints ? { styleHints } : {}),
           },
         },
       });
@@ -227,6 +238,8 @@ const StepTheme = ({ data, setData }: Props) => {
         <ConfirmDialog
           storeName={data.storeName}
           category={data.category}
+          userHints={userHints}
+          setUserHints={setUserHints}
           onConfirm={handleConfirmGenerate}
           onCancel={() => setGenState('idle')}
         />
@@ -433,52 +446,125 @@ const AIGenerateCTA = ({ storeName, category, used, onClick }: {
 );
 
 // ── Confirmation Dialog ──────────────────────────────────────────────────────
-const ConfirmDialog = ({ storeName, category, onConfirm, onCancel }: {
-  storeName: string; category: string; onConfirm: () => void; onCancel: () => void;
-}) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-    <div className="bg-background rounded-2xl shadow-2xl border border-border w-full max-w-sm p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-      {/* Icon */}
-      <div className="flex justify-center">
-        <div className="h-14 w-14 rounded-2xl bg-purple-100 flex items-center justify-center">
-          <Wand2 className="h-7 w-7 text-purple-600" />
+const ConfirmDialog = ({ storeName, category, userHints, setUserHints, onConfirm, onCancel }: {
+  storeName: string; category: string;
+  userHints: { color: string; feel: string; extra: string };
+  setUserHints: React.Dispatch<React.SetStateAction<{ color: string; feel: string; extra: string }>>;
+  onConfirm: () => void; onCancel: () => void;
+}) => {
+  const FEEL_OPTIONS = ['Minimal & clean', 'Bold & vibrant', 'Elegant & luxury', 'Playful & fun', 'Dark & premium', 'Earthy & natural'];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-background rounded-2xl shadow-2xl border border-border w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh]">
+
+        {/* Icon */}
+        <div className="flex justify-center">
+          <div className="h-14 w-14 rounded-2xl bg-purple-100 flex items-center justify-center">
+            <Wand2 className="h-7 w-7 text-purple-600" />
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className="text-center space-y-1">
+          <h3 className="text-base font-bold">Generate AI Theme</h3>
+          <p className="text-xs text-muted-foreground">
+            AI will design a <span className="font-medium text-foreground capitalize">{category}</span> theme
+            {storeName ? <> for <span className="font-medium text-foreground">"{storeName}"</span></> : ''}.
+          </p>
+        </div>
+
+        {/* ── User Inputs ── */}
+        <div className="space-y-3">
+          {/* Color preference */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+              <Paintbrush className="h-3.5 w-3.5 text-purple-500" />
+              Preferred colors
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <Input
+              placeholder="e.g. deep blue and gold, pastel pink, black and white"
+              value={userHints.color}
+              onChange={(e) => setUserHints(h => ({ ...h, color: e.target.value }))}
+              className="h-9 text-sm"
+            />
+          </div>
+
+          {/* Mood/Feel */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+              <Type className="h-3.5 w-3.5 text-purple-500" />
+              Theme mood
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {FEEL_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setUserHints(h => ({ ...h, feel: h.feel === opt ? '' : opt }))}
+                  className={cn(
+                    'text-[11px] px-2.5 py-1 rounded-full border transition-all duration-150',
+                    userHints.feel === opt
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'border-border text-muted-foreground hover:border-purple-300 hover:text-purple-700'
+                  )}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <Input
+              placeholder="Or type your own: e.g. warm and cozy, futuristic"
+              value={FEEL_OPTIONS.includes(userHints.feel) ? '' : userHints.feel}
+              onChange={(e) => setUserHints(h => ({ ...h, feel: e.target.value }))}
+              className="h-9 text-sm mt-1"
+            />
+          </div>
+
+          {/* Extra instructions */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+              <LayoutGrid className="h-3.5 w-3.5 text-purple-500" />
+              Anything else for AI?
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <Textarea
+              placeholder="e.g. include a WhatsApp button, Hindi font, no dark backgrounds, show testimonials section"
+              value={userHints.extra}
+              onChange={(e) => setUserHints(h => ({ ...h, extra: e.target.value }))}
+              className="text-sm resize-none"
+              rows={2}
+            />
+          </div>
+        </div>
+
+        {/* Warning */}
+        <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 border border-amber-200 p-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+          <p className="text-[11px] text-amber-700 leading-relaxed">
+            <span className="font-semibold">One-time only.</span> You can only generate 1 free AI theme per store.
+          </p>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white gap-2"
+            onClick={onConfirm}
+          >
+            <Wand2 className="h-4 w-4" />
+            Generate Theme
+          </Button>
         </div>
       </div>
-
-      {/* Content */}
-      <div className="text-center space-y-2">
-        <h3 className="text-base font-bold">Generate AI Theme?</h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          AI will design a <span className="font-medium text-foreground capitalize">{category}</span> theme
-          {storeName ? <> for <span className="font-medium text-foreground">"{storeName}"</span></> : ''}.
-          This takes ~30–60 seconds.
-        </p>
-      </div>
-
-      {/* Warning */}
-      <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 border border-amber-200 p-3">
-        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-        <p className="text-[11px] text-amber-700 leading-relaxed">
-          <span className="font-semibold">One-time only.</span> You can only generate 1 free AI theme per store. Choose your category wisely before proceeding.
-        </p>
-      </div>
-
-      {/* Buttons */}
-      <div className="flex gap-3">
-        <Button variant="outline" className="flex-1" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white gap-2"
-          onClick={onConfirm}
-        >
-          <Wand2 className="h-4 w-4" />
-          Generate
-        </Button>
-      </div>
     </div>
-  </div>
-);
+  );
+};
 
 
 // ── Progress Dialog ──────────────────────────────────────────────────────────
