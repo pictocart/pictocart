@@ -84,28 +84,28 @@ const StepCategory = ({ data, setData }: Props) => {
 
   /* ── Mouse drag handlers ── */
   const onMouseDown = (e: React.MouseEvent) => {
-    pause();
-    isDragging.current = true;
-    didDrag.current    = false;
-    dragStartX.current = e.clientX;
+    isDragging.current  = true;
+    didDrag.current     = false;
+    dragStartX.current  = e.clientX;
     dragScrollL.current = scrollRef.current?.scrollLeft ?? 0;
   };
 
   const onMouseMove = (e: React.MouseEvent) => {
     if (!isDragging.current || !scrollRef.current) return;
     const dx = dragStartX.current - e.clientX;
-    if (Math.abs(dx) > 3) didDrag.current = true;
+    if (Math.abs(dx) > 3) {
+      didDrag.current = true;
+      pause(); // stop auto-scroll only when actual drag detected
+    }
     scrollRef.current.scrollLeft = dragScrollL.current + dx;
   };
 
   const onMouseUp = () => {
     isDragging.current = false;
-    scheduleResume();
   };
 
   /* ── Touch handlers ── */
   const onTouchStart = (e: React.TouchEvent) => {
-    pause();
     dragStartX.current  = e.touches[0].clientX;
     dragScrollL.current = scrollRef.current?.scrollLeft ?? 0;
     didDrag.current     = false;
@@ -114,11 +114,14 @@ const StepCategory = ({ data, setData }: Props) => {
   const onTouchMove = (e: React.TouchEvent) => {
     if (!scrollRef.current) return;
     const dx = dragStartX.current - e.touches[0].clientX;
-    if (Math.abs(dx) > 3) didDrag.current = true;
+    if (Math.abs(dx) > 3) {
+      didDrag.current = true;
+      pause(); // stop auto-scroll only when actual swipe detected
+    }
     scrollRef.current.scrollLeft = dragScrollL.current + dx;
   };
 
-  const onTouchEnd = () => { scheduleResume(); };
+  const onTouchEnd = () => {};
 
   const selected = data.category;
 
