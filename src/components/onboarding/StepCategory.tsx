@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Shirt, UtensilsCrossed, Cpu, Gem, Sparkles, MoreHorizontal, Receipt, Scissors } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -22,12 +22,44 @@ const categories = [
 
 const StepCategory = ({ data, setData }: Props) => {
   const [mounted, setMounted] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => { setTimeout(() => setMounted(true), 100); }, []);
+
+  // Auto-scroll: slowly drift right, reset when end reached
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    autoScrollRef.current = setInterval(() => {
+      if (!el) return;
+      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 4) {
+        // reached end — scroll back to start smoothly
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        el.scrollLeft += 1;
+      }
+    }, 20);
+
+    return () => {
+      if (autoScrollRef.current) clearInterval(autoScrollRef.current);
+    };
+  }, [mounted]);
+
+  // Pause auto-scroll on user interaction
+  const pauseScroll = () => {
+    if (autoScrollRef.current) clearInterval(autoScrollRef.current);
+  };
+
+  const handleSelect = (id: string) => {
+    setData(d => ({ ...d, category: id }));
+  };
 
   const selected = data.category;
 
   return (
-    <div className={`space-y-4 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+    <div className={`flex flex-col gap-5 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
 
       {/* Header */}
       <div className="text-center space-y-1">
@@ -35,15 +67,18 @@ const StepCategory = ({ data, setData }: Props) => {
         <p className="text-xs text-muted-foreground">This helps us customize your store experience.</p>
       </div>
 
-      {/* Horizontal scroll row */}
+      {/* Horizontal scroll */}
       <div className="relative">
         {/* Left fade */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-r from-background to-transparent" />
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-10 z-10 bg-gradient-to-r from-background to-transparent" />
         {/* Right fade */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-background to-transparent" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 z-10 bg-gradient-to-l from-background to-transparent" />
 
         <div
-          className="flex gap-3 overflow-x-auto px-4 py-2 snap-x snap-mandatory"
+          ref={scrollRef}
+          onMouseDown={pauseScroll}
+          onTouchStart={pauseScroll}
+          className="flex gap-4 overflow-x-auto px-6 py-3 snap-x snap-mandatory"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {categories.map((cat) => {
@@ -51,38 +86,37 @@ const StepCategory = ({ data, setData }: Props) => {
             return (
               <button
                 key={cat.id}
-                onClick={() => setData(d => ({ ...d, category: cat.id }))}
+                onClick={() => handleSelect(cat.id)}
                 className={cn(
-                  'snap-center flex-shrink-0 flex flex-col items-center gap-2 rounded-xl border p-3 transition-all duration-200',
-                  'w-[110px]',
-                  isSelected
-                    ? 'shadow-md scale-105'
-                    : 'border-border bg-card hover:border-primary/40 hover:shadow-sm hover:scale-[1.02]'
+                  'snap-center flex-shrink-0 flex flex-col items-center gap-3 rounded-2xl border transition-all duration-200',
+                  'w-[140px] py-5 px-3',
+                  !isSelected && 'border-border bg-card hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5'
                 )}
                 style={isSelected ? {
                   background: cat.selBg,
                   borderColor: cat.selBorder,
                   borderWidth: 2,
-                  boxShadow: `0 4px 14px ${cat.selBorder}50`,
+                  boxShadow: `0 6px 20px ${cat.selBorder}45`,
+                  transform: 'translateY(-2px)',
                 } : {}}
               >
                 {/* Icon */}
                 <div
-                  className="flex h-10 w-10 items-center justify-center rounded-lg"
+                  className="flex h-14 w-14 items-center justify-center rounded-xl"
                   style={isSelected
                     ? { background: 'white', border: `1.5px solid ${cat.selBorder}` }
                     : { background: '#f3f4f6' }
                   }
                 >
-                  <cat.icon className={cn('h-5 w-5', isSelected ? cat.iconColor : 'text-muted-foreground')} />
+                  <cat.icon className={cn('h-6 w-6', isSelected ? cat.iconColor : 'text-muted-foreground')} />
                 </div>
 
                 {/* Text */}
-                <div className="text-center">
-                  <p className={cn('text-[11px] font-semibold leading-tight', isSelected ? 'text-foreground' : 'text-muted-foreground')}>
+                <div className="text-center space-y-0.5">
+                  <p className={cn('text-xs font-semibold leading-tight', isSelected ? 'text-foreground' : 'text-muted-foreground')}>
                     {cat.label}
                   </p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{cat.desc}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">{cat.desc}</p>
                 </div>
 
                 {/* Selected dot */}
