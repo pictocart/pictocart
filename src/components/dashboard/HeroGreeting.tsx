@@ -64,7 +64,7 @@ const HeroGreeting = ({ todayRevenue, todayOrders, pendingOrders, storeName }: P
             </h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {storeName ? <>Welcome back to <span className="font-medium text-foreground">{storeName}</span>.</> : 'Welcome back.'} Here's your store today.
+            {storeName ? <>Welcome on  <span className="font-medium text-foreground">{storeName}</span>.</> : 'Welcome back.'} Here's your store today.
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">

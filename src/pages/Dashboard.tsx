@@ -6,12 +6,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   IndianRupee, ShoppingCart, TrendingUp, Package, ExternalLink, Copy, Check,
-  CheckCircle2, Circle, ArrowRight, Receipt,
+  CheckCircle2, Circle, ArrowRight, Receipt, Pencil, AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { useLowStockNotifications } from '@/hooks/useLowStockNotifications';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
@@ -31,10 +41,14 @@ import StatCard from '@/components/ui/StatCard';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { store, loading } = useStore();
+  const { store, loading, refetchStore } = useStore();
   const { products } = useProducts();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [urlDialogOpen, setUrlDialogOpen] = useState(false);
+  const [newSlug, setNewSlug] = useState('');
+  const [slugSaving, setSlugSaving] = useState(false);
+  const [slugError, setSlugError] = useState('');
   useOrderNotifications(store?.id);
   useLowStockNotifications();
 
@@ -93,6 +107,65 @@ const Dashboard = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // --- Change URL logic ---
+  const slugChangedAt: string | null = (settings as any)?.slug_changed_at ?? null;
+  const cooldownDays = 10;
+  const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
+  const nextAllowedDate = slugChangedAt ? new Date(new Date(slugChangedAt).getTime() + cooldownMs) : null;
+  const daysUntilAllowed = nextAllowedDate
+    ? Math.ceil((nextAllowedDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0;
+  const canChangeUrl = !nextAllowedDate || Date.now() >= nextAllowedDate.getTime();
+
+  const openUrlDialog = () => {
+    setNewSlug(store?.slug ?? '');
+    setSlugError('');
+    setUrlDialogOpen(true);
+  };
+
+  const validateSlug = (value: string) => {
+    if (!value.trim()) return 'URL cannot be empty.';
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value))
+      return 'Only lowercase letters, numbers, and hyphens allowed (no spaces or special characters).';
+    if (value.length < 3) return 'Must be at least 3 characters.';
+    if (value.length > 50) return 'Must be 50 characters or fewer.';
+    if (value === store?.slug) return 'This is already your current URL.';
+    return '';
+  };
+
+  const handleSaveSlug = async () => {
+    const err = validateSlug(newSlug);
+    if (err) { setSlugError(err); return; }
+    setSlugSaving(true);
+    try {
+      // Check uniqueness
+      const { data: existing } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('slug', newSlug)
+        .neq('id', store!.id)
+        .maybeSingle();
+      if (existing) {
+        setSlugError('This URL is already taken. Please choose another.');
+        setSlugSaving(false);
+        return;
+      }
+      const updatedSettings = { ...settings, slug_changed_at: new Date().toISOString() };
+      const { error } = await supabase
+        .from('stores')
+        .update({ slug: newSlug, settings: updatedSettings })
+        .eq('id', store!.id);
+      if (error) throw error;
+      await refetchStore();
+      toast.success('Store URL updated successfully!');
+      setUrlDialogOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to update URL. Please try again.');
+    } finally {
+      setSlugSaving(false);
+    }
+  };
+
   return (
     <div className="relative space-y-6 pb-20 md:pb-0">
       {/* Soft mesh background */}
@@ -126,6 +199,15 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openUrlDialog}
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                title={canChangeUrl ? 'Change store URL' : `Available in ${daysUntilAllowed} day${daysUntilAllowed === 1 ? '' : 's'}`}
+              >
+                <Pencil className="h-3.5 w-3.5" /> Change URL
+              </Button>
               <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-1.5">
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                 {copied ? 'Copied' : 'Copy'}
@@ -137,6 +219,60 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Change URL dialog */}
+      <Dialog open={urlDialogOpen} onOpenChange={setUrlDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Store URL</DialogTitle>
+            <DialogDescription>
+              Your store URL is how customers find you. After changing it, you'll need to wait <strong>{cooldownDays} days</strong> before changing it again.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {!canChangeUrl && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>You can change your URL again in <strong>{daysUntilAllowed} day{daysUntilAllowed === 1 ? '' : 's'}</strong> (on {nextAllowedDate?.toLocaleDateString()}).</span>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Store URL slug</label>
+              <div className="flex items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm gap-1">
+                <span className="text-muted-foreground shrink-0">{window.location.origin}/store/</span>
+                <Input
+                  value={newSlug}
+                  onChange={(e) => {
+                    setNewSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'));
+                    setSlugError('');
+                  }}
+                  disabled={!canChangeUrl || slugSaving}
+                  placeholder="my-store"
+                  className="border-0 bg-transparent p-0 h-auto focus-visible:ring-0 shadow-none font-medium"
+                />
+              </div>
+              {slugError && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {slugError}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Lowercase letters, numbers, and hyphens only.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUrlDialogOpen(false)} disabled={slugSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveSlug} disabled={!canChangeUrl || slugSaving}>
+              {slugSaving ? (
+                <><span className="h-4 w-4 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin mr-2" />Saving...</>
+              ) : 'Save URL'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Smart contextual actions */}
       <div data-tour="smart-actions">

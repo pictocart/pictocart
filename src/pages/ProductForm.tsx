@@ -324,9 +324,14 @@ const ProductForm = () => {
           {/* Images & Product Hint */}
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Images & Product Hint</CardTitle>
-                <Button data-tour="product-ai-fill" variant="outline" size="sm" onClick={generateWithAI} disabled={aiLoading || images.length === 0}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1 min-w-0">
+                  <CardTitle className="text-base">Images & Product Hint</CardTitle>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Upload your product photo, optionally add a short description, then tap <span className="font-medium text-foreground">Generate with AI</span> — it will auto-fill the title, description, price suggestion, tags &amp; more for you.
+                  </p>
+                </div>
+                <Button data-tour="product-ai-fill" variant="outline" size="sm" onClick={generateWithAI} disabled={aiLoading || images.length === 0} className="shrink-0">
                   {aiLoading ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
                   {aiLoading ? 'Generating...' : 'Generate with AI'}
                 </Button>

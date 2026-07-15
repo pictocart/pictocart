@@ -48,11 +48,11 @@ const StepGoLive = ({ data, store, onFinish }: Props) => {
         <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/30 shadow-2xl shadow-primary/20">
           <PartyPopper className="h-12 w-12 text-primary" />
         </div>
-        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Your store is ready! 🎉</h2>
-        <p className="text-muted-foreground max-w-sm mx-auto text-base">
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Congratulations! Your online store is Ready🎉</h2>
+        {/* <p className="text-muted-foreground max-w-sm mx-auto text-base">
           You've set up <span className="font-semibold text-foreground">{data.storeName || 'your store'}</span>.
           Go live now and start sharing with customers!
-        </p>
+        </p> */}
       </div>
 
       {/* Store URL */}
@@ -79,7 +79,7 @@ const StepGoLive = ({ data, store, onFinish }: Props) => {
           </>
         ) : (
           <>
-            <Rocket className="h-6 w-6" /> Go Live Now <ArrowRight className="h-5 w-5" />
+            <Rocket className="h-6 w-6" /> View Store<ArrowRight className="h-5 w-5" />
           </>
         )}
       </Button>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -233,8 +234,8 @@ const StepTheme = ({ data, setData }: Props) => {
   return (
     <div className="flex flex-col h-full">
 
-      {/* Confirmation Dialog */}
-      {genState === 'confirm' && (
+      {/* Confirmation Dialog — rendered in body to escape overflow:hidden */}
+      {genState === 'confirm' && createPortal(
         <ConfirmDialog
           storeName={data.storeName}
           category={data.category}
@@ -242,12 +243,14 @@ const StepTheme = ({ data, setData }: Props) => {
           setUserHints={setUserHints}
           onConfirm={handleConfirmGenerate}
           onCancel={() => setGenState('idle')}
-        />
+        />,
+        document.body
       )}
 
-      {/* Progress Dialog */}
-      {genState === 'generating' && (
-        <ProgressDialog stepIdx={stepIdx} pct={pct} category={data.category} />
+      {/* Progress Dialog — rendered in body to escape overflow:hidden */}
+      {genState === 'generating' && createPortal(
+        <ProgressDialog stepIdx={stepIdx} pct={pct} category={data.category} />,
+        document.body
       )}
 
       {/* Fixed header */}
