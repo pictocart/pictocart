@@ -85,6 +85,8 @@ export const useCreateReturn = () => {
       items: any[];
       refund_amount: number;
       customer_notes?: string;
+      request_type?: 'return' | 'exchange';
+      exchange_details?: Record<string, unknown>;
     }) => {
       const { error, data } = await supabase
         .from('returns' as any)
