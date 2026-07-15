@@ -3691,12 +3691,14 @@ export type Database = {
           created_at: string
           customer_notes: string | null
           customer_user_id: string | null
+          exchange_details: Json | null
           id: string
           items: Json
           order_id: string
           reason: string
           refund_amount: number
           refund_id: string | null
+          request_type: string
           seller_notes: string | null
           status: string
           store_id: string
@@ -3706,12 +3708,14 @@ export type Database = {
           created_at?: string
           customer_notes?: string | null
           customer_user_id?: string | null
+          exchange_details?: Json | null
           id?: string
           items?: Json
           order_id: string
           reason: string
           refund_amount?: number
           refund_id?: string | null
+          request_type?: string
           seller_notes?: string | null
           status?: string
           store_id: string
@@ -3721,12 +3725,14 @@ export type Database = {
           created_at?: string
           customer_notes?: string | null
           customer_user_id?: string | null
+          exchange_details?: Json | null
           id?: string
           items?: Json
           order_id?: string
           reason?: string
           refund_amount?: number
           refund_id?: string | null
+          request_type?: string
           seller_notes?: string | null
           status?: string
           store_id?: string

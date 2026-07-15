@@ -1,0 +1,2 @@
+ALTER TABLE public.returns ADD COLUMN IF NOT EXISTS request_type TEXT NOT NULL DEFAULT 'return' CHECK (request_type IN ('return','exchange'));
+ALTER TABLE public.returns ADD COLUMN IF NOT EXISTS exchange_details JSONB;
