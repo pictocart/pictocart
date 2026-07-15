@@ -1,28 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useCustomerOrders } from '@/hooks/useCustomerOrders';
+import { useCustomerReturns } from '@/hooks/useCustomerReturns';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Loader2, Package, MapPin, LogOut, Plus, Trash2, User, Edit2, Check, Star, ChevronRight, Heart, Settings, Shield,
+  Loader2, Package, MapPin, LogOut, Plus, Trash2, User, Edit2, Check, ChevronRight, Heart, Shield,
+  Search, Undo2, MessageCircle, ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import RequestReturnButton from '@/components/storefront/RequestReturnButton';
+import OrderActions from '@/components/storefront/OrderActions';
 
 const statusColors: Record<string, string> = {
   pending: '#f59e0b',
   confirmed: '#3b82f6',
   processing: '#8b5cf6',
+  packed: '#8b5cf6',
   shipped: '#6366f1',
+  out_for_delivery: '#f97316',
   delivered: '#16a34a',
   cancelled: '#ef4444',
   returned: '#78716c',
+  refunded: '#16a34a',
+  exchanged: '#0ea5e9',
 };
 
-type TabKey = 'profile' | 'orders' | 'addresses';
+type TabKey = 'profile' | 'orders' | 'returns' | 'support' | 'addresses';
+
+const ORDER_FILTERS: { key: string; label: string; match: (s: string) => boolean }[] = [
+  { key: 'all', label: 'All', match: () => true },
+  { key: 'pending', label: 'Pending', match: (s) => ['pending','confirmed','processing','packed'].includes(s) },
+  { key: 'shipped', label: 'Shipped', match: (s) => ['shipped','out_for_delivery'].includes(s) },
+  { key: 'delivered', label: 'Delivered', match: (s) => s === 'delivered' },
+  { key: 'cancelled', label: 'Cancelled', match: (s) => s === 'cancelled' },
+  { key: 'returned', label: 'Returned', match: (s) => s === 'returned' },
+];
 
 const CustomerAccount = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -166,8 +181,26 @@ const CustomerAccount = () => {
   const tabs: { key: TabKey; label: string; icon: any }[] = [
     { key: 'profile', label: 'Profile', icon: User },
     { key: 'orders', label: 'Orders', icon: Package },
+    { key: 'returns', label: 'Returns', icon: Undo2 },
+    { key: 'support', label: 'Support', icon: MessageCircle },
     { key: 'addresses', label: 'Addresses', icon: MapPin },
   ];
+
+  const [orderFilter, setOrderFilter] = useState('all');
+  const [orderSearch, setOrderSearch] = useState('');
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+    const f = ORDER_FILTERS.find((x) => x.key === orderFilter) || ORDER_FILTERS[0];
+    const q = orderSearch.trim().toLowerCase();
+    return orders.filter((o: any) => {
+      if (!f.match(o.status || '')) return false;
+      if (!q) return true;
+      if (o.order_number?.toLowerCase().includes(q)) return true;
+      const items = Array.isArray(o.items) ? o.items : [];
+      return items.some((it: any) => (it.title || '').toLowerCase().includes(q));
+    });
+  }, [orders, orderFilter, orderSearch]);
+
 
   return (
     <StorefrontLayout store={store}>
@@ -311,53 +344,117 @@ const CustomerAccount = () => {
         {/* ─── ORDERS TAB ─── */}
         {tab === 'orders' && (
           <div className="space-y-4">
+            {/* Filter + search */}
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex-1 relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
+                <input
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                  placeholder="Search by order ID or product name…"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm border outline-none focus:ring-2"
+                  style={{ ...inputStyle, ...focusRing }}
+                />
+              </div>
+              <div className="flex gap-1 overflow-x-auto pb-1">
+                {ORDER_FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setOrderFilter(f.key)}
+                    className="px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors"
+                    style={{
+                      backgroundColor: orderFilter === f.key ? colors.primary + '18' : 'transparent',
+                      color: orderFilter === f.key ? colors.primary : undefined,
+                      border: `1px solid ${orderFilter === f.key ? colors.primary + '40' : colors.secondary}`,
+                      borderRadius: brHalf,
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {ordersLoading ? (
               <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
-            ) : !orders?.length ? (
+            ) : !filteredOrders.length ? (
               <div className="text-center py-16 border" style={{ borderColor: colors.secondary, borderRadius: br }}>
                 <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p className="text-sm opacity-50 mb-1">No orders yet</p>
+                <p className="text-sm opacity-50 mb-1">{orders?.length ? 'No orders match this filter' : 'No orders yet'}</p>
                 <p className="text-xs opacity-30 mb-4">Your order history will appear here</p>
                 <Link to={`/store/${slug}`} className="inline-block px-5 py-2 text-sm font-semibold" style={{ backgroundColor: colors.primary, color: '#fff', borderRadius: brHalf }}>
                   Start Shopping
                 </Link>
               </div>
             ) : (
-              orders.map((order: any) => (
-                <div key={order.id} className="p-4 border hover:shadow-sm transition-shadow" style={{ borderColor: colors.secondary, borderRadius: br }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <span className="text-sm font-mono font-semibold">{order.order_number}</span>
-                      <span className="text-xs opacity-40 ml-2">{format(new Date(order.created_at), 'dd MMM yyyy')}</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide" style={{ backgroundColor: (statusColors[order.status] || '#888') + '18', color: statusColors[order.status] || '#888' }}>
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2">
-                    {(Array.isArray(order.items) ? order.items : []).map((item: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2.5 shrink-0 p-2 border" style={{ borderColor: colors.secondary + '60', borderRadius: brHalf }}>
-                        {item.image && <img src={item.image} alt="" className="h-12 w-12 rounded object-cover" />}
-                        <div className="text-xs">
-                          <p className="font-medium truncate max-w-[140px]">{item.title}</p>
-                          <p className="opacity-40 mt-0.5">Qty: {item.quantity}</p>
-                        </div>
+              filteredOrders.map((order: any) => {
+                const items = Array.isArray(order.items) ? order.items : [];
+                const addr = order.customer_address || {};
+                return (
+                  <div key={order.id} className="p-4 border hover:shadow-sm transition-shadow" style={{ borderColor: colors.secondary, borderRadius: br }}>
+                    <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+                      <div className="min-w-0">
+                        <Link to={`/store/${slug}/account/orders/${order.id}`} className="text-sm font-mono font-semibold hover:underline">{order.order_number}</Link>
+                        <p className="text-xs opacity-50 mt-0.5">
+                          Placed {format(new Date(order.created_at), 'dd MMM yyyy')}
+                          {order.delivered_at && <> · Delivered {format(new Date(order.delivered_at), 'dd MMM')}</>}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t" style={{ borderColor: colors.secondary + '50' }}>
-                    <span className="text-sm font-bold" style={{ color: colors.primary }}>₹{Number(order.total).toLocaleString('en-IN')}</span>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {order.tracking_number && <span className="text-xs opacity-50">Tracking: <span className="font-mono">{order.tracking_number}</span></span>}
-                      <RequestReturnButton order={order} primaryColor={colors.primary} mode="exchange" />
-                      <RequestReturnButton order={order} primaryColor={colors.primary} mode="return" />
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide" style={{ backgroundColor: (statusColors[order.status] || '#888') + '18', color: statusColors[order.status] || '#888' }}>
+                          {order.status}
+                        </span>
+                        {order.payment_status && (
+                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full uppercase" style={{ backgroundColor: (order.payment_status === 'paid' ? '#16a34a' : '#f59e0b') + '18', color: order.payment_status === 'paid' ? '#16a34a' : '#f59e0b' }}>
+                            {order.payment_status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-2">
+                      {items.map((item: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2.5 shrink-0 p-2 border" style={{ borderColor: colors.secondary + '60', borderRadius: brHalf }}>
+                          {item.image && <img src={item.image} alt="" className="h-12 w-12 rounded object-cover" />}
+                          <div className="text-xs">
+                            <p className="font-medium truncate max-w-[160px]">{item.title}</p>
+                            <p className="opacity-40 mt-0.5">Qty: {item.quantity}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {(addr.city || addr.pincode) && (
+                      <p className="text-xs opacity-50 mt-2 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> {addr.city}{addr.state ? `, ${addr.state}` : ''}{addr.pincode ? ` — ${addr.pincode}` : ''}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t gap-3 flex-wrap" style={{ borderColor: colors.secondary + '50' }}>
+                      <span className="text-sm font-bold" style={{ color: colors.primary }}>₹{Number(order.total).toLocaleString('en-IN')}</span>
+                      <OrderActions order={order} primaryColor={colors.primary} />
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
+
+        {/* ─── RETURNS TAB ─── */}
+        {tab === 'returns' && (
+          <ReturnsTabContent slug={slug!} userId={user.id} storeId={store.id} colors={colors} br={br} brHalf={brHalf} />
+        )}
+
+        {/* ─── SUPPORT TAB ─── */}
+        {tab === 'support' && (
+          <div className="text-center py-14 border" style={{ borderColor: colors.secondary, borderRadius: br }}>
+            <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-20" />
+            <p className="text-sm opacity-60 mb-4">Get help with your orders</p>
+            <Link to={`/store/${slug}/account/support`} className="inline-block px-5 py-2 text-sm font-semibold" style={{ backgroundColor: colors.primary, color: '#fff', borderRadius: brHalf }}>
+              Open Support Center
+            </Link>
+          </div>
+        )}
+
+
 
         {/* ─── ADDRESSES TAB ─── */}
         {tab === 'addresses' && (
@@ -488,4 +585,33 @@ const CustomerAccount = () => {
   );
 };
 
+const ReturnsTabContent = ({ slug, userId, storeId, colors, br, brHalf }: any) => {
+  const { data: returns, isLoading } = useCustomerReturns(userId, storeId);
+  if (isLoading) return <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>;
+  if (!returns?.length) return (
+    <div className="text-center py-16 border" style={{ borderColor: colors.secondary, borderRadius: br }}>
+      <Undo2 className="h-12 w-12 mx-auto mb-3 opacity-20" />
+      <p className="text-sm opacity-50">No return or exchange requests yet</p>
+    </div>
+  );
+  return (
+    <div className="space-y-3">
+      {returns.map((r: any) => (
+        <Link key={r.id} to={`/store/${slug}/account/returns/${r.id}`} className="block p-4 border hover:shadow-sm" style={{ borderColor: colors.secondary, borderRadius: br }}>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold capitalize">{r.request_type} · {r.reason}</p>
+              <p className="text-xs opacity-60 mt-0.5">{format(new Date(r.created_at), 'dd MMM yyyy')} · ₹{Number(r.refund_amount || 0).toLocaleString('en-IN')}</p>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase" style={{ backgroundColor: (statusColors[r.status] || '#888') + '20', color: statusColors[r.status] || '#888', borderRadius: brHalf }}>
+              {r.status.replace(/_/g, ' ')}
+            </span>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+};
+
 export default CustomerAccount;
+

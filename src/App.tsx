@@ -90,6 +90,9 @@ const ReviewsModeration = lazy(() => import("@/pages/ReviewsModeration"));
 const CustomerAuth = lazy(() => import("@/pages/storefront/CustomerAuth"));
 const CustomerResetPassword = lazy(() => import("@/pages/storefront/CustomerResetPassword"));
 const CustomerAccount = lazy(() => import("@/pages/storefront/CustomerAccount"));
+const CustomerOrderDetail = lazy(() => import("@/pages/storefront/CustomerOrderDetail"));
+const CustomerReturnDetail = lazy(() => import("@/pages/storefront/CustomerReturnDetail"));
+const CustomerSupport = lazy(() => import("@/pages/storefront/CustomerSupport"));
 const CustomerWishlist = lazy(() => import("@/pages/storefront/CustomerWishlist"));
 const StorefrontBlog = lazy(() => import("@/pages/storefront/StorefrontBlog"));
 const StorefrontBlogPost = lazy(() => import("@/pages/storefront/StorefrontBlogPost"));
@@ -340,6 +343,9 @@ const AppRoutes = () => {
             <Route path="/store/:slug/account/auth" element={<CustomerAuth />} />
             <Route path="/store/:slug/reset-password" element={<CustomerResetPassword />} />
             <Route path="/store/:slug/account" element={<CustomerRoute><CustomerAccount /></CustomerRoute>} />
+            <Route path="/store/:slug/account/orders/:id" element={<CustomerRoute><CustomerOrderDetail /></CustomerRoute>} />
+            <Route path="/store/:slug/account/returns/:id" element={<CustomerRoute><CustomerReturnDetail /></CustomerRoute>} />
+            <Route path="/store/:slug/account/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
             <Route path="/store/:slug/account/wishlist" element={<CustomerRoute><CustomerWishlist /></CustomerRoute>} />
             <Route path="/store/:slug/p/:pageSlug" element={<StorefrontCustomPage />} />
             <Route path="/store/:slug/:policyType" element={<StorefrontPolicy />} />
