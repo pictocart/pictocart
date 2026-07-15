@@ -343,6 +343,9 @@ const AppRoutes = () => {
             <Route path="/store/:slug/account/auth" element={<CustomerAuth />} />
             <Route path="/store/:slug/reset-password" element={<CustomerResetPassword />} />
             <Route path="/store/:slug/account" element={<CustomerRoute><CustomerAccount /></CustomerRoute>} />
+            <Route path="/store/:slug/account/orders/:id" element={<CustomerRoute><CustomerOrderDetail /></CustomerRoute>} />
+            <Route path="/store/:slug/account/returns/:id" element={<CustomerRoute><CustomerReturnDetail /></CustomerRoute>} />
+            <Route path="/store/:slug/account/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
             <Route path="/store/:slug/account/wishlist" element={<CustomerRoute><CustomerWishlist /></CustomerRoute>} />
             <Route path="/store/:slug/p/:pageSlug" element={<StorefrontCustomPage />} />
             <Route path="/store/:slug/:policyType" element={<StorefrontPolicy />} />
