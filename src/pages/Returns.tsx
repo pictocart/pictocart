@@ -29,8 +29,8 @@ const Returns = () => {
   };
 
   const submit = async () => {
-    if (!activeId) return;
-    await updateStatus.mutateAsync({ id: activeId, status: nextStatus, seller_notes: notes });
+    if (!activeId || !active) return;
+    await updateStatus.mutateAsync({ id: activeId, status: nextStatus, seller_notes: notes, order_id: active.order_id });
     setActiveId(null);
   };
 
