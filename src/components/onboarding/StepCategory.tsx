@@ -23,51 +23,104 @@ const categories = [
 const StepCategory = ({ data, setData }: Props) => {
   const [mounted, setMounted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
-  const isPaused = useRef(false);
+
+  // auto-scroll state
+  const rafRef      = useRef<number | null>(null);
+  const isPaused    = useRef(false);
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const accumulator = useRef(0); // fractional-pixel accumulator
+
+  // drag state
+  const isDragging  = useRef(false);
+  const dragStartX  = useRef(0);
+  const dragScrollL = useRef(0);
+  const didDrag     = useRef(false); // distinguishes click from drag
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 80);
     return () => clearTimeout(t);
   }, []);
 
-  // Auto-scroll using requestAnimationFrame for smoothness
+  /* ── Auto-scroll via RAF ── */
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
+    const SPEED = 0.04; // px per ms  — slow and gentle
 
-    let lastTime = 0;
-    const SPEED = 0.6; // px per ms
+    let last = performance.now();
 
     const tick = (now: number) => {
-      if (!isPaused.current && el) {
-        const delta = now - lastTime;
-        lastTime = now;
-        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 2) {
-          el.scrollLeft = 0;
-        } else {
-          el.scrollLeft += SPEED * Math.min(delta, 32);
+      const dt = Math.min(now - last, 50); // cap delta to avoid jump after tab-switch
+      last = now;
+
+      if (!isPaused.current) {
+        const el = scrollRef.current;
+        if (el) {
+          accumulator.current += SPEED * dt;
+          if (accumulator.current >= 1) {
+            const step = Math.floor(accumulator.current);
+            accumulator.current -= step;
+            if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 2) {
+              el.scrollLeft = 0;
+            } else {
+              el.scrollLeft += step;
+            }
+          }
         }
-      } else {
-        lastTime = now;
       }
+
       rafRef.current = requestAnimationFrame(tick);
     };
 
-    rafRef.current = requestAnimationFrame((now) => { lastTime = now; rafRef.current = requestAnimationFrame(tick); });
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, []);
 
-  const pauseScroll = () => {
+  /* ── Pause / resume helpers ── */
+  const pause = () => {
     isPaused.current = true;
     if (resumeTimer.current) clearTimeout(resumeTimer.current);
-    // Resume after 3s of no interaction
-    resumeTimer.current = setTimeout(() => { isPaused.current = false; }, 3000);
   };
+  const scheduleResume = () => {
+    if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    resumeTimer.current = setTimeout(() => { isPaused.current = false; }, 2500);
+  };
+
+  /* ── Mouse drag handlers ── */
+  const onMouseDown = (e: React.MouseEvent) => {
+    pause();
+    isDragging.current = true;
+    didDrag.current    = false;
+    dragStartX.current = e.clientX;
+    dragScrollL.current = scrollRef.current?.scrollLeft ?? 0;
+  };
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollRef.current) return;
+    const dx = dragStartX.current - e.clientX;
+    if (Math.abs(dx) > 3) didDrag.current = true;
+    scrollRef.current.scrollLeft = dragScrollL.current + dx;
+  };
+
+  const onMouseUp = () => {
+    isDragging.current = false;
+    scheduleResume();
+  };
+
+  /* ── Touch handlers ── */
+  const onTouchStart = (e: React.TouchEvent) => {
+    pause();
+    dragStartX.current  = e.touches[0].clientX;
+    dragScrollL.current = scrollRef.current?.scrollLeft ?? 0;
+    didDrag.current     = false;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!scrollRef.current) return;
+    const dx = dragStartX.current - e.touches[0].clientX;
+    if (Math.abs(dx) > 3) didDrag.current = true;
+    scrollRef.current.scrollLeft = dragScrollL.current + dx;
+  };
+
+  const onTouchEnd = () => { scheduleResume(); };
 
   const selected = data.category;
 
@@ -80,30 +133,41 @@ const StepCategory = ({ data, setData }: Props) => {
         <p className="text-xs text-muted-foreground mt-1">This helps us customize your store experience.</p>
       </div>
 
-      {/* Horizontal scroll strip */}
-      <div className="relative">
-        {/* Left fade */}
+      {/* Scroll strip */}
+      <div className="relative select-none">
         <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-12 z-10 bg-gradient-to-r from-background to-transparent" />
-        {/* Right fade */}
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 z-10 bg-gradient-to-l from-background to-transparent" />
 
         <div
           ref={scrollRef}
-          onMouseDown={pauseScroll}
-          onMouseMove={(e) => { if (e.buttons === 1) pauseScroll(); }}
-          onTouchStart={pauseScroll}
-          onTouchMove={pauseScroll}
           className="flex gap-4 overflow-x-auto px-8 py-4"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', cursor: 'grab' }}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', cursor: isDragging.current ? 'grabbing' : 'grab' }}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
         >
           {categories.map((cat) => {
             const isSelected = selected === cat.id;
             return (
               <button
                 key={cat.id}
-                onClick={() => { setData(d => ({ ...d, category: cat.id })); }}
+                onMouseUp={() => {
+                  // fire select only if user didn't drag
+                  if (!didDrag.current) {
+                    setData(d => ({ ...d, category: cat.id }));
+                  }
+                }}
+                onTouchEnd={() => {
+                  if (!didDrag.current) {
+                    setData(d => ({ ...d, category: cat.id }));
+                  }
+                }}
                 className={cn(
-                  'flex-shrink-0 flex flex-col items-center gap-3 rounded-2xl border-2 transition-all duration-200 active:scale-95',
+                  'flex-shrink-0 flex flex-col items-center gap-3 rounded-2xl border-2 transition-all duration-200',
                   'w-[148px] py-6 px-4',
                   !isSelected && 'border-border/70 bg-white hover:border-primary/40 hover:shadow-md hover:-translate-y-1'
                 )}
@@ -114,7 +178,6 @@ const StepCategory = ({ data, setData }: Props) => {
                   transform: 'translateY(-4px)',
                 } : {}}
               >
-                {/* Icon box */}
                 <div
                   className="flex h-14 w-14 items-center justify-center rounded-xl transition-all duration-200"
                   style={isSelected
@@ -125,7 +188,6 @@ const StepCategory = ({ data, setData }: Props) => {
                   <cat.icon className={cn('h-6 w-6 transition-colors duration-200', isSelected ? cat.iconColor : 'text-slate-400')} />
                 </div>
 
-                {/* Label */}
                 <div className="text-center">
                   <p className={cn('text-[11px] font-semibold leading-tight', isSelected ? 'text-foreground' : 'text-slate-500')}>
                     {cat.label}
@@ -133,7 +195,6 @@ const StepCategory = ({ data, setData }: Props) => {
                   <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{cat.desc}</p>
                 </div>
 
-                {/* Selected indicator dot */}
                 <div
                   className="h-1.5 w-1.5 rounded-full transition-all duration-200"
                   style={{ background: isSelected ? cat.selBorder : 'transparent' }}
@@ -144,9 +205,9 @@ const StepCategory = ({ data, setData }: Props) => {
         </div>
       </div>
 
-      {/* Scroll hint on first load */}
+      {/* Swipe hint */}
       {!selected && (
-        <p className="text-center text-[10px] text-muted-foreground mt-2 animate-in fade-in duration-500">
+        <p className="text-center text-[10px] text-muted-foreground mt-1 animate-in fade-in duration-500">
           ← swipe to browse →
         </p>
       )}
@@ -160,7 +221,7 @@ const StepCategory = ({ data, setData }: Props) => {
         </p>
       )}
 
-      {/* FSSAI for food */}
+      {/* FSSAI */}
       {selected === 'food' && (
         <div className="max-w-sm mx-auto mt-4 rounded-xl border border-amber-400/40 bg-amber-50/60 p-3 animate-in fade-in duration-200">
           <Label htmlFor="fssai-real" className="flex items-center gap-1.5 text-xs font-medium mb-1.5">
