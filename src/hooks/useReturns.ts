@@ -49,14 +49,19 @@ export const useStoreReturns = () => {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status, seller_notes }: { id: string; status: ReturnStatus; seller_notes?: string }) => {
+    mutationFn: async ({ id, status, seller_notes, order_id }: { id: string; status: ReturnStatus; seller_notes?: string; order_id?: string }) => {
       const updates: Record<string, unknown> = { status };
       if (seller_notes !== undefined) updates.seller_notes = seller_notes;
       const { error } = await supabase.from('returns' as any).update(updates).eq('id', id);
       if (error) throw error;
+      // When merchant confirms the physical return is received or refunded, mark the order as returned
+      if (order_id && (status === 'received' || status === 'refunded')) {
+        await supabase.from('orders').update({ status: 'returned' }).eq('id', order_id);
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['returns', store?.id] });
+      qc.invalidateQueries({ queryKey: ['orders', store?.id] });
       toast.success('Return updated');
     },
     onError: (e: Error) => toast.error(e.message),
