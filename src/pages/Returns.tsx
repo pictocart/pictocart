@@ -219,13 +219,12 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
   return (
     <div className="space-y-4 mt-4">
       <Tabs defaultValue="summary" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="items">Item Details</TabsTrigger>
-          <TabsTrigger value="manage">Manage</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="summary">Summary & Manage</TabsTrigger>
+          <TabsTrigger value="items">Item / Order Details</TabsTrigger>
         </TabsList>
 
-        {/* ---------- Summary tab ---------- */}
+        {/* ---------- Summary + Manage (merged) ---------- */}
         <TabsContent value="summary" className="space-y-5 mt-4">
           <section>
             <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Package className="h-4 w-4" /> Return Summary</h3>
@@ -237,7 +236,6 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
               {r.customer_notes && <p className="text-muted-foreground italic">"{r.customer_notes}"</p>}
             </div>
 
-            {/* Timeline inside summary card */}
             <div className="mt-4 rounded-md border p-3">
               <h4 className="text-xs font-semibold mb-2 flex items-center gap-2 text-muted-foreground uppercase tracking-wide"><Clock className="h-3.5 w-3.5" /> Timeline / History</h4>
               {timeline.length === 0 ? (
@@ -267,53 +265,8 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
               </div>
             </section>
           )}
-        </TabsContent>
 
-        {/* ---------- Item Details tab ---------- */}
-        <TabsContent value="items" className="space-y-3 mt-4">
-          <h3 className="text-sm font-semibold flex items-center gap-2"><Package className="h-4 w-4" /> Items in this return</h3>
-          {Array.isArray(r.items) && r.items.length > 0 ? (
-            <div className="space-y-2">
-              {r.items.map((it: any, i: number) => {
-                const name = it.name || it.product_name || it.title || 'Item';
-                const qty = it.quantity ?? it.qty ?? 1;
-                const price = it.price ?? it.unit_price ?? it.amount;
-                const variant = it.variant || it.variant_label || [it.size, it.color].filter(Boolean).join(' / ');
-                const img = it.image || it.image_url || it.thumbnail;
-                return (
-                  <div key={i} className="flex gap-3 rounded-md border p-3">
-                    {img ? (
-                      <img src={img} alt={name} className="h-16 w-16 rounded object-cover border" />
-                    ) : (
-                      <div className="h-16 w-16 rounded bg-muted flex items-center justify-center">
-                        <Package className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{name}</p>
-                      {variant && <p className="text-xs text-muted-foreground">{variant}</p>}
-                      <p className="text-xs text-muted-foreground mt-1">Qty: {qty}{price != null && <> · ₹{Number(price).toLocaleString('en-IN')}</>}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-md border-2 border-dashed p-6 text-center text-sm text-muted-foreground">
-              No item details captured for this return.
-            </div>
-          )}
-
-          {r.exchange_details && (
-            <div className="rounded-md bg-muted p-3 text-sm">
-              <p className="font-semibold mb-1">Exchange preferences</p>
-              <pre className="text-xs whitespace-pre-wrap break-words">{JSON.stringify(r.exchange_details, null, 2)}</pre>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ---------- Manage tab ---------- */}
-        <TabsContent value="manage" className="space-y-5 mt-4">
+          {/* --- Manage controls --- */}
           <section>
             <label className="text-sm font-semibold mb-1 block">Return status</label>
             <Select value={status} onValueChange={(v) => setStatus(v as ReturnStatus)}>
@@ -365,6 +318,11 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
             <Textarea className="mt-2" placeholder="Internal note (not shared with customer)" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} />
           </section>
         </TabsContent>
+
+        {/* ---------- Full order / item details ---------- */}
+        <TabsContent value="items" className="space-y-4 mt-4">
+          <ReturnOrderDetails orderId={r.order_id} returnItems={Array.isArray(r.items) ? r.items : []} exchangeDetails={r.exchange_details} />
+        </TabsContent>
       </Tabs>
 
       <div className="sticky bottom-0 -mx-6 px-6 py-3 bg-background border-t flex justify-end gap-2">
@@ -372,6 +330,104 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save changes
         </Button>
       </div>
+    </div>
+  );
+};
+
+/* ---------------- Full order details for the return ---------------- */
+
+const ReturnOrderDetails = ({ orderId, returnItems, exchangeDetails }: { orderId: string; returnItems: any[]; exchangeDetails: any }) => {
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useMemo(() => {
+    let cancel = false;
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from('orders').select('*').eq('id', orderId).maybeSingle();
+      if (!cancel) { setOrder(data); setLoading(false); }
+    })();
+    return () => { cancel = true; };
+  }, [orderId]);
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  if (!order) return <p className="text-sm text-muted-foreground">Order not found.</p>;
+
+  const items: any[] = Array.isArray(order.items) ? order.items : [];
+  const addr: any = order.customer_address || {};
+  const returnedKeys = new Set(returnItems.map((it: any) => (it.name || it.product_name || it.title || '') + '|' + (it.variant || '')));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold">Order #{String(order.id).slice(0, 8).toUpperCase()}</p>
+          <p className="text-xs text-muted-foreground">Placed {format(new Date(order.created_at), 'dd MMM yyyy, hh:mm a')}</p>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link to={`/orders/${orderId}`}>Open full order</Link>
+        </Button>
+      </div>
+
+      <section className="rounded-md border p-3 space-y-1 text-sm">
+        <p className="font-semibold flex items-center gap-2"><Package className="h-4 w-4" /> Customer</p>
+        <p>{order.customer_name}</p>
+        {order.customer_email && <p className="text-xs text-muted-foreground">{order.customer_email}</p>}
+        {order.customer_phone && <p className="text-xs text-muted-foreground">{order.customer_phone}</p>}
+        {(addr.line1 || addr.city) && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {[addr.line1, addr.line2, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')}
+          </p>
+        )}
+      </section>
+
+      <section>
+        <p className="text-sm font-semibold mb-2">Items ({items.length})</p>
+        <div className="space-y-2">
+          {items.map((it: any, i: number) => {
+            const name = it.title || it.name || it.product_name || 'Item';
+            const qty = it.quantity ?? it.qty ?? 1;
+            const price = it.price ?? it.unit_price ?? 0;
+            const variant = it.variant || [it.size, it.color].filter(Boolean).join(' / ');
+            const img = it.image || it.image_url || it.thumbnail;
+            const isReturned = returnedKeys.has((name) + '|' + (variant || ''));
+            return (
+              <div key={i} className={cn('flex gap-3 rounded-md border p-3', isReturned && 'border-primary/60 bg-primary/5')}>
+                {img ? (
+                  <img src={img} alt={name} className="h-16 w-16 rounded object-cover border" />
+                ) : (
+                  <div className="h-16 w-16 rounded bg-muted flex items-center justify-center"><Package className="h-5 w-5 text-muted-foreground" /></div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{name}</p>
+                    {isReturned && <span className="text-[10px] uppercase tracking-wide rounded bg-primary text-primary-foreground px-1.5 py-0.5">In return</span>}
+                  </div>
+                  {variant && <p className="text-xs text-muted-foreground">{variant}</p>}
+                  <p className="text-xs text-muted-foreground mt-1">Qty: {qty} · ₹{Number(price).toLocaleString('en-IN')}</p>
+                </div>
+                <p className="text-sm font-semibold">₹{(Number(price) * Number(qty)).toLocaleString('en-IN')}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-md border p-3 text-sm space-y-1">
+        <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>₹{Number(order.subtotal ?? order.total ?? 0).toLocaleString('en-IN')}</span></div>
+        {order.shipping_amount != null && <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>₹{Number(order.shipping_amount).toLocaleString('en-IN')}</span></div>}
+        {order.tax_amount != null && <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span>₹{Number(order.tax_amount).toLocaleString('en-IN')}</span></div>}
+        {order.discount_amount != null && Number(order.discount_amount) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span>-₹{Number(order.discount_amount).toLocaleString('en-IN')}</span></div>}
+        <div className="flex justify-between font-semibold pt-1 border-t"><span>Total</span><span>₹{Number(order.total).toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between text-xs text-muted-foreground pt-1"><span>Payment</span><span className="capitalize">{order.payment_method} · {order.payment_status}</span></div>
+      </section>
+
+      {exchangeDetails && (
+        <section className="rounded-md bg-muted p-3 text-sm">
+          <p className="font-semibold mb-1">Exchange preferences</p>
+          <pre className="text-xs whitespace-pre-wrap break-words">{JSON.stringify(exchangeDetails, null, 2)}</pre>
+        </section>
+      )}
     </div>
   );
 };
