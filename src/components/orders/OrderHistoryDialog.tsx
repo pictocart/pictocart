@@ -84,12 +84,18 @@ const OrderHistoryDialog = ({ open, onOpenChange, orderId }: Props) => {
     queryKey: ['order-history', orderId],
     enabled: open && !!orderId,
     queryFn: async () => {
-      const [{ data: order }, { data: returns }, { data: refunds }] = await Promise.all([
+      const [{ data: order }, { data: history }, { data: returns }, { data: refunds }] = await Promise.all([
         supabase.from('orders').select('*').eq('id', orderId).maybeSingle(),
+        supabase.from('order_status_history' as any).select('*').eq('order_id', orderId).order('created_at', { ascending: true }),
         supabase.from('returns' as any).select('*').eq('order_id', orderId).order('created_at', { ascending: true }),
         supabase.from('refunds' as any).select('*').eq('order_id', orderId).order('created_at', { ascending: true }),
       ]);
-      return { order: order as any, returns: (returns || []) as any[], refunds: (refunds || []) as any[] };
+      return {
+        order: order as any,
+        history: (history || []) as any[],
+        returns: (returns || []) as any[],
+        refunds: (refunds || []) as any[],
+      };
     },
   });
 
@@ -97,16 +103,36 @@ const OrderHistoryDialog = ({ open, onOpenChange, orderId }: Props) => {
 
   if (data?.order) {
     const o = data.order;
-    // Order created
-    events.push({
-      at: o.created_at,
-      title: 'Order Created',
-      to: o.status,
-      by: 'Customer',
-      note: `Order #${o.order_number} placed`,
-      icon: ShoppingCart,
-      tone: 'emerald',
-    });
+    const historyRows = data.history || [];
+
+    if (historyRows.length === 0) {
+      // Fallback if history missing
+      events.push({
+        at: o.created_at,
+        title: 'Order Created',
+        to: o.status,
+        by: 'Customer',
+        note: `Order #${o.order_number} placed`,
+        icon: ShoppingCart,
+        tone: 'emerald',
+      });
+    } else {
+      historyRows.forEach((h: any) => {
+        const m = metaFor(h.to_status);
+        const isCreation = !h.from_status;
+        events.push({
+          at: h.created_at,
+          title: isCreation ? 'Order Created' : `Status changed to ${m.label}`,
+          from: h.from_status,
+          to: h.to_status,
+          by: (h.actor as Actor) || 'System',
+          note: isCreation ? `Order #${o.order_number} placed` : (h.note || null),
+          icon: isCreation ? ShoppingCart : m.icon,
+          tone: isCreation ? 'emerald' : m.tone,
+        });
+      });
+    }
+
     // Payment
     if (o.payment_status === 'paid') {
       events.push({
@@ -140,20 +166,6 @@ const OrderHistoryDialog = ({ open, onOpenChange, orderId }: Props) => {
         note: o.pod_url ? 'POD available' : null,
         icon: Home,
         tone: 'green',
-      });
-    }
-    // Current status snapshot (fallback for statuses not otherwise captured)
-    const covered = new Set(['new']);
-    if (o.status && !covered.has(o.status) && !['shipped','delivered'].includes(o.status)) {
-      const m = metaFor(o.status);
-      events.push({
-        at: o.updated_at || o.created_at,
-        title: m.label,
-        to: o.status,
-        by: 'Merchant',
-        note: o.notes ?? null,
-        icon: m.icon,
-        tone: m.tone,
       });
     }
   }
