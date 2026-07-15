@@ -585,4 +585,33 @@ const CustomerAccount = () => {
   );
 };
 
+const ReturnsTabContent = ({ slug, userId, storeId, colors, br, brHalf }: any) => {
+  const { data: returns, isLoading } = useCustomerReturns(userId, storeId);
+  if (isLoading) return <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>;
+  if (!returns?.length) return (
+    <div className="text-center py-16 border" style={{ borderColor: colors.secondary, borderRadius: br }}>
+      <Undo2 className="h-12 w-12 mx-auto mb-3 opacity-20" />
+      <p className="text-sm opacity-50">No return or exchange requests yet</p>
+    </div>
+  );
+  return (
+    <div className="space-y-3">
+      {returns.map((r: any) => (
+        <Link key={r.id} to={`/store/${slug}/account/returns/${r.id}`} className="block p-4 border hover:shadow-sm" style={{ borderColor: colors.secondary, borderRadius: br }}>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold capitalize">{r.request_type} · {r.reason}</p>
+              <p className="text-xs opacity-60 mt-0.5">{format(new Date(r.created_at), 'dd MMM yyyy')} · ₹{Number(r.refund_amount || 0).toLocaleString('en-IN')}</p>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase" style={{ backgroundColor: (statusColors[r.status] || '#888') + '20', color: statusColors[r.status] || '#888', borderRadius: brHalf }}>
+              {r.status.replace(/_/g, ' ')}
+            </span>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+};
+
 export default CustomerAccount;
+
