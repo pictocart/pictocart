@@ -39,7 +39,10 @@ const STATUS_ORDER: OrderStatus[] = ['pending', 'confirmed', 'processing', 'ship
 // Terminal statuses — once reached, no further change allowed
 const TERMINAL_STATUSES: string[] = ['delivered', 'rejected', 'cancelled', 'returned'];
 // All selectable statuses in order (for dropdown)
-const SELECTABLE_STATUSES: OrderStatus[] = ['new', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'rejected', 'cancelled', 'returned'];
+// Note: 'returned' is intentionally excluded — returns must be initiated by the customer and
+// flow through the Returns section. The order is automatically marked 'returned' when the
+// merchant processes the return there.
+const SELECTABLE_STATUSES: OrderStatus[] = ['new', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'rejected', 'cancelled'];
 
 const OrderDetail = () => {
   const { id } = useParams();

@@ -1674,6 +1674,41 @@ export type Database = {
           },
         ]
       }
+      fssai_history: {
+        Row: {
+          added_at: string
+          deleted_at: string | null
+          deleted_by_user: boolean
+          fssai_number: string
+          id: string
+          store_id: string
+        }
+        Insert: {
+          added_at?: string
+          deleted_at?: string | null
+          deleted_by_user?: boolean
+          fssai_number: string
+          id?: string
+          store_id: string
+        }
+        Update: {
+          added_at?: string
+          deleted_at?: string | null
+          deleted_by_user?: boolean
+          fssai_number?: string
+          id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fssai_history_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       help_articles: {
         Row: {
           body_md: string
@@ -6557,6 +6592,8 @@ export type Database = {
         | "delivered"
         | "cancelled"
         | "returned"
+        | "rejected"
+        | "new"
       partner_invite_status: "pending" | "active" | "suspended"
       partner_license_status: "available" | "consumed" | "revoked"
       partner_tier: "partner" | "state_head" | "regional_head"
@@ -6761,6 +6798,8 @@ export const Constants = {
         "delivered",
         "cancelled",
         "returned",
+        "rejected",
+        "new",
       ],
       partner_invite_status: ["pending", "active", "suspended"],
       partner_license_status: ["available", "consumed", "revoked"],
