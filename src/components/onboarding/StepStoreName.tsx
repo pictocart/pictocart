@@ -22,7 +22,11 @@ const StepStoreName = ({ data, setData }: Props) => {
   }, []);
 
   const checkSlug = useCallback(async (slug: string) => {
-    if (!slug || slug.length < 2) { setSlugStatus('idle'); setData(d => ({ ...d, slugAvailable: false })); return; }
+    if (!slug || slug.length < 2) { 
+      setSlugStatus('idle'); 
+      setData(d => ({ ...d, slugAvailable: false })); 
+      return; 
+    }
     setSlugStatus('checking');
     const { data: existing } = await supabase
       .from('stores')
@@ -30,8 +34,35 @@ const StepStoreName = ({ data, setData }: Props) => {
       .eq('slug', slug)
       .maybeSingle();
     const available = !existing;
-    setSlugStatus(available ? 'available' : 'taken');
-    setData(d => ({ ...d, slugAvailable: available }));
+    
+    if (available) {
+      setSlugStatus('available');
+      setData(d => ({ ...d, slugAvailable: true }));
+    } else {
+      // Try alternatives
+      const alternatives = [`${slug}-x`, `${slug}-shop`, `${slug}-store`, `${slug}-${Math.floor(Math.random() * 99)}`];
+      let foundAvailable = false;
+      
+      for (const alt of alternatives) {
+        const { data: existingAlt } = await supabase
+          .from('stores')
+          .select('id')
+          .eq('slug', alt)
+          .maybeSingle();
+        
+        if (!existingAlt) {
+          setData(d => ({ ...d, slug: alt, slugAvailable: true }));
+          setSlugStatus('available');
+          foundAvailable = true;
+          break;
+        }
+      }
+      
+      if (!foundAvailable) {
+        setSlugStatus('taken');
+        setData(d => ({ ...d, slugAvailable: false }));
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -46,34 +77,34 @@ const StepStoreName = ({ data, setData }: Props) => {
   };
 
   return (
-    <div className={`space-y-8 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-      <div className="text-center space-y-4">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10 shadow-lg shadow-primary/10">
-          <Store className="h-8 w-8 text-primary" />
+    <div className={`space-y-4 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <div className="text-center space-y-2">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
+          <Store className="h-6 w-6 text-primary" />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">What's your store name?</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold tracking-tight">What's your store name?</h2>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
             Pick a name that represents your brand. You can always change it later.
           </p>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="store-name" className="text-sm font-medium">Store Name</Label>
+      <div className="max-w-md mx-auto space-y-3">
+        <div className="space-y-1">
+          <Label htmlFor="store-name" className="text-xs font-medium">Store Name</Label>
           <Input
             id="store-name"
             placeholder="e.g. Priya's Fashion Hub"
             value={data.storeName}
             onChange={(e) => handleChange(e.target.value)}
-            className="text-base h-13 px-4 rounded-xl border-muted-foreground/20 focus:border-primary shadow-sm"
+            className="h-10 px-3 rounded-lg"
             autoFocus
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="store-desc" className="text-sm font-medium">
+        <div className="space-y-1">
+          <Label htmlFor="store-desc" className="text-xs font-medium">
             Short Description <span className="text-muted-foreground font-normal">(optional)</span>
           </Label>
           <Input
@@ -81,29 +112,29 @@ const StepStoreName = ({ data, setData }: Props) => {
             placeholder="e.g. Trendy fashion for modern women"
             value={data.description || ''}
             onChange={(e) => setData((d) => ({ ...d, description: e.target.value }))}
-            className="text-base h-13 px-4 rounded-xl border-muted-foreground/20 focus:border-primary shadow-sm"
+            className="h-10 px-3 rounded-lg"
           />
         </div>
 
         {data.slug && (
-          <div className="rounded-xl border border-border bg-gradient-to-br from-secondary/80 to-secondary/30 p-4 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your store URL</p>
+          <div className="rounded-lg border bg-secondary/50 p-2.5 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3 text-primary" />
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Your store URL</p>
             </div>
-            <p className="text-sm font-medium text-foreground font-mono bg-background/60 rounded-lg px-3 py-2">
+            <p className="text-xs font-medium font-mono bg-background rounded px-2 py-1">
               <span className="text-muted-foreground">pictocart.in/store/</span>
               <span className="text-primary">{data.slug}</span>
             </p>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               {slugStatus === 'checking' && (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /><span className="text-xs text-muted-foreground">Checking availability…</span></>
+                <><Loader2 className="h-3 w-3 animate-spin text-muted-foreground" /><span className="text-[10px] text-muted-foreground">Checking…</span></>
               )}
               {slugStatus === 'available' && (
-                <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /><span className="text-xs text-emerald-600 font-medium">This URL is available!</span></>
+                <><CheckCircle2 className="h-3 w-3 text-emerald-500" /><span className="text-[10px] text-emerald-600 font-medium">Available!</span></>
               )}
               {slugStatus === 'taken' && (
-                <><XCircle className="h-3.5 w-3.5 text-destructive" /><span className="text-xs text-destructive font-medium">This URL is already taken. Try a different name.</span></>
+                <><XCircle className="h-3 w-3 text-destructive" /><span className="text-[10px] text-destructive">Taken. Trying alternatives...</span></>
               )}
             </div>
           </div>

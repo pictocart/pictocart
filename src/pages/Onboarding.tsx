@@ -333,25 +333,25 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20 flex flex-col">
       {/* Header */}
-      <header className="border-b border-border/50 px-6 py-4 flex items-center gap-3 backdrop-blur-sm bg-background/80 sticky top-0 z-10">
-        <PicToCartLogo size={40} />
+      <header className="border-b border-border/50 px-6 py-3 flex items-center gap-3 backdrop-blur-sm bg-background/80 sticky top-0 z-10">
+        <PicToCartLogo size={36} />
         <div>
-          <span className="font-semibold text-foreground block leading-tight">
+          <span className="font-semibold text-sm text-foreground block leading-tight">
             {data.storeName || 'Set up your store'}
           </span>
           <span className="text-xs text-muted-foreground">Step {currentStep} of {TOTAL_STEPS}</span>
         </div>
         <div className="ml-auto">
-          <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full">
+          <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">
             {stepLabels[currentStep - 1]}
           </span>
         </div>
       </header>
 
       {/* Progress stepper */}
-      <div className="px-6 pt-8 pb-4 max-w-3xl mx-auto w-full">
+      <div className="px-6 pt-4 pb-3 max-w-3xl mx-auto w-full">
         {/* Progress bar */}
-        <div className="relative h-1.5 bg-muted rounded-full overflow-hidden mb-6">
+        <div className="relative h-1.5 bg-muted rounded-full overflow-hidden mb-4">
           <div
             className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-700 ease-out"
             style={{ width: `${progress}%` }}
@@ -378,23 +378,23 @@ const Onboarding = () => {
                   className={cn(
                     'flex items-center justify-center rounded-full transition-all duration-500 ease-out',
                     isCompleted
-                      ? 'h-6 w-6 bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                      ? 'h-5 w-5 bg-primary text-primary-foreground shadow-md shadow-primary/25'
                       : isCurrent
-                      ? 'h-7 w-7 bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-primary/15'
-                      : 'h-5 w-5 bg-muted border-2 border-muted-foreground/15'
+                      ? 'h-6 w-6 bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-primary/15'
+                      : 'h-4 w-4 bg-muted border-2 border-muted-foreground/15'
                   )}
                 >
                   {isCompleted ? (
-                    <Check className="h-3 w-3" strokeWidth={3} />
+                    <Check className="h-2.5 w-2.5" strokeWidth={3} />
                   ) : isCurrent ? (
-                    <div className="h-2 w-2 rounded-full bg-primary-foreground animate-pulse" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground animate-pulse" />
                   ) : null}
                 </div>
 
                 {/* Label */}
                 <span
                   className={cn(
-                    'text-[9px] sm:text-[10px] mt-2 text-center leading-tight transition-all duration-300 hidden sm:block',
+                    'text-[9px] sm:text-[10px] mt-1.5 text-center leading-tight transition-all duration-300 hidden sm:block',
                     isCompleted ? 'text-primary font-medium' : isCurrent ? 'text-foreground font-semibold' : 'text-muted-foreground/50'
                   )}
                 >
@@ -407,7 +407,7 @@ const Onboarding = () => {
       </div>
 
       {/* Step content with animation */}
-      <div className={cn("flex-1 py-8 w-full", currentStep === 3 ? "px-4 max-w-7xl mx-auto" : "px-6 max-w-3xl mx-auto")}>
+      <div className={cn("flex-1 py-4 w-full", currentStep === 3 ? "px-4 max-w-7xl mx-auto" : "px-6 max-w-3xl mx-auto")}>
         <div
           ref={contentRef}
           className={cn(
