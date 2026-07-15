@@ -251,6 +251,9 @@ const OrderDetail = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+            <History className="h-4 w-4 mr-1" /> View History
+          </Button>
           {!(order as any).invoice_number && (
             <Button
               data-tour="order-invoice"
