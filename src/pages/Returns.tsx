@@ -78,15 +78,28 @@ const Returns = () => {
               <Card key={r.id}>
                 <CardContent className="py-4 flex flex-wrap items-start gap-4">
                   <div className="flex-1 min-w-[200px]">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Link to={`/orders/${r.order_id}`} className="text-sm font-semibold hover:underline">
                         Order
                       </Link>
                       <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', meta?.color)}>
                         {meta?.label}
                       </span>
+                      <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium',
+                        r.request_type === 'exchange'
+                          ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                          : 'bg-slate-100 text-slate-800 border-slate-200')}>
+                        {r.request_type === 'exchange' ? 'Exchange' : 'Return'}
+                      </span>
                     </div>
                     <p className="text-sm mt-1"><span className="text-muted-foreground">Reason:</span> {r.reason}</p>
+                    {r.exchange_details && (r.exchange_details.preferred_size || r.exchange_details.preferred_color) && (
+                      <p className="text-xs mt-1">
+                        <span className="text-muted-foreground">Wants: </span>
+                        {r.exchange_details.preferred_size && <>Size <strong>{r.exchange_details.preferred_size}</strong> </>}
+                        {r.exchange_details.preferred_color && <>· Colour <strong>{r.exchange_details.preferred_color}</strong></>}
+                      </p>
+                    )}
                     {r.customer_notes && (
                       <p className="text-xs text-muted-foreground mt-1">"{r.customer_notes}"</p>
                     )}
