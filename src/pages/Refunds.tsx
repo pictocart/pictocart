@@ -204,7 +204,7 @@ const Refunds = () => {
                       <TableCell className="text-sm">{r.orders?.customer_name ?? '—'}</TableCell>
                       <TableCell className="text-right font-semibold">₹{Number(r.amount).toLocaleString('en-IN')}</TableCell>
                       <TableCell className="capitalize text-sm">{r.orders?.payment_method ?? '—'}</TableCell>
-                      <TableCell className="text-sm">{r.razorpay_refund_id ? 'Razorpay' : 'Manual'}</TableCell>
+                      <TableCell className="text-sm capitalize">{r.razorpay_refund_id ? 'Razorpay' : r._source === 'return' ? 'Return' : r._source === 'exchange' ? 'Exchange' : 'Manual'}</TableCell>
                       <TableCell>
                         <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', meta.color)}>{meta.label}</span>
                       </TableCell>
