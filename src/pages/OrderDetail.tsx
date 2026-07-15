@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, User, MapPin, Phone, Mail, Package, Truck, Loader2, FileText, Printer, Banknote, Smartphone, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, MapPin, Phone, Mail, Package, Truck, Loader2, FileText, Printer, Banknote, Smartphone, CreditCard, CheckCircle2, AlertCircle, History } from 'lucide-react';
+import OrderHistoryDialog from '@/components/orders/OrderHistoryDialog';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -83,6 +84,7 @@ const OrderDetail = () => {
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -249,6 +251,9 @@ const OrderDetail = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+            <History className="h-4 w-4 mr-1" /> View History
+          </Button>
           {!(order as any).invoice_number && (
             <Button
               data-tour="order-invoice"
@@ -736,6 +741,8 @@ const OrderDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <OrderHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} orderId={order.id} />
     </div>
   );
 };
