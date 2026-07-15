@@ -1,28 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useCustomerOrders } from '@/hooks/useCustomerOrders';
+import { useCustomerReturns } from '@/hooks/useCustomerReturns';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Loader2, Package, MapPin, LogOut, Plus, Trash2, User, Edit2, Check, Star, ChevronRight, Heart, Settings, Shield,
+  Loader2, Package, MapPin, LogOut, Plus, Trash2, User, Edit2, Check, ChevronRight, Heart, Shield,
+  Search, Undo2, MessageCircle, ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import RequestReturnButton from '@/components/storefront/RequestReturnButton';
+import OrderActions from '@/components/storefront/OrderActions';
 
 const statusColors: Record<string, string> = {
   pending: '#f59e0b',
   confirmed: '#3b82f6',
   processing: '#8b5cf6',
+  packed: '#8b5cf6',
   shipped: '#6366f1',
+  out_for_delivery: '#f97316',
   delivered: '#16a34a',
   cancelled: '#ef4444',
   returned: '#78716c',
+  refunded: '#16a34a',
+  exchanged: '#0ea5e9',
 };
 
-type TabKey = 'profile' | 'orders' | 'addresses';
+type TabKey = 'profile' | 'orders' | 'returns' | 'support' | 'addresses';
+
+const ORDER_FILTERS: { key: string; label: string; match: (s: string) => boolean }[] = [
+  { key: 'all', label: 'All', match: () => true },
+  { key: 'pending', label: 'Pending', match: (s) => ['pending','confirmed','processing','packed'].includes(s) },
+  { key: 'shipped', label: 'Shipped', match: (s) => ['shipped','out_for_delivery'].includes(s) },
+  { key: 'delivered', label: 'Delivered', match: (s) => s === 'delivered' },
+  { key: 'cancelled', label: 'Cancelled', match: (s) => s === 'cancelled' },
+  { key: 'returned', label: 'Returned', match: (s) => s === 'returned' },
+];
 
 const CustomerAccount = () => {
   const { slug } = useParams<{ slug: string }>();
