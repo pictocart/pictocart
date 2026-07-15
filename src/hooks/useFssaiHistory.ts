@@ -28,7 +28,7 @@ export const useFssaiHistory = () => {
         .eq('store_id', store!.id)
         .order('added_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as FssaiEntry[];
+      return (data ?? []) as unknown as FssaiEntry[];
     },
   });
 
