@@ -74,7 +74,16 @@ const StepTheme = ({ data, setData }: Props) => {
   const trendingIds = new Set([...recommendedIds, ...trending.map((t) => t.id)]);
   const others = themes.filter((t) => !trendingIds.has(t.id));
 
-  // Auto-pick the first recommended theme (falls back to trending → first overall)
+  // Preload all preview images as soon as themes data arrives
+  useEffect(() => {
+    if (!themes.length) return;
+    themes.forEach((t) => {
+      if (t.preview_image) {
+        const img = new Image();
+        img.src = t.preview_image;
+      }
+    });
+  }, [themes]);
   // so Continue isn't blocked and the default matches the chosen vertical.
   useEffect(() => {
     if (data.selectedThemeId || themes.length === 0) return;
@@ -144,7 +153,10 @@ const Section = ({ title, icon, children }: { title: string; icon: React.ReactNo
   </div>
 );
 
-const ThemeCard = ({ theme, selected, onClick }: { theme: ThemeMaster; selected: boolean; onClick: () => void }) => (
+const ThemeCard = ({ theme, selected, onClick }: { theme: ThemeMaster; selected: boolean; onClick: () => void }) => {
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  return (
   <div
     className={cn(
       'relative rounded-2xl border-2 overflow-hidden transition-all duration-300 hover:-translate-y-0.5 group bg-card',
@@ -154,9 +166,28 @@ const ThemeCard = ({ theme, selected, onClick }: { theme: ThemeMaster; selected:
     )}
   >
     <button type="button" onClick={onClick} className="block w-full text-left">
-      <div className="aspect-[4/3] bg-muted overflow-hidden">
+      <div className="aspect-[4/3] bg-muted overflow-hidden relative">
+        {/* Skeleton shimmer — shows until image loads */}
+        {!imgLoaded && (
+          <div className="absolute inset-0 z-10">
+            <div className="h-full w-full bg-gradient-to-r from-muted via-muted-foreground/10 to-muted animate-pulse" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Palette className="h-8 w-8 text-muted-foreground/30" />
+            </div>
+          </div>
+        )}
         {theme.preview_image ? (
-          <img src={theme.preview_image} alt={theme.name} className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
+          <img
+            src={theme.preview_image}
+            alt={theme.name}
+            loading="eager"
+            fetchPriority="high"
+            onLoad={() => setImgLoaded(true)}
+            className={cn(
+              'h-full w-full object-cover group-hover:scale-[1.02] transition-all duration-500',
+              imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'
+            )}
+          />
         ) : (
           <div className="h-full w-full flex items-center justify-center text-muted-foreground">
             <Palette className="h-8 w-8 opacity-40" />
@@ -195,6 +226,7 @@ const ThemeCard = ({ theme, selected, onClick }: { theme: ThemeMaster; selected:
       </div>
     )}
   </div>
-);
+  );
+};
 
 export default StepTheme;
