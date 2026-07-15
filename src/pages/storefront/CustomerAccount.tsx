@@ -45,6 +45,20 @@ const CustomerAccount = () => {
   const { user, signOut } = useCustomerAuth(slug || '');
   const { data: orders, isLoading: ordersLoading } = useCustomerOrders(user?.id, store?.id);
   const [tab, setTab] = useState<TabKey>('profile');
+  const [orderFilter, setOrderFilter] = useState('all');
+  const [orderSearch, setOrderSearch] = useState('');
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+    const f = ORDER_FILTERS.find((x) => x.key === orderFilter) || ORDER_FILTERS[0];
+    const q = orderSearch.trim().toLowerCase();
+    return orders.filter((o: any) => {
+      if (!f.match(o.status || '')) return false;
+      if (!q) return true;
+      if (o.order_number?.toLowerCase().includes(q)) return true;
+      const items = Array.isArray(o.items) ? o.items : [];
+      return items.some((it: any) => (it.title || '').toLowerCase().includes(q));
+    });
+  }, [orders, orderFilter, orderSearch]);
 
   // Profile state
   const [profileName, setProfileName] = useState('');
@@ -186,20 +200,6 @@ const CustomerAccount = () => {
     { key: 'addresses', label: 'Addresses', icon: MapPin },
   ];
 
-  const [orderFilter, setOrderFilter] = useState('all');
-  const [orderSearch, setOrderSearch] = useState('');
-  const filteredOrders = useMemo(() => {
-    if (!orders) return [];
-    const f = ORDER_FILTERS.find((x) => x.key === orderFilter) || ORDER_FILTERS[0];
-    const q = orderSearch.trim().toLowerCase();
-    return orders.filter((o: any) => {
-      if (!f.match(o.status || '')) return false;
-      if (!q) return true;
-      if (o.order_number?.toLowerCase().includes(q)) return true;
-      const items = Array.isArray(o.items) ? o.items : [];
-      return items.some((it: any) => (it.title || '').toLowerCase().includes(q));
-    });
-  }, [orders, orderFilter, orderSearch]);
 
 
   return (
