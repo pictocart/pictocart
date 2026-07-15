@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { Undo2, Repeat2, Truck, ExternalLink, MapPin } from 'lucide-react';
+import { Undo2, Repeat2, Truck, ExternalLink, MapPin, Clock } from 'lucide-react';
 import { RETURN_STATUSES } from '@/hooks/useReturns';
 import { cn } from '@/lib/utils';
 
