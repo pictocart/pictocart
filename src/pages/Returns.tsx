@@ -340,7 +340,7 @@ const ReturnOrderDetails = ({ orderId, returnItems, exchangeDetails }: { orderId
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useMemo(() => {
+  useEffect(() => {
     let cancel = false;
     (async () => {
       setLoading(true);
