@@ -33,16 +33,42 @@ const Refunds = () => {
     queryKey: ['refunds-list', store?.id],
     queryFn: async () => {
       if (!store?.id) return [];
-      const { data, error } = await supabase
-        .from('refunds')
-        .select('id, order_id, amount, status, speed, reason, razorpay_refund_id, created_at, orders:order_id (order_number, customer_name, customer_email, payment_method)')
-        .eq('store_id', store.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      const [gatewayRes, returnsRes] = await Promise.all([
+        supabase
+          .from('refunds')
+          .select('id, order_id, amount, status, speed, reason, razorpay_refund_id, created_at, orders:order_id (order_number, customer_name, customer_email, payment_method)')
+          .eq('store_id', store.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('returns')
+          .select('id, order_id, refund_amount, refund_status, refund_method, request_type, status, reason, updated_at, created_at, orders:order_id (order_number, customer_name, customer_email, payment_method, store_id)')
+          .gt('refund_amount', 0)
+          .order('updated_at', { ascending: false }),
+      ]);
+      if (gatewayRes.error) throw gatewayRes.error;
+      if (returnsRes.error) throw returnsRes.error;
+      const gateway = (gatewayRes.data ?? []).map((r: any) => ({ ...r, _source: 'gateway' }));
+      const returnsRows = (returnsRes.data ?? [])
+        .filter((r: any) => r.orders?.store_id === store.id)
+        .map((r: any) => ({
+          id: r.id,
+          order_id: r.order_id,
+          amount: r.refund_amount,
+          status: r.refund_status || (r.status === 'refund_completed' ? 'processed' : 'pending'),
+          speed: null,
+          reason: r.reason,
+          razorpay_refund_id: null,
+          created_at: r.updated_at || r.created_at,
+          orders: r.orders,
+          _source: r.request_type === 'exchange' ? 'exchange' : 'return',
+        }));
+      return [...gateway, ...returnsRows].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     },
     enabled: !!store?.id,
   });
+
 
   const filtered = useMemo(() => {
     return refunds.filter((r: any) => {
