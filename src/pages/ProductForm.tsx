@@ -54,6 +54,10 @@ const ProductForm = () => {
   const [costPrice, setCostPrice] = useState('');
   const [taxRate, setTaxRate] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [isReturnable, setIsReturnable] = useState(true);
+  const [isExchangeable, setIsExchangeable] = useState(true);
+  const [returnWindowDays, setReturnWindowDays] = useState('7');
+  const [exchangeWindowDays, setExchangeWindowDays] = useState('7');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -112,6 +116,10 @@ const ProductForm = () => {
       setCostPrice(existingProduct.cost_price ? String(existingProduct.cost_price) : '');
       setTaxRate((existingProduct as any).tax_rate ? String((existingProduct as any).tax_rate) : '');
       setIsActive(existingProduct.is_active ?? true);
+      setIsReturnable((existingProduct as any).is_returnable ?? true);
+      setIsExchangeable((existingProduct as any).is_exchangeable ?? true);
+      setReturnWindowDays(String((existingProduct as any).return_window_days ?? 7));
+      setExchangeWindowDays(String((existingProduct as any).exchange_window_days ?? 7));
       setSeoTitle(existingProduct.seo_title || '');
       setSeoDescription(existingProduct.seo_description || '');
       if (aiData.product_type) setProductType(aiData.product_type as ProductType);
@@ -207,6 +215,10 @@ const ProductForm = () => {
       cost_price: costPrice ? Number(costPrice) : 0,
       tax_rate: taxRate ? Number(taxRate) : 0,
       is_active: asDraft ? false : isActive,
+      is_returnable: isReturnable,
+      is_exchangeable: isExchangeable,
+      return_window_days: Number(returnWindowDays) || 7,
+      exchange_window_days: Number(exchangeWindowDays) || 7,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
       ai_generated_data: { product_type: productType, highlights, product_hint: productHint || undefined, product_videos: productVideos, ...typeMetadata } as any,
@@ -649,6 +661,79 @@ const ProductForm = () => {
               <div className="space-y-1.5">
                 <Label htmlFor="inventory">Stock Quantity</Label>
                 <Input id="inventory" type="number" min="0" value={inventoryCount} onChange={(e) => setInventoryCount(e.target.value)} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Return & Exchange Policy */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Return & Exchange Policy</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Configure return and exchange options for this product</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="returnable">Returnable</Label>
+                  <p className="text-xs text-muted-foreground">Allow customers to return this product</p>
+                </div>
+                <Switch
+                  id="returnable"
+                  checked={isReturnable}
+                  onCheckedChange={setIsReturnable}
+                />
+              </div>
+
+              {isReturnable && (
+                <div className="space-y-1.5 pl-4 border-l-2 border-muted">
+                  <Label htmlFor="returnWindow">Return Window (Days)</Label>
+                  <Input
+                    id="returnWindow"
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={returnWindowDays}
+                    onChange={(e) => setReturnWindowDays(e.target.value)}
+                    placeholder="7"
+                  />
+                  <p className="text-xs text-muted-foreground">Days after delivery within which returns are accepted</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="exchangeable">Exchangeable</Label>
+                  <p className="text-xs text-muted-foreground">Allow customers to exchange this product</p>
+                </div>
+                <Switch
+                  id="exchangeable"
+                  checked={isExchangeable}
+                  onCheckedChange={setIsExchangeable}
+                />
+              </div>
+
+              {isExchangeable && (
+                <div className="space-y-1.5 pl-4 border-l-2 border-muted">
+                  <Label htmlFor="exchangeWindow">Exchange Window (Days)</Label>
+                  <Input
+                    id="exchangeWindow"
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={exchangeWindowDays}
+                    onChange={(e) => setExchangeWindowDays(e.target.value)}
+                    placeholder="7"
+                  />
+                  <p className="text-xs text-muted-foreground">Days after delivery within which exchanges are accepted</p>
+                </div>
+              )}
+
+              <div className="rounded-md bg-muted/40 p-3 text-xs space-y-1">
+                <p className="font-medium">💡 Tip:</p>
+                <p className="text-muted-foreground">
+                  For non-returnable items (e.g., personalized products, intimate wear), disable both options.
+                  For perishable goods (food, beauty), set shorter windows (1-3 days).
+                </p>
               </div>
             </CardContent>
           </Card>
