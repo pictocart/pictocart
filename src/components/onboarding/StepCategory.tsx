@@ -74,15 +74,13 @@ const StepCategory = ({ data, setData }: Props) => {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, []);
 
-  /* ── Pause / resume helpers ── */
+  /* ── Pause permanently once user interacts ── */
   const pause = () => {
     isPaused.current = true;
     if (resumeTimer.current) clearTimeout(resumeTimer.current);
   };
-  const scheduleResume = () => {
-    if (resumeTimer.current) clearTimeout(resumeTimer.current);
-    resumeTimer.current = setTimeout(() => { isPaused.current = false; }, 2500);
-  };
+  // No resume — once user scrolls, auto-scroll stays off
+  const scheduleResume = () => {};
 
   /* ── Mouse drag handlers ── */
   const onMouseDown = (e: React.MouseEvent) => {
