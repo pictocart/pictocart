@@ -2282,6 +2282,47 @@ export type Database = {
           },
         ]
       }
+      order_status_history: {
+        Row: {
+          actor: string
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          order_id: string
+          to_status: string
+        }
+        Insert: {
+          actor?: string
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          order_id: string
+          to_status: string
+        }
+        Update: {
+          actor?: string
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          order_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount_refunded: number
