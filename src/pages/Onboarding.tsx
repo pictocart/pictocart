@@ -331,7 +331,10 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20 flex flex-col">
+    <div className={cn(
+      "bg-gradient-to-br from-background via-background to-accent/20 flex flex-col",
+      currentStep === 3 ? "h-screen overflow-hidden" : "min-h-screen"
+    )}>
       {/* Header */}
       <header className="border-b border-border/50 px-6 py-3 flex items-center gap-3 backdrop-blur-sm bg-background/80 sticky top-0 z-10">
         <PicToCartLogo size={36} />
@@ -407,11 +410,18 @@ const Onboarding = () => {
       </div>
 
       {/* Step content with animation */}
-      <div className={cn("flex-1 py-4 w-full", currentStep === 3 ? "px-4 max-w-7xl mx-auto" : "px-6 max-w-3xl mx-auto")}>
+      {/* Step 3 (Theme): flex-1 + overflow-hidden so only the inner grid scrolls */}
+      <div className={cn(
+        "w-full",
+        currentStep === 3
+          ? "flex-1 min-h-0 overflow-hidden px-4 max-w-7xl mx-auto flex flex-col py-3"
+          : "flex-1 py-4 px-6 max-w-3xl mx-auto"
+      )}>
         <div
           ref={contentRef}
           className={cn(
             'transition-all duration-300 ease-out',
+            currentStep === 3 ? 'flex flex-col flex-1 min-h-0' : '',
             animating
               ? direction === 'forward'
                 ? 'opacity-0 translate-x-8'
