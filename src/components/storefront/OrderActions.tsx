@@ -18,8 +18,13 @@ const btn = "text-xs font-medium inline-flex items-center gap-1.5 px-3 py-1.5 ro
 
 const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onChanged }: Props) => {
   const { slug } = useParams<{ slug: string }>();
-  const { data: elig, isLoading } = useOrderEligibility(order.id);
+  const { data: elig, isLoading, error } = useOrderEligibility(order.id);
   const [cancelling, setCancelling] = useState(false);
+
+  // Debug: log if there's an error
+  if (error) {
+    console.error('OrderEligibility error:', error);
+  }
 
   const cancel = async () => {
     setCancelling(true);
@@ -58,7 +63,75 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
   if (isLoading) {
     return <span className="text-xs opacity-40 inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Loading actions…</span>;
   }
-  if (!elig) return null;
+
+  // If error or no data, show basic actions as fallback with client-side logic
+  if (!elig || error) {
+    console.warn('Order eligibility unavailable, using client-side fallback');
+    const wrapCls = variant === 'stacked' ? 'flex flex-col gap-2 items-stretch' : 'flex flex-wrap items-center gap-2';
+    
+    // Simple client-side eligibility
+    const canCancel = ['pending', 'new', 'confirmed', 'processing', 'packed'].includes(order.status);
+    const canTrack = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery'].includes(order.status);
+    const isDelivered = order.status === 'delivered' || order.delivered_at;
+    const canReturn = isDelivered && order.payment_status !== 'refunded';
+    const canExchange = isDelivered;
+    
+    return (
+      <div className={wrapCls}>
+        <Link to={`/store/${slug}/account/orders/${order.id}`} className={btn} style={{ borderColor: primaryColor + '40', color: primaryColor }}>
+          <Eye className="h-3.5 w-3.5" /> View Details
+        </Link>
+
+        {canTrack && (
+          <Link to={`/store/${slug}/account/orders/${order.id}`} className={btn}>
+            <Truck className="h-3.5 w-3.5" /> Track Order
+          </Link>
+        )}
+
+        {order.payment_status === 'paid' && (
+          <button onClick={downloadInvoice} className={btn}>
+            <Download className="h-3.5 w-3.5" /> Invoice
+          </button>
+        )}
+
+        {canCancel && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className={btn} style={{ borderColor: '#ef444440', color: '#ef4444' }}>
+                <XCircle className="h-3.5 w-3.5" /> Cancel
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Order {order.order_number} will be cancelled. If already paid, refund will be initiated per store policy.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep Order</AlertDialogCancel>
+                <AlertDialogAction disabled={cancelling} onClick={cancel}>
+                  {cancelling ? 'Cancelling…' : 'Yes, Cancel'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+
+        {canReturn && (
+          <RequestReturnButton order={order} primaryColor={primaryColor} mode="return" />
+        )}
+
+        {canExchange && (
+          <RequestReturnButton order={order} primaryColor={primaryColor} mode="exchange" />
+        )}
+
+        <Link to={`/store/${slug}/account/support?order=${order.id}`} className={btn}>
+          <MessageCircle className="h-3.5 w-3.5" /> Support
+        </Link>
+      </div>
+    );
+  }
 
   const wrapCls = variant === 'stacked' ? 'flex flex-col gap-2 items-stretch' : 'flex flex-wrap items-center gap-2';
 
