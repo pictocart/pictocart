@@ -741,6 +741,8 @@ const OrderDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <OrderHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} orderId={order.id} />
     </div>
   );
 };
