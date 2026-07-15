@@ -25,7 +25,7 @@ const OrderRelatedCards = ({ orderId, courier, awb, trackingNumber, deliveredAt,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('returns' as any)
-        .select('id, status, reason, refund_amount, refund_status, request_type, exchange_details, replacement_awb, replacement_courier, replacement_delivered_at, created_at')
+        .select('id, status, reason, refund_amount, refund_status, request_type, exchange_details, replacement_awb, replacement_courier, replacement_delivered_at, timeline, created_at')
         .eq('order_id', orderId)
         .order('created_at', { ascending: false });
       if (error) throw error;
