@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Loader2, Undo2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useParams } from 'react-router-dom';
+import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 
 interface Props {
   order: {
@@ -19,7 +20,8 @@ interface Props {
 }
 
 const RequestReturnButton = ({ order, primaryColor }: Props) => {
-  const { user } = useAuth();
+  const { slug } = useParams<{ slug: string }>();
+  const { user } = useCustomerAuth(slug || '');
   const create = useCreateReturn();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('Damaged');
