@@ -3147,13 +3147,17 @@ export type Database = {
           cost_price: number | null
           created_at: string
           description: string | null
+          exchange_window_days: number
           id: string
           images: string[] | null
           inventory_count: number | null
           is_active: boolean | null
+          is_exchangeable: boolean
+          is_returnable: boolean
           menu_meta: Json
           price: number
           reorder_level: number | null
+          return_window_days: number
           seo_description: string | null
           seo_title: string | null
           short_description: string | null
@@ -3172,13 +3176,17 @@ export type Database = {
           cost_price?: number | null
           created_at?: string
           description?: string | null
+          exchange_window_days?: number
           id?: string
           images?: string[] | null
           inventory_count?: number | null
           is_active?: boolean | null
+          is_exchangeable?: boolean
+          is_returnable?: boolean
           menu_meta?: Json
           price?: number
           reorder_level?: number | null
+          return_window_days?: number
           seo_description?: string | null
           seo_title?: string | null
           short_description?: string | null
@@ -3197,13 +3205,17 @@ export type Database = {
           cost_price?: number | null
           created_at?: string
           description?: string | null
+          exchange_window_days?: number
           id?: string
           images?: string[] | null
           inventory_count?: number | null
           is_active?: boolean | null
+          is_exchangeable?: boolean
+          is_returnable?: boolean
           menu_meta?: Json
           price?: number
           reorder_level?: number | null
+          return_window_days?: number
           seo_description?: string | null
           seo_title?: string | null
           short_description?: string | null
@@ -5519,6 +5531,101 @@ export type Database = {
           },
         ]
       }
+      support_ticket_messages: {
+        Row: {
+          attachments: Json
+          body: string
+          created_at: string
+          id: string
+          sender_type: string
+          sender_user_id: string | null
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json
+          body: string
+          created_at?: string
+          id?: string
+          sender_type: string
+          sender_user_id?: string | null
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json
+          body?: string
+          created_at?: string
+          id?: string
+          sender_type?: string
+          sender_user_id?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          customer_user_id: string
+          id: string
+          last_message_at: string
+          order_id: string | null
+          priority: string
+          status: string
+          store_id: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          customer_user_id: string
+          id?: string
+          last_message_at?: string
+          order_id?: string | null
+          priority?: string
+          status?: string
+          store_id: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          customer_user_id?: string
+          id?: string
+          last_message_at?: string
+          order_id?: string | null
+          priority?: string
+          status?: string
+          store_id?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -6457,6 +6564,7 @@ export type Database = {
           total: number
         }[]
       }
+      get_order_eligibility: { Args: { _order_id: string }; Returns: Json }
       get_public_credit_settings: {
         Args: never
         Returns: {
