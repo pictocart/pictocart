@@ -50,6 +50,26 @@ const OrderRelatedCards = ({ orderId, courier, awb, trackingNumber, deliveredAt,
             <Row label="Reason" value={<span className="text-right max-w-[60%]">{returnReq.reason}</span>} />
             <Row label="Refund amount" value={<span className="font-semibold">₹{Number(returnReq.refund_amount).toLocaleString('en-IN')}</span>} />
             <Row label="Requested" value={<span>{format(new Date(returnReq.created_at), 'dd MMM yyyy')}</span>} />
+
+            {/* Timeline / History */}
+            <div className="mt-3 rounded-md border p-3">
+              <p className="text-xs font-semibold mb-2 flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                <Clock className="h-3.5 w-3.5" /> Timeline / History
+              </p>
+              {Array.isArray(returnReq.timeline) && returnReq.timeline.length > 0 ? (
+                <ol className="space-y-2">
+                  {[...returnReq.timeline].reverse().map((t: any, i: number) => (
+                    <li key={i} className="text-xs border-l-2 border-primary/40 pl-3">
+                      <p className="font-medium">{t.note ?? t.status}</p>
+                      <p className="text-muted-foreground">{t.at ? format(new Date(t.at), 'dd MMM yyyy, hh:mm a') : ''}</p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-xs text-muted-foreground">No activity yet.</p>
+              )}
+            </div>
+
             <Button variant="outline" size="sm" asChild className="w-full mt-2">
               <Link to="/returns">View Return Details</Link>
             </Button>
