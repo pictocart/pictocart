@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStoreReturns, RETURN_STATUSES, type ReturnStatus, type ReturnRequest } from '@/hooks/useReturns';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
