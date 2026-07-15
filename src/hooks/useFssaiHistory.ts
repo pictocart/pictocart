@@ -106,7 +106,7 @@ export const useAdminFssaiHistory = (storeId?: string) => {
         .eq('store_id', storeId!)
         .order('added_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as FssaiEntry[];
+      return (data ?? []) as unknown as FssaiEntry[];
     },
   });
 };
