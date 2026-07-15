@@ -17,6 +17,8 @@ export interface ReturnRequest {
   seller_notes: string | null;
   customer_notes: string | null;
   refund_id: string | null;
+  request_type: 'return' | 'exchange';
+  exchange_details: Record<string, any> | null;
   created_at: string;
   updated_at: string;
 }
