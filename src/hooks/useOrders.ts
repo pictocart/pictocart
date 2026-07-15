@@ -7,19 +7,21 @@ import type { Tables, TablesUpdate } from '@/integrations/supabase/types';
 export type Order = Tables<'orders'>;
 export type OrderUpdate = TablesUpdate<'orders'>;
 
-export type OrderStatus = 'new' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned' | 'rejected';
+export type OrderStatus = 'new' | 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'returned' | 'rejected';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cod';
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
-  { value: 'new',        label: 'New',        color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  { value: 'pending',    label: 'Pending',    color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-  { value: 'confirmed',  label: 'Confirmed',  color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { value: 'processing', label: 'Processing', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  { value: 'shipped',    label: 'Shipped',    color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-  { value: 'delivered',  label: 'Delivered',  color: 'bg-green-100 text-green-800 border-green-200' },
-  { value: 'rejected',   label: 'Rejected',   color: 'bg-orange-100 text-orange-800 border-orange-200' },
-  { value: 'cancelled',  label: 'Cancelled',  color: 'bg-red-100 text-red-800 border-red-200' },
-  { value: 'returned',   label: 'Returned',   color: 'bg-gray-100 text-gray-800 border-gray-200' },
+  { value: 'new',              label: 'New',              color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  { value: 'pending',          label: 'Pending',          color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+  { value: 'confirmed',        label: 'Confirmed',        color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { value: 'processing',       label: 'Processing',       color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  { value: 'packed',           label: 'Packed',           color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+  { value: 'shipped',          label: 'Shipped',          color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+  { value: 'out_for_delivery', label: 'Out for Delivery', color: 'bg-sky-100 text-sky-800 border-sky-200' },
+  { value: 'delivered',        label: 'Delivered',        color: 'bg-green-100 text-green-800 border-green-200' },
+  { value: 'rejected',         label: 'Rejected',         color: 'bg-orange-100 text-orange-800 border-orange-200' },
+  { value: 'cancelled',        label: 'Cancelled',        color: 'bg-red-100 text-red-800 border-red-200' },
+  { value: 'returned',         label: 'Returned',         color: 'bg-gray-100 text-gray-800 border-gray-200' },
 ];
 
 export const PAYMENT_STATUSES: { value: PaymentStatus; label: string; color: string }[] = [

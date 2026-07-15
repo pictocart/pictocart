@@ -80,6 +80,9 @@ const SiteOffer = lazy(() => import("@/pages/SiteOffer"));
 const AdminPlanOffer = lazy(() => import("@/pages/admin/AdminPlanOffer"));
 const Wallet = lazy(() => import("@/pages/Wallet"));
 const Returns = lazy(() => import("@/pages/Returns"));
+const Exchanges = lazy(() => import("@/pages/Exchanges"));
+const Refunds = lazy(() => import("@/pages/Refunds"));
+const Shipments = lazy(() => import("@/pages/Shipments"));
 const Policies = lazy(() => import("@/pages/Policies"));
 const Testimonials = lazy(() => import("@/pages/Testimonials"));
 const GoogleReviewsConnect = lazy(() => import("@/pages/GoogleReviewsConnect"));
@@ -221,6 +224,9 @@ const AppRoutes = () => {
               <Route path="/accounts/reports/cashbook" element={<AccountsCashBook />} />
               <Route path="/accounts/reports/gst" element={<AccountsGst />} />
               <Route path="/returns" element={<Returns />} />
+              <Route path="/exchanges" element={<Exchanges />} />
+              <Route path="/refunds" element={<Refunds />} />
+              <Route path="/shipments" element={<Shipments />} />
               <Route path="/reviews" element={<ReviewsModeration />} />
               <Route path="/customise" element={<Customise />} />
               <Route path="/customise/legacy" element={<CustomiseLegacy />} />

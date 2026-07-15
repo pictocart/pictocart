@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ShipOrderDialog from '@/components/orders/ShipOrderDialog';
 import RefundPanel from '@/components/orders/RefundPanel';
+import OrderRelatedCards from '@/components/orders/OrderRelatedCards';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -651,6 +652,17 @@ const OrderDetail = () => {
               </CardContent>
             </Card>
           )}
+
+          <OrderRelatedCards
+            orderId={order.id}
+            courier={(order as any).courier}
+            awb={(order as any).awb}
+            trackingNumber={order.tracking_number}
+            deliveredAt={(order as any).delivered_at}
+            shippingLabelUrl={(order as any).shipping_label_url}
+            podUrl={(order as any).pod_url}
+            deliveryAttempts={(order as any).delivery_attempts}
+          />
         </div>
       </div>
 

@@ -2285,6 +2285,8 @@ export type Database = {
       orders: {
         Row: {
           amount_refunded: number
+          awb: string | null
+          courier: string | null
           courier_provider: string | null
           courier_response: Json | null
           created_at: string
@@ -2293,6 +2295,8 @@ export type Database = {
           customer_name: string | null
           customer_phone: string | null
           customer_user_id: string | null
+          delivered_at: string | null
+          delivery_attempts: number
           fulfillment_mode: Database["public"]["Enums"]["fulfillment_mode"]
           guest_tracking_code: string | null
           id: string
@@ -2302,10 +2306,12 @@ export type Database = {
           order_number: string
           payment_method: string | null
           payment_status: Database["public"]["Enums"]["payment_status"] | null
+          pod_url: string | null
           prep_status: Database["public"]["Enums"]["prep_status"] | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
           shipping: number | null
+          shipping_label_url: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           store_id: string
           subtotal: number | null
@@ -2317,6 +2323,8 @@ export type Database = {
         }
         Insert: {
           amount_refunded?: number
+          awb?: string | null
+          courier?: string | null
           courier_provider?: string | null
           courier_response?: Json | null
           created_at?: string
@@ -2325,6 +2333,8 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           customer_user_id?: string | null
+          delivered_at?: string | null
+          delivery_attempts?: number
           fulfillment_mode?: Database["public"]["Enums"]["fulfillment_mode"]
           guest_tracking_code?: string | null
           id?: string
@@ -2334,10 +2344,12 @@ export type Database = {
           order_number: string
           payment_method?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          pod_url?: string | null
           prep_status?: Database["public"]["Enums"]["prep_status"] | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
           shipping?: number | null
+          shipping_label_url?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           store_id: string
           subtotal?: number | null
@@ -2349,6 +2361,8 @@ export type Database = {
         }
         Update: {
           amount_refunded?: number
+          awb?: string | null
+          courier?: string | null
           courier_provider?: string | null
           courier_response?: Json | null
           created_at?: string
@@ -2357,6 +2371,8 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           customer_user_id?: string | null
+          delivered_at?: string | null
+          delivery_attempts?: number
           fulfillment_mode?: Database["public"]["Enums"]["fulfillment_mode"]
           guest_tracking_code?: string | null
           id?: string
@@ -2366,10 +2382,12 @@ export type Database = {
           order_number?: string
           payment_method?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          pod_url?: string | null
           prep_status?: Database["public"]["Enums"]["prep_status"] | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
           shipping?: number | null
+          shipping_label_url?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           store_id?: string
           subtotal?: number | null
@@ -3690,52 +3708,106 @@ export type Database = {
         Row: {
           created_at: string
           customer_notes: string | null
+          customer_photos: Json | null
           customer_user_id: string | null
           exchange_details: Json | null
           id: string
+          internal_notes: string | null
           items: Json
           order_id: string
+          picked_up_at: string | null
+          pickup_awb: string | null
+          pickup_courier: string | null
+          pickup_scheduled_at: string | null
+          qc_notes: string | null
+          qc_photos: Json | null
+          qc_status: string | null
           reason: string
           refund_amount: number
+          refund_completed_at: string | null
           refund_id: string | null
+          refund_initiated_at: string | null
+          refund_status: string | null
+          replacement_awb: string | null
+          replacement_courier: string | null
+          replacement_delivered_at: string | null
+          replacement_product_id: string | null
+          replacement_shipped_at: string | null
           request_type: string
           seller_notes: string | null
           status: string
           store_id: string
+          timeline: Json
           updated_at: string
         }
         Insert: {
           created_at?: string
           customer_notes?: string | null
+          customer_photos?: Json | null
           customer_user_id?: string | null
           exchange_details?: Json | null
           id?: string
+          internal_notes?: string | null
           items?: Json
           order_id: string
+          picked_up_at?: string | null
+          pickup_awb?: string | null
+          pickup_courier?: string | null
+          pickup_scheduled_at?: string | null
+          qc_notes?: string | null
+          qc_photos?: Json | null
+          qc_status?: string | null
           reason: string
           refund_amount?: number
+          refund_completed_at?: string | null
           refund_id?: string | null
+          refund_initiated_at?: string | null
+          refund_status?: string | null
+          replacement_awb?: string | null
+          replacement_courier?: string | null
+          replacement_delivered_at?: string | null
+          replacement_product_id?: string | null
+          replacement_shipped_at?: string | null
           request_type?: string
           seller_notes?: string | null
           status?: string
           store_id: string
+          timeline?: Json
           updated_at?: string
         }
         Update: {
           created_at?: string
           customer_notes?: string | null
+          customer_photos?: Json | null
           customer_user_id?: string | null
           exchange_details?: Json | null
           id?: string
+          internal_notes?: string | null
           items?: Json
           order_id?: string
+          picked_up_at?: string | null
+          pickup_awb?: string | null
+          pickup_courier?: string | null
+          pickup_scheduled_at?: string | null
+          qc_notes?: string | null
+          qc_photos?: Json | null
+          qc_status?: string | null
           reason?: string
           refund_amount?: number
+          refund_completed_at?: string | null
           refund_id?: string | null
+          refund_initiated_at?: string | null
+          refund_status?: string | null
+          replacement_awb?: string | null
+          replacement_courier?: string | null
+          replacement_delivered_at?: string | null
+          replacement_product_id?: string | null
+          replacement_shipped_at?: string | null
           request_type?: string
           seller_notes?: string | null
           status?: string
           store_id?: string
+          timeline?: Json
           updated_at?: string
         }
         Relationships: []
@@ -6600,6 +6672,8 @@ export type Database = {
         | "returned"
         | "rejected"
         | "new"
+        | "packed"
+        | "out_for_delivery"
       partner_invite_status: "pending" | "active" | "suspended"
       partner_license_status: "available" | "consumed" | "revoked"
       partner_tier: "partner" | "state_head" | "regional_head"
@@ -6806,6 +6880,8 @@ export const Constants = {
         "returned",
         "rejected",
         "new",
+        "packed",
+        "out_for_delivery",
       ],
       partner_invite_status: ["pending", "active", "suspended"],
       partner_license_status: ["available", "consumed", "revoked"],
