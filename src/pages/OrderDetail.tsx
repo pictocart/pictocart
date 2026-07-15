@@ -84,6 +84,7 @@ const OrderDetail = () => {
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   if (isLoading) {
     return (
