@@ -217,104 +217,155 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
   };
 
   return (
-    <div className="space-y-5 mt-4">
-      {/* Overview */}
-      <section>
-        <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Package className="h-4 w-4" /> Overview</h3>
-        <div className="rounded-md bg-muted p-3 text-sm space-y-1">
-          <p><strong>Order:</strong> <Link to={`/orders/${r.order_id}`} className="text-primary hover:underline">View</Link></p>
-          <p><strong>Reason:</strong> {r.reason}</p>
-          <p><strong>Refund amount:</strong> ₹{Number(r.refund_amount).toLocaleString('en-IN')}</p>
-          {r.customer_notes && <p className="text-muted-foreground italic">"{r.customer_notes}"</p>}
-        </div>
-      </section>
+    <div className="space-y-4 mt-4">
+      <Tabs defaultValue="summary" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="summary">Summary</TabsTrigger>
+          <TabsTrigger value="items">Item Details</TabsTrigger>
+          <TabsTrigger value="manage">Manage</TabsTrigger>
+        </TabsList>
 
-      {/* Status */}
-      <section>
-        <label className="text-sm font-semibold mb-1 block">Return status</label>
-        <Select value={status} onValueChange={(v) => setStatus(v as ReturnStatus)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {RETURN_STATUSES.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
-          </SelectContent>
-        </Select>
-      </section>
+        {/* ---------- Summary tab ---------- */}
+        <TabsContent value="summary" className="space-y-5 mt-4">
+          <section>
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Package className="h-4 w-4" /> Return Summary</h3>
+            <div className="rounded-md bg-muted p-3 text-sm space-y-1">
+              <p><strong>Order:</strong> <Link to={`/orders/${r.order_id}`} className="text-primary hover:underline">View</Link></p>
+              <p><strong>Reason:</strong> {r.reason}</p>
+              <p><strong>Refund amount:</strong> ₹{Number(r.refund_amount).toLocaleString('en-IN')}</p>
+              <p><strong>Status:</strong> {RETURN_STATUSES.find((s) => s.value === r.status)?.label}</p>
+              {r.customer_notes && <p className="text-muted-foreground italic">"{r.customer_notes}"</p>}
+            </div>
 
-      {/* Pickup */}
-      <section>
-        <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Truck className="h-4 w-4" /> Pickup</h3>
-        <div className="grid grid-cols-2 gap-2">
-          <Input placeholder="Courier (e.g. Shiprocket)" value={pickupCourier} onChange={(e) => setPickupCourier(e.target.value)} />
-          <Input placeholder="AWB / Waybill" value={pickupAwb} onChange={(e) => setPickupAwb(e.target.value)} />
-          <Input type="datetime-local" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="col-span-2" />
-        </div>
-      </section>
+            {/* Timeline inside summary card */}
+            <div className="mt-4 rounded-md border p-3">
+              <h4 className="text-xs font-semibold mb-2 flex items-center gap-2 text-muted-foreground uppercase tracking-wide"><Clock className="h-3.5 w-3.5" /> Timeline / History</h4>
+              {timeline.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No activity yet.</p>
+              ) : (
+                <ol className="space-y-2">
+                  {[...timeline].reverse().map((t: any, i: number) => (
+                    <li key={i} className="text-xs border-l-2 border-primary/40 pl-3">
+                      <p className="font-medium">{t.note ?? t.status}</p>
+                      <p className="text-muted-foreground">{t.at ? format(new Date(t.at), 'dd MMM yyyy, hh:mm a') : ''}</p>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          </section>
 
-      {/* Quality check */}
-      <section>
-        <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Quality Check</h3>
-        <Select value={qcStatus} onValueChange={setQcStatus}>
-          <SelectTrigger><SelectValue placeholder="QC result" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="passed">Passed</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Textarea className="mt-2" placeholder="QC notes" rows={2} value={qcNotes} onChange={(e) => setQcNotes(e.target.value)} />
-      </section>
+          {Array.isArray(r.customer_photos) && r.customer_photos.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold mb-2">Customer uploads</h3>
+              <div className="grid grid-cols-4 gap-2">
+                {r.customer_photos.map((url: string, i: number) => (
+                  <a key={i} href={url} target="_blank" rel="noreferrer" className="block aspect-square rounded overflow-hidden border">
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+        </TabsContent>
 
-      {/* Customer uploads */}
-      {Array.isArray(r.customer_photos) && r.customer_photos.length > 0 && (
-        <section>
-          <h3 className="text-sm font-semibold mb-2">Customer uploads</h3>
-          <div className="grid grid-cols-4 gap-2">
-            {r.customer_photos.map((url: string, i: number) => (
-              <a key={i} href={url} target="_blank" rel="noreferrer" className="block aspect-square rounded overflow-hidden border">
-                <img src={url} alt="" className="w-full h-full object-cover" />
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
+        {/* ---------- Item Details tab ---------- */}
+        <TabsContent value="items" className="space-y-3 mt-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2"><Package className="h-4 w-4" /> Items in this return</h3>
+          {Array.isArray(r.items) && r.items.length > 0 ? (
+            <div className="space-y-2">
+              {r.items.map((it: any, i: number) => {
+                const name = it.name || it.product_name || it.title || 'Item';
+                const qty = it.quantity ?? it.qty ?? 1;
+                const price = it.price ?? it.unit_price ?? it.amount;
+                const variant = it.variant || it.variant_label || [it.size, it.color].filter(Boolean).join(' / ');
+                const img = it.image || it.image_url || it.thumbnail;
+                return (
+                  <div key={i} className="flex gap-3 rounded-md border p-3">
+                    {img ? (
+                      <img src={img} alt={name} className="h-16 w-16 rounded object-cover border" />
+                    ) : (
+                      <div className="h-16 w-16 rounded bg-muted flex items-center justify-center">
+                        <Package className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{name}</p>
+                      {variant && <p className="text-xs text-muted-foreground">{variant}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">Qty: {qty}{price != null && <> · ₹{Number(price).toLocaleString('en-IN')}</>}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-md border-2 border-dashed p-6 text-center text-sm text-muted-foreground">
+              No item details captured for this return.
+            </div>
+          )}
 
-      {/* Refund */}
-      <section>
-        <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Banknote className="h-4 w-4" /> Refund</h3>
-        <Select value={refundStatus} onValueChange={setRefundStatus}>
-          <SelectTrigger><SelectValue placeholder="Refund state" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="processing">Processing</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
-          </SelectContent>
-        </Select>
-      </section>
+          {r.exchange_details && (
+            <div className="rounded-md bg-muted p-3 text-sm">
+              <p className="font-semibold mb-1">Exchange preferences</p>
+              <pre className="text-xs whitespace-pre-wrap break-words">{JSON.stringify(r.exchange_details, null, 2)}</pre>
+            </div>
+          )}
+        </TabsContent>
 
-      {/* Notes */}
-      <section>
-        <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Notes</h3>
-        <Textarea placeholder="Note visible in customer conversation" value={sellerNotes} onChange={(e) => setSellerNotes(e.target.value)} rows={2} />
-        <Textarea className="mt-2" placeholder="Internal note (not shared with customer)" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} />
-      </section>
+        {/* ---------- Manage tab ---------- */}
+        <TabsContent value="manage" className="space-y-5 mt-4">
+          <section>
+            <label className="text-sm font-semibold mb-1 block">Return status</label>
+            <Select value={status} onValueChange={(v) => setStatus(v as ReturnStatus)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {RETURN_STATUSES.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </section>
 
-      {/* Timeline / Audit log */}
-      <section>
-        <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Clock className="h-4 w-4" /> Timeline</h3>
-        {timeline.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No activity yet.</p>
-        ) : (
-          <ol className="space-y-2">
-            {[...timeline].reverse().map((t: any, i: number) => (
-              <li key={i} className="text-xs border-l-2 border-primary/40 pl-3">
-                <p className="font-medium">{t.note ?? t.status}</p>
-                <p className="text-muted-foreground">{t.at ? format(new Date(t.at), 'dd MMM yyyy, hh:mm a') : ''}</p>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+          <section>
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Truck className="h-4 w-4" /> Pickup</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="Courier (e.g. Shiprocket)" value={pickupCourier} onChange={(e) => setPickupCourier(e.target.value)} />
+              <Input placeholder="AWB / Waybill" value={pickupAwb} onChange={(e) => setPickupAwb(e.target.value)} />
+              <Input type="datetime-local" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="col-span-2" />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Quality Check</h3>
+            <Select value={qcStatus} onValueChange={setQcStatus}>
+              <SelectTrigger><SelectValue placeholder="QC result" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="passed">Passed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+            <Textarea className="mt-2" placeholder="QC notes" rows={2} value={qcNotes} onChange={(e) => setQcNotes(e.target.value)} />
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Banknote className="h-4 w-4" /> Refund</h3>
+            <Select value={refundStatus} onValueChange={setRefundStatus}>
+              <SelectTrigger><SelectValue placeholder="Refund state" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Notes</h3>
+            <Textarea placeholder="Note visible in customer conversation" value={sellerNotes} onChange={(e) => setSellerNotes(e.target.value)} rows={2} />
+            <Textarea className="mt-2" placeholder="Internal note (not shared with customer)" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} />
+          </section>
+        </TabsContent>
+      </Tabs>
 
       <div className="sticky bottom-0 -mx-6 px-6 py-3 bg-background border-t flex justify-end gap-2">
         <Button onClick={save} disabled={saving}>
