@@ -301,7 +301,7 @@ const StepTheme = ({ data, setData }: Props) => {
 
             {/* AI Generate CTA card — hide if already done */}
             {genState !== 'done' && (
-              <Section title="Want something unique?" icon={<Wand2 className="h-3 w-3" />}>
+              <Section title='Did not find any of the themes to your liking! Generate a theme with AI, absolutely free.' icon={<Wand2 className="h-3 w-3" />}>
                 <AIGenerateCTA
                   storeName={data.storeName}
                   category={data.category}
