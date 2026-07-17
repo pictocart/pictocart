@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -373,9 +374,12 @@ const App = () => (
             </TourProvider>
           </StoreProvider>
         </AuthProvider>
+ <Analytics />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
 
 export default App;
+
+
