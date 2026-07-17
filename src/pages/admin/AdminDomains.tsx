@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
   Globe, Loader2, CheckCircle2, XCircle, RefreshCw,
-  Search, Plus, Trash2, ExternalLink, ShieldCheck,
+  Search, Plus, Trash2, ExternalLink, ShieldCheck, Info,
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -216,21 +216,62 @@ const AdminDomains = () => {
                   {filtered.map((store) => (
                     <tr key={store.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
-                        <p className="font-medium">{store.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{store.name}</span>
+                          {store.is_published ? (
+                            <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px] py-0 px-1.5 h-4 hover:bg-green-50" variant="outline">Published</Badge>
+                          ) : (
+                            <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] py-0 px-1.5 h-4 hover:bg-yellow-50" variant="outline">Unpublished</Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground font-mono">{store.slug}</p>
                       </td>
                       <td className="px-4 py-3">
                         {store.custom_domain ? (
-                          <div className="flex items-center gap-2">
-                            <code className="text-xs bg-muted px-2 py-0.5 rounded">{store.custom_domain}</code>
-                            <a
-                              href={`https://${store.custom_domain}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono font-semibold">{store.custom_domain}</code>
+                              <a
+                                href={`https://${store.custom_domain}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </div>
+
+                            {/* DNS Instructions details */}
+                            {store.domain_status !== 'active' && (
+                              <div className="text-[10px] text-muted-foreground bg-muted/40 p-2 rounded space-y-1 max-w-xs border border-yellow-200/50">
+                                <p className="font-semibold text-foreground flex items-center gap-1">
+                                  <Info className="h-3 w-3 text-yellow-600" /> DNS Instructions:
+                                </p>
+                                {(() => {
+                                  const clean = store.custom_domain.replace(/^(https?:\/\/)?(www\.)?/i, "").replace(/\/.*$/, "").trim().toLowerCase();
+                                  const parts = clean.split(".");
+                                  const isSub = parts.length > 2 && parts[0] !== 'www';
+
+                                  if (isSub) {
+                                    return (
+                                      <div className="font-mono text-[9px] space-y-0.5">
+                                        <p><span className="font-sans text-muted-foreground">Type:</span> CNAME</p>
+                                        <p><span className="font-sans text-muted-foreground">Name:</span> {parts[0]}</p>
+                                        <p><span className="font-sans text-muted-foreground">Points to:</span> cname.vercel-dns.com</p>
+                                      </div>
+                                    );
+                                  } else {
+                                    return (
+                                      <div className="font-mono text-[9px] space-y-0.5">
+                                        <p><span className="font-sans text-muted-foreground">Type:</span> A</p>
+                                        <p><span className="font-sans text-muted-foreground">Name:</span> @</p>
+                                        <p><span className="font-sans text-muted-foreground">Points to:</span> 76.76.21.21</p>
+                                      </div>
+                                    );
+                                  }
+                                })()}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
@@ -241,6 +282,30 @@ const AdminDomains = () => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 justify-end flex-wrap">
+                          {/* Publish & Activate shortcut */}
+                          {!store.is_published && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs text-orange-700 border-orange-200 hover:bg-orange-50 font-semibold"
+                              onClick={async () => {
+                                const { error } = await supabase
+                                  .from('stores')
+                                  .update({ is_published: true, domain_status: 'active' })
+                                  .eq('id', store.id);
+                                if (error) {
+                                  toast.error(error.message);
+                                } else {
+                                  qc.invalidateQueries({ queryKey: ['admin-domains-stores'] });
+                                  toast.success('Store published & domain activated!');
+                                }
+                              }}
+                            >
+                              <Globe className="h-3 w-3 mr-1" />
+                              Publish & Activate
+                            </Button>
+                          )}
+
                           {/* Connect / Edit */}
                           <Button
                             size="sm"
