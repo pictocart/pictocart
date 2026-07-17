@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -151,7 +152,31 @@ Rules:
       aiData = await response.json();
       content = aiData.choices?.[0]?.message?.content || "";
     } else {
-      // Fallback to Groq Vision
+      // Convert image URL to base64 data URL for Groq to bypass public access restrictions
+      let base64ImageUrl = imageUrl;
+      if (imageUrl.startsWith("http")) {
+        try {
+          const imgRes = await fetch(imageUrl);
+          if (imgRes.ok) {
+            const arrayBuffer = await imgRes.arrayBuffer();
+            const uint8 = new Uint8Array(arrayBuffer);
+            let binary = "";
+            const len = uint8.byteLength;
+            for (let i = 0; i < len; i++) {
+              binary += String.fromCharCode(uint8[i]);
+            }
+            const base64 = btoa(binary);
+            const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+            base64ImageUrl = `data:${contentType};base64,${base64}`;
+          } else {
+            console.warn(`Failed to fetch image for base64 conversion: ${imgRes.status}`);
+          }
+        } catch (err) {
+          console.error("Failed to convert image to base64 for Groq:", err);
+        }
+      }
+
+      // Fallback to Groq Vision (does not support response_format: {type: "json_object"})
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
@@ -162,11 +187,10 @@ Rules:
               role: "user",
               content: [
                 { type: "text", text: prompt + "\n\nCRITICAL: Return ONLY a raw valid JSON object. Do not include markdown blocks or backticks." },
-                { type: "image_url", image_url: { url: imageUrl } }
+                { type: "image_url", image_url: { url: base64ImageUrl } }
               ]
             }
-          ],
-          response_format: { type: "json_object" }
+          ]
         }),
       });
 
