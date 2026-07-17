@@ -4,10 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Star, Check, X, Loader2, MessageSquare } from 'lucide-react';
+import { Star, Check, X, Loader2, MessageSquare, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ReviewRow {
   id: string;
@@ -43,6 +48,60 @@ const ReviewsModeration = () => {
   const [feedback, setFeedback] = useState<OrderFeedbackRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // AI Review Generator states
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [genOpen, setGenOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [reviewCount, setReviewCount] = useState('3');
+  const [sentiment, setSentiment] = useState('positive');
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    if (!store?.id) return;
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('store_id', store.id)
+        .order('name');
+      if (!error && data) {
+        setProducts(data);
+        if (data.length > 0) {
+          setSelectedProduct(data[0].id);
+        }
+      }
+    };
+    fetchProducts();
+  }, [store?.id]);
+
+  const handleGenerate = async () => {
+    if (!store?.id || !selectedProduct) {
+      toast.error('Please select a product first');
+      return;
+    }
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-reviews', {
+        body: {
+          store_id: store.id,
+          product_id: selectedProduct,
+          count: parseInt(reviewCount),
+          sentiment,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`Successfully generated ${data.count || count} reviews!`);
+      setGenOpen(false);
+      load(); // Reload reviews list
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to generate reviews');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const load = async () => {
     if (!store?.id) return;
@@ -92,9 +151,17 @@ const ReviewsModeration = () => {
 
   return (
     <div className="space-y-4 pb-20 md:pb-0">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Review Moderation</h1>
-        <p className="text-sm text-muted-foreground">Approve or reject customer reviews before they appear on your storefront.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Review Moderation</h1>
+          <p className="text-sm text-muted-foreground">Approve or reject customer reviews before they appear on your storefront.</p>
+        </div>
+        <Button
+          onClick={() => setGenOpen(true)}
+          className="w-full md:w-auto gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 font-semibold shadow-md shrink-0"
+        >
+          <Sparkles className="h-4 w-4" /> Generate AI Reviews
+        </Button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -208,6 +275,96 @@ const ReviewsModeration = () => {
           ))}
         </div>
       )}
+      {/* Generate AI Reviews Dialog */}
+      <Dialog open={genOpen} onOpenChange={setGenOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-600 animate-pulse" />
+              Generate AI Product Reviews
+            </DialogTitle>
+            <DialogDescription>
+              Create authentic, high-quality simulated customer reviews for your products to build immediate buyer trust.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            {/* Product selection */}
+            <div className="space-y-2">
+              <Label htmlFor="product-select">Product</Label>
+              {products.length === 0 ? (
+                <p className="text-xs text-destructive">No products found in your store. Add a product first.</p>
+              ) : (
+                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                  <SelectTrigger id="product-select" className="w-full">
+                    <SelectValue placeholder="Select a product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Review count */}
+            <div className="space-y-2">
+              <Label htmlFor="count-select">Number of reviews</Label>
+              <Select value={reviewCount} onValueChange={setReviewCount}>
+                <SelectTrigger id="count-select" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3 Reviews</SelectItem>
+                  <SelectItem value="5">5 Reviews</SelectItem>
+                  <SelectItem value="10">10 Reviews</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sentiment */}
+            <div className="space-y-2">
+              <Label htmlFor="sentiment-select">Review Tone & Sentiment</Label>
+              <Select value={sentiment} onValueChange={setSentiment}>
+                <SelectTrigger id="sentiment-select" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="highly_positive">Highly Positive (5 Stars only)</SelectItem>
+                  <SelectItem value="positive">Positive (4 - 5 Stars)</SelectItem>
+                  <SelectItem value="mixed">Mixed Vibe (3 - 5 Stars)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={generating || products.length === 0}
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 font-semibold"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating reviews...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Reviews
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
