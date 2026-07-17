@@ -20,6 +20,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -245,48 +246,50 @@ const AdminDomains = () => {
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </a>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground hover:bg-transparent"
-                                onClick={() => setInstructionsDomain(store.custom_domain)}
-                                title="Show DNS setup instructions"
-                              >
-                                <Info className="h-3.5 w-3.5 text-blue-600 cursor-pointer" />
-                              </Button>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    className="p-0.5 text-muted-foreground hover:text-foreground inline-flex items-center justify-center bg-transparent border-0"
+                                    onClick={() => setInstructionsDomain(store.custom_domain)}
+                                  >
+                                    <Info className="h-3.5 w-3.5 text-blue-600 cursor-pointer animate-pulse" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent className="p-3 max-w-xs bg-popover border border-border shadow-md rounded-md text-xs space-y-2">
+                                  <p className="font-semibold text-foreground flex items-center gap-1">
+                                    <Info className="h-3.5 w-3.5 text-yellow-600" /> DNS Instructions:
+                                  </p>
+                                  <p className="text-muted-foreground text-[10px]">
+                                    Configure this record at your domain provider (GoDaddy, Hostinger, etc.) to connect the domain:
+                                  </p>
+                                  {(() => {
+                                    const clean = store.custom_domain.replace(/^(https?:\/\/)?(www\.)?/i, "").replace(/\/.*$/, "").trim().toLowerCase();
+                                    const parts = clean.split(".");
+                                    const isSub = parts.length > 2 && parts[0] !== 'www';
+
+                                    if (isSub) {
+                                      return (
+                                        <div className="font-mono text-[10px] space-y-1 bg-muted/60 p-2 rounded border">
+                                          <p><span className="font-sans text-muted-foreground">Type:</span> CNAME</p>
+                                          <p><span className="font-sans text-muted-foreground">Name:</span> {parts[0]}</p>
+                                          <p><span className="font-sans text-muted-foreground">Points to:</span> cname.vercel-dns.com</p>
+                                        </div>
+                                      );
+                                    } else {
+                                      return (
+                                        <div className="font-mono text-[10px] space-y-1 bg-muted/60 p-2 rounded border">
+                                          <p><span className="font-sans text-muted-foreground">Type:</span> A</p>
+                                          <p><span className="font-sans text-muted-foreground">Name:</span> @</p>
+                                          <p><span className="font-sans text-muted-foreground">Points to:</span> 76.76.21.21</p>
+                                        </div>
+                                      );
+                                    }
+                                  })()}
+                                  <p className="text-[10px] text-muted-foreground italic">Click the icon to see full guide and copy values.</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
-
-                            {/* DNS Instructions details */}
-                            {store.domain_status !== 'active' && (
-                              <div className="text-[10px] text-muted-foreground bg-muted/40 p-2 rounded space-y-1 max-w-xs border border-yellow-200/50">
-                                <p className="font-semibold text-foreground flex items-center gap-1">
-                                  <Info className="h-3 w-3 text-yellow-600" /> DNS Instructions:
-                                </p>
-                                {(() => {
-                                  const clean = store.custom_domain.replace(/^(https?:\/\/)?(www\.)?/i, "").replace(/\/.*$/, "").trim().toLowerCase();
-                                  const parts = clean.split(".");
-                                  const isSub = parts.length > 2 && parts[0] !== 'www';
-
-                                  if (isSub) {
-                                    return (
-                                      <div className="font-mono text-[9px] space-y-0.5">
-                                        <p><span className="font-sans text-muted-foreground">Type:</span> CNAME</p>
-                                        <p><span className="font-sans text-muted-foreground">Name:</span> {parts[0]}</p>
-                                        <p><span className="font-sans text-muted-foreground">Points to:</span> cname.vercel-dns.com</p>
-                                      </div>
-                                    );
-                                  } else {
-                                    return (
-                                      <div className="font-mono text-[9px] space-y-0.5">
-                                        <p><span className="font-sans text-muted-foreground">Type:</span> A</p>
-                                        <p><span className="font-sans text-muted-foreground">Name:</span> @</p>
-                                        <p><span className="font-sans text-muted-foreground">Points to:</span> 76.76.21.21</p>
-                                      </div>
-                                    );
-                                  }
-                                })()}
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
