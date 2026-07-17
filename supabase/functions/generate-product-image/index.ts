@@ -29,10 +29,6 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const UNSPLASH_ACCESS_KEY = Deno.env.get("UNSPLASH_ACCESS_KEY");
-    if (!LOVABLE_API_KEY && !UNSPLASH_ACCESS_KEY) {
-      throw new Error("Neither LOVABLE_API_KEY nor UNSPLASH_ACCESS_KEY is configured");
-    }
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -75,14 +71,21 @@ serve(async (req) => {
       const data = await r.json();
       imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url || data.choices?.[0]?.message?.content;
     } else {
-      // Fallback to Unsplash random squarish query
-      const cleanPrompt = userPrompt.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2).slice(0, 3).join(" ");
-      const r = await fetch(`https://api.unsplash.com/photos/random?query=${encodeURIComponent(cleanPrompt || "product")}&orientation=squarish&content_filter=high&client_id=${UNSPLASH_ACCESS_KEY}`);
-      if (!r.ok) {
-        throw new Error(`Unsplash API search error: ${r.statusText}`);
+      // Fallback to Pollinations.ai (unlimited free open-source image generation)
+      const cleanPrompt = encodeURIComponent(`Professional studio photograph of ${userPrompt}. Square 1:1 aspect, soft natural lighting, shallow depth-of-field, appetizing, premium plating/styling, photorealistic, hyper-detailed, no text, no watermark, white or rustic neutral background.`);
+      const url = `https://image.pollinations.ai/p/${cleanPrompt}?width=1024&height=1024&nologo=true&private=true&model=flux`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Pollinations API error: ${response.statusText}`);
       }
-      const data = await r.json();
-      imageUrl = data?.urls?.regular || data?.urls?.small || "";
+      const buffer = await response.arrayBuffer();
+      const bin = new Uint8Array(buffer);
+      const path = `${userData.user.id}/ai-product/${crypto.randomUUID()}.png`;
+      const { error: upErr } = await admin.storage.from("product-images").upload(path, bin, { contentType: "image/png", upsert: false });
+      if (upErr) throw upErr;
+
+      imageUrl = admin.storage.from("product-images").getPublicUrl(path).data.publicUrl;
     }
 
     if (!imageUrl) {

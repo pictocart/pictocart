@@ -22,7 +22,6 @@ Deno.serve(async (req) => {
 
     const { title, body, store_name, category, kind } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('Missing API key');
 
     const isThumb = kind === 'thumbnail';
     const excerpt = (body || '').replace(/[#*_`>\-]/g, ' ').slice(0, 600);
@@ -44,27 +43,51 @@ Style: rich realistic colors, natural daylight, lifestyle composition relevant t
 
 ABSOLUTE RULES: No text, no captions, no typography, no watermark, no logos, no letters, no numbers anywhere in the image. Pure photographic imagery only.`;
 
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        // Nano Banana 2 — fast + pro-quality image generation
-        model: 'google/gemini-3.1-flash-image-preview',
-        messages: [{ role: 'user', content: visualPrompt }],
-        modalities: ['image', 'text'],
-      }),
-    });
+    let imageUrl = "";
 
-    if (!res.ok) {
-      const errText = await res.text();
-      if (res.status === 429) throw new Error('Rate limited. Please try again in a moment.');
-      if (res.status === 402) throw new Error('AI credits exhausted. Add credits in workspace settings.');
-      throw new Error(`Image API error: ${res.status} ${errText}`);
+    if (LOVABLE_API_KEY) {
+      const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-3.1-flash-image-preview',
+          messages: [{ role: 'user', content: visualPrompt }],
+          modalities: ['image', 'text'],
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        if (res.status === 429) throw new Error('Rate limited. Please try again in a moment.');
+        if (res.status === 402) throw new Error('AI credits exhausted. Add credits in workspace settings.');
+        throw new Error(`Image API error: ${res.status} ${errText}`);
+      }
+
+      const data = await res.json();
+      imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    } else {
+      // Fallback to Pollinations.ai (free, unlimited, open source)
+      const cleanPrompt = encodeURIComponent(visualPrompt);
+      const width = isThumb ? 1024 : 1280;
+      const height = isThumb ? 1024 : 720;
+      const url = `https://image.pollinations.ai/p/${cleanPrompt}?width=${width}&height=${height}&nologo=true&private=true&model=flux`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Pollinations API error: ${response.statusText}`);
+      }
+      const buffer = await response.arrayBuffer();
+      const bin = new Uint8Array(buffer);
+      
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const path = `${userData.user.id}/blog-images/${crypto.randomUUID()}.png`;
+      const { error: upErr } = await admin.storage.from("product-images").upload(path, bin, { contentType: "image/png", upsert: false });
+      if (upErr) throw upErr;
+      
+      imageUrl = admin.storage.from("product-images").getPublicUrl(path).data.publicUrl;
     }
 
-    const data = await res.json();
-    const imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!imageUrl) throw new Error('No image returned from model');
+    if (!imageUrl) throw new Error('No image generated or found');
 
     return new Response(JSON.stringify({ image: imageUrl, kind }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
