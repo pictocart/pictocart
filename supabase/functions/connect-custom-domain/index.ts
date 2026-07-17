@@ -215,7 +215,7 @@ serve(async (req) => {
     const token = crypto.randomUUID().replace(/-/g, "");
     await admin.from("stores").update({
       custom_domain: domain,
-      domain_status: "active",
+      domain_status: "pending_dns",
       domain_added_to_vercel_at: new Date().toISOString(),
       domain_verification_token: token,
     }).eq("id", store_id);
@@ -223,7 +223,7 @@ serve(async (req) => {
     return json({
       success: true,
       domain,
-      status: "active",
+      status: "pending_dns",
       dns_instructions: buildDnsInstructions(domain),
     });
   } catch (err) {

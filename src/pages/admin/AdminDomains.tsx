@@ -59,6 +59,7 @@ const AdminDomains = () => {
   const [dialogDomain, setDialogDomain] = useState('');
   const [dialogAction, setDialogAction] = useState<'connect' | 'remove'>('connect');
   const [checking, setChecking] = useState<string | null>(null); // store_id being checked
+  const [instructionsDomain, setInstructionsDomain] = useState<string | null>(null); // domain to show DNS instructions for
 
   // ── Load all stores (with domain columns) ────────────────────────────────
   const { data: stores = [], isLoading } = useQuery({
@@ -94,10 +95,15 @@ const AdminDomains = () => {
       if ((data as any)?.error) throw new Error((data as any).error);
       return data;
     },
-    onSuccess: (_data, vars) => {
+    onSuccess: (data: any, vars) => {
       qc.invalidateQueries({ queryKey: ['admin-domains-stores'] });
-      if (vars.action === 'connect') toast.success(`Domain connected for store`);
-      else toast.success('Domain removed');
+      if (vars.action === 'connect') {
+        toast.success(`Domain saved as DNS pending!`);
+        // Show copyable DNS instructions popup
+        setInstructionsDomain(vars.domain ?? null);
+      } else {
+        toast.success('Domain removed');
+      }
       setDialogStore(null);
       setDialogDomain('');
     },
@@ -239,6 +245,15 @@ const AdminDomains = () => {
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </a>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground hover:bg-transparent"
+                                onClick={() => setInstructionsDomain(store.custom_domain)}
+                                title="Show DNS setup instructions"
+                              >
+                                <Info className="h-3.5 w-3.5 text-blue-600 cursor-pointer" />
+                              </Button>
                             </div>
 
                             {/* DNS Instructions details */}
@@ -428,6 +443,133 @@ const AdminDomains = () => {
                 ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 : null}
               {dialogAction === 'connect' ? 'Connect Domain' : 'Remove Domain'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DNS Setup Instructions Dialog */}
+      <Dialog open={!!instructionsDomain} onOpenChange={(o) => { if (!o) setInstructionsDomain(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-blue-600 animate-pulse" />
+              DNS Configuration Instructions
+            </DialogTitle>
+          </DialogHeader>
+
+          {instructionsDomain && (() => {
+            const clean = instructionsDomain.replace(/^(https?:\/\/)?(www\.)?/i, "").replace(/\/.*$/, "").trim().toLowerCase();
+            const parts = clean.split(".");
+            const isSub = parts.length > 2 && parts[0] !== 'www';
+
+            return (
+              <div className="space-y-4 py-2">
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-lg text-xs space-y-1">
+                  <p className="font-semibold text-yellow-950">DNS Instructions Configuration</p>
+                  <p>You have successfully added <strong className="font-mono bg-yellow-100 px-1 rounded">{clean}</strong>. Please follow the instructions below to point your domain registrar to Pictocart.</p>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Required Record:</h3>
+                  {isSub ? (
+                    <div className="border rounded-lg p-3 bg-muted/30 space-y-2 text-xs">
+                      <div className="flex justify-between items-center border-b pb-1.5 font-semibold text-muted-foreground">
+                        <span>Record Type</span>
+                        <span className="text-foreground">CNAME</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-1.5">
+                        <span className="text-muted-foreground">Name/Host</span>
+                        <div className="flex items-center gap-1.5">
+                          <code className="font-mono bg-muted px-1.5 py-0.5 rounded font-semibold">{parts[0]}</code>
+                          <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-transparent" onClick={() => { navigator.clipboard.writeText(parts[0]); toast.success("Copied!"); }}>
+                            <span className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer">Copy</span>
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Points to/Value</span>
+                        <div className="flex items-center gap-1.5">
+                          <code className="font-mono bg-muted px-1.5 py-0.5 rounded font-semibold">cname.vercel-dns.com</code>
+                          <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-transparent" onClick={() => { navigator.clipboard.writeText("cname.vercel-dns.com"); toast.success("Copied!"); }}>
+                            <span className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer">Copy</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* A Record */}
+                      <div className="border rounded-lg p-3 bg-muted/30 space-y-2 text-xs">
+                        <div className="flex justify-between items-center border-b pb-1.5 font-semibold text-muted-foreground">
+                          <span>Record Type</span>
+                          <span className="text-foreground">A Record</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b pb-1.5">
+                          <span className="text-muted-foreground">Name/Host</span>
+                          <div className="flex items-center gap-1.5">
+                            <code className="font-mono bg-muted px-1.5 py-0.5 rounded font-semibold">@</code>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-transparent" onClick={() => { navigator.clipboard.writeText("@"); toast.success("Copied!"); }}>
+                              <span className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer">Copy</span>
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Points to/Value</span>
+                          <div className="flex items-center gap-1.5">
+                            <code className="font-mono bg-muted px-1.5 py-0.5 rounded font-semibold">76.76.21.21</code>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-transparent" onClick={() => { navigator.clipboard.writeText("76.76.21.21"); toast.success("Copied!"); }}>
+                              <span className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer">Copy</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* WWW CNAME Redirect */}
+                      <div className="border rounded-lg p-3 bg-muted/30 space-y-2 text-xs">
+                        <div className="flex justify-between items-center border-b pb-1.5 font-semibold text-muted-foreground">
+                          <span>Record Type</span>
+                          <span className="text-foreground">CNAME</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b pb-1.5">
+                          <span className="text-muted-foreground">Name/Host</span>
+                          <div className="flex items-center gap-1.5">
+                            <code className="font-mono bg-muted px-1.5 py-0.5 rounded font-semibold">www</code>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-transparent" onClick={() => { navigator.clipboard.writeText("www"); toast.success("Copied!"); }}>
+                              <span className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer">Copy</span>
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Points to/Value</span>
+                          <div className="flex items-center gap-1.5">
+                            <code className="font-mono bg-muted px-1.5 py-0.5 rounded font-semibold">cname.vercel-dns.com</code>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-transparent" onClick={() => { navigator.clipboard.writeText("cname.vercel-dns.com"); toast.success("Copied!"); }}>
+                              <span className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer">Copy</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 text-xs text-muted-foreground">
+                  <p className="font-semibold text-foreground">Steps to configure:</p>
+                  <ol className="list-decimal pl-4 space-y-1">
+                    <li>Log in to your domain provider site (e.g., GoDaddy, Namecheap, Hostinger).</li>
+                    <li>Go to the <strong>DNS Settings / DNS Zone Editor</strong> page.</li>
+                    <li>Add the record(s) shown above exactly as described.</li>
+                    <li>Wait a few minutes for propagation and click <strong>Check DNS</strong> to verify.</li>
+                  </ol>
+                </div>
+              </div>
+            );
+          })()}
+
+          <DialogFooter>
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold" onClick={() => setInstructionsDomain(null)}>
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
