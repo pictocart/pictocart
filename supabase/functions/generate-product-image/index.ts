@@ -29,7 +29,10 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const UNSPLASH_ACCESS_KEY = Deno.env.get("UNSPLASH_ACCESS_KEY");
+    if (!LOVABLE_API_KEY && !UNSPLASH_ACCESS_KEY) {
+      throw new Error("Neither LOVABLE_API_KEY nor UNSPLASH_ACCESS_KEY is configured");
+    }
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -48,28 +51,42 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "INSUFFICIENT_CREDITS", balance: 0 }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const fullPrompt = `Professional studio photograph of ${userPrompt}. ${productName ? `Product: "${productName}".` : ""} ${category ? `Category: ${category}.` : ""} Square 1:1 aspect, soft natural lighting, shallow depth-of-field, appetizing, premium plating/styling, photorealistic, hyper-detailed, no text, no watermark, white or rustic neutral background. Suitable as a hero product photo for an Indian e-commerce store${storeName ? ` "${storeName}"` : ""}.`;
+    let imageUrl = "";
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: fullPrompt }],
-        modalities: ["image", "text"],
-      }),
-    });
+    if (LOVABLE_API_KEY) {
+      const fullPrompt = `Professional studio photograph of ${userPrompt}. ${productName ? `Product: "${productName}".` : ""} ${category ? `Category: ${category}.` : ""} Square 1:1 aspect, soft natural lighting, shallow depth-of-field, appetizing, premium plating/styling, photorealistic, hyper-detailed, no text, no watermark, white or rustic neutral background. Suitable as a hero product photo for an Indian e-commerce store${storeName ? ` "${storeName}"` : ""}.`;
 
-    if (!r.ok) {
-      const t = await r.text();
-      if (r.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (r.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted on the platform side." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`AI gateway error ${r.status}: ${t}`);
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content: fullPrompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!r.ok) {
+        const t = await r.text();
+        if (r.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (r.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted on the platform side." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        throw new Error(`AI gateway error ${r.status}: ${t}`);
+      }
+      const data = await r.json();
+      imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url || data.choices?.[0]?.message?.content;
+    } else {
+      // Fallback to Unsplash random squarish query
+      const cleanPrompt = userPrompt.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2).slice(0, 3).join(" ");
+      const r = await fetch(`https://api.unsplash.com/photos/random?query=${encodeURIComponent(cleanPrompt || "product")}&orientation=squarish&content_filter=high&client_id=${UNSPLASH_ACCESS_KEY}`);
+      if (!r.ok) {
+        throw new Error(`Unsplash API search error: ${r.statusText}`);
+      }
+      const data = await r.json();
+      imageUrl = data?.urls?.regular || data?.urls?.small || "";
     }
-    const data = await r.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url || data.choices?.[0]?.message?.content;
+
     if (!imageUrl) {
-      return new Response(JSON.stringify({ error: "No image returned by model" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "No image generated or found" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Persist to product-images bucket under the user's folder (RLS-compatible).

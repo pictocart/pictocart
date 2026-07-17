@@ -90,7 +90,10 @@ serve(async (req) => {
 
     // 3. Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!LOVABLE_API_KEY && !GROQ_API_KEY) {
+      throw new Error("Neither LOVABLE_API_KEY nor GROQ_API_KEY is configured");
+    }
 
     const prompt = `You are an expert e-commerce product analyst for an Indian online store${storeName ? ` called "${storeName}"` : ""}.
 Analyze this product image and generate COMPREHENSIVE product details. Fill EVERY field — never leave one blank. Make educated, realistic guesses from the image when not certain.
@@ -124,25 +127,58 @@ Rules:
 - Never write "N/A" or empty strings for the descriptive fields above.
 - Respond ONLY with the JSON object, no markdown fences, no commentary.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: imageUrl } }] }],
-      }),
-    });
+    let content = "";
+    let aiData: any = null;
 
-    if (!response.ok) {
-      if (response.status === 429) return json({ error: "Rate limit exceeded. Please try again." }, 429);
-      if (response.status === 402) return json({ error: "Platform AI credits exhausted." }, 402);
-      const txt = await response.text();
-      console.error("AI gateway error:", response.status, txt);
-      throw new Error(`AI gateway error: ${response.status}`);
+    if (LOVABLE_API_KEY) {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: imageUrl } }] }],
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) return json({ error: "Rate limit exceeded. Please try again." }, 429);
+        if (response.status === 402) return json({ error: "Platform AI credits exhausted." }, 402);
+        const txt = await response.text();
+        console.error("AI gateway error:", response.status, txt);
+        throw new Error(`AI gateway error: ${response.status}`);
+      }
+
+      aiData = await response.json();
+      content = aiData.choices?.[0]?.message?.content || "";
+    } else {
+      // Fallback to Groq Vision
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "llama-3.2-11b-vision-preview",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt + "\n\nCRITICAL: Return ONLY a raw valid JSON object. Do not include markdown blocks or backticks." },
+                { type: "image_url", image_url: { url: imageUrl } }
+              ]
+            }
+          ],
+          response_format: { type: "json_object" }
+        }),
+      });
+
+      if (!response.ok) {
+        const txt = await response.text();
+        console.error("Groq vision error:", response.status, txt);
+        throw new Error(`Groq vision error: ${response.status}`);
+      }
+
+      aiData = await response.json();
+      content = aiData.choices?.[0]?.message?.content || "";
     }
-
-    const aiData = await response.json();
-    const content = aiData.choices?.[0]?.message?.content || "";
     let product;
     try {
       product = JSON.parse(content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
