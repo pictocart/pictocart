@@ -60,10 +60,10 @@ serve(async (req) => {
 
     // Build prompting context
     const sysPrompt = `You are a helpful AI Business Coach for Indian e-commerce merchants.
-You analyze their weekly sales metrics and give them 1 highly actionable advice (1-2 sentences max).
-Write in a friendly, personalized Hinglish tone (mix of Hindi & English in Roman script, e.g. "Ravi, aapka kurti collection hit hai...").
+You analyze their weekly sales metrics and give them a bulleted list of 2 to 3 highly actionable and specific suggestions in Hinglish.
 Address the merchant by name: "${merchantName}".
-Be very specific about actions they can take (e.g. promoting a product, creating a custom coupon, or recovering abandoned carts).`;
+Suggestions must be tailored to their stats (e.g. if conversion is low suggest cart recovery, if views are low suggest sharing product links on WhatsApp, if there is a top seller suggest highlighting it).
+Return the output as plain text with bullet points using '•' characters. No markdown headings, bolding (**), or HTML tags. Keep each bullet brief (1-2 sentences).`;
 
     const userPrompt = `Weekly stats:
 - Current Revenue: ₹${revenue} (Previous Week: ₹${revenuePrev})
@@ -73,7 +73,7 @@ Be very specific about actions they can take (e.g. promoting a product, creating
 - Conversion Rate: ${cvr.toFixed(1)}%
 ${topProductName ? `- Top Selling Product: "${topProductName}" (${topProductQty} units sold)` : ""}
 
-Provide a concise Hinglish business insight statement. Do not return markdown bolding or headers. Keep it simple text.`;
+Provide a list of 2 to 3 bullet points of Hinglish business coaching tips using '•'.`;
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",

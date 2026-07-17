@@ -30,6 +30,7 @@ import TopProducts from '@/components/dashboard/TopProducts';
 import RecentOrders from '@/components/dashboard/RecentOrders';
 import ProvisioningStatus from '@/components/dashboard/ProvisioningStatus';
 import WeeklyDigest from '@/components/dashboard/WeeklyDigest';
+import AICoachCard from '@/components/dashboard/AICoachCard';
 import AbandonedCartBanner from '@/components/dashboard/AbandonedCartBanner';
 import PremiumThemePendingCard from '@/components/dashboard/PremiumThemePendingCard';
 import { ThemeUpdateBanner } from '@/components/ThemeUpdateBanner';
@@ -285,6 +286,9 @@ const Dashboard = () => {
           isPublished={!!store?.is_published}
         />
       </div>
+
+      {/* AI Business Coach insights */}
+      {store?.id && <AICoachCard storeId={store.id} />}
 
       {/* AI Wallet */}
       <div data-tour="wallet-card"><WalletCard /></div>
