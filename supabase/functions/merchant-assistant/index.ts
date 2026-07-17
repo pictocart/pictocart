@@ -27,7 +27,10 @@ Deno.serve(async (req) => {
 
     const SARVAM_API_KEY = Deno.env.get('SARVAM_API_KEY');
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!SARVAM_API_KEY && !LOVABLE_API_KEY) throw new Error('Missing SARVAM_API_KEY / LOVABLE_API_KEY');
+    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
+    if (!SARVAM_API_KEY && !LOVABLE_API_KEY && !GROQ_API_KEY) {
+      throw new Error('Missing SARVAM_API_KEY / LOVABLE_API_KEY / GROQ_API_KEY');
+    }
 
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -92,39 +95,65 @@ Deno.serve(async (req) => {
 
     const systemPrompt = buildSystemPrompt(ctx, body.language);
 
-    // Primary: Sarvam (multilingual, India-first). Fallback: Lovable AI Gateway.
-    const useSarvam = !!SARVAM_API_KEY;
-    const endpoint = useSarvam
-      ? 'https://api.sarvam.ai/v1/chat/completions'
-      : 'https://ai.gateway.lovable.dev/v1/chat/completions';
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (useSarvam) {
-      headers['api-subscription-key'] = SARVAM_API_KEY!;
-      headers['Authorization'] = `Bearer ${SARVAM_API_KEY}`;
+    let reply = '';
+    if (SARVAM_API_KEY) {
+      const headers = {
+        'Content-Type': 'application/json',
+        'api-subscription-key': SARVAM_API_KEY,
+        'Authorization': `Bearer ${SARVAM_API_KEY}`,
+      };
+      const res = await fetch('https://api.sarvam.ai/v1/chat/completions', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'sarvam-30b',
+          temperature: 0.5,
+          messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        }),
+      });
+      if (!res.ok) throw new Error(`Sarvam AI error: ${res.status} ${await res.text()}`);
+      const data = await res.json();
+      reply = data?.choices?.[0]?.message?.content?.trim() || '(no reply)';
+    } else if (LOVABLE_API_KEY) {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      };
+      const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          temperature: 0.5,
+          messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        if (res.status === 429) return json({ error: 'Rate limited. Try again in a moment.' }, 429);
+        if (res.status === 402) return json({ error: 'AI credits exhausted. Please add credits.' }, 402);
+        throw new Error(`AI gateway error: ${res.status} ${txt}`);
+      }
+      const data = await res.json();
+      reply = data?.choices?.[0]?.message?.content?.trim() || '(no reply)';
     } else {
-      headers['Authorization'] = `Bearer ${LOVABLE_API_KEY}`;
+      // Fallback to Groq using Llama 3
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          temperature: 0.5,
+          messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        }),
+      });
+      if (!res.ok) throw new Error(`Groq API error: ${res.status} - ${await res.text()}`);
+      const data = await res.json();
+      reply = data?.choices?.[0]?.message?.content?.trim() || '(no reply)';
     }
-    const modelName = useSarvam ? 'sarvam-30b' : 'google/gemini-3-flash-preview';
-
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: modelName,
-        temperature: 0.5,
-        messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      }),
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error('[merchant-assistant] AI error', res.status, txt);
-      if (res.status === 429) return json({ error: 'Rate limited. Try again in a moment.' }, 429);
-      if (res.status === 402) return json({ error: 'AI credits exhausted. Please add credits.' }, 402);
-      throw new Error(`AI gateway: ${res.status} ${txt}`);
-    }
-    const data = await res.json();
-    const reply: string = data?.choices?.[0]?.message?.content?.trim() || '(no reply)';
 
     // Persist assistant message + bump thread
     await admin.from('merchant_chat_messages').insert({

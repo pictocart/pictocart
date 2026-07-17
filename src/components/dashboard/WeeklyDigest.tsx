@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TrendingUp, TrendingDown, Minus, Sparkles, RefreshCw, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props { storeId: string }
@@ -70,6 +72,69 @@ const WeeklyDigest = ({ storeId }: Props) => {
     enabled: !!storeId,
   });
 
+  const [insight, setInsight] = useState<string>('');
+  const [loadingInsight, setLoadingInsight] = useState(false);
+
+  const fetchInsight = async (force = false) => {
+    if (!storeId || !data) return;
+
+    const cacheKey = `insight_store_${storeId}`;
+    if (!force) {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          const age = Date.now() - parsed.timestamp;
+          if (age < 24 * 60 * 60 * 1000) { // 24 hours
+            setInsight(parsed.insight);
+            return;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    setLoadingInsight(true);
+    try {
+      const { data: res, error } = await supabase.functions.invoke('generate-dashboard-insights', {
+        body: {
+          store_id: storeId,
+          revenue: data.revenue,
+          revenuePrev: data.revenuePrev,
+          orders: data.orders,
+          ordersPrev: data.ordersPrev,
+          views: data.views,
+          carts: data.carts,
+          cvr: data.cvr,
+          topProductName: data.topProductName,
+          topProductQty: data.topProductQty,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (res?.insight) {
+        setInsight(res.insight);
+        localStorage.setItem(cacheKey, JSON.stringify({
+          insight: res.insight,
+          timestamp: Date.now()
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to load AI insight', e);
+      if (!insight) {
+        setInsight('Great job managing the store this week! Keep promoting your custom domain on social media.');
+      }
+    } finally {
+      setLoadingInsight(false);
+    }
+  };
+
+  useEffect(() => {
+    if (data) {
+      fetchInsight();
+    }
+  }, [storeId, !!data]);
+
   if (isLoading || !data) return null;
 
   return (
@@ -114,6 +179,38 @@ const WeeklyDigest = ({ storeId }: Props) => {
             <span className="text-muted-foreground"> — top seller ({data.topProductQty} sold)</span>
           </div>
         )}
+
+        {/* AI Business Coach card */}
+        <div className="mt-4 pt-4 border-t border-border space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-violet-600 animate-pulse" />
+              AI Business Coach
+            </h4>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-primary"
+              onClick={() => fetchInsight(true)}
+              disabled={loadingInsight}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", loadingInsight && "animate-spin")} />
+            </Button>
+          </div>
+
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100 p-3.5">
+            {loadingInsight ? (
+              <div className="flex items-center gap-2 text-xs text-slate-500 py-1">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-600" />
+                <span>Coach is analyzing weekly sales performance...</span>
+              </div>
+            ) : (
+              <p className="text-xs leading-relaxed text-slate-800 font-medium">
+                {insight || "Aapke business performance ko simplify karne ke liye Coach metrics check kar rha hai..."}
+              </p>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

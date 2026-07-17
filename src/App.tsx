@@ -96,6 +96,7 @@ const Policies = lazy(() => import("@/pages/Policies"));
 const Testimonials = lazy(() => import("@/pages/Testimonials"));
 const GoogleReviewsConnect = lazy(() => import("@/pages/GoogleReviewsConnect"));
 const ReviewsModeration = lazy(() => import("@/pages/ReviewsModeration"));
+const MarketingCopywriter = lazy(() => import("@/pages/MarketingCopywriter"));
 const CustomerAuth = lazy(() => import("@/pages/storefront/CustomerAuth"));
 const CustomerResetPassword = lazy(() => import("@/pages/storefront/CustomerResetPassword"));
 const CustomerAccount = lazy(() => import("@/pages/storefront/CustomerAccount"));
@@ -313,6 +314,7 @@ const AppRoutes = () => {
             <Route path="/themes" element={<Themes />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/site-offer" element={<SiteOffer />} />
+            <Route path="/marketing/copywriter" element={<MarketingCopywriter />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/profile" element={<SellerProfile />} />
             <Route path="/policies" element={<Policies />} />
