@@ -1,0 +1,118 @@
+action_key;cache_hit;created_at;credits;granted_by_admin;id;inr_value;manual_cost_inr;manual_minutes;metadata;promo_code;razorpay_order_id;razorpay_payment_id;reason;store_id;type
+;false;2026-05-05 19:22:45.749438+00;1000;;b0325bd8-9a3c-4553-a0b9-e3a1acf6a502;99;0;0;"{""pack_id"":""dccef197-97fd-4ed1-93d8-1a982c9fb3b0""}";;order_SlnR9LzuXw5J6H;pay_SlnRjscLB5tfrF;Recharge — pack;247470d1-b5e6-4e13-b631-e701e2b03d8e;credit
+;false;2026-05-07 11:37:19.087429+00;5000;;4a43cefc-0ac7-48de-931d-df17f1c3a972;0;0;0;{};;;;Testing credits granted to antarikshautomations@gmail.com (AI Cafe);fe5f46de-42e3-44c5-8538-3337ed057f4a;grant
+generate-product;false;2026-05-07 11:39:14.435354+00;8;;51629374-07e3-43af-a6bb-9365c856a4ad;0.720;150;15;{};;;;;fe5f46de-42e3-44c5-8538-3337ed057f4a;debit
+generate-product;false;2026-05-08 10:28:10.31141+00;8;;ec457206-7e16-4894-9a6c-3a1b4087b129;0.720;150;15;{};;;;;247470d1-b5e6-4e13-b631-e701e2b03d8e;debit
+generate-product;false;2026-05-08 10:29:12.276148+00;8;;30dc1c6c-b1ed-4312-b5f6-152ff1c67c4d;0.720;150;15;{};;;;;247470d1-b5e6-4e13-b631-e701e2b03d8e;debit
+generate-product;true;2026-05-08 10:51:59.728045+00;1;;eaa9f948-f6d5-4bce-9cec-b5fe78373208;0.090;150;15;{};;;;;247470d1-b5e6-4e13-b631-e701e2b03d8e;debit
+;false;2026-05-19 17:45:42.783894+00;200;;0201d199-0a74-4dd5-a388-289ee3c57b6c;0;0;0;"{""note"":""testing"",""source"":""admin_grant""}";;;;Manual test grant — shivani.voices@gmail.com;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;grant
+generate-product;false;2026-05-19 17:47:50.214226+00;8;;4b9ed749-8ac4-48e8-afa5-0e84e751830b;0.720;150;15;{};;;;;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;debit
+generate-product;false;2026-05-19 17:49:38.276574+00;8;;09fc8929-e704-407f-8c6d-8382887a151a;0.720;150;15;{};;;;;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;debit
+generate-product;false;2026-05-19 17:50:30.416897+00;8;;46d193e1-739b-46c4-89fb-06ce445106f2;0.720;150;15;{};;;;;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;debit
+generate-product;false;2026-05-19 17:51:10.323326+00;8;;b0e04c3c-25fc-4f2e-a471-da3387324b95;0.720;150;15;{};;;;;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;debit
+;false;2026-05-20 18:00:23.106718+00;100;;e2429455-3760-46e3-b98b-5d0dc26a7968;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;c6682c1f-f366-4196-9f96-8a394b3a5632;bonus
+;false;2026-05-20 18:45:01.027539+00;100;;c1156429-64c2-49a7-b070-09458796ab49;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;d2b27614-f24d-42d6-9f49-a87df7443e0e;bonus
+;false;2026-05-20 19:01:13.104663+00;100;;17f305ed-581f-40f1-b5b1-4566c2cd2479;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;b3b3c0e9-403c-4355-aa76-f7b9c35a0bdc;bonus
+;false;2026-05-21 07:14:22.377998+00;100;;98218923-eee4-4fd7-bf96-48302928d521;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;25f81744-8f50-4795-a675-0df8386e07b4;bonus
+generate-product;false;2026-05-21 07:16:18.623739+00;8;;642de49e-2a6b-4ee7-b3f2-5b859bfc54ec;0.720;150;15;{};;;;;25f81744-8f50-4795-a675-0df8386e07b4;debit
+;false;2026-05-24 07:57:49.282233+00;100;;969d0214-ba48-48c9-aa89-7b845b904d99;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;bonus
+generate-product;false;2026-05-24 08:03:07.899341+00;8;;9742e3aa-f3cb-42e0-b05a-c2867c3d6117;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+generate-product;false;2026-05-24 08:07:05.948314+00;8;;a327027e-b387-4219-86d9-7b77b8325d43;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+generate-product;false;2026-05-24 08:10:21.32134+00;8;;113c26bf-7e2f-4da3-82c1-4bb2f6e43971;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+generate-product;false;2026-05-24 08:16:37.63311+00;8;;72fbce4d-05f5-4de2-8527-c4dc505e0005;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+generate-product;false;2026-05-24 08:20:19.157419+00;8;;d2223397-8649-4c93-8175-ce5d940dc2a0;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+generate-product;false;2026-05-24 08:29:27.7152+00;8;;64aa98ce-5a0c-482d-8f3f-5fefce861596;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+;false;2026-05-24 08:29:53.235215+00;100;;aaaff820-d8c8-4766-b283-655b4cfa12be;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;a4c8b82c-24e1-4555-9855-c9ce4bc5965d;bonus
+generate-product;false;2026-05-24 08:36:41.67518+00;8;;b79a5311-c7db-413f-8004-1d7ba0eb46e1;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+generate-product;false;2026-05-24 08:43:32.117144+00;8;;dee16ac5-76c5-4743-84cd-5b3b57589b06;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+generate-product;false;2026-05-24 08:47:26.10511+00;8;;35633375-9dde-4e35-8ae6-2ebdcc9a3c9c;0.720;150;15;{};;;;;3abc0b86-1a7f-4ceb-b52b-2164f84124ee;debit
+;false;2026-05-24 11:23:33.186162+00;100;;0ae9b620-9590-4849-bc3b-256e19666083;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;e0f3528b-4174-474c-b6b2-f915bd7effd4;bonus
+;false;2026-05-24 17:49:42.87264+00;100;;c13b6c80-fb69-41e3-8e5e-2a77d4d03588;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;400b4b21-1e5f-40e0-bbe4-1366763b110e;bonus
+;false;2026-05-25 07:10:25.490778+00;100;;44e76edb-8073-454e-acb1-0e2c1969367e;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;5d0e9d32-975d-4b39-a347-0fd2dea3ceda;bonus
+generate-product;false;2026-05-25 08:34:46.629574+00;8;;ce27e188-53fc-421b-82d1-86a388ed8615;0.720;150;15;{};;;;;5d0e9d32-975d-4b39-a347-0fd2dea3ceda;debit
+;false;2026-05-25 16:05:11.27941+00;100;;3346c370-cbcc-43a7-9831-3d3e1a8bdf5e;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;78f7af87-dee0-42dd-9554-08639d80353f;bonus
+sourcing_search;false;2026-05-26 08:58:02.968803+00;2;;d5ce440e-3f25-44d9-8b84-a28fd9074a7d;0.180;50;30;{};;;;;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;debit
+;false;2026-05-26 08:58:47.729372+00;500;;a9b27904-7069-4b01-9b07-8169193036dd;0;0;0;"{""source"":""sourcing_trial""}";;;;Sourcing trial top-up;309b2d56-2ed2-4705-b762-b80c8774bda6;bonus
+;false;2026-05-26 08:58:47.729372+00;500;;408401b1-8b73-455f-a70a-207d21a6945a;0;0;0;"{""source"":""sourcing_trial""}";;;;Sourcing trial top-up;6cdeb4fd-d936-4241-bf7d-f3843048a703;bonus
+;false;2026-05-26 08:58:47.729372+00;500;;bfac581c-eab7-4457-b904-761a61bb0ab3;0;0;0;"{""source"":""sourcing_trial""}";;;;Sourcing trial top-up;7caed475-7d73-45bd-bb72-8bafaeadf34b;bonus
+sourcing_search;false;2026-05-26 09:00:54.862025+00;2;;da98a777-e20e-42e9-a667-87d49c4bac9c;0.180;50;30;{};;;;;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;debit
+sourcing_search;false;2026-05-26 09:01:01.524171+00;2;;bfa270dc-7be7-48c7-b5e5-32cba65dee64;0.180;50;30;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+;false;2026-05-26 09:03:27.973503+00;100;;100a45cc-9e0e-47b6-bbf0-a88452356436;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;9d6f2384-af2c-45f1-96ed-8e597aca2f4c;bonus
+sourcing_search;false;2026-05-26 09:32:04.16748+00;2;;ab685f0a-4946-4c17-9bb8-8adb2adc8d71;0.180;50;30;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+sourcing_reveal_contact;false;2026-05-26 09:33:43.234824+00;5;;3b4faada-3bb9-416c-917d-7b42be81e2a6;0.450;100;15;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+generate-product;false;2026-05-26 09:35:21.660377+00;8;;5866d9ae-09c4-4558-adde-04729cb9b805;0.720;150;15;{};;;;;9d6f2384-af2c-45f1-96ed-8e597aca2f4c;debit
+generate-product;true;2026-05-26 09:35:40.831313+00;1;;5f712fbb-4b87-4f6a-bdb2-11ffc1db7f29;0.090;150;15;{};;;;;9d6f2384-af2c-45f1-96ed-8e597aca2f4c;debit
+generate-product;true;2026-05-26 09:36:34.623258+00;1;;9cc0dd6d-56ba-476e-bff5-737c913275a5;0.090;150;15;{};;;;;9d6f2384-af2c-45f1-96ed-8e597aca2f4c;debit
+sourcing_search;false;2026-05-26 10:13:02.462535+00;2;;be91d8e3-b970-428b-980a-a98fdaafe269;0.180;50;30;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+sourcing_search;false;2026-05-26 10:14:02.191029+00;2;;262c4c8c-1c7c-457a-ab7a-f9254e47072f;0.180;50;30;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+;false;2026-05-26 15:07:55.878587+00;100;;14ec3531-5f8a-48f8-af96-2c1e082313a4;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;8f17db86-5359-4f34-aa42-b24d6204fcf2;bonus
+;false;2026-05-26 16:45:47.149375+00;100;;73944dc2-28bc-469e-8de9-99ddb063517a;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;b839485d-2c77-4d9d-8a32-631bbcdf10cd;bonus
+generate-product;false;2026-05-27 09:26:24.111285+00;8;;0c37da6a-06a9-46d4-b35c-03615a52ff27;0.720;150;15;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+generate-product;false;2026-05-28 11:15:43.259336+00;8;;d2e2b960-da3b-4564-8dfd-96ad59663230;0.720;150;15;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+;false;2026-05-29 09:54:19.944942+00;100;;1fc6cd21-3b63-49bf-9274-4d909f27f0e1;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;b4da479a-225a-4b48-8fda-b131183d9dc4;bonus
+generate-product;false;2026-05-31 12:29:46.512107+00;8;;8f9ac225-3a10-4e09-9fdd-47ef01fe0258;0.720;150;15;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+generate-product;false;2026-05-31 12:34:44.189279+00;8;;9a2e1089-eaf6-43a4-8bd8-aa366bc7b294;0.720;150;15;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+generate-product;false;2026-06-01 11:54:20.644312+00;8;;fccf4573-3c76-4507-af95-9e16b7159183;0.720;150;15;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+generate-product;false;2026-06-02 00:25:55.845598+00;8;;7eae2da9-b402-4945-b229-978bdf55c9fb;0.720;150;15;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+;false;2026-06-02 03:38:52.615116+00;100;;f029a3ce-f380-4561-a016-ca4bc8b3c46a;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;27ad5816-5195-4d61-8438-e0190addc761;bonus
+;false;2026-06-02 09:53:17.691292+00;100;;9f3c19bb-2ab2-4900-861c-8ccf07545df8;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;17fc6fa6-1d54-4bd9-9795-39ff472f151c;bonus
+generate-product;false;2026-06-02 09:58:03.104727+00;8;;d19cb488-db6e-4f8b-ae39-eaf087f1d23f;0.720;150;15;{};;;;;17fc6fa6-1d54-4bd9-9795-39ff472f151c;debit
+sourcing_import;false;2026-06-02 10:18:46.999975+00;1;;9621090e-1bef-4937-b57e-a04287648546;0.090;20;10;{};;;;;17fc6fa6-1d54-4bd9-9795-39ff472f151c;debit
+;false;2026-06-08 09:21:17.596527+00;100;;b2e097c1-7af8-40e9-b462-1470ca7657c7;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;b19973d6-bdfc-45c7-8e7e-a64ffe5ae6c1;bonus
+generate-product;false;2026-06-09 10:23:35.952389+00;8;;d21cf9be-e78c-4d45-9fba-f4f6ce10711d;0.720;150;15;{};;;;;6cdeb4fd-d936-4241-bf7d-f3843048a703;debit
+;false;2026-06-12 08:22:30.567184+00;100;;f7d572c1-5cf0-43dc-a2e6-8dc138304d4c;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;a72ad055-45ae-4a0a-9f90-b268ef6da982;bonus
+generate-product;false;2026-06-12 08:25:59.12756+00;8;;9225b9ed-a736-4ede-9255-727d65ce08a2;0.720;150;15;{};;;;;a72ad055-45ae-4a0a-9f90-b268ef6da982;debit
+;false;2026-06-13 13:17:16.410076+00;100;;87bcf87c-2e1a-40af-8817-8cc5036101de;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;d9af8911-7c81-4008-99c7-97c6a57a9261;bonus
+generate-product;false;2026-06-13 13:23:34.546811+00;8;;e264cec7-e872-477e-9140-1f81b94f242b;0.720;150;15;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+sourcing_search;false;2026-06-13 13:34:22.453945+00;2;;f7c8a961-7ebe-4bbc-96b2-997856b406b4;0.180;50;30;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+;false;2026-06-16 12:30:03.79428+00;100;;d96bba94-fe71-40f6-a6e0-8ce654f5ed55;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;cb7f6293-1aa4-4584-908f-b7316a09114d;bonus
+generate-product;false;2026-06-16 12:33:31.530637+00;8;;f9ad1ff9-c949-45fe-87be-3cebd1868d44;0.720;150;15;{};;;;;cb7f6293-1aa4-4584-908f-b7316a09114d;debit
+generate-product;false;2026-06-18 09:30:30.184336+00;8;;7075ada3-1389-401d-bf7e-3c719a8dc4e1;0.720;150;15;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+sourcing_search;false;2026-06-18 09:36:55.157913+00;2;;26a256bb-69bf-4452-8d93-a480a91fb58d;0.180;50;30;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+sourcing_search;false;2026-06-18 09:37:44.68736+00;2;;11561e1c-46ab-4521-8c7a-2a7c318b66d1;0.180;50;30;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+;false;2026-06-18 16:32:57.694798+00;100;;ea823eba-f9dd-41ba-a1cb-d5e305293800;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;9a89bacb-121b-4515-9956-201377e9c8eb;bonus
+;false;2026-06-19 02:03:20.632175+00;100;;6df55322-3028-41f9-aae5-e058ff7d0c93;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;87bf2cf0-c4d7-458f-9c61-ff126a8d7e2c;bonus
+generate_custom_page;false;2026-06-19 05:43:10.934728+00;25;;d3720102-2e59-4fa7-b856-56f01fe64903;2.250;1500;120;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+generate-product-image;false;2026-06-19 06:50:38.755865+00;10;;29b70149-0fdb-49da-b1c8-a53fd4c18741;0.900;200;8;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+generate-product-image;false;2026-06-19 06:50:58.365842+00;10;;9868a7de-0f4a-4df1-a05e-ae872d1fc17e;0.900;200;8;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+generate_custom_page;false;2026-06-19 07:55:36.57407+00;25;;9b5a1198-c47c-4fe5-ab09-6b0575d41e75;2.250;1500;120;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+regenerate_custom_page_section;false;2026-06-19 07:57:25.039559+00;8;;59c8f12c-b97d-4261-87ca-200aa601f4a0;0.720;300;20;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+generate-product;false;2026-06-19 08:28:08.136177+00;8;;6548c09e-8790-4199-802b-055968b92628;0.720;150;15;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+generate-product;false;2026-06-19 08:35:35.91991+00;8;;5c82dbb8-3a0d-4f7d-b550-57ca496bbff5;0.720;150;15;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+generate-product;false;2026-06-19 08:42:58.499027+00;8;;b0464b09-ed99-4487-b19a-39dc9047109a;0.720;150;15;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+generate-product;false;2026-06-19 08:54:30.429533+00;8;;99472ee8-185e-46ef-9837-9087ce5ff9a7;0.720;150;15;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+generate-product;false;2026-06-19 09:03:06.059639+00;8;;11b4b707-34a5-4050-a396-7e4471b1db60;0.720;150;15;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+;false;2026-06-19 09:10:37.794679+00;1000;;1511649b-81f2-4bc9-9401-dca7e94b97f8;99;0;0;"{""pack_id"":""dccef197-97fd-4ed1-93d8-1a982c9fb3b0""}";;order_T3R2hVtdLk6zLG;pay_T3R3Wp6UouiDtg;Recharge — pack;d9af8911-7c81-4008-99c7-97c6a57a9261;credit
+generate-product;false;2026-06-19 09:10:52.135175+00;8;;7e976da7-ed1b-4181-a01d-0d4fc4ec1e5e;0.720;150;15;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+;false;2026-06-21 07:05:42.729174+00;100;;2d7e15b3-b3f5-48d9-9a87-8341e7141962;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;ea77b9a3-e14d-4418-8a44-bc5e0f25b9b3;bonus
+;false;2026-06-27 14:00:38.475258+00;100;;d9dbb21e-e2c7-48e3-b211-19923870dd50;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;1929a8ef-880e-472e-adbb-743c78218084;bonus
+;false;2026-06-29 08:13:27.696114+00;5000;;d4723f47-fe1d-4307-ab8c-65783b449dd9;0;0;0;"{""reason"":""testing"",""source"":""admin_grant""}";;;;Admin grant — testing (Scale plan upgrade);d9af8911-7c81-4008-99c7-97c6a57a9261;grant
+generate-product-image;false;2026-06-29 08:38:18.43338+00;10;;6ed2be22-386c-4aaf-8cdf-e7a861e16bab;0.900;200;8;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+generate-product-image;false;2026-06-29 08:38:31.774249+00;10;;aa3b5cfa-4c89-467f-84a8-4ff20fea0dd4;0.900;200;8;{};;;;;d9af8911-7c81-4008-99c7-97c6a57a9261;debit
+;false;2026-07-03 09:19:23.050073+00;100;;1a6fbc8d-4d65-4b29-8217-cf0852c8d65e;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;bfd4c23b-2e0f-43f0-a5ae-702fc13170f8;bonus
+;false;2026-07-03 09:19:49.737067+00;100;;a6bc877d-6c5a-482f-955b-b201cd32a468;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;c072c795-15a2-4ba8-972b-7654728939c7;bonus
+generate-product;false;2026-07-03 09:25:03.757582+00;8;;08386ec2-5dbf-4b31-ab06-6405bd2dec17;0.720;150;15;{};;;;;bfd4c23b-2e0f-43f0-a5ae-702fc13170f8;debit
+generate-product;false;2026-07-07 06:57:14.246265+00;8;;5906a6cf-613d-4ffe-b5cc-eeaa0a844475;0.720;150;15;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+;false;2026-07-07 07:11:14.841142+00;100;;c98a3312-c327-4499-9465-de733c281018;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;a1766301-4cb4-4d3c-8f7f-ebdb87b3668b;bonus
+sourcing_search;false;2026-07-07 07:23:10.612034+00;2;;ae3c23b3-4fdc-4dc5-b1b9-a8ee8c64822d;0.180;50;30;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+sourcing_import;false;2026-07-07 07:24:49.39674+00;1;;5c60ec93-cbe8-42f1-bd8d-b8c38f1bfe20;0.090;20;10;{};;;;;309b2d56-2ed2-4705-b762-b80c8774bda6;debit
+;false;2026-07-07 11:36:12.854357+00;100;;f17ad08d-842d-4c05-a116-7dd8a851674b;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;641a27a9-a9f9-43be-a5b7-237f28ddda56;bonus
+;false;2026-07-07 12:51:38.019263+00;100;;842c5869-d54f-447c-bad0-ed005ff3babc;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;68fdebfc-c85c-4b39-903b-263e00877ac5;bonus
+;false;2026-07-07 14:33:24.55643+00;100;;bf0e1819-3914-4778-b8bb-49ad789ab956;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;cf162297-7491-44b6-a565-1527e5b052f3;bonus
+generate-product-image;false;2026-07-07 14:41:15.046853+00;10;;7d814d31-2e5b-4395-90cc-554936d88adf;0.900;200;8;{};;;;;cf162297-7491-44b6-a565-1527e5b052f3;debit
+;false;2026-07-09 05:33:10.890873+00;100;;f21c3db8-1f47-4be4-ae06-ab28d38e53f0;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;32c7944f-7eb4-41ae-8f28-20450f1601d3;bonus
+;false;2026-07-10 17:59:01.53791+00;100;;efd6cc11-e1bd-4a7b-919c-76bb1c0429e9;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;1225855b-35c5-4b78-bd1a-d55db3003f0f;bonus
+sourcing_search;false;2026-07-14 06:20:28.664646+00;2;;20fdd429-8138-47d6-8ca8-fd6bce7db98b;0.180;50;30;{};;;;;ea77b9a3-e14d-4418-8a44-bc5e0f25b9b3;debit
+;false;2026-07-15 08:57:38.419469+00;100;;f23da2e8-046e-4f66-9bef-afb414495735;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;6a6d7f3a-5c51-47f2-84f4-6cdda23cec46;bonus
+;false;2026-07-15 09:51:03.407859+00;100;;d826325d-5f4d-429c-897b-2653e34d7cc8;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;abed0fec-3e57-47eb-8781-e7beac7ceb0e;bonus
+generate-product;false;2026-07-15 10:27:33.603266+00;8;;f27dcc00-7054-44e0-a726-cd505c3afe52;0.720;150;15;{};;;;;abed0fec-3e57-47eb-8781-e7beac7ceb0e;debit
+generate-product;false;2026-07-15 10:31:22.206404+00;8;;766adad3-4213-418a-a47c-e95f80abd9d2;0.720;150;15;{};;;;;abed0fec-3e57-47eb-8781-e7beac7ceb0e;debit
+;false;2026-07-15 10:43:35.660087+00;100;;14187dd7-ccfa-4997-8745-d0661885d900;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;12195d43-1057-413c-aebb-f977210b36a2;bonus
+;false;2026-07-15 14:00:17.819319+00;100;;11c943b0-5c39-4312-b8d7-8f4030ac36f5;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;c23ccdea-b646-4786-8453-1ce50d20af0e;bonus
+;false;2026-07-15 21:30:48.299173+00;100;;00090c22-7723-471d-b8a8-bd7e658756a6;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;903c083f-c67b-4dd2-8112-1c9a3571b446;bonus
+;false;2026-07-15 22:45:30.877746+00;100;;e1876c03-1689-4d91-9345-d6265e92b8d5;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;26911643-9d1e-4382-839f-ad5a7b2f3a43;bonus
+;false;2026-07-16 07:53:39.451638+00;100;;07df3253-1d41-46e4-9423-02924a546222;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;3079ef7e-9482-41c5-96b1-b06eba72b4d6;bonus
+;false;2026-07-16 08:11:15.009495+00;100;;4f5a16d0-248c-49e3-bba6-708009102e1c;0;0;0;"{""plan"":""free"",""source"":""signup_bonus""}";;;;Welcome bonus — Free plan;a6f7d2eb-1cbe-42f5-916b-79d33cc54bb3;bonus
+generate-product-image;false;2026-07-16 08:18:28.896214+00;10;;2695a040-abd4-4a08-9aa7-100c5e997589;0.900;200;8;{};;;;;a6f7d2eb-1cbe-42f5-916b-79d33cc54bb3;debit
+generate-product-image;false;2026-07-16 08:18:49.603374+00;10;;027d6546-6a8f-4b83-8356-dd6e48f0b6dc;0.900;200;8;{};;;;;a6f7d2eb-1cbe-42f5-916b-79d33cc54bb3;debit
+generate-product-image;false;2026-07-16 08:19:15.30533+00;10;;6337f5af-add6-4006-accd-c0650bf7d81f;0.900;200;8;{};;;;;a6f7d2eb-1cbe-42f5-916b-79d33cc54bb3;debit

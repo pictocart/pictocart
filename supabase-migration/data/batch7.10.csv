@@ -1,0 +1,2 @@
+created_at;due_date;id;invoice_number;paid_at;paid_via;pdf_url;period_end;period_start;razorpay_order_id;razorpay_payment_id;status;store_id;total_commission;total_gmv;updated_at;waive_reason
+2026-07-01 02:00:01.998604+00;2026-07-07;3d495511-df80-4890-8c46-3c4a9a6da7ee;COM/2026-27/0003;;;;2026-06-30;2026-06-01;;;pending;6cdeb4fd-d936-4241-bf7d-f3843048a703;197.96;19796.00;2026-07-01 02:00:01.998604+00;

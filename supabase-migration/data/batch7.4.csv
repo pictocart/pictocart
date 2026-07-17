@@ -1,0 +1,4 @@
+created_at;id;is_active;kind;last_scanned_at;scans_count;slug;store_id;table_label;target_path
+2026-05-19 17:55:07.522858+00;d8e82ea2-7e8f-40e9-8151-c56904e28798;true;menu;;0;pq85nejycj;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;;/store/aggu-s-cafe/menu
+2026-05-19 17:57:04.417748+00;709a633c-1298-402b-8808-b5dd272db36c;true;table;;0;wsdjjmx8b8;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;T-1;/store/aggu-s-cafe/menu/t/T-1
+2026-06-22 08:59:14.067253+00;3f53b22c-0f23-4524-8c78-45808dc92d1f;true;menu;;0;23sfe79u2d;ea77b9a3-e14d-4418-8a44-bc5e0f25b9b3;;/store/fru10wholesale/menu

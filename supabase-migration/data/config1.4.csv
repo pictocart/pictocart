@@ -1,0 +1,2 @@
+alert_email;auto_heal_enabled;downtime_threshold_minutes;id;notify_customers;notify_merchants;session_timeout_minutes;updated_at
+;true;10;1;false;true;480;2026-04-20 19:08:51.893828+00

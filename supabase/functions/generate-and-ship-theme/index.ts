@@ -1,5 +1,5 @@
+// @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { costInr, IMAGE_COST_INR } from "../_shared/theme-pricing.ts";
 import { validateManifest } from "../_shared/manifestSchema.ts";
 
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
@@ -7,37 +7,47 @@ const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 async function callAI(model: string, body: any, fnName: string) {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, ...body }),
-  });
-  if (!r.ok) throw new Error(`AI ${r.status}: ${await r.text()}`);
-  const data = await r.json();
-  const cost = costInr(model, data.usage?.prompt_tokens ?? 0, data.usage?.completion_tokens ?? 0);
-  await supabase.from("ai_call_log").insert({ function_name: fnName, model, prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: cost });
-  return { data, cost };
+  const key = Deno.env.get("GROQ_API_KEY");
+  if (!key) throw new Error("GROQ_API_KEY missing");
+
+  const MAX_RETRIES = 4;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 2000));
+    }
+    const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model, ...body }),
+    });
+    if (r.status === 429) {
+      const errText = await r.text();
+      const retryMatch = errText.match(/try again in (\d+\.?\d*)s/i);
+      if (retryMatch && attempt < MAX_RETRIES - 1) {
+        await new Promise((r) => setTimeout(r, Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500));
+      }
+      if (attempt === MAX_RETRIES - 1) throw new Error(`Groq 429: ${errText}`);
+      continue;
+    }
+    if (!r.ok) throw new Error(`AI ${r.status}: ${await r.text()}`);
+    const data = await r.json();
+    const cost = 0; // Groq is free
+    await supabase.from("ai_call_log").insert({ function_name: fnName, model, prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: cost });
+    return { data, cost };
+  }
+  throw new Error("callAI: all retries exhausted");
 }
 
-async function genImage(prompt: string, fnName: string): Promise<{ url: string | null; cost: number }> {
+async function genImage(prompt: string, _fnName: string): Promise<{ url: string | null; cost: number }> {
   try {
-    const { data } = await callAI("google/gemini-3.1-flash-image-preview", {
-      messages: [{ role: "user", content: prompt }],
-      modalities: ["image", "text"],
-    }, fnName);
-    const dataUrl: string | undefined = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!dataUrl?.startsWith("data:image/")) return { url: null, cost: IMAGE_COST_INR };
-    const [meta, b64] = dataUrl.split(",");
-    const mime = meta.match(/data:(image\/\w+)/)?.[1] ?? "image/png";
-    const ext = mime.split("/")[1];
-    const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    const path = `themes/${crypto.randomUUID()}.${ext}`;
-    const up = await supabase.storage.from("store-assets").upload(path, bin, { contentType: mime, upsert: false });
-    if (up.error) { console.error("upload", up.error); return { url: null, cost: IMAGE_COST_INR }; }
-    const { data: pub } = supabase.storage.from("store-assets").getPublicUrl(path);
-    return { url: pub.publicUrl, cost: IMAGE_COST_INR };
+    const unsplashKey = Deno.env.get("UNSPLASH_ACCESS_KEY");
+    if (!unsplashKey) return { url: null, cost: 0 };
+    const stopWords = new Set(["a","an","the","of","on","in","at","for","with","and","or","no","text","overlay","background","lighting","crop","ratio","portrait","landscape","studio","soft","warm","golden","clean","high","end","premium","cinematic","aesthetic","professional","indian","photo","photograph","photography"]);
+    const keywords = prompt.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 3 && !stopWords.has(w)).slice(0, 4).join(" ");
+    const r = await fetch(`https://api.unsplash.com/photos/random?query=${encodeURIComponent(keywords || "product")}&orientation=portrait&content_filter=high&client_id=${unsplashKey}`);
+    if (!r.ok) return { url: null, cost: 0 };
+    const data = await r.json();
+    return { url: data?.urls?.regular ?? null, cost: 0 };
   } catch (e) { console.error("genImage", e); return { url: null, cost: 0 }; }
 }
 
@@ -214,7 +224,7 @@ Deno.serve(async (req) => {
     const rawCategory: string = brief.category ?? "general";
     const briefName = brief.name ?? brief.vibe ?? rawCategory;
 
-    // Load category brief (supports "vertical" or "vertical/subcategory")
+    // Vertical for service branch detection only
     let vert = rawCategory;
     let sub: string | null = brief.subcategory ?? null;
     if (!sub && rawCategory.includes("/")) {
@@ -233,6 +243,21 @@ Deno.serve(async (req) => {
     const category: string = cb ? `${cb.vertical}${cb.subcategory ? "/" + cb.subcategory : ""}` : rawCategory;
     const briefBlock = cb ? `\n\nCATEGORY BRIEF\nDisplay: ${cb.display_name}\nDirection: ${cb.prompt_addendum}\nPalette hints: ${cb.palette_hints ?? "n/a"}\nTone & vocabulary: ${cb.vocabulary ?? "n/a"}\nImage style: ${cb.image_style ?? "n/a"}\nPreferred section order (use unless a clearly better one fits the vibe): ${(cb.section_priority || []).join(", ")}` : "";
 
+    // Load existing themes in same category — LLM will avoid repeating them
+    const { data: existingThemes } = await supabase
+      .from("theme_master_projects")
+      .select("name, description, client_patch_prompt")
+      .eq("category", category)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(15);
+
+    const existingBlock = existingThemes && existingThemes.length > 0
+      ? `\n\nALREADY EXISTING THEMES IN THIS CATEGORY — your theme must be COMPLETELY DIFFERENT from ALL of these:\n${(existingThemes as any[]).map((t: any) => `- "${t.name}": ${t.description ?? ""}`).join("\n")}\n`
+      : "";
+
+    // No briefBlock, no layoutBlock — LLM decides everything
+
     // =========================================================================
     // SERVICE INDUSTRY BRANCH — doctor/clinic/salon/spa/home-visit themes.
     // Builds rich service DNA (providers, services, packages, hours, faqs) and
@@ -241,7 +266,7 @@ Deno.serve(async (req) => {
     if (vert === "services") {
       const svcSys = `You design premium booking-first websites for Indian service businesses (doctors, clinics, salons, spas, home-visit pros) sold via Pic To Cart. Every theme must feel trustworthy, calm and unmistakably built for THIS profession — not a generic shop. Real Google Fonts. Tight palette. INR pricing. Realistic Indian names, qualifications, addresses.${briefBlock}`;
       const svcUser = `Build a complete theme for "${briefName}". Sub-vertical: ${sub ?? cb?.subcategory ?? "general service"}. Vibe: ${brief.vibe ?? cb?.display_name ?? "calm, professional"}. Fill EVERY field. Providers: 3 Indian professionals with real-sounding qualifications. Services: 6-8 bookable services with duration_min (15-120) and INR price. Packages: 3 prepaid bundles. Clinic_hours: all 7 days. FAQs: 4-6 questions a real customer would ask before booking. Image prompts must be detailed photographic descriptions, no text overlay.`;
-      const svcRes = await callAI("google/gemini-2.5-flash", {
+      const svcRes = await callAI("llama-3.3-70b-versatile", {
         messages: [{ role: "system", content: svcSys }, { role: "user", content: svcUser }],
         tools: [serviceTool],
         tool_choice: { type: "function", function: { name: "build_service_theme" } },
@@ -414,28 +439,71 @@ Deno.serve(async (req) => {
       return json({ ok: true, theme_id: themeId, shipped: true, kind: "service", total_cost_inr: totalCost, manifest });
     }
 
-    // Load layout archetype. If none specified, AI-pick from category brief best-fit.
-    let layoutSlug: string | null = brief.layout_slug ?? null;
-    let archetype: any = null;
-    if (layoutSlug) {
-      const { data } = await supabase.from("theme_layout_archetypes").select("*").eq("slug", layoutSlug).eq("is_active", true).maybeSingle();
-      archetype = data;
-    }
-    if (!archetype) {
-      // Pick best-fit by matching category vertical against archetype.best_for[]
-      const { data: all } = await supabase.from("theme_layout_archetypes").select("*").eq("is_active", true).order("sort_order");
-      const verticalKey = (vert || "").toLowerCase();
-      archetype = (all ?? []).find((a: any) => (a.best_for || []).some((b: string) => verticalKey.includes(b) || b.includes(verticalKey)))
-        ?? (all ?? []).find((a: any) => a.slug === "catalog-dense")
-        ?? (all ?? [])[0];
-      layoutSlug = archetype?.slug ?? "catalog-dense";
-    }
-    const layoutBlock = archetype ? `\n\nLAYOUT CONTRACT — YOU MUST FOLLOW THIS EXACTLY (do not invent another structure):\nLayout: ${archetype.name} (${archetype.slug})\nRequired hero_style: ${archetype.hero_style}\nRequired category_style: ${archetype.category_style}\nRequired product_style: ${archetype.product_style}\nRequired header_style: ${archetype.header_style}\nDensity: ${archetype.density}\nRadius: ${archetype.radius_hint}\nRequired section_order (use this order): ${(archetype.section_order || []).join(", ")}\nMotion language: ${archetype.motion_language}\nImage ratios — hero: ${archetype.image_ratios?.hero}, category: ${archetype.image_ratios?.category}, product: ${archetype.image_ratios?.product}\n\nDETAILED INSTRUCTIONS:\n${archetype.prompt_instructions}\n\nFORBIDDEN sections: ${(archetype.forbidden_sections || []).join(", ") || "none"}` : "";
+    // No layout archetype load — LLM decides layout freely
+    const layoutSlug: string | null = brief.layout_slug ?? null;
 
-    const sysPrompt = `You design beautiful, distinctive e-commerce themes for Indian small sellers (Pic To Cart). Each theme MUST feel structurally different from the previous ones — not just a recolor. You will be given a strict LAYOUT CONTRACT — obey it exactly. Use real Google Fonts. Palette must be tight and cohesive. All colors valid hex.`;
-    const userPrompt = `Brief: ${JSON.stringify({ ...brief, category, name: briefName, layout: layoutSlug })}.${briefBlock}${layoutBlock}
-Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill EVERY field. Products must have realistic Indian INR prices. Image prompts must be detailed photographic descriptions for e-commerce, no text overlay.`;
-    const dnaRes = await callAI("google/gemini-2.5-flash", {
+    const sysPrompt = `You are a world-class creative director designing e-commerce websites for Indian brands.
+
+You have COMPLETE creative freedom. No templates. No formulas.
+
+Every theme you create must feel like it was designed by a DIFFERENT creative agency with a completely different philosophy. Think: Nykaa vs Boat vs Bewakoof vs Forest Essentials — each has a unique DNA.
+
+YOUR DECISIONS (you choose everything):
+- Color palette — unexpected combinations that WORK together
+- Typography — specific Google Font pairing that matches brand personality  
+- Hero layout — NOT always split image. Could be fullscreen, text-only, editorial, collage, diagonal
+- Navbar — could be dark, colored, floating, transparent, bold bar
+- Section order — design an EMOTIONAL JOURNEY specific to this brand
+- Grid density — compact, airy, editorial, dense — your call
+- Border radius — sharp edges (0px) or very rounded (24px) or anything in between
+
+FORBIDDEN (unless truly justified):
+- Generic blue + white tech layout
+- Standard split hero (text left, image right) — ONLY if brand truly needs it
+- Same section order as a typical Shopify store
+- Predictable color palettes (navy + white, black + gold)
+
+RULES:
+- All colors must be valid hex codes
+- Fonts must be real Google Fonts
+- ALL products must have realistic Indian INR prices
+- Image prompts must be detailed photography directions — no text overlay in image
+- section_order must be chosen as an emotional journey: awareness → interest → desire → action
+
+Available section types for section_order:
+hero, usp_strip, category_grid, product_grid, story, testimonials, 
+newsletter, journal_strip, marquee, lookbook, features, values, 
+spec_table, faq, process_steps
+
+Available hero_style values:
+fullscreen_image, split_image, text_only, editorial_asymmetric, 
+grid_collage, minimal_float, centered_bold, diagonal_split
+
+Available header_style values:
+classic, centered_logo, minimal_left, bold_bar, transparent_overlay, floating_pill
+
+Available category_style values:
+grid_4, grid_3, big_feature, mosaic_2x2, horizontal_scroll, circles, editorial_list, overlay_cards
+
+Available product_style values:
+grid_clean, grid_dense, editorial_list, magazine_mix, masonry, minimal_cards, bold_cards
+
+Available density values: compact, balanced, airy, spacious`;
+
+    const userPrompt = `Design a UNIQUE e-commerce theme for:
+Store Name: "${briefName}"
+Category: ${category}
+${brief.vibe ? `Mood hint: ${brief.vibe}` : ""}
+${existingBlock}
+THINK DEEPLY:
+1. What kind of Indian brand is this? Give it a strong personality.
+2. What unexpected color combination would a top designer choose?
+3. What hero layout feels most authentic for this brand?
+4. What navbar style fits — dark? Colored? Floating?
+5. What section journey makes a customer go from curious → convinced → buying?
+
+Be bold. Be original. Make it beautiful. Fill EVERY field completely.`;
+    const dnaRes = await callAI("llama-3.3-70b-versatile", {
       messages: [{ role: "system", content: sysPrompt }, { role: "user", content: userPrompt }],
       tools: [themeTool],
       tool_choice: { type: "function", function: { name: "build_theme" } },
@@ -444,31 +512,17 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
     if (!toolCall) throw new Error("AI did not return theme blueprint");
     const dna = JSON.parse(toolCall.function.arguments);
 
-    // Defensive override: lock layout fields to the archetype contract so the model can't drift.
-    if (archetype) {
-      dna.layout = {
-        hero_style: archetype.hero_style,
-        category_style: archetype.category_style,
-        product_style: archetype.product_style,
-        header_style: archetype.header_style,
-        density: archetype.density,
-        section_order: archetype.section_order,
-      };
-    }
-
-    const heroRatio = archetype?.image_ratios?.hero ?? "16:9";
-    const catRatio = archetype?.image_ratios?.category ?? "1:1";
-    const imgPrompts: { key: string; prompt: string; ratio: string }[] = [
-      { key: "hero", prompt: `${dna.hero.image_prompt}. Cinematic, ${dna.vibe} aesthetic, ${heroRatio}, high-end product photography, no text.`, ratio: heroRatio },
-      ...dna.categories.map((c: any, i: number) => ({ key: `cat_${i}`, prompt: `${c.image_prompt}. ${dna.vibe} aesthetic, ${catRatio} crop, clean studio background, no text.`, ratio: catRatio })),
+    // LLM ka layout decision — no override, full freedom
+    const layout = dna.layout ?? {};
+    const imgPrompts: { key: string; prompt: string }[] = [
+      { key: "hero", prompt: `${dna.hero.image_prompt}. High-end product photography, no text overlay.` },
+      ...(dna.categories ?? []).map((c: any, i: number) => ({ key: `cat_${i}`, prompt: `${c.image_prompt}. Clean product photo, no text overlay.` })),
     ];
     const imgResults = await Promise.all(imgPrompts.map((p) => genImage(p.prompt, "generate-and-ship-theme")));
     const imageCostTotal = imgResults.reduce((s, r) => s + r.cost, 0);
     const imageCount = imgResults.filter((r) => r.url).length;
     const heroUrl = imgResults[0].url;
-    dna.categories.forEach((c: any, i: number) => { c.image = imgResults[i + 1].url; });
-
-    const layout = dna.layout ?? {};
+    (dna.categories ?? []).forEach((c: any, i: number) => { c.image = imgResults[i + 1]?.url ?? null; });
 
     // Canonical builders — one per section type. Pure: () => section.
     const builders: Record<string, () => any> = {
@@ -548,7 +602,7 @@ Design a theme called "${briefName}" with vibe "${brief.vibe ?? category}". Fill
       dna,
       layout,
       layout_slug: layoutSlug,
-      layout_archetype: archetype ? { slug: archetype.slug, name: archetype.name, editor_schema: archetype.editor_schema, image_ratios: archetype.image_ratios, motion_language: archetype.motion_language } : null,
+      layout_archetype: null,
       hero_image: heroUrl,
       pages: {
         auth: { sections: [

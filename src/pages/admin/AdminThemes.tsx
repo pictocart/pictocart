@@ -259,8 +259,13 @@ const MasterProjectsTab = () => {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('theme_master_projects').delete().eq('id', id);
+    mutationFn: async ({ id, theme_id }: { id: string; theme_id: string }) => {
+      const [{ error: mErr }, { error: vErr }, { error: pErr }] = await Promise.all([
+        supabase.from("theme_master_metrics").delete().eq("theme_id", theme_id),
+        supabase.from("theme_master_versions").delete().eq("theme_id", theme_id),
+        supabase.from("theme_master_projects").delete().eq("theme_id", theme_id),
+      ]);
+      const error = pErr || vErr || mErr;
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Theme deleted'); qc.invalidateQueries({ queryKey: ['admin-theme-masters'] }); },
@@ -366,7 +371,7 @@ const MasterProjectsTab = () => {
                   <Button size="sm" variant="outline" onClick={() => setPublishing(t)} title="Publish new version">
                     <Rocket className="h-3.5 w-3.5 text-primary" />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => { if (confirm(`Delete "${t.name}"?`)) remove.mutate(t.id); }}>
+                  <Button size="sm" variant="outline" onClick={() => { if (confirm(`Delete "${t.name}"?`)) remove.mutate({ id: t.id, theme_id: t.theme_id }); }}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>

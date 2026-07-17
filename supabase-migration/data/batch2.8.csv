@@ -1,0 +1,143 @@
+body_md;category;created_at;id;is_published;slug;sort;title;updated_at
+"## Launch your store in 5 minutes
+
+1. **Sign up** with email or Google.
+2. Complete the **7-step onboarding wizard**: store name, category, logo, product photo (AI generates details), theme, payment setup, go live.
+3. Your store is live at `your-slug.pictocart.in` instantly — no waiting.
+
+Need help? Tap the floating help button or WhatsApp us at **+91 98101 89606**.";basics;2026-05-18 08:34:53.060163+00;ff2aab84-420a-4439-a172-49dc9d496428;true;getting-started;1;Getting started in 5 minutes;2026-05-18 08:34:53.060163+00
+"The wizard is mandatory and unlocks your dashboard only after completion.
+
+- **Store name & category** — defines your storefront URL and default sections.
+- **Logo upload** — square 1:1 crop, kept at original filename.
+- **AI product** — upload one photo, our AI writes title, description, price suggestion, and tags. Saved only when you finish the wizard.
+- **Theme** — pick a free starter or browse premium themes.
+- **Payment setup** — add Razorpay keys or enable COD.
+- **Go live** — confirm and your store is published.";basics;2026-05-18 08:34:53.060163+00;b0a6829e-2268-4d26-b75c-ea910d6828a9;true;onboarding-wizard;2;Understanding the onboarding wizard;2026-05-18 08:34:53.060163+00
+"### Free vs Premium themes
+- Free starter themes ship with every account.
+- **Premium themes (₹500)** are AI-generated 5-page designs with custom fonts, gradients, and section layouts.
+
+### Customising your store
+Go to **Store Design** to:
+- Drag-and-drop sections (banner slider, USP strip, featured products, blog strip).
+- Swap fonts (any Google Font), colors, spacing and animations.
+- Override the theme template at any time — your changes persist as JSONB overrides.
+
+### Logo & branding
+Update your logo from **Store Design → Header**. Crops to 1:1 with `react-easy-crop`.";design;2026-05-18 08:34:53.060163+00;3f9d814a-1021-47a6-9107-096ff4f79463;true;themes-and-design;3;Themes, store design & customisation;2026-05-18 08:34:53.060163+00
+"### Setup
+1. Sign up at razorpay.com and complete KYC using **your storefront domain** (e.g. `https://yourstore.pictocart.in` or your connected custom domain).
+2. Copy your **Key ID** and **Key Secret** from the Razorpay dashboard.
+3. Paste them into **Dashboard → Payment Settings**.
+4. Payments flow **directly to your bank account** — PicToCart never holds your money.
+
+### Verification
+Every payment is verified server-side with HMAC-SHA256 before the order is marked paid.
+
+### Platform fee
+A 2% platform commission applies on each successful order.";payments;2026-05-18 08:34:53.060163+00;987814cb-fe31-4f23-8709-d17594fa52ba;true;payments-razorpay;4;Accept payments with Razorpay;2026-05-18 08:34:53.060163+00
+"1. Go to **Dashboard → COD Settings**.
+2. Toggle COD on and set:
+   - Minimum order value
+   - Maximum order value
+   - Per-pincode availability (uses Delhivery serviceability)
+3. Customers see COD as a checkout option automatically.
+
+You can disable COD anytime — existing COD orders stay valid.";payments;2026-05-18 08:34:53.060163+00;bbcd9140-892d-4ce2-8937-21633fec32e7;true;cod-setup;5;Enable Cash on Delivery (COD);2026-05-18 08:34:53.060163+00
+"### Pincode serviceability
+The `PincodeChecker` on product pages calls our Delhivery proxy to confirm delivery availability and ETA.
+
+### Creating shipments
+From **Orders → Order Detail → Ship**:
+1. Confirm package weight & dimensions.
+2. Generate AWB — the label PDF downloads immediately.
+3. Tracking updates flow into the order timeline.
+
+### Charges
+Shipping cost is deducted from your wallet at AWB generation. Recharge from **Wallet**.";shipping;2026-05-18 08:34:53.060163+00;6b81b440-3252-4d79-97f3-48c8d5e724c3;true;shipping-delhivery;6;Shipping with Delhivery;2026-05-18 08:34:53.060163+00
+"1. In **Dashboard → Domain Settings** add your domain (e.g. `mystore.com`).
+2. At your DNS provider, add:
+   - **A record** → `185.158.133.1`
+   - **TXT record** (verification token shown in dashboard)
+3. Click **Verify**. Status moves to **Active** once propagation completes (usually 5–30 minutes).
+4. **Important:** if using Razorpay, complete KYC with this same domain so checkout origin matches.";domains;2026-05-18 08:34:53.060163+00;c19a2440-7f9a-48c5-961f-5275f0e41fc9;true;custom-domains;7;Connect your custom domain;2026-05-18 08:34:53.060163+00
+"AI features (product descriptions, theme generation, store assistant, engagement reports) use credits.
+
+- Onboarding includes free credits to get started.
+- Recharge from **Wallet → Recharge** in any denomination.
+- Each AI call shows its credit cost before running.
+- Credit balance is shown in the top bar via `CreditBadge`.";billing;2026-05-18 08:34:53.060163+00;e57e6ec0-8b37-4feb-a7b5-9105ba9c0551;true;ai-credits;8;AI credits & wallet;2026-05-18 08:34:53.060163+00
+"	- **Starter** — free forever, 1 store, basic features.
+- **Growth (₹999/mo)** — premium themes, custom domain, blog, advanced analytics, AI engagement report.
+- **Pro** — everything in Growth plus priority support, white-label emails, unlimited products.
+
+Upgrade from **Billing**. Change plan anytime — pro-rated.";billing;2026-05-18 08:34:53.060163+00;1c9892b7-a9ac-4da0-876f-246ea511450d;true;subscription-plans;9;Subscription plans (Starter, Growth, Pro);2026-05-18 08:34:53.060163+00
+"Available on Growth and Pro plans.
+
+1. Open **Dashboard → Blog Posts → New Post**.
+2. Use the **AI assist** button to draft titles, intros, or full posts from a prompt.
+3. Add SEO title, meta description and cover image.
+4. Publish — the post appears on `/store/your-slug/blog` and in the BlogStrip section.
+
+Manage email subscribers from **Subscribers**.";design;2026-05-18 08:34:53.060163+00;b04c06ce-d50b-4f52-aa28-f9cdae02468e;true;blog-system;10;Run a blog on your store;2026-05-18 08:34:53.060163+00
+"Your shoppers get a dedicated account on **your** storefront (not PicToCart's).
+
+- Sign up & login at `/store/your-slug/account`.
+- Multiple saved addresses with CRUD.
+- Order history with live shipping status.
+- Wishlist (saved across sessions).
+- Reviews & ratings — verified-purchase badges shown automatically.
+
+Customers carry `is_customer: true` metadata so they are never sent to seller onboarding.";customers;2026-05-18 08:34:53.060163+00;681dbe28-83f9-4015-9662-ae022c971c19;true;customer-accounts;11;Customer accounts on your storefront;2026-05-18 08:34:53.060163+00
+"Create from **Dashboard → Coupons**:
+- Flat or percentage discount
+- Minimum order value
+- Total usage limit & per-customer limit
+- Validity dates
+- Auto-applied or code-based
+
+Validation runs server-side via a DB RPC at checkout — no client tampering possible.";sales;2026-05-18 08:34:53.060163+00;96d2c621-8f04-47f9-908e-1163a3fc1625;true;coupons-discounts;12;Coupons & discounts;2026-05-18 08:34:53.060163+00
+"	- **Orders list** shows status, customer, payment mode and total.
+- **Order detail** has a full timeline (placed → paid → packed → shipped → delivered).
+- **Download invoice** generates a GST-ready PDF with your store's GSTIN, bank details and HSN codes.
+- **Refunds** can be processed inline (Razorpay refunds are automatic; COD refunds are manual).";orders;2026-05-18 08:34:53.060163+00;beec2bd1-ed81-4e8e-8a40-9d5b508799f1;true;orders-and-invoices;13;Managing orders & GST invoices;2026-05-18 08:34:53.060163+00
+"1. Customer requests a return from their order page (`RequestReturnButton`).
+2. You see the request in **Dashboard → Returns**.
+3. Approve or reject. On approval, you can:
+   - Generate a reverse-pickup AWB via Delhivery
+   - Issue a full or partial refund via the `RefundPanel`
+4. The customer is notified by email at every step.";orders;2026-05-18 08:34:53.060163+00;47de1935-43e8-4b8a-a52d-6c487b26cad3;true;returns;14;Returns & refunds;2026-05-18 08:34:53.060163+00
+"	- Customers rate 1–5 stars and can attach photos.
+- **Verified Purchase** badge appears when the reviewer's order is in your system.
+- Moderate from **Dashboard → Reviews**: approve, hide or reply.
+- Average rating is shown on product cards and detail pages.";sales;2026-05-18 08:34:53.060163+00;51cc3537-0f4c-4f76-b235-c3072561afd3;true;reviews;15;Product reviews & ratings;2026-05-18 08:34:53.060163+00
+"From **Dashboard → Email Branding**:
+- Upload your logo and brand color.
+- Set a custom ""from"" name.
+- (Pro) Use your own verified sending domain for white-label emails.
+
+Order confirmation, shipping update, and return emails all use these settings automatically.";design;2026-05-18 08:34:53.060163+00;6fb9a1ca-1dae-4928-bed9-b4f4c5c9723a;true;email-branding;16;Branded transactional emails;2026-05-18 08:34:53.060163+00
+"Every storefront page uses `SEOHead`:
+- Custom title (<60 chars) and meta description (<160 chars).
+- Open Graph image at 1200×630 for rich link previews.
+- Canonical URLs and JSON-LD product schema.
+
+Set store-wide defaults in **SEO Settings**; per-product overrides on the product form.";marketing;2026-05-18 08:34:53.060163+00;6ef7b015-1dd8-4bdd-a9d8-7736ea7f00f5;true;seo-marketing;17;SEO & social sharing;2026-05-18 08:34:53.060163+00
+"A 0–100 score for your store with an actionable improvement roadmap.
+
+- Generates from **Dashboard → Overview → Run engagement report**.
+- Scores cover: product completeness, theme polish, SEO, social, reviews, conversion.
+- Each issue ships with a one-click fix link.";growth;2026-05-18 08:34:53.060163+00;810e0731-3cef-48e0-b569-f3ac6cac88bf;true;ai-engagement-report;18;AI engagement report;2026-05-18 08:34:53.060163+00
+"Every storefront is a Progressive Web App.
+
+- Customers see an **Add to Home Screen** prompt on supported browsers.
+- iOS-safe padding and a sticky bottom nav give a native feel.
+- Your logo and brand color are used for the splash screen via `manifest.json`.";design;2026-05-18 08:34:53.060163+00;e1782938-dc6d-4323-aa6d-d382323873a3;true;mobile-app-pwa;19;Install your store as an app (PWA);2026-05-18 08:34:53.060163+00
+"We're here to help — fastest channels first:
+
+- **WhatsApp:** [+91 98101 89606](https://wa.me/919810189606) (Mon–Sat, 10am–7pm IST)
+- **Email:** support@pictocart.in
+- **Help button:** the floating ? icon in your dashboard opens this help center.
+
+Pro plan customers get priority response within 2 working hours.";support;2026-05-18 08:34:53.060163+00;5a86a88b-d434-4fd2-ac50-b37b20573233;true;contact-support;20;Contact PicToCart support;2026-05-18 08:34:53.060163+00

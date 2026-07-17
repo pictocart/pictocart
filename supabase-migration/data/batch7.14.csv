@@ -1,0 +1,29 @@
+created_at;error_message;id;message_id;metadata;recipient_email;status;template_name
+2026-06-16 12:39:48.648737+00;;294161a7-1879-4d1e-8278-c626aa609376;9972e27d-9565-4c0a-b0db-3b7562a58051;;nigam.manish33@gmail.com;pending;welcome-customer
+2026-06-16 12:39:57.827949+00;;63244917-1011-4c9c-b438-192c2816e03f;9972e27d-9565-4c0a-b0db-3b7562a58051;;nigam.manish33@gmail.com;sent;welcome-customer
+2026-06-18 16:28:34.410537+00;;4d5a5c1c-0473-4051-9b2e-b9cad13c61c2;8e061ddf-299a-40cd-a64c-d3ff68649ae6;;antarikshadvertising@gmail.com;pending;partner-invite
+2026-06-18 16:28:40.410393+00;;cb327829-8267-479f-8889-bfddfc37c98f;8e061ddf-299a-40cd-a64c-d3ff68649ae6;;antarikshadvertising@gmail.com;sent;partner-invite
+2026-06-19 06:32:26.394838+00;;75f37d34-9d39-4d5f-8373-f55bb9e724c0;95308dd8-8af2-44dd-8ede-d558783e872d;;nigam.manish33@gmail.com;pending;recovery
+2026-06-19 06:32:38.961279+00;;af846c69-31c1-4eb1-8683-18bb85425c23;95308dd8-8af2-44dd-8ede-d558783e872d;;nigam.manish33@gmail.com;sent;recovery
+2026-06-22 09:04:52.34233+00;;1ce732a8-d257-487c-8a16-10db05772a85;05d6fed4-c51d-4e3b-bb55-b4eb88f95031;;nigam.manish33@gmail.com;pending;welcome-customer
+2026-06-22 09:04:56.955723+00;;fab11d96-d6ba-46ff-b4d6-43bdce5095d4;05d6fed4-c51d-4e3b-bb55-b4eb88f95031;;nigam.manish33@gmail.com;sent;welcome-customer
+2026-06-29 06:09:01.311455+00;;23061d59-8d61-4efc-813e-15676b94be9b;8c93d29c-a040-408d-8ae5-eb38340f084c;;nigam.manish33@gmail.com;pending;customer-password-reset
+2026-06-29 06:09:09.112726+00;;c6ea6268-96cc-4246-9456-915f4b1c0a9e;8c93d29c-a040-408d-8ae5-eb38340f084c;;nigam.manish33@gmail.com;sent;customer-password-reset
+2026-06-29 06:21:13.700467+00;;4243054c-56e9-4570-8de4-bc07cfe1e6c0;08fda491-34da-41e8-84ad-7e89c8fbd084;;nigam.manish33@gmail.com;pending;recovery
+2026-06-29 06:21:18.570631+00;;ca35a126-fe08-491c-bcae-8da18e0b364f;08fda491-34da-41e8-84ad-7e89c8fbd084;;nigam.manish33@gmail.com;sent;recovery
+2026-06-29 06:51:35.470607+00;;bf5fbd9c-f028-4671-b417-ed97b4fc2127;47805cfc-1c9a-4406-afd6-928ef922a20f;;nigam.manish33@gmail.com;pending;welcome-customer
+2026-06-29 06:51:42.643638+00;;f8936560-fe6a-46df-b0f4-966191b8b3ab;47805cfc-1c9a-4406-afd6-928ef922a20f;;nigam.manish33@gmail.com;sent;welcome-customer
+2026-07-03 09:16:42.671297+00;;dd2f0b10-519c-4418-91f9-ec5565fe6c45;aaea9509-7bf7-46a1-a382-1444eed75c20;;priyamvadasingh0@gmail.com;pending;partner-invite
+2026-07-03 09:16:45.990283+00;;9eb99025-9e8a-4c1a-9113-5f4c7b88342b;aaea9509-7bf7-46a1-a382-1444eed75c20;;priyamvadasingh0@gmail.com;sent;partner-invite
+2026-07-03 09:16:49.771709+00;Permanent bounce — email address is invalid or rejected;23a083e4-0a4c-4220-ab3a-86808cbc7f8f;aaea9509-7bf7-46a1-a382-1444eed75c20;"{""event"":""failed"",""message_id"":""20260703091646.2a341dd07d3a2555@notify.pictocart.in"",""recipient"":""priyamvadasingh0@gmail.com"",""severity"":""permanent"",""subject"":""You're invited to the Pic To Cart Partner Program""}";priyamvadasingh0@gmail.com;bounced;system
+2026-07-07 07:37:07.854981+00;;2afbe151-aa23-49d3-9e8b-669036e91c20;99dedbcd-0dc5-4354-b184-902a02273692;;musthelp8@gmail.com;pending;welcome-customer
+2026-07-07 07:37:10.746159+00;;c9ea1ad6-3819-4011-bf35-3393eda31dfb;99dedbcd-0dc5-4354-b184-902a02273692;;musthelp8@gmail.com;sent;welcome-customer
+2026-07-09 21:30:04.265564+00;;f914fe2d-6d76-447f-89bc-28e13c97a027;c9c31608-0a3c-4d16-bd57-dcd343b768d6;;sa94@gmail.com;pending;welcome-customer
+2026-07-09 21:30:11.316496+00;;43e0ad2e-a785-4c20-a235-c2215c734280;c9c31608-0a3c-4d16-bd57-dcd343b768d6;;sa94@gmail.com;sent;welcome-customer
+2026-07-09 21:30:13.521387+00;Permanent bounce — email address is invalid or rejected;97ac0c3e-7fab-4221-be8a-0f48ecaea827;c9c31608-0a3c-4d16-bd57-dcd343b768d6;"{""event"":""failed"",""message_id"":""20260709213011.d075b90371fde739@notify.pictocart.in"",""recipient"":""sa94@gmail.com"",""severity"":""permanent"",""subject"":""Welcome to 3D World 🎉""}";sa94@gmail.com;bounced;system
+2026-07-10 06:16:52.606039+00;;91154b96-8421-4cf0-ba5e-27e21dbf7d06;193de1ab-49fa-474c-9f0c-0b5303372b94;;itsmesaurabh214@gmail.com;pending;recovery
+2026-07-10 06:16:55.518172+00;;bc0b2de7-edc4-4d1e-be06-45a7647cef96;193de1ab-49fa-474c-9f0c-0b5303372b94;;itsmesaurabh214@gmail.com;sent;recovery
+2026-07-10 15:33:58.172826+00;;ce106517-51e4-4b5b-90a0-750496e73a92;835f2bac-0ba3-421f-85b8-cbec938628c8;;itsmesaurabh214@gmail.com;pending;recovery
+2026-07-10 15:34:01.991959+00;;b9e0e8f9-0b13-47f3-bd4a-02d6a182ab40;835f2bac-0ba3-421f-85b8-cbec938628c8;;itsmesaurabh214@gmail.com;sent;recovery
+2026-07-15 15:43:03.417973+00;;87d108bd-0c44-431c-a18c-5b5d3fe972bb;c8e2129b-7c66-47d3-8b32-55cab2751ea1;;nigam.manish33@gmail.com;pending;welcome-customer
+2026-07-15 15:43:06.149751+00;;74dda43a-1e98-46d7-8ee3-0e4ca04450c8;c8e2129b-7c66-47d3-8b32-55cab2751ea1;;nigam.manish33@gmail.com;sent;welcome-customer

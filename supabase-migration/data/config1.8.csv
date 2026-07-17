@@ -1,0 +1,2 @@
+current_day_spent_inr;current_hour_spent_inr;daily_inr_cap;day_window_started_at;hour_window_started_at;hourly_inr_cap;id;is_enabled;paused_until;per_job_inr_estimate;updated_at
+0;0;500;2026-07-15 22:50:01.143+00;2026-07-16 11:00:01.11+00;50;1;true;;2;2026-05-05 19:14:27.842201+00

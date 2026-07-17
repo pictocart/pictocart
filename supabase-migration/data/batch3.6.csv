@@ -1,0 +1,5 @@
+badge;bonus_pct;created_at;credits;id;is_active;is_popular;name;price_inr;sort_order;updated_at;valid_from;valid_until
+;0;2026-05-04 16:49:03.204337+00;1000;dccef197-97fd-4ed1-93d8-1a982c9fb3b0;true;false;Starter;99;1;2026-05-04 16:49:03.204337+00;;
+Most Popular;10;2026-05-04 16:49:03.204337+00;5500;ebdc7853-8799-4274-9a57-f1b7a071fe1d;true;true;Growth;499;2;2026-05-04 16:49:03.204337+00;;
+Best Value;20;2026-05-04 16:49:03.204337+00;18000;5a7fbf9e-9527-4941-b9ef-f8a340fc520b;true;false;Pro;1499;3;2026-05-04 16:49:03.204337+00;;
+;30;2026-05-04 16:49:03.204337+00;65000;52bad75f-809f-4c68-8508-798085a5ba11;true;false;Scale;4999;4;2026-05-04 16:49:03.204337+00;;

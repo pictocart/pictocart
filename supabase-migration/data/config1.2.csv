@@ -1,0 +1,16 @@
+action_key;cache_hit_credits;credits;is_active;label;manual_cost_inr;manual_minutes;model;updated_at
+generate_custom_page;25;25;true;Generate custom page;1500;120;google/gemini-2.5-flash;2026-06-19 03:06:49.112705+00
+generate-blog;5;60;true;Full blog post (AI-written);1200;120;google/gemini-2.5-pro;2026-05-04 16:49:03.204337+00
+generate-blog-image;2;20;true;Blog cover or thumbnail image;250;30;google/gemini-3-flash-image-preview;2026-05-04 16:49:03.204337+00
+generate-email-templates;3;30;true;Branded email template set;600;60;google/gemini-2.5-flash;2026-05-04 16:49:03.204337+00
+generate-product;1;8;true;Product description from image;150;15;google/gemini-2.5-flash;2026-06-18 09:35:52.69964+00
+generate-product-image;1;10;true;Generate product image with AI;200;8;google/gemini-2.5-flash-image;2026-06-19 06:18:22.995097+00
+generate-section-content;1;5;true;Storefront section content;100;10;google/gemini-2.5-flash;2026-05-04 16:49:03.204337+00
+generate-theme-pack;25;250;true;Premium theme pack generation;5000;480;google/gemini-2.5-pro;2026-05-04 16:49:03.204337+00
+regenerate_custom_page_section;8;8;true;Regenerate a page section;300;20;google/gemini-2.5-flash;2026-06-19 03:06:49.112705+00
+sourcing_deep_scrape;0;5;true;Deep supplier scrape;150;20;google/gemini-2.5-flash;2026-05-26 08:26:45.28488+00
+sourcing_import;0;1;true;Import sourced product;20;10;google/gemini-2.5-flash;2026-05-26 08:26:45.28488+00
+sourcing_reveal_contact;0;5;true;Unlock supplier contact;100;15;google/gemini-2.5-flash;2026-05-26 08:26:45.28488+00
+sourcing_search;0;2;true;Source product search;50;30;google/gemini-2.5-flash;2026-05-26 08:26:45.28488+00
+store-engagement;2;15;true;Store engagement report;0;0;google/gemini-2.5-flash;2026-05-04 16:49:03.204337+00
+storefront-assistant;0;2;true;Storefront AI assistant reply;50;3;google/gemini-3-flash-preview;2026-05-04 16:49:03.204337+00

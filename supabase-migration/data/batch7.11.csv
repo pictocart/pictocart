@@ -1,0 +1,2 @@
+allowed_modes;auto_apply;bogo_buy_qty;bogo_get_discount_pct;bogo_get_qty;code;created_at;description;expires_at;id;is_active;max_uses;min_order_amount;starts_at;store_id;tiers;type;updated_at;used_count;value
+{dine_in,takeaway,delivery};true;;;;HAPPY50;2026-06-29 07:19:24.215969+00;;;47be6081-0e62-4b58-aedb-ea39d263203f;true;;0;2026-06-29 07:19:23.939+00;6cdeb4fd-d936-4241-bf7d-f3843048a703;;percentage;2026-06-29 07:19:24.215969+00;1;50

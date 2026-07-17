@@ -12,9 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Loader2, Play, RefreshCw, SkipForward, Send, ExternalLink,
-  Sparkles, Search, CalendarPlus, Save, Wand2, Plus, Store, Briefcase, Filter, X,
+  Sparkles, Search, CalendarPlus, Save, Wand2, Plus, Store, Briefcase, Filter, X, Trash2,
 } from "lucide-react";
 
 // ── Industry taxonomy ────────────────────────────────────────────────────────
@@ -74,6 +75,7 @@ type ResearchJob = { id: string; status: string; query: string | null; total: nu
 type Settings = { auto_research: boolean; auto_generate: boolean; cadence_days: number; themes_per_batch: number; research_query: string; last_research_at: string | null; last_generation_at: string | null };
 
 export default function ThemeMasterPipeline() {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState("library");
   const [calendar, setCalendar] = useState<Slot[]>([]);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -223,6 +225,27 @@ export default function ThemeMasterPipeline() {
   async function ship(_themeId: string) {
     // Themes are auto-published to the in-project marketplace at generation time.
     toast.success("Already published — visible in Master Projects tab.");
+  }
+
+  async function handleDelete(themeId: string, name: string) {
+    if (!confirm(`Are you sure you want to permanently delete the theme "${name}"? This action cannot be undone.`)) return;
+    setBusy(themeId);
+    try {
+      const [{ error: mErr }, { error: vErr }, { error: pErr }] = await Promise.all([
+        supabase.from("theme_master_metrics").delete().eq("theme_id", themeId),
+        supabase.from("theme_master_versions").delete().eq("theme_id", themeId),
+        supabase.from("theme_master_projects").delete().eq("theme_id", themeId),
+      ]);
+      const err = pErr || vErr || mErr;
+      if (err) throw err;
+      toast.success(`Theme "${name}" deleted`);
+      queryClient.invalidateQueries({ queryKey: ["admin-theme-masters"] });
+      await loadAll();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete theme");
+    } finally {
+      setBusy(null);
+    }
   }
 
 
@@ -472,6 +495,15 @@ export default function ThemeMasterPipeline() {
                         </Button>
                         <Button size="sm" onClick={() => ship(t.theme_id)} disabled={busy === t.theme_id}>
                           <Send className="h-3 w-3 mr-1" />{m?.shipped_to_pictocart ? "Re-ship" : "Ship"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(t.theme_id, dna.name || t.theme_id)}
+                          disabled={busy === t.theme_id}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
                         </Button>
                       </div>
                       {refineFor === t.theme_id && (

@@ -1,0 +1,3 @@
+amount;attachment_url;category;created_at;expense_date;id;is_recurring;notes;parent_expense_id;payment_mode;recurrence;store_id;updated_at
+100.00;;Electricity;2026-05-19 19:45:01.80207+00;2026-05-19;cd502565-8845-4229-938c-c24d8fbe834a;false;;;cash;;d7ad0003-f8c1-4271-80aa-cfc42c1d25e4;2026-05-19 19:45:01.80207+00
+1555.00;;Electricity;2026-06-29 07:39:12.762908+00;2026-06-29;c8ea1354-94ff-493f-9073-564a6d64a7ec;false;paid to KESA;;cash;;6cdeb4fd-d936-4241-bf7d-f3843048a703;2026-06-29 07:39:12.762908+00

@@ -1,3 +1,21 @@
+# Environment variables
+.env
+.env.*
+
+# Migration & utility scripts (local only)
+migrate-users.mjs
+update-passwords.mjs
+check-and-replace.mjs
+check-pw.mjs
+cleanup.mjs
+make-admin.mjs
+make-admin2.mjs
+test-delete.mjs
+migrate/
+
+# Supabase temp
+supabase/.temp/
+
 # Logs
 logs
 *.log

@@ -1,0 +1,70 @@
+content;created_at;id;role;thread_id
+What is the most important thing to fix in my store right now?;2026-05-20 16:27:43.623419+00;cbea7a7a-332b-4f6a-999b-6307074bd84e;user;8f69efc1-4771-42df-9f39-c6ac2e16e9a1
+"The most critical issue with **Aggu's Cafe** right now is that you have **zero payment methods enabled**, meaning customers cannot actually buy your coffee or snacks. Even though you have 3 paid orders in your history, currently both Razorpay and COD are turned off.
+
+To fix this immediately:
+1. Go to [Payment Settings](/payment-settings).
+2. **Enable COD (Cash on Delivery)** for an instant fix, or connect your **Razorpay keys** to accept online payments.
+3. While you're at it, finish your [Onboarding](/onboarding) (Step 4) to ensure your store is fully optimized.
+
+You also have **3 unshipped orders** waiting—would you like me to guide you on how to generate shipping labels for them?";2026-05-20 16:27:47.550966+00;99911e26-a306-479f-baa6-4b79aabb3ff2;assistant;8f69efc1-4771-42df-9f39-c6ac2e16e9a1
+Mine is a coffee cafe and we have pay at counter option available;2026-05-20 16:28:42.713537+00;f5f4b579-a123-49e6-ad88-c73497586201;user;8f69efc1-4771-42df-9f39-c6ac2e16e9a1
+"Since you offer ""Pay at Counter,"" the best way to handle this on PicToCart is to **Enable COD (Cash on Delivery)**. This allows your customers to place orders online and pay you physically when they arrive at the cafe.
+
+Here is how to set it up:
+1. Go to [Payment Settings](/payment-settings).
+2. Toggle the **Enable COD** switch to ""On.""
+3. (Optional) You can rename the label to ""Pay at Counter"" in your checkout settings so it's clear to your customers.
+
+Once enabled, those **3 unshipped orders** can be processed. Would you like to know how to mark them as ""Completed"" once the customers pay at your cafe?";2026-05-20 16:28:46.157628+00;6249173a-ed4d-46ae-9352-ce456eab5e33;assistant;8f69efc1-4771-42df-9f39-c6ac2e16e9a1
+"It is saying Cash on Delivery
+Always Active";2026-05-20 16:31:08.225833+00;d5f0bd62-4f08-4495-9c24-532d9d8999e8;user;8f69efc1-4771-42df-9f39-c6ac2e16e9a1
+"Since your dashboard shows **COD is Always Active**, that's great—it means customers can already place orders to pay at your counter. However, the most urgent thing to address now is that you have **3 unshipped orders** with a total revenue of ₹2,075 that need to be cleared.
+
+To manage these ""Pay at Counter"" orders:
+1. Go to your [Orders](/orders) page.
+2. Click on each pending order from your cafe.
+3. Once the customer pays at the counter, manually mark them as **Delivered/Completed** so your sales analytics stay accurate.
+
+Also, since you are on the **Free Plan**, you might want to check out [Billing](/billing) if you'd like to connect a custom domain (like `agguscafe.com`) instead of the default link. Does that sound like something you'd need?";2026-05-20 16:31:12.382003+00;f63ecb48-a38c-4732-ae81-dea99b7b23d8;assistant;8f69efc1-4771-42df-9f39-c6ac2e16e9a1
+all orders are served so there is no need to ship.;2026-05-20 16:32:27.54928+00;373f2ee0-2b55-4903-bdcd-df52e24a8a7e;user;8f69efc1-4771-42df-9f39-c6ac2e16e9a1
+"Since these were served at the cafe, you just need to clear them from your ""Unshipped"" list so your dashboard stays updated.
+
+**Actions to take:**
+1. Go to [Orders](/orders).
+2. Open each of the **3 pending orders**.
+3. Manually update the status to **Delivered** or **Completed**. This will move them out of your pending queue and finalize your ₹2,075 revenue record.
+
+Since your workflow is ""Pay at Counter,"" would you like help setting up a **QR Code** for your cafe so customers can scan and order directly from their tables?";2026-05-20 16:32:31.06695+00;db8f06ac-8e9e-406e-be95-0f23cff67db3;assistant;8f69efc1-4771-42df-9f39-c6ac2e16e9a1
+What is the most important thing to fix in my store right now?;2026-05-26 12:26:59.210798+00;db60e13b-4123-4185-8afe-a86242380527;user;e6e462e3-dee8-4287-8c24-ab9b40eb0e24
+"Hi! Looking at your store **Indilipi**, the most critical issue is that **customers currently cannot pay you**. Since neither Razorpay nor COD is enabled, your checkout will not work.
+
+Here is how to fix this and get your store ready:
+
+1.  **Enable Payments:** Go to [Payment Settings](/payment-settings) to link your Razorpay keys or toggle **Cash on Delivery (COD)** to 'On'.
+2.  **Complete Onboarding:** You are currently at Step 4. Visit [Onboarding](/onboarding) to finish the final setup steps.
+3.  **Add Brand Identity:** Your store is missing a logo. You can upload one in [Store Design](/store-design) to build trust with fashion shoppers.
+
+Would you like help setting up your Razorpay keys or should we look at adding more products first?";2026-05-26 12:27:03.067823+00;c92eaca1-133e-4c5e-8b40-75e58a4030ec;assistant;e6e462e3-dee8-4287-8c24-ab9b40eb0e24
+Check again I have already created everything;2026-05-26 12:28:10.267233+00;22c05e17-80d3-4cca-84f1-242f20cf5ac1;user;e6e462e3-dee8-4287-8c24-ab9b40eb0e24
+"I understand you've put in the work, but according to your store's current data, there are **two technical blockers** preventing you from actually receiving orders:
+
+1.  **Checkout is Disabled:** Even though you have a product listed, customers cannot complete a purchase because [Payment Settings](/payment-settings) shows **Razorpay is not configured** and **COD is turned off**. You must enable at least one to take orders.
+2.  **Onboarding Incomplete:** Your [Onboarding](/onboarding) status is still marked as incomplete (Step 4). Finishing this ensures your store is fully synced for shipping and notifications.
+
+**Quick Action:** Please head to [Payment Settings](/payment-settings) and toggle **Enable Cash on Delivery** to ""On"" immediately so you can start testing your checkout.
+
+Does the checkout page show an error when you try to buy your own product?";2026-05-26 12:28:13.986686+00;dfe972ad-d52b-47da-9934-dc3364c964ff;assistant;e6e462e3-dee8-4287-8c24-ab9b40eb0e24
+I want to change theme;2026-06-20 04:47:54.804951+00;599d843b-9656-4294-842a-d2d61d536891;user;9737c18d-3a98-461f-9828-4065c3cecee6
+I want to change theme;2026-06-20 04:48:12.130668+00;f071f898-8aea-468c-925d-1c60c40af9d2;user;3ca35fc6-d238-4336-aaf9-814921a4e086
+I wan to change the theme;2026-06-20 04:49:29.594501+00;441758d0-88cd-4479-9191-f281b606a639;user;b45a4749-edb7-42b9-b03f-cc3f54845a2a
+What is the most important thing to fix in my store right now?;2026-06-20 04:49:57.905673+00;d6476765-9963-4c8e-8996-b9e25a95c4de;user;3eb85794-efb0-4c4f-87af-440c6b271f49
+मेरी दुकान में अभी सबसे ज़रूरी क्या ठीक करना है?;2026-07-16 09:08:01.658726+00;d380a239-6aa5-462f-80ea-7642e67b2880;user;f068e67e-ba22-4d63-ac16-87280e0bf8e6
+"आपकी दुकान में सबसे ज़रूरी चीज़ **ऑनबोर्डिंग पूरी करना** है।
+
+आपकी दुकान का `onboarding_completed` status `false` है, जिसका मतलब है कि दुकान अभी पूरी तरह तैयार नहीं है।
+
+**फिक्स:** इसे ठीक करने के लिए, आपको ऑनबोर्डिंग पूरी करनी होगी।
+1. **Go to:** `/onboarding`
+
+क्या यह समस्या हल हो गई है, या आपको अगले कदम की ज़रूरत है?";2026-07-16 09:08:09.808025+00;06aec2b3-2eb4-4c96-aa55-9bfd44ade66c;assistant;f068e67e-ba22-4d63-ac16-87280e0bf8e6

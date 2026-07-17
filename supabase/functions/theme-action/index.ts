@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
@@ -42,7 +43,7 @@ Deno.serve(async (req) => {
     }
     if (action === "update_settings") {
       const patch: any = {};
-      ["auto_research","auto_generate","cadence_days","themes_per_batch","research_query"].forEach((k) => { if (body[k] !== undefined) patch[k] = body[k]; });
+      ["auto_research", "auto_generate", "cadence_days", "themes_per_batch", "research_query"].forEach((k) => { if (body[k] !== undefined) patch[k] = body[k]; });
       patch.updated_at = new Date().toISOString();
       const { data, error } = await supabase.from("theme_settings").update(patch).eq("id", 1).select().single();
       if (error) throw error;
@@ -74,6 +75,24 @@ Deno.serve(async (req) => {
     }
     if (action === "skip_slot") {
       await supabase.from("theme_release_calendar").update({ status: "skipped" }).eq("id", body.calendar_id);
+      return json({ ok: true });
+    }
+    if (action === "delete_theme") {
+      const themeId = body.theme_id;
+      if (!themeId) return json({ ok: false, error: "theme_id required" }, 400);
+
+      // Delete from theme_master_projects
+      const { error: pErr } = await supabase.from("theme_master_projects").delete().eq("theme_id", themeId);
+      if (pErr) console.error("Error deleting from theme_master_projects:", pErr);
+
+      // Delete from theme_master_versions
+      const { error: vErr } = await supabase.from("theme_master_versions").delete().eq("theme_id", themeId);
+      if (vErr) console.error("Error deleting from theme_master_versions:", vErr);
+
+      // Delete from theme_master_metrics
+      const { error: mErr } = await supabase.from("theme_master_metrics").delete().eq("theme_id", themeId);
+      if (mErr) console.error("Error deleting from theme_master_metrics:", mErr);
+
       return json({ ok: true });
     }
     return json({ ok: false, error: "unknown action" }, 400);
