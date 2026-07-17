@@ -1,3 +1,4 @@
+// @ts-nocheck
 // generate-product-image: AI-generate a product photo (mainly for F&B merchants
 // where stock images look identical). Charges 10 AI credits per call.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
