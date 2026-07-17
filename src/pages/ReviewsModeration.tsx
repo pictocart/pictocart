@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Star, Check, X, Loader2, MessageSquare, Sparkles } from 'lucide-react';
+import { Star, Check, X, Loader2, MessageSquare, Sparkles, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -50,7 +50,7 @@ const ReviewsModeration = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   // AI Review Generator states
-  const [products, setProducts] = useState<{ id: string; title: string }[]>([]);
+  const [products, setProducts] = useState<{ id: string; title: string; images?: string[] | any }[]>([]);
   const [genOpen, setGenOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [reviewCount, setReviewCount] = useState('3');
@@ -62,7 +62,7 @@ const ReviewsModeration = () => {
     const fetchProducts = async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, title')
+        .select('id, title, images')
         .eq('store_id', store.id)
         .order('title');
       if (!error && data) {
@@ -298,22 +298,44 @@ const ReviewsModeration = () => {
           <div className="space-y-4 py-3">
             {/* Product selection */}
             <div className="space-y-2">
-              <Label htmlFor="product-select">Product</Label>
+              <Label>Select Product</Label>
               {products.length === 0 ? (
                 <p className="text-xs text-destructive">No products found in your store. Add a product first.</p>
               ) : (
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger id="product-select" className="w-full">
-                    <SelectValue placeholder="Select a product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="max-h-[180px] overflow-y-auto border border-border rounded-lg p-2.5 bg-slate-50/50 grid grid-cols-2 gap-2 pr-1">
+                  {products.map((p) => {
+                    const isSelected = selectedProduct === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setSelectedProduct(p.id)}
+                        className={cn(
+                          "flex items-center gap-2 p-2 text-left border rounded-lg transition-all hover:bg-slate-50 text-xs bg-white w-full relative outline-none",
+                          isSelected
+                            ? "border-violet-600 ring-2 ring-violet-100 bg-violet-50/10 font-semibold text-violet-900"
+                            : "border-border text-slate-700"
+                        )}
+                      >
+                        {p.images?.[0] ? (
+                          <img
+                            src={p.images[0]}
+                            alt={p.title}
+                            className="h-8 w-8 object-cover rounded shrink-0 border border-slate-100"
+                          />
+                        ) : (
+                          <Package className="h-8 w-8 text-muted-foreground/30 rounded bg-slate-100 p-1.5 shrink-0" />
+                        )}
+                        <span className="line-clamp-2 leading-tight flex-1">{p.title}</span>
+                        {isSelected && (
+                          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-violet-600 flex items-center justify-center text-[9px] text-white font-bold border border-white">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
