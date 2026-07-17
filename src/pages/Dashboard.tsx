@@ -287,9 +287,6 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* AI Business Coach insights */}
-      {store?.id && <AICoachCard storeId={store.id} />}
-
       {/* AI Wallet */}
       <div data-tour="wallet-card"><WalletCard /></div>
 
@@ -328,6 +325,9 @@ const Dashboard = () => {
           tone={stats.pendingCount > 0 ? 'rose' : 'primary'}
         />
       </div>
+
+      {/* AI Business Coach insights */}
+      {store?.id && <AICoachCard storeId={store.id} />}
 
       {/* Charts row */}
       {store?.id && (
