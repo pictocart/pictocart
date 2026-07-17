@@ -21,3 +21,54 @@ FOR UPDATE
 TO authenticated
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
+
+
+
+
+
+User A types: meri-dukan.com
+                    │
+                    ▼
+         Vercel: "yeh domain mujhe pata hai"
+         Same React app serve karta hai
+                    │
+                    ▼
+         useStoreByHost("meri-dukan.com")
+         Supabase: WHERE custom_domain = "meri-dukan.com"
+         → slug = "ramesh-sarees"
+                    │
+                    ▼
+         /store/ramesh-sarees khulta hai ✅
+         RAMESH KI DUKAN
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User B types: kapde-wala.com
+                    │
+                    ▼
+         Vercel: same React app
+                    │
+                    ▼
+         useStoreByHost("kapde-wala.com")
+         Supabase: WHERE custom_domain = "kapde-wala.com"
+         → slug = "kapde-store"
+                    │
+                    ▼
+         /store/kapde-store khulta hai ✅
+         KAPDE WALE KI DUKAN
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User C types: electronics.shop
+                    │
+                    ▼
+         Vercel: same React app
+                    │
+                    ▼
+         useStoreByHost("electronics.shop")
+         Supabase: WHERE custom_domain = "electronics.shop"
+         → slug = "electro-hub"
+                    │
+                    ▼
+         /store/electro-hub khulta hai ✅
+         ELECTRONICS WALE KI DUKAN

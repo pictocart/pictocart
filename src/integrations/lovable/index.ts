@@ -9,30 +9,75 @@ type SignInOptions = {
   extraParams?: Record<string, string>;
 };
 
+const isLovableDomain = 
+  window.location.hostname.endsWith(".lovable.app") || 
+  window.location.hostname.endsWith(".lovable.dev");
+
+const shouldUseSupabaseAuth = !isLovableDomain;
+
+const providerMap: Record<"google" | "apple" | "microsoft", "google" | "apple" | "azure"> = {
+  google: "google",
+  apple: "apple",
+  microsoft: "azure",
+};
+
+const signInWithSupabase = async (provider: "google" | "apple" | "microsoft", opts?: SignInOptions) => {
+  try {
+    const supabaseProvider = providerMap[provider];
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: supabaseProvider,
+      options: {
+        redirectTo: opts?.redirect_uri || `${window.location.origin}/dashboard`,
+        queryParams: opts?.extraParams,
+      },
+    });
+
+    if (error) {
+      return { error };
+    }
+
+    return { redirected: true };
+  } catch (e) {
+    return { error: e instanceof Error ? e : new Error(String(e)) };
+  }
+};
+
 export const lovable = {
   auth: {
     signInWithOAuth: async (provider: "google" | "apple" | "microsoft", opts?: SignInOptions) => {
-      const result = await lovableAuth.signInWithOAuth(provider, {
-        redirect_uri: opts?.redirect_uri,
-        extraParams: {
-          ...opts?.extraParams,
-        },
-      });
-
-      if (result.redirected) {
-        return result;
-      }
-
-      if (result.error) {
-        return result;
+      if (shouldUseSupabaseAuth) {
+        console.log("Using standard Supabase OAuth on non-Lovable domain.");
+        return signInWithSupabase(provider, opts);
       }
 
       try {
-        await supabase.auth.setSession(result.tokens);
-      } catch (e) {
-        return { error: e instanceof Error ? e : new Error(String(e)) };
+        const result = await lovableAuth.signInWithOAuth(provider, {
+          redirect_uri: opts?.redirect_uri,
+          extraParams: {
+            ...opts?.extraParams,
+          },
+        });
+
+        if (result.redirected) {
+          return result;
+        }
+
+        if (result.error) {
+          console.warn("Lovable OAuth failed, falling back to standard Supabase OAuth:", result.error);
+          return await signInWithSupabase(provider, opts);
+        }
+
+        try {
+          await supabase.auth.setSession(result.tokens);
+        } catch (e) {
+          return { error: e instanceof Error ? e : new Error(String(e)) };
+        }
+        return result;
+      } catch (err) {
+        console.warn("Lovable OAuth error, falling back to standard Supabase OAuth:", err);
+        return await signInWithSupabase(provider, opts);
       }
-      return result;
     },
   },
 };
+
