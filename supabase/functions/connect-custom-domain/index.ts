@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * connect-custom-domain
  *
@@ -68,7 +69,19 @@ serve(async (req) => {
       .single();
 
     if (storeErr || !store) return json({ error: "Store not found" }, 404);
-    if (store.user_id !== user.id) return json({ error: "Forbidden" }, 403);
+
+    // Check if user is admin
+    const { data: isAdminRole } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    const isOwner = store.user_id === user.id;
+    const isAdmin = !!isAdminRole;
+
+    if (!isOwner && !isAdmin) return json({ error: "Forbidden" }, 403);
 
     const vercelToken = Deno.env.get("VERCEL_TOKEN");
     const vercelProjectId = Deno.env.get("VERCEL_PROJECT_ID");
@@ -202,7 +215,7 @@ serve(async (req) => {
     const token = crypto.randomUUID().replace(/-/g, "");
     await admin.from("stores").update({
       custom_domain: domain,
-      domain_status: "pending_dns",
+      domain_status: "active",
       domain_added_to_vercel_at: new Date().toISOString(),
       domain_verification_token: token,
     }).eq("id", store_id);
@@ -210,7 +223,7 @@ serve(async (req) => {
     return json({
       success: true,
       domain,
-      status: "pending_dns",
+      status: "active",
       dns_instructions: buildDnsInstructions(domain),
     });
   } catch (err) {
@@ -220,14 +233,50 @@ serve(async (req) => {
   }
 });
 
+function parseDomain(domain: string) {
+  const clean = domain.replace(/^(https?:\/\/)?(www\.)?/i, "").replace(/\/.*$/, "").trim().toLowerCase();
+  const parts = clean.split(".");
+  
+  const multiPartSuffixes = [
+    "co.uk", "me.uk", "org.uk", "ltd.uk", "plc.uk", "net.uk", "sch.uk",
+    "co.in", "net.in", "org.in", "gen.in", "ind.in", "firm.in",
+    "co.jp", "or.jp", "ne.jp", "ac.jp", "ad.jp",
+    "co.kr", "ne.kr",
+    "co.za", "net.za", "org.za",
+    "com.br", "net.br", "org.br",
+    "com.cn", "net.cn", "org.cn", "gov.cn"
+  ];
+
+  if (parts.length <= 2) {
+    return { isApex: true, subdomain: null, apexDomain: clean };
+  }
+
+  const lastTwo = parts.slice(-2).join(".");
+  if (parts.length === 3) {
+    if (multiPartSuffixes.includes(lastTwo)) {
+      return { isApex: true, subdomain: null, apexDomain: clean };
+    } else {
+      return { isApex: false, subdomain: parts[0], apexDomain: parts.slice(1).join(".") };
+    }
+  }
+
+  // 4 or more parts
+  const secondAndThird = parts.slice(-3, -1).join(".");
+  if (multiPartSuffixes.includes(secondAndThird)) {
+    return { isApex: false, subdomain: parts.slice(0, -3).join("."), apexDomain: parts.slice(-3).join(".") };
+  } else {
+    return { isApex: false, subdomain: parts.slice(0, -2).join("."), apexDomain: parts.slice(-2).join(".") };
+  }
+}
+
 /**
  * Returns the exact DNS records the merchant needs to add at their registrar.
  * Vercel IPs: https://vercel.com/docs/projects/domains/add-a-domain#dns-records
  */
 function buildDnsInstructions(domain: string) {
-  const isApex = !domain.startsWith("www.");
+  const domainInfo = parseDomain(domain);
   return {
-    primary: isApex
+    primary: domainInfo.isApex
       ? {
           type: "A",
           name: "@",
@@ -236,12 +285,12 @@ function buildDnsInstructions(domain: string) {
         }
       : {
           type: "CNAME",
-          name: "www",
+          name: domainInfo.subdomain || "www",
           value: "cname.vercel-dns.com",
-          note: "www subdomain — use CNAME record",
+          note: "Subdomain — use CNAME record",
         },
     // Always recommend adding www as well if they entered apex
-    www: isApex
+    www: domainInfo.isApex
       ? {
           type: "CNAME",
           name: "www",

@@ -46,6 +46,42 @@ type DomainStatus = 'none' | 'pending_dns' | 'verifying' | 'active' | 'failed';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+export function parseDomain(domain: string) {
+  const clean = domain.replace(/^(https?:\/\/)?(www\.)?/i, "").replace(/\/.*$/, "").trim().toLowerCase();
+  const parts = clean.split(".");
+  
+  const multiPartSuffixes = [
+    "co.uk", "me.uk", "org.uk", "ltd.uk", "plc.uk", "net.uk", "sch.uk",
+    "co.in", "net.in", "org.in", "gen.in", "ind.in", "firm.in",
+    "co.jp", "or.jp", "ne.jp", "ac.jp", "ad.jp",
+    "co.kr", "ne.kr",
+    "co.za", "net.za", "org.za",
+    "com.br", "net.br", "org.br",
+    "com.cn", "net.cn", "org.cn", "gov.cn"
+  ];
+
+  if (parts.length <= 2) {
+    return { isApex: true, subdomain: null, apexDomain: clean };
+  }
+
+  const lastTwo = parts.slice(-2).join(".");
+  if (parts.length === 3) {
+    if (multiPartSuffixes.includes(lastTwo)) {
+      return { isApex: true, subdomain: null, apexDomain: clean };
+    } else {
+      return { isApex: false, subdomain: parts[0], apexDomain: parts.slice(1).join(".") };
+    }
+  }
+
+  // 4 or more parts
+  const secondAndThird = parts.slice(-3, -1).join(".");
+  if (multiPartSuffixes.includes(secondAndThird)) {
+    return { isApex: false, subdomain: parts.slice(0, -3).join("."), apexDomain: parts.slice(-3).join(".") };
+  } else {
+    return { isApex: false, subdomain: parts.slice(0, -2).join("."), apexDomain: parts.slice(-2).join(".") };
+  }
+}
+
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text);
   toast.success('Copied!');
@@ -239,13 +275,12 @@ function CustomDomainSection({ store, refetchStore }: { store: any; refetchStore
 
   // ── Render: domain connected, waiting for DNS ──────────────────────────────
   if ((domainStatus === 'pending_dns' || domainStatus === 'verifying') && customDomain) {
-    // Build instructions locally if we don't have them from the connect call
-    const isApex = !customDomain.startsWith('www.');
+    const domainInfo = parseDomain(customDomain);
     const localInstructions: DnsInstructions = dnsInstructions ?? {
-      primary: isApex
+      primary: domainInfo.isApex
         ? { type: 'A', name: '@', value: '76.76.21.21', note: 'Root/Apex domain — use A record' }
-        : { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', note: 'www subdomain — use CNAME' },
-      www: isApex
+        : { type: 'CNAME', name: domainInfo.subdomain || 'www', value: 'cname.vercel-dns.com', note: 'Subdomain — use CNAME' },
+      www: domainInfo.isApex
         ? { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', note: 'Optional: add www so both work' }
         : null,
       ttl: '3600 (or lowest available)',

@@ -184,176 +184,226 @@ const AppRoutes = () => {
     );
   }
 
-  if (!onPlatform && hostStore && !location.pathname.startsWith(`/store/${hostStore.slug}`)) {
-    return <CustomDomainRedirect slug={hostStore.slug} />;
+  // Set active store slug globally for custom domain routing support
+  if (hostStore?.slug) {
+    (window as any).__hostStoreSlug = hostStore.slug;
+  }
+
+  // If visitor lands on custom domain but URL has the /store/:slug prefix, redirect to clean path
+  if (!onPlatform && hostStore && location.pathname.startsWith(`/store/${hostStore.slug}`)) {
+    const cleanPath = location.pathname.replace(`/store/${hostStore.slug}`, "");
+    const target = `${cleanPath || "/"}${location.search}${location.hash}`;
+    return <Navigate to={target} replace />;
+  }
+
+  if (!onPlatform && !hostStore) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
+        Store not found. Please verify the domain configuration or publish the store.
+      </div>
+    );
   }
 
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Loading…</div>}>
     <ScrollToTop />
     <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/q/:slug" element={<QRRedirect />} />
-            <Route path="/investors" element={<Investors />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/features/:slug" element={<FeatureDetail />} />
-            <Route path="/marketplace" element={<ThemeMarketplacePublic />} />
-            <Route path="/marketplace/:slug" element={<ThemeMarketplaceDetail />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute>
-                  <Onboarding />
-                </ProtectedRoute>
-              }
-            />
-            {/* Seller dashboard routes — share a single layout so the sidebar
-                stays mounted and Suspense only swaps the page content. */}
-            <Route element={<DashboardShell />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/products" element={<ProductList />} />
-              <Route path="/products/new" element={<ProductForm />} />
-              <Route path="/products/:id" element={<ProductForm />} />
-              <Route path="/orders" element={<OrderList />} />
-              <Route path="/orders/:id" element={<OrderDetail />} />
-              <Route path="/invoices" element={<Invoices />} />
-              <Route path="/accounts" element={<AccountsOverview />} />
-              <Route path="/accounts/purchases" element={<AccountsPurchases />} />
-              <Route path="/accounts/expenses" element={<AccountsExpenses />} />
-              <Route path="/accounts/suppliers" element={<AccountsSuppliers />} />
-              <Route path="/accounts/khata" element={<AccountsKhata />} />
-              <Route path="/accounts/inventory" element={<AccountsInventory />} />
-              <Route path="/accounts/reports/pnl" element={<AccountsPnl />} />
-              <Route path="/accounts/reports/cashbook" element={<AccountsCashBook />} />
-              <Route path="/accounts/reports/gst" element={<AccountsGst />} />
-              <Route path="/returns" element={<Returns />} />
-              <Route path="/exchanges" element={<Exchanges />} />
-              <Route path="/refunds" element={<Refunds />} />
-              <Route path="/shipments" element={<Shipments />} />
-              <Route path="/reviews" element={<ReviewsModeration />} />
-              <Route path="/customise" element={<Customise />} />
-              <Route path="/customise/legacy" element={<CustomiseLegacy />} />
-              <Route path="/promo-ticker" element={<PromoTickerPage />} />
-              <Route path="/sourcing" element={<Sourcing />} />
-              <Route path="/settings/payments" element={<PaymentSettings />} />
-              <Route path="/settings/cod" element={<CodSettings />} />
-              <Route path="/settings/shipping" element={<ShippingSettings />} />
-              <Route path="/settings/fulfillment" element={<FulfillmentSettings />} />
-              <Route path="/settings/qr" element={<QRCodes />} />
-              <Route path="/settings/domain" element={<DomainSettings />} />
-              <Route path="/settings/seo" element={<SEOSettings />} />
-              <Route path="/settings/email" element={<EmailBrandingSettings />} />
-              <Route path="/coupons" element={<CouponList />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/blog-posts" element={<BlogPosts />} />
-              <Route path="/blog-posts/new" element={<BlogPostForm />} />
-              <Route path="/blog-posts/:id" element={<BlogPostForm />} />
-              <Route path="/subscribers" element={<Subscribers />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/analytics" element={<StoreAnalytics />} />
-              <Route path="/themes" element={<Themes />} />
-              <Route path="/billing" element={<Billing />} />
-              <Route path="/site-offer" element={<SiteOffer />} />
-              <Route path="/wallet" element={<Wallet />} />
-              <Route path="/profile" element={<SellerProfile />} />
-              <Route path="/policies" element={<Policies />} />
-              <Route path="/testimonials" element={<Testimonials />} />
-              <Route path="/google-reviews" element={<GoogleReviewsConnect />} />
-              <Route path="/menu" element={<Menu />} />
-              <Route path="/kitchen" element={<Kitchen />} />
-              <Route path="/providers" element={<Providers />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/appointments" element={<Appointments />} />
-              <Route path="/family-plans" element={<FamilyPlans />} />
-              <Route path="/providers/payouts" element={<ProviderPayouts />} />
-            </Route>
+      {!onPlatform && hostStore ? (
+        // Custom Domain Storefront Routes (without /store/:slug prefix)
+        <>
+          <Route path="/" element={<Storefront />} />
+          <Route path="/shop" element={<Storefront page="shop" />} />
+          <Route path="/collections" element={<Storefront page="collections" />} />
+          <Route path="/collections/:categoryId" element={<Storefront page="collection_detail" />} />
+          <Route path="/about" element={<Storefront page="about" />} />
+          <Route path="/contact" element={<Storefront page="contact" />} />
+          <Route path="/product/:productId" element={<StorefrontProduct />} />
+          <Route path="/cart" element={<StorefrontCart />} />
+          <Route path="/checkout" element={<StorefrontCheckout />} />
+          <Route path="/menu" element={<StorefrontMenu />} />
+          <Route path="/menu/t/:tableToken" element={<StorefrontMenu forceMode="dine_in" />} />
+          <Route path="/menu/takeaway" element={<StorefrontMenu forceMode="takeaway" />} />
+          <Route path="/menu/delivery" element={<StorefrontMenu forceMode="delivery" />} />
+          <Route path="/book" element={<StorefrontBooking />} />
+          <Route path="/blog" element={<StorefrontBlog />} />
+          <Route path="/blog/:postSlug" element={<StorefrontBlogPost />} />
+          <Route path="/account/auth" element={<CustomerAuth />} />
+          <Route path="/reset-password" element={<CustomerResetPassword />} />
+          <Route path="/account" element={<CustomerRoute><CustomerAccount /></CustomerRoute>} />
+          <Route path="/account/orders/:id" element={<CustomerRoute><CustomerOrderDetail /></CustomerRoute>} />
+          <Route path="/account/returns/:id" element={<CustomerRoute><CustomerReturnDetail /></CustomerRoute>} />
+          <Route path="/account/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
+          <Route path="/account/wishlist" element={<CustomerRoute><CustomerWishlist /></CustomerRoute>} />
+          <Route path="/p/:pageSlug" element={<StorefrontCustomPage />} />
+          <Route path="/:policyType" element={<StorefrontPolicy />} />
+          <Route path="*" element={<NotFound />} />
+        </>
+      ) : (
+        // Platform Routes
+        <>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/q/:slug" element={<QRRedirect />} />
+          <Route path="/investors" element={<Investors />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/features/:slug" element={<FeatureDetail />} />
+          <Route path="/marketplace" element={<ThemeMarketplacePublic />} />
+          <Route path="/marketplace/:slug" element={<ThemeMarketplaceDetail />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            }
+          />
+          {/* Seller dashboard routes — share a single layout so the sidebar
+              stays mounted and Suspense only swaps the page content. */}
+          <Route element={<DashboardShell />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/products" element={<ProductList />} />
+            <Route path="/products/new" element={<ProductForm />} />
+            <Route path="/products/:id" element={<ProductForm />} />
+            <Route path="/orders" element={<OrderList />} />
+            <Route path="/orders/:id" element={<OrderDetail />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/accounts" element={<AccountsOverview />} />
+            <Route path="/accounts/purchases" element={<AccountsPurchases />} />
+            <Route path="/accounts/expenses" element={<AccountsExpenses />} />
+            <Route path="/accounts/suppliers" element={<AccountsSuppliers />} />
+            <Route path="/accounts/khata" element={<AccountsKhata />} />
+            <Route path="/accounts/inventory" element={<AccountsInventory />} />
+            <Route path="/accounts/reports/pnl" element={<AccountsPnl />} />
+            <Route path="/accounts/reports/cashbook" element={<AccountsCashBook />} />
+            <Route path="/accounts/reports/gst" element={<AccountsGst />} />
+            <Route path="/returns" element={<Returns />} />
+            <Route path="/exchanges" element={<Exchanges />} />
+            <Route path="/refunds" element={<Refunds />} />
+            <Route path="/shipments" element={<Shipments />} />
+            <Route path="/reviews" element={<ReviewsModeration />} />
+            <Route path="/customise" element={<Customise />} />
+            <Route path="/customise/legacy" element={<CustomiseLegacy />} />
+            <Route path="/promo-ticker" element={<PromoTickerPage />} />
+            <Route path="/sourcing" element={<Sourcing />} />
+            <Route path="/settings/payments" element={<PaymentSettings />} />
+            <Route path="/settings/cod" element={<CodSettings />} />
+            <Route path="/settings/shipping" element={<ShippingSettings />} />
+            <Route path="/settings/fulfillment" element={<FulfillmentSettings />} />
+            <Route path="/settings/qr" element={<QRCodes />} />
+            <Route path="/settings/domain" element={<DomainSettings />} />
+            <Route path="/settings/seo" element={<SEOSettings />} />
+            <Route path="/settings/email" element={<EmailBrandingSettings />} />
+            <Route path="/coupons" element={<CouponList />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/blog-posts" element={<BlogPosts />} />
+            <Route path="/blog-posts/new" element={<BlogPostForm />} />
+            <Route path="/blog-posts/:id" element={<BlogPostForm />} />
+            <Route path="/subscribers" element={<Subscribers />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/analytics" element={<StoreAnalytics />} />
+            <Route path="/themes" element={<Themes />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/site-offer" element={<SiteOffer />} />
+            <Route path="/wallet" element={<Wallet />} />
+            <Route path="/profile" element={<SellerProfile />} />
+            <Route path="/policies" element={<Policies />} />
+            <Route path="/testimonials" element={<Testimonials />} />
+            <Route path="/google-reviews" element={<GoogleReviewsConnect />} />
+            <Route path="/menu" element={<Menu />} />
+            <Route path="/kitchen" element={<Kitchen />} />
+            <Route path="/providers" element={<Providers />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/appointments" element={<Appointments />} />
+            <Route path="/family-plans" element={<FamilyPlans />} />
+            <Route path="/providers/payouts" element={<ProviderPayouts />} />
+          </Route>
 
-            <Route path="/store-design" element={<Navigate to="/customise" replace />} />
-            <Route path="/invoices/:id/print" element={<ProtectedRoute><InvoicePrint /></ProtectedRoute>} />
+          <Route path="/store-design" element={<Navigate to="/customise" replace />} />
+          <Route path="/invoices/:id/print" element={<ProtectedRoute><InvoicePrint /></ProtectedRoute>} />
 
-            {/* Admin routes — same pattern, persistent AdminLayout */}
-            <Route element={<AdminShell />}>
-              <Route path="/admin" element={<AdminOverview />} />
-              <Route path="/admin/stores" element={<AdminStores />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/themes" element={<AdminThemes />} />
-              <Route path="/admin/revenue" element={<AdminRevenue />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/profile" element={<AdminProfile />} />
-              <Route path="/admin/security" element={<AdminSecurity />} />
-              <Route path="/admin/provisioning" element={<AdminProvisioning />} />
-              <Route path="/admin/plans" element={<AdminPlans />} />
-              <Route path="/admin/plan-offer" element={<AdminPlanOffer />} />
-              <Route path="/admin/launch" element={<AdminLaunchChecklist />} />
-              <Route path="/admin/credits-economy" element={<AdminCreditsEconomy />} />
-              <Route path="/admin/health" element={<AdminHealth />} />
-              <Route path="/admin/disputes" element={<AdminDisputes />} />
-              <Route path="/admin/commissions" element={<AdminCommissions />} />
-              <Route path="/admin/partners" element={<AdminPartners />} />
-              <Route path="/admin/partner-payouts" element={<AdminPartnerPayouts />} />
-              <Route path="/admin/partner-analytics" element={<AdminPartnerAnalytics />} />
-              <Route path="/admin/domains" element={<AdminDomains />} />
-            </Route>
-            <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
-            <Route path="/admin/themes/preview-live/:themeId" element={<AdminThemeLivePreview />} />
-            {/* Public alias — same renderer, no admin-looking URL for marketplace visitors */}
-            <Route path="/themes/preview/:themeId" element={<AdminThemeLivePreview />} />
+          {/* Admin routes — same pattern, persistent AdminLayout */}
+          <Route element={<AdminShell />}>
+            <Route path="/admin" element={<AdminOverview />} />
+            <Route path="/admin/stores" element={<AdminStores />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/themes" element={<AdminThemes />} />
+            <Route path="/admin/revenue" element={<AdminRevenue />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
+            <Route path="/admin/security" element={<AdminSecurity />} />
+            <Route path="/admin/provisioning" element={<AdminProvisioning />} />
+            <Route path="/admin/plans" element={<AdminPlans />} />
+            <Route path="/admin/plan-offer" element={<AdminPlanOffer />} />
+            <Route path="/admin/launch" element={<AdminLaunchChecklist />} />
+            <Route path="/admin/credits-economy" element={<AdminCreditsEconomy />} />
+            <Route path="/admin/health" element={<AdminHealth />} />
+            <Route path="/admin/disputes" element={<AdminDisputes />} />
+            <Route path="/admin/commissions" element={<AdminCommissions />} />
+            <Route path="/admin/partners" element={<AdminPartners />} />
+            <Route path="/admin/partner-payouts" element={<AdminPartnerPayouts />} />
+            <Route path="/admin/partner-analytics" element={<AdminPartnerAnalytics />} />
+            <Route path="/admin/domains" element={<AdminDomains />} />
+          </Route>
+          <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
+          <Route path="/admin/themes/preview-live/:themeId" element={<AdminThemeLivePreview />} />
+          <Route path="/themes/preview/:themeId" element={<AdminThemeLivePreview />} />
 
-            {/* Partner program (license-based, admin-invited) */}
-            <Route path="/partners" element={<PartnersSignup />} />
-            <Route path="/partners/signup" element={<PartnersSignup />} />
-            <Route path="/partners/dashboard" element={<PartnersDashboard />} />
-            <Route path="/partner/accept" element={<PartnerAccept />} />
-            <Route path="/partner" element={<PartnerDashboard />} />
-            <Route path="/partner/stores/new" element={<NewClientStore />} />
-            <Route path="/partner/hierarchy" element={<PartnerHierarchy />} />
-            <Route path="/partner/payouts" element={<PartnerPayouts />} />
-            <Route path="/store-invite/accept" element={<StoreInviteAccept />} />
-            <Route path="/store-invite/accept" element={<StoreInviteAccept />} />
-            {/* Help Center */}
-            <Route path="/help" element={<Help />} />
-            <Route path="/help/:slug" element={<Help />} />
-            {/* Platform Legal Pages */}
-            <Route path="/unsubscribe" element={<Unsubscribe />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/refund-policy" element={<RefundPolicy />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/contact-us" element={<Contact />} />
-            {/* Public Storefront Routes */}
-            <Route path="/store/preview-theme" element={<ThemePreview />} />
-            <Route path="/store/:slug" element={<Storefront />} />
-            <Route path="/store/:slug/shop" element={<Storefront page="shop" />} />
-            <Route path="/store/:slug/collections" element={<Storefront page="collections" />} />
-            <Route path="/store/:slug/collections/:categoryId" element={<Storefront page="collection_detail" />} />
-            <Route path="/store/:slug/about" element={<Storefront page="about" />} />
-            <Route path="/store/:slug/contact" element={<Storefront page="contact" />} />
-            <Route path="/store/:slug/product/:productId" element={<StorefrontProduct />} />
-            <Route path="/store/:slug/cart" element={<StorefrontCart />} />
-            <Route path="/store/:slug/checkout" element={<StorefrontCheckout />} />
-            <Route path="/store/:slug/menu" element={<StorefrontMenu />} />
-            <Route path="/store/:slug/menu/t/:tableToken" element={<StorefrontMenu forceMode="dine_in" />} />
-            <Route path="/store/:slug/menu/takeaway" element={<StorefrontMenu forceMode="takeaway" />} />
-            <Route path="/store/:slug/menu/delivery" element={<StorefrontMenu forceMode="delivery" />} />
-            <Route path="/store/:slug/book" element={<StorefrontBooking />} />
-            <Route path="/track/:code" element={<OrderTracking />} />
-            <Route path="/menu" element={<ProtectedRoute><DashboardLayout><Menu /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/kitchen" element={<ProtectedRoute><DashboardLayout><Kitchen /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/store/:slug/blog" element={<StorefrontBlog />} />
-            <Route path="/store/:slug/blog/:postSlug" element={<StorefrontBlogPost />} />
-            <Route path="/store/:slug/account/auth" element={<CustomerAuth />} />
-            <Route path="/store/:slug/reset-password" element={<CustomerResetPassword />} />
-            <Route path="/store/:slug/account" element={<CustomerRoute><CustomerAccount /></CustomerRoute>} />
-            <Route path="/store/:slug/account/orders/:id" element={<CustomerRoute><CustomerOrderDetail /></CustomerRoute>} />
-            <Route path="/store/:slug/account/returns/:id" element={<CustomerRoute><CustomerReturnDetail /></CustomerRoute>} />
-            <Route path="/store/:slug/account/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
-            <Route path="/store/:slug/account/wishlist" element={<CustomerRoute><CustomerWishlist /></CustomerRoute>} />
-            <Route path="/store/:slug/p/:pageSlug" element={<StorefrontCustomPage />} />
-            <Route path="/store/:slug/:policyType" element={<StorefrontPolicy />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          {/* Partner program (license-based, admin-invited) */}
+          <Route path="/partners" element={<PartnersSignup />} />
+          <Route path="/partners/signup" element={<PartnersSignup />} />
+          <Route path="/partners/dashboard" element={<PartnersDashboard />} />
+          <Route path="/partner/accept" element={<PartnerAccept />} />
+          <Route path="/partner" element={<PartnerDashboard />} />
+          <Route path="/partner/stores/new" element={<NewClientStore />} />
+          <Route path="/partner/hierarchy" element={<PartnerHierarchy />} />
+          <Route path="/partner/payouts" element={<PartnerPayouts />} />
+          <Route path="/store-invite/accept" element={<StoreInviteAccept />} />
+          <Route path="/store-invite/accept" element={<StoreInviteAccept />} />
+          {/* Help Center */}
+          <Route path="/help" element={<Help />} />
+          <Route path="/help/:slug" element={<Help />} />
+          {/* Platform Legal Pages */}
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/contact-us" element={<Contact />} />
+          {/* Public Storefront Routes */}
+          <Route path="/store/preview-theme" element={<ThemePreview />} />
+          <Route path="/store/:slug" element={<Storefront />} />
+          <Route path="/store/:slug/shop" element={<Storefront page="shop" />} />
+          <Route path="/store/:slug/collections" element={<Storefront page="collections" />} />
+          <Route path="/store/:slug/collections/:categoryId" element={<Storefront page="collection_detail" />} />
+          <Route path="/store/:slug/about" element={<Storefront page="about" />} />
+          <Route path="/store/:slug/contact" element={<Storefront page="contact" />} />
+          <Route path="/store/:slug/product/:productId" element={<StorefrontProduct />} />
+          <Route path="/store/:slug/cart" element={<StorefrontCart />} />
+          <Route path="/store/:slug/checkout" element={<StorefrontCheckout />} />
+          <Route path="/store/:slug/menu" element={<StorefrontMenu />} />
+          <Route path="/store/:slug/menu/t/:tableToken" element={<StorefrontMenu forceMode="dine_in" />} />
+          <Route path="/store/:slug/menu/takeaway" element={<StorefrontMenu forceMode="takeaway" />} />
+          <Route path="/store/:slug/menu/delivery" element={<StorefrontMenu forceMode="delivery" />} />
+          <Route path="/store/:slug/book" element={<StorefrontBooking />} />
+          <Route path="/track/:code" element={<OrderTracking />} />
+          <Route path="/menu" element={<ProtectedRoute><DashboardLayout><Menu /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/kitchen" element={<ProtectedRoute><DashboardLayout><Kitchen /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/store/:slug/blog" element={<StorefrontBlog />} />
+          <Route path="/store/:slug/blog/:postSlug" element={<StorefrontBlogPost />} />
+          <Route path="/store/:slug/account/auth" element={<CustomerAuth />} />
+          <Route path="/store/:slug/reset-password" element={<CustomerResetPassword />} />
+          <Route path="/store/:slug/account" element={<CustomerRoute><CustomerAccount /></CustomerRoute>} />
+          <Route path="/store/:slug/account/orders/:id" element={<CustomerRoute><CustomerOrderDetail /></CustomerRoute>} />
+          <Route path="/store/:slug/account/returns/:id" element={<CustomerRoute><CustomerReturnDetail /></CustomerRoute>} />
+          <Route path="/store/:slug/account/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
+          <Route path="/store/:slug/account/wishlist" element={<CustomerRoute><CustomerWishlist /></CustomerRoute>} />
+          <Route path="/store/:slug/p/:pageSlug" element={<StorefrontCustomPage />} />
+          <Route path="/store/:slug/:policyType" element={<StorefrontPolicy />} />
+          <Route path="*" element={<NotFound />} />
+        </>
+      )}
+    </Routes>
     </Suspense>
   );
 };

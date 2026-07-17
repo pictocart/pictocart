@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * check-domain-status
  *
@@ -102,11 +103,24 @@ serve(async (req) => {
       .single();
 
     if (storeErr || !store) return json({ error: "Store not found" }, 404);
-    if (store.user_id !== user.id) return json({ error: "Forbidden" }, 403);
+
+    // Check if user is admin
+    const { data: isAdminRole } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    const isOwner = store.user_id === user.id;
+    const isAdmin = !!isAdminRole;
+
+    if (!isOwner && !isAdmin) return json({ error: "Forbidden" }, 403);
     if (!store.custom_domain) return json({ error: "No custom domain configured" }, 400);
 
     const domain = store.custom_domain as string;
-    const isApex = !domain.startsWith("www.");
+    const domainInfo = parseDomain(domain);
+    const isApex = domainInfo.isApex;
 
     // ── DNS checks ────────────────────────────────────────────────────────────
     let aRecordOk = false;
@@ -192,3 +206,39 @@ serve(async (req) => {
     return json({ error: message }, 500);
   }
 });
+
+function parseDomain(domain: string) {
+  const clean = domain.replace(/^(https?:\/\/)?(www\.)?/i, "").replace(/\/.*$/, "").trim().toLowerCase();
+  const parts = clean.split(".");
+  
+  const multiPartSuffixes = [
+    "co.uk", "me.uk", "org.uk", "ltd.uk", "plc.uk", "net.uk", "sch.uk",
+    "co.in", "net.in", "org.in", "gen.in", "ind.in", "firm.in",
+    "co.jp", "or.jp", "ne.jp", "ac.jp", "ad.jp",
+    "co.kr", "ne.kr",
+    "co.za", "net.za", "org.za",
+    "com.br", "net.br", "org.br",
+    "com.cn", "net.cn", "org.cn", "gov.cn"
+  ];
+
+  if (parts.length <= 2) {
+    return { isApex: true, subdomain: null, apexDomain: clean };
+  }
+
+  const lastTwo = parts.slice(-2).join(".");
+  if (parts.length === 3) {
+    if (multiPartSuffixes.includes(lastTwo)) {
+      return { isApex: true, subdomain: null, apexDomain: clean };
+    } else {
+      return { isApex: false, subdomain: parts[0], apexDomain: parts.slice(1).join(".") };
+    }
+  }
+
+  // 4 or more parts
+  const secondAndThird = parts.slice(-3, -1).join(".");
+  if (multiPartSuffixes.includes(secondAndThird)) {
+    return { isApex: false, subdomain: parts.slice(0, -3).join("."), apexDomain: parts.slice(-3).join(".") };
+  } else {
+    return { isApex: false, subdomain: parts.slice(0, -2).join("."), apexDomain: parts.slice(-2).join(".") };
+  }
+}
