@@ -40,14 +40,9 @@ async function callAI(model: string, body: any, fnName: string) {
 
 async function genImage(prompt: string, _fnName: string): Promise<{ url: string | null; cost: number }> {
   try {
-    const unsplashKey = Deno.env.get("UNSPLASH_ACCESS_KEY");
-    if (!unsplashKey) return { url: null, cost: 0 };
-    const stopWords = new Set(["a","an","the","of","on","in","at","for","with","and","or","no","text","overlay","background","lighting","crop","ratio","portrait","landscape","studio","soft","warm","golden","clean","high","end","premium","cinematic","aesthetic","professional","indian","photo","photograph","photography"]);
-    const keywords = prompt.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 3 && !stopWords.has(w)).slice(0, 4).join(" ");
-    const r = await fetch(`https://api.unsplash.com/photos/random?query=${encodeURIComponent(keywords || "product")}&orientation=portrait&content_filter=high&client_id=${unsplashKey}`);
-    if (!r.ok) return { url: null, cost: 0 };
-    const data = await r.json();
-    return { url: data?.urls?.regular ?? null, cost: 0 };
+    const cleanPrompt = encodeURIComponent(`${prompt}, e-commerce photography, premium, clean background`);
+    const url = `https://image.pollinations.ai/p/${cleanPrompt}?width=1024&height=1024&nologo=true&private=true&model=flux`;
+    return { url, cost: 0 };
   } catch (e) { console.error("genImage", e); return { url: null, cost: 0 }; }
 }
 
