@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -10,7 +10,32 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -78,15 +103,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "accounts_settings_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: true
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       admin_settings: {
         Row: {
@@ -530,29 +547,7 @@ export type Database = {
           travel_fee?: number | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "appointments_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "service_providers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       blog_posts: {
         Row: {
@@ -597,15 +592,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "blog_posts_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       categories: {
         Row: {
@@ -638,22 +625,7 @@ export type Database = {
           sort_order?: number
           store_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "categories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "categories_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       client_error_logs: {
         Row: {
@@ -800,15 +772,7 @@ export type Database = {
           updated_at?: string
           waive_reason?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "commission_invoices_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       coupons: {
         Row: {
@@ -877,15 +841,7 @@ export type Database = {
           used_count?: number
           value?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "coupons_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       credit_milestone_grants: {
         Row: {
@@ -1050,22 +1006,7 @@ export type Database = {
           updated_at?: string
           visits_left?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "customer_package_balances_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "service_packages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_package_balances_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       customers: {
         Row: {
@@ -1104,15 +1045,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "customers_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       disputes: {
         Row: {
@@ -1199,15 +1132,7 @@ export type Database = {
           status?: string
           store_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "domain_connect_sessions_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       dropship_orders: {
         Row: {
@@ -1279,36 +1204,7 @@ export type Database = {
           user_id?: string
           wholesale_cost?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "dropship_orders_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dropship_orders_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dropship_orders_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dropship_orders_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       email_send_log: {
         Row: {
@@ -1419,15 +1315,7 @@ export type Database = {
           name?: string
           store_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "expense_categories_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       expenses: {
         Row: {
@@ -1475,22 +1363,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "expenses_parent_expense_id_fkey"
-            columns: ["parent_expense_id"]
-            isOneToOne: false
-            referencedRelation: "expenses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "expenses_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       family_groups: {
         Row: {
@@ -1538,22 +1411,7 @@ export type Database = {
           valid_from?: string | null
           valid_until?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "family_groups_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "family_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "family_groups_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       family_members: {
         Row: {
@@ -1592,15 +1450,7 @@ export type Database = {
           phone?: string | null
           relation?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "family_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "family_groups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       family_plans: {
         Row: {
@@ -1657,22 +1507,7 @@ export type Database = {
           updated_at?: string
           yearly_fee?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "family_plans_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "service_providers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "family_plans_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       fssai_history: {
         Row: {
@@ -1699,15 +1534,7 @@ export type Database = {
           id?: string
           store_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fssai_history_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       help_articles: {
         Row: {
@@ -1779,22 +1606,7 @@ export type Database = {
           reference_table?: string | null
           store_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_movements_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_movements_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       invoice_counters: {
         Row: {
@@ -1863,29 +1675,7 @@ export type Database = {
           payment_mode?: Database["public"]["Enums"]["payment_mode_t"] | null
           store_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "khata_entries_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "khata_entries_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "khata_entries_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       low_balance_alerts: {
         Row: {
@@ -1966,22 +1756,7 @@ export type Database = {
           theme_pack_id?: string | null
           tokens_used?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "master_theme_deliveries_master_id_fkey"
-            columns: ["master_id"]
-            isOneToOne: false
-            referencedRelation: "theme_master_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "master_theme_deliveries_theme_pack_id_fkey"
-            columns: ["theme_pack_id"]
-            isOneToOne: false
-            referencedRelation: "theme_packs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       merchant_chat_messages: {
         Row: {
@@ -2005,15 +1780,7 @@ export type Database = {
           role?: string
           thread_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "merchant_chat_messages_thread_id_fkey"
-            columns: ["thread_id"]
-            isOneToOne: false
-            referencedRelation: "merchant_chat_threads"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       merchant_chat_threads: {
         Row: {
@@ -2043,15 +1810,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "merchant_chat_threads_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       merchant_sourcing_saved: {
         Row: {
@@ -2078,22 +1837,7 @@ export type Database = {
           store_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "merchant_sourcing_saved_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "merchant_sourcing_saved_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       merchant_supplier_unlocks: {
         Row: {
@@ -2123,29 +1867,7 @@ export type Database = {
           supplier_id?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "merchant_supplier_unlocks_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "merchant_supplier_unlocks_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "merchant_supplier_unlocks_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       newsletter_subscribers: {
         Row: {
@@ -2166,15 +1888,7 @@ export type Database = {
           store_id?: string
           subscribed_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "newsletter_subscribers_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       order_commissions: {
         Row: {
@@ -2216,29 +1930,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "order_commissions_invoice_fk"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "commission_invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_commissions_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: true
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_commissions_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       order_feedback: {
         Row: {
@@ -2265,22 +1957,7 @@ export type Database = {
           rating?: number
           store_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "order_feedback_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: true
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_feedback_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       order_status_history: {
         Row: {
@@ -2313,15 +1990,7 @@ export type Database = {
           order_id?: string
           to_status?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "order_status_history_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       orders: {
         Row: {
@@ -2438,15 +2107,7 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       partner_commissions: {
         Row: {
@@ -2497,29 +2158,7 @@ export type Database = {
           source_ref?: string | null
           status?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "partner_commissions_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_commissions_referral_id_fkey"
-            columns: ["referral_id"]
-            isOneToOne: false
-            referencedRelation: "partner_referrals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_commissions_source_partner_id_fkey"
-            columns: ["source_partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       partner_invites: {
         Row: {
@@ -2552,15 +2191,7 @@ export type Database = {
           partner_id?: string
           token_hash?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "partner_invites_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       partner_license_batches: {
         Row: {
@@ -2596,15 +2227,7 @@ export type Database = {
           total_inr?: number
           unit_price_inr?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "partner_license_batches_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       partner_licenses: {
         Row: {
@@ -2640,29 +2263,7 @@ export type Database = {
           revoked_by?: string | null
           status?: Database["public"]["Enums"]["partner_license_status"]
         }
-        Relationships: [
-          {
-            foreignKeyName: "partner_licenses_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "partner_license_batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_licenses_consumed_by_store_id_fkey"
-            columns: ["consumed_by_store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_licenses_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       partner_payouts: {
         Row: {
@@ -2707,15 +2308,7 @@ export type Database = {
           status?: string
           utr?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "partner_payouts_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       partner_referrals: {
         Row: {
@@ -2748,15 +2341,7 @@ export type Database = {
           status?: string
           store_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "partner_referrals_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       partners: {
         Row: {
@@ -2864,15 +2449,7 @@ export type Database = {
           upi_id?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "partners_parent_partner_id_fkey"
-            columns: ["parent_partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       payment_events: {
         Row: {
@@ -2914,22 +2491,7 @@ export type Database = {
           razorpay_payment_id?: string | null
           store_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "payment_events_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_events_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       plan_configs: {
         Row: {
@@ -3268,15 +2830,7 @@ export type Database = {
           updated_at?: string
           variants?: Json | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "products_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -3345,29 +2899,7 @@ export type Database = {
           provider_id?: string
           store_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "provider_commissions_appointment_id_fkey"
-            columns: ["appointment_id"]
-            isOneToOne: false
-            referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "provider_commissions_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "service_providers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "provider_commissions_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       provider_schedules: {
         Row: {
@@ -3412,22 +2944,7 @@ export type Database = {
           updated_at?: string
           weekday?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "provider_schedules_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "service_providers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "provider_schedules_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       provision_job_logs: {
         Row: {
@@ -3457,15 +2974,7 @@ export type Database = {
           status?: string
           step?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "provision_job_logs_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "provision_requests"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       provision_requests: {
         Row: {
@@ -3528,15 +3037,7 @@ export type Database = {
           theme_master_id?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "provision_requests_theme_master_id_fkey"
-            columns: ["theme_master_id"]
-            isOneToOne: false
-            referencedRelation: "theme_master_projects"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       provisioning_budget: {
         Row: {
@@ -3635,22 +3136,7 @@ export type Database = {
           total?: number
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "purchase_bills_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_bills_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       refunds: {
         Row: {
@@ -3701,22 +3187,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "refunds_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "refunds_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       research_jobs: {
         Row: {
@@ -3920,22 +3391,7 @@ export type Database = {
           title?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "reviews_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reviews_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       seller_push_tokens: {
         Row: {
@@ -3974,15 +3430,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "seller_push_tokens_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       service_packages: {
         Row: {
@@ -4024,15 +3472,7 @@ export type Database = {
           updated_at?: string
           validity_days?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "service_packages_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       service_providers: {
         Row: {
@@ -4119,15 +3559,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "service_providers_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       services: {
         Row: {
@@ -4196,15 +3628,7 @@ export type Database = {
           teleconsult_enabled?: boolean | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "services_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sourcing_inquiries: {
         Row: {
@@ -4255,29 +3679,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "sourcing_inquiries_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sourcing_inquiries_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sourcing_inquiries_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sourcing_products: {
         Row: {
@@ -4388,15 +3790,7 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "sourcing_products_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sourcing_supplier_payouts: {
         Row: {
@@ -4441,15 +3835,7 @@ export type Database = {
           supplier_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "sourcing_supplier_payouts_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sourcing_supplier_reviews: {
         Row: {
@@ -4479,22 +3865,7 @@ export type Database = {
           supplier_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "sourcing_supplier_reviews_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sourcing_supplier_reviews_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sourcing_suppliers: {
         Row: {
@@ -4641,15 +4012,7 @@ export type Database = {
           trend_score?: number
           week_of?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "sourcing_viral_products_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "sourcing_products"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_content: {
         Row: {
@@ -4745,15 +4108,7 @@ export type Database = {
           uploaded_images?: Json
           version?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_custom_pages_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_email_domains: {
         Row: {
@@ -4792,15 +4147,7 @@ export type Database = {
           updated_at?: string
           verified_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_email_domains_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: true
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_email_templates: {
         Row: {
@@ -4827,15 +4174,7 @@ export type Database = {
           templates?: Json
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_email_templates_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: true
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_fulfillment_settings: {
         Row: {
@@ -4937,22 +4276,7 @@ export type Database = {
           text?: string | null
           time_unix?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_google_reviews_cache_connection_id_fkey"
-            columns: ["connection_id"]
-            isOneToOne: false
-            referencedRelation: "store_google_reviews_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "store_google_reviews_cache_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_google_reviews_connections: {
         Row: {
@@ -5012,15 +4336,7 @@ export type Database = {
           total_reviews?: number | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_google_reviews_connections_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: true
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_handovers: {
         Row: {
@@ -5074,22 +4390,7 @@ export type Database = {
           token_hash?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_handovers_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "store_handovers_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_qr_codes: {
         Row: {
@@ -5176,15 +4477,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_secrets_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: true
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_site_offers: {
         Row: {
@@ -5232,15 +4525,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_site_offers_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: true
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       store_testimonials: {
         Row: {
@@ -5282,15 +4567,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_testimonials_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       stores: {
         Row: {
@@ -5299,6 +4576,9 @@ export type Database = {
           created_at: string
           custom_domain: string | null
           description: string | null
+          domain_added_to_vercel_at: string | null
+          domain_status: string | null
+          domain_verification_token: string | null
           downtime_notified_at: string | null
           home_page_id: string | null
           home_page_kind: string
@@ -5329,6 +4609,9 @@ export type Database = {
           created_at?: string
           custom_domain?: string | null
           description?: string | null
+          domain_added_to_vercel_at?: string | null
+          domain_status?: string | null
+          domain_verification_token?: string | null
           downtime_notified_at?: string | null
           home_page_id?: string | null
           home_page_kind?: string
@@ -5359,6 +4642,9 @@ export type Database = {
           created_at?: string
           custom_domain?: string | null
           description?: string | null
+          domain_added_to_vercel_at?: string | null
+          domain_status?: string | null
+          domain_verification_token?: string | null
           downtime_notified_at?: string | null
           home_page_id?: string | null
           home_page_kind?: string
@@ -5383,29 +4669,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "stores_home_page_id_fkey"
-            columns: ["home_page_id"]
-            isOneToOne: false
-            referencedRelation: "store_custom_pages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stores_home_page_product_id_fkey"
-            columns: ["home_page_product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stores_owned_by_partner_id_fkey"
-            columns: ["owned_by_partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subscription_events: {
         Row: {
@@ -5435,15 +4699,7 @@ export type Database = {
           razorpay_event_id?: string | null
           subscription_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "subscription_events_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -5512,15 +4768,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: true
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       suppliers: {
         Row: {
@@ -5562,15 +4810,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "suppliers_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       support_ticket_messages: {
         Row: {
@@ -5600,15 +4840,7 @@ export type Database = {
           sender_user_id?: string | null
           ticket_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "support_tickets"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       support_tickets: {
         Row: {
@@ -5650,22 +4882,7 @@ export type Database = {
           subject?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "support_tickets_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "support_tickets_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       suppressed_emails: {
         Row: {
@@ -5779,22 +4996,7 @@ export type Database = {
           theme_pack_id?: string | null
           tokens_used?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "theme_generation_metrics_delivery_id_fkey"
-            columns: ["delivery_id"]
-            isOneToOne: false
-            referencedRelation: "master_theme_deliveries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "theme_generation_metrics_theme_pack_id_fkey"
-            columns: ["theme_pack_id"]
-            isOneToOne: false
-            referencedRelation: "theme_packs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       theme_image_pool: {
         Row: {
@@ -6121,15 +5323,7 @@ export type Database = {
           theme_ref?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "theme_purchase_intents_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       theme_purchases: {
         Row: {
@@ -6150,22 +5344,7 @@ export type Database = {
           store_id?: string
           theme_pack_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "theme_purchases_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "theme_purchases_theme_pack_id_fkey"
-            columns: ["theme_pack_id"]
-            isOneToOne: false
-            referencedRelation: "theme_packs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       theme_release_calendar: {
         Row: {
@@ -6210,15 +5389,7 @@ export type Database = {
           theme_brief?: Json | null
           theme_pack_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "theme_release_calendar_theme_pack_id_fkey"
-            columns: ["theme_pack_id"]
-            isOneToOne: false
-            referencedRelation: "theme_packs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       theme_research_corpus: {
         Row: {
@@ -6362,15 +5533,7 @@ export type Database = {
           theme_master_id?: string
           version?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "theme_versions_theme_master_id_fkey"
-            columns: ["theme_master_id"]
-            isOneToOne: false
-            referencedRelation: "theme_master_projects"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tour_progress: {
         Row: {
@@ -6418,15 +5581,7 @@ export type Database = {
           store_id?: string
           subscription_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "trial_reminders_sent_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -6468,22 +5623,7 @@ export type Database = {
           store_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "wishlists_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "wishlists_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -6975,6 +6115,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: [
