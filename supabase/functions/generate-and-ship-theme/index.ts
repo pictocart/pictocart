@@ -38,12 +38,47 @@ async function callAI(model: string, body: any, fnName: string) {
   throw new Error("callAI: all retries exhausted");
 }
 
-async function genImage(prompt: string, _fnName: string): Promise<{ url: string | null; cost: number }> {
+async function genImage(prompt: string, _fnName: string, vibe = ""): Promise<{ url: string | null; cost: number }> {
   try {
-    const cleanPrompt = encodeURIComponent(`${prompt}, e-commerce photography, premium, clean background`);
+    let addendum = "e-commerce photography, premium, clean background";
+    const cleanVibe = vibe.toLowerCase();
+    if (cleanVibe.includes("minimal") || cleanVibe.includes("clean") || cleanVibe.includes("simple")) {
+      addendum = "Scandinavian clean aesthetic, bright studio lighting, neutral background, shadows, soft focus, minimal product shot";
+    } else if (cleanVibe.includes("luxury") || cleanVibe.includes("premium") || cleanVibe.includes("gold") || cleanVibe.includes("elegant") || cleanVibe.includes("royal")) {
+      addendum = "high-end luxury product photography, elegant warm ambient lighting, gold accents, marble textures, shallow depth of field, 8k resolution, commercial look";
+    } else if (cleanVibe.includes("organic") || cleanVibe.includes("natural") || cleanVibe.includes("eco") || cleanVibe.includes("earth") || cleanVibe.includes("botanical")) {
+      addendum = "natural organic product shot, soft sunlight through leaves, textured raw stone or wood background, botanical details, authentic texture, natural lighting";
+    } else if (cleanVibe.includes("bold") || cleanVibe.includes("vibrant") || cleanVibe.includes("modern") || cleanVibe.includes("neon") || cleanVibe.includes("playful") || cleanVibe.includes("gen-z")) {
+      addendum = "bold editorial product photography, high contrast, vibrant color blocking, pop-art style, sharp focus, studio flash, eye-catching";
+    }
+
+    const cleanPrompt = encodeURIComponent(`${prompt}, ${addendum}`);
     const url = `https://image.pollinations.ai/p/${cleanPrompt}?width=1024&height=1024&nologo=true&private=true&model=flux`;
     return { url, cost: 0 };
   } catch (e) { console.error("genImage", e); return { url: null, cost: 0 }; }
+}
+
+function sanitizeText(val: any): any {
+  if (typeof val === "string") {
+    // Strip markdown headers like ### or ##
+    let cleaned = val.replace(/^#+\s+/gm, "");
+    // Strip markdown bold/italic tags like **, *, __, _
+    cleaned = cleaned.replace(/(\*\*|\*|__|_)/g, "");
+    // Strip raw HTML tags
+    cleaned = cleaned.replace(/<[^>]*>/g, "");
+    return cleaned.trim();
+  }
+  if (Array.isArray(val)) {
+    return val.map(sanitizeText);
+  }
+  if (val !== null && typeof val === "object") {
+    const res: Record<string, any> = {};
+    for (const key of Object.keys(val)) {
+      res[key] = sanitizeText(val[key]);
+    }
+    return res;
+  }
+  return val;
 }
 
 const themeTool = {
@@ -259,8 +294,14 @@ Deno.serve(async (req) => {
     // renders booking-first storefront pages instead of generic catalog.
     // =========================================================================
     if (vert === "services") {
-      const svcSys = `You design premium booking-first websites for Indian service businesses (doctors, clinics, salons, spas, home-visit pros) sold via Pic To Cart. Every theme must feel trustworthy, calm and unmistakably built for THIS profession — not a generic shop. Real Google Fonts. Tight palette. INR pricing. Realistic Indian names, qualifications, addresses.${briefBlock}`;
-      const svcUser = `Build a complete theme for "${briefName}". Sub-vertical: ${sub ?? cb?.subcategory ?? "general service"}. Vibe: ${brief.vibe ?? cb?.display_name ?? "calm, professional"}. Fill EVERY field. Providers: 3 Indian professionals with real-sounding qualifications. Services: 6-8 bookable services with duration_min (15-120) and INR price. Packages: 3 prepaid bundles. Clinic_hours: all 7 days. FAQs: 4-6 questions a real customer would ask before booking. Image prompts must be detailed photographic descriptions, no text overlay.`;
+      const svcSys = `You design premium booking-first websites for Indian service businesses (doctors, clinics, salons, spas, home-visit pros) sold via Pic To Cart. Every theme must feel trustworthy, calm and unmistakably built for THIS profession — not a generic shop. Tight palette. INR pricing. You MUST select one of the following curated Google Font pairings for heading and body in the 'fonts' object:
+  1. 'Playfair Display' (heading) & 'Inter' (body) [Vibe: Luxury, Elegant, Heritage]
+  2. 'Outfit' (heading) & 'Plus Jakarta Sans' (body) [Vibe: Tech, Modern, Premium]
+  3. 'Space Grotesk' (heading) & 'Syne' (body) [Vibe: Bold, Playful, Gen-Z]
+  4. 'Fraunces' (heading) & 'DM Sans' (body) [Vibe: Organic, Aesthetic, Botanical]
+  5. 'Cinzel' (heading) & 'Montserrat' (body) [Vibe: Royal, Classic, Premium]
+Realistic Indian names, qualifications, addresses. Never include any Markdown formatting (like **, *, __, _, #, etc.) or raw HTML tags (like <b>, <p>, etc.) in any of the copy fields. Keep all strings clean and plain-text. ${briefBlock}`;
+      const svcUser = `Build a complete theme for "${briefName}". Sub-vertical: ${sub ?? cb?.subcategory ?? "general service"}. Vibe: ${brief.vibe ?? cb?.display_name ?? "calm, professional"}. Fill EVERY field. Providers: 3 Indian professionals with real-sounding qualifications and realistic Indian names. Services: 6-8 bookable services with duration_min (15-120) and INR price. Packages: 3 prepaid bundles. Clinic_hours: all 7 days. FAQs: 4-6 questions a real customer would ask before booking. Image prompts must be detailed photographic descriptions, no text overlay. Ensure reviews use realistic Indian names and metro locations (e.g. Bangalore, Mumbai, New Delhi).`;
       const svcRes = await callAI("llama-3.3-70b-versatile", {
         messages: [{ role: "system", content: svcSys }, { role: "user", content: svcUser }],
         tools: [serviceTool],
@@ -268,7 +309,7 @@ Deno.serve(async (req) => {
       }, "generate-and-ship-theme");
       const svcCall = svcRes.data.choices?.[0]?.message?.tool_calls?.[0];
       if (!svcCall) throw new Error("AI did not return service theme blueprint");
-      const sdna = JSON.parse(svcCall.function.arguments);
+      const sdna = sanitizeText(JSON.parse(svcCall.function.arguments));
 
       // Generate images: hero + 4 department tiles + 3 provider portraits.
       const svcImgPrompts: string[] = [
@@ -276,7 +317,7 @@ Deno.serve(async (req) => {
         ...sdna.departments.map((d: any) => `${d.image_prompt}. ${sdna.vibe} aesthetic, 1:1 crop, premium professional photo, no text.`),
         ...sdna.providers.map((pr: any) => `${pr.image_prompt}. Premium professional portrait of an Indian ${pr.role}, ${sdna.vibe} aesthetic, soft studio lighting, 4:5 portrait, no text.`),
       ];
-      const svcImgRes = await Promise.all(svcImgPrompts.map((pp) => genImage(pp, "generate-and-ship-theme")));
+      const svcImgRes = await Promise.all(svcImgPrompts.map((pp) => genImage(pp, "generate-and-ship-theme", sdna.vibe || "")));
       const imageCostTotal = svcImgRes.reduce((s, r) => s + r.cost, 0);
       const imageCount = svcImgRes.filter((r) => r.url).length;
       const heroUrl = svcImgRes[0].url;
@@ -445,7 +486,12 @@ Every theme you create must feel like it was designed by a DIFFERENT creative ag
 
 YOUR DECISIONS (you choose everything):
 - Color palette — unexpected combinations that WORK together
-- Typography — specific Google Font pairing that matches brand personality  
+- Typography — specific Google Font pairing that matches brand personality. You MUST select one of the following curated Google Font pairings for heading and body in the 'fonts' object:
+  1. 'Playfair Display' (heading) & 'Inter' (body) [Vibe: Luxury, Elegant, Heritage]
+  2. 'Outfit' (heading) & 'Plus Jakarta Sans' (body) [Vibe: Tech, Modern, Premium]
+  3. 'Space Grotesk' (heading) & 'Syne' (body) [Vibe: Bold, Playful, Gen-Z]
+  4. 'Fraunces' (heading) & 'DM Sans' (body) [Vibe: Organic, Aesthetic, Botanical]
+  5. 'Cinzel' (heading) & 'Montserrat' (body) [Vibe: Royal, Classic, Premium]
 - Hero layout — NOT always split image. Could be fullscreen, text-only, editorial, collage, diagonal
 - Navbar — could be dark, colored, floating, transparent, bold bar
 - Section order — design an EMOTIONAL JOURNEY specific to this brand
@@ -460,28 +506,31 @@ FORBIDDEN (unless truly justified):
 
 RULES:
 - All colors must be valid hex codes
-- Fonts must be real Google Fonts
+- Fonts must be one of the 5 curated Google Font pairings listed above
 - ALL products must have realistic Indian INR prices
-- Image prompts must be detailed photography directions — no text overlay in image
+- All reviews/testimonials MUST use realistic Indian names (e.g. Aarav, Priya, Rohan, Vikram, Meera, Ananya, Kabir, Neha, Arjun, Riya) and realistic Indian locations (e.g. Indiranagar - Bangalore, Bandra - Mumbai, GK II - New Delhi, Salt Lake - Kolkata).
+- Include trust-building USPs such as 'Cash on Delivery Available', 'Free Shipping across India', 'Handcrafted with Love in Rajasthan', '24/7 Support in Hindi & English'.
+- Image prompts must be detailed photography directions — no text overlay in image.
 - section_order must be chosen as an emotional journey: awareness → interest → desire → action
+- Never include any Markdown formatting (like **, *, __, _, #, etc.) or raw HTML tags (like <b>, <p>, etc.) in any of the text fields. Keep strings clean and plain-text.
 
 Available section types for section_order:
-hero, usp_strip, category_grid, product_grid, story, testimonials, 
-newsletter, journal_strip, marquee, lookbook, features, values, 
-spec_table, faq, process_steps
+- hero, usp_strip, category_grid, product_grid, story, testimonials, 
+- newsletter, journal_strip, marquee, lookbook, features, values, 
+- spec_table, faq, process_steps
 
 Available hero_style values:
-fullscreen_image, split_image, text_only, editorial_asymmetric, 
-grid_collage, minimal_float, centered_bold, diagonal_split
+- fullscreen_image, split_image, text_only, editorial_asymmetric, 
+- grid_collage, minimal_float, centered_bold, diagonal_split
 
 Available header_style values:
-classic, centered_logo, minimal_left, bold_bar, transparent_overlay, floating_pill
+- classic, centered_logo, minimal_left, bold_bar, transparent_overlay, floating_pill
 
 Available category_style values:
-grid_4, grid_3, big_feature, mosaic_2x2, horizontal_scroll, circles, editorial_list, overlay_cards
+- grid_4, grid_3, big_feature, mosaic_2x2, horizontal_scroll, circles, editorial_list, overlay_cards
 
 Available product_style values:
-grid_clean, grid_dense, editorial_list, magazine_mix, masonry, minimal_cards, bold_cards
+- grid_clean, grid_dense, editorial_list, magazine_mix, masonry, minimal_cards, bold_cards
 
 Available density values: compact, balanced, airy, spacious`;
 
@@ -505,7 +554,7 @@ Be bold. Be original. Make it beautiful. Fill EVERY field completely.`;
     }, "generate-and-ship-theme");
     const toolCall = dnaRes.data.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("AI did not return theme blueprint");
-    const dna = JSON.parse(toolCall.function.arguments);
+    const dna = sanitizeText(JSON.parse(toolCall.function.arguments));
 
     // LLM ka layout decision — no override, full freedom
     const layout = dna.layout ?? {};
@@ -513,7 +562,7 @@ Be bold. Be original. Make it beautiful. Fill EVERY field completely.`;
       { key: "hero", prompt: `${dna.hero.image_prompt}. High-end product photography, no text overlay.` },
       ...(dna.categories ?? []).map((c: any, i: number) => ({ key: `cat_${i}`, prompt: `${c.image_prompt}. Clean product photo, no text overlay.` })),
     ];
-    const imgResults = await Promise.all(imgPrompts.map((p) => genImage(p.prompt, "generate-and-ship-theme")));
+    const imgResults = await Promise.all(imgPrompts.map((p) => genImage(p.prompt, "generate-and-ship-theme", dna.vibe || "")));
     const imageCostTotal = imgResults.reduce((s, r) => s + r.cost, 0);
     const imageCount = imgResults.filter((r) => r.url).length;
     const heroUrl = imgResults[0].url;
