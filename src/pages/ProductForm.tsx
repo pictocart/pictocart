@@ -93,6 +93,36 @@ const ProductForm = () => {
   const [newCatSaving, setNewCatSaving] = useState(false);
   const aiCredits = useAICredits({ onInsufficient: () => setRechargeOpen(true) });
 
+  // AI Product Reviews states
+  const [genReviewsOpen, setGenReviewsOpen] = useState(false);
+  const [reviewCount, setReviewCount] = useState('3');
+  const [sentiment, setSentiment] = useState('positive');
+  const [generatingReviews, setGeneratingReviews] = useState(false);
+
+  const handleGenerateReviews = async () => {
+    if (!id || !store?.id) return;
+    setGeneratingReviews(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-reviews', {
+        body: {
+          store_id: store.id,
+          product_id: id,
+          count: parseInt(reviewCount),
+          sentiment,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`Successfully generated ${data.count} AI reviews!`);
+      setGenReviewsOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to generate reviews');
+    } finally {
+      setGeneratingReviews(false);
+    }
+  };
+
   // Populate form for edit
   useEffect(() => {
     if (existingProduct) {
@@ -289,7 +319,18 @@ const ProductForm = () => {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {isEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setGenReviewsOpen(true)}
+              className="gap-1.5 border-violet-200 text-violet-700 hover:bg-violet-50 hover:text-violet-800"
+            >
+              <Sparkles className="h-4 w-4 text-violet-600 animate-pulse" />
+              Generate AI Reviews
+            </Button>
+          )}
           <Button variant="outline" onClick={() => handleSave(true)} disabled={saving}>Save Draft</Button>
           <Button data-tour="product-save" onClick={() => handleSave(false)} disabled={saving}>
             {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
@@ -761,6 +802,75 @@ const ProductForm = () => {
           </Card>
         </div>
       </div>
+      {/* Generate AI Reviews Dialog */}
+      <Dialog open={genReviewsOpen} onOpenChange={setGenReviewsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-600 animate-pulse" />
+              Generate AI Product Reviews
+            </DialogTitle>
+            <DialogDescription>
+              Create authentic, high-quality simulated customer reviews for "{title}" with realistic ratings to build immediate buyer trust.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            {/* Review count */}
+            <div className="space-y-2">
+              <Label htmlFor="review-count">Number of reviews</Label>
+              <Select value={reviewCount} onValueChange={setReviewCount}>
+                <SelectTrigger id="review-count" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3 Reviews</SelectItem>
+                  <SelectItem value="5">5 Reviews</SelectItem>
+                  <SelectItem value="10">10 Reviews</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sentiment */}
+            <div className="space-y-2">
+              <Label htmlFor="review-sentiment">Review Tone & Sentiment</Label>
+              <Select value={sentiment} onValueChange={setSentiment}>
+                <SelectTrigger id="review-sentiment" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="highly_positive">Highly Positive (5 Stars only)</SelectItem>
+                  <SelectItem value="positive">Positive (4 - 5 Stars)</SelectItem>
+                  <SelectItem value="mixed">Mixed Vibe (3 - 5 Stars)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenReviewsOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerateReviews}
+              disabled={generatingReviews}
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 font-semibold"
+            >
+              {generatingReviews ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating reviews...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Reviews
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
