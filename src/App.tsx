@@ -5,7 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { StoreProvider } from "@/contexts/StoreContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -35,6 +35,14 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]);
   return null;
+};
+
+const LandingPageWrapper = () => {
+  const { user } = useAuth();
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <LandingPage />;
 };
 
 // Lazy-load heavy / less-frequent pages to shrink initial bundle.
@@ -241,7 +249,7 @@ const AppRoutes = () => {
       ) : (
         // Platform Routes
         <>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<LandingPageWrapper />} />
           <Route path="/q/:slug" element={<QRRedirect />} />
           <Route path="/investors" element={<Investors />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
