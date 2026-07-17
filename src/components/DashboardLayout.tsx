@@ -20,6 +20,7 @@ import {
   Search,
   FileText,
   Mail,
+  MessageSquare,
   TrendingUp,
   FolderTree,
   UserCircle,
