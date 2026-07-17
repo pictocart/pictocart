@@ -125,6 +125,7 @@ const NewClientStore = lazy(() => import("@/pages/partner/NewClientStore"));
 const PartnerHierarchy = lazy(() => import("@/pages/partner/PartnerHierarchy"));
 const PartnerPayouts = lazy(() => import("@/pages/partner/PartnerPayouts"));
 const AdminPartnerPayouts = lazy(() => import("@/pages/admin/AdminPartnerPayouts"));
+const AdminDomains = lazy(() => import("@/pages/admin/AdminDomains"));
 const AdminPartnerAnalytics = lazy(() => import("@/pages/admin/AdminPartnerAnalytics"));
 const StoreInviteAccept = lazy(() => import("@/pages/storefront/StoreInviteAccept"));
 const Help = lazy(() => import("@/pages/Help"));
@@ -292,6 +293,7 @@ const AppRoutes = () => {
               <Route path="/admin/partners" element={<AdminPartners />} />
               <Route path="/admin/partner-payouts" element={<AdminPartnerPayouts />} />
               <Route path="/admin/partner-analytics" element={<AdminPartnerAnalytics />} />
+              <Route path="/admin/domains" element={<AdminDomains />} />
             </Route>
             <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
             <Route path="/admin/themes/preview-live/:themeId" element={<AdminThemeLivePreview />} />

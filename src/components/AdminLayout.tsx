@@ -30,6 +30,7 @@ import { useState } from 'react';
 const adminNavItems = [
   { label: 'Overview', icon: LayoutDashboard, path: '/admin' },
   { label: 'Stores', icon: Store, path: '/admin/stores' },
+  { label: 'Domains', icon: Globe, path: '/admin/domains' },
   { label: 'Provisioning', icon: Rocket, path: '/admin/provisioning' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Themes', icon: Palette, path: '/admin/themes' },
