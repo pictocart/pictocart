@@ -23,7 +23,17 @@ serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
-    const { imageUrl, category, storeName, productType, productHint, store_id } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    if (body.listModels) {
+      const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+      const r = await fetch("https://api.groq.com/openai/v1/models", {
+        headers: { Authorization: `Bearer ${GROQ_API_KEY}` }
+      });
+      const data = await r.json();
+      return json(data);
+    }
+
+    const { imageUrl, category, storeName, productType, productHint, store_id } = body;
     if (!imageUrl) return json({ error: "imageUrl is required" }, 400);
     if (!store_id) return json({ error: "store_id is required" }, 400);
 
@@ -181,7 +191,7 @@ Rules:
         method: "POST",
         headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "llama-3.2-11b-vision-preview",
+          model: "meta-llama/llama-4-scout-17b-16e-instruct",
           messages: [
             {
               role: "user",
@@ -197,7 +207,7 @@ Rules:
       if (!response.ok) {
         const txt = await response.text();
         console.error("Groq vision error:", response.status, txt);
-        throw new Error(`Groq vision error: ${response.status}`);
+        throw new Error(`Groq vision error: ${response.status} - ${txt}`);
       }
 
       aiData = await response.json();
