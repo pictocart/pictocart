@@ -50,7 +50,7 @@ const ReviewsModeration = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   // AI Review Generator states
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [products, setProducts] = useState<{ id: string; title: string }[]>([]);
   const [genOpen, setGenOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [reviewCount, setReviewCount] = useState('3');
@@ -62,9 +62,9 @@ const ReviewsModeration = () => {
     const fetchProducts = async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name')
+        .select('id, title')
         .eq('store_id', store.id)
-        .order('name');
+        .order('title');
       if (!error && data) {
         setProducts(data);
         
@@ -309,7 +309,7 @@ const ReviewsModeration = () => {
                   <SelectContent>
                     {products.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.name}
+                        {p.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
