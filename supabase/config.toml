@@ -1,6 +1,12 @@
 project_id = "qxeyndsvkfsmkilkzmuc"
 
 [functions]
+  [functions.connect-custom-domain]
+    verify_jwt = true
+
+  [functions.check-domain-status]
+    verify_jwt = true
+
   [functions.admin-cloudflare-action]
     verify_jwt = false
   [functions.partner-accept]

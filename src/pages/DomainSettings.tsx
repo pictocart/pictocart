@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,19 +10,26 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
-  Globe,
-  Loader2,
-  CheckCircle2,
-  Copy,
-  ExternalLink,
-  Mail,
-  Shield,
-  Sparkles,
-  Clock,
-  RefreshCw,
+  Globe, Loader2, CheckCircle2, Copy, ExternalLink,
+  Mail, Shield, Sparkles, RefreshCw, AlertTriangle,
+  ArrowRight, Unplug, Info,
 } from 'lucide-react';
 
-// ── Types ──
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface DnsInstruction {
+  type: string;
+  name: string;
+  value: string;
+  note: string;
+}
+
+interface DnsInstructions {
+  primary: DnsInstruction;
+  www: DnsInstruction | null;
+  ttl: string;
+  propagation_note: string;
+}
 
 interface EmailDomainConfig {
   id: string;
@@ -35,21 +42,356 @@ interface EmailDomainConfig {
   verified_at: string | null;
 }
 
-interface ProvisionRequestRow {
-  id: string;
-  status: string;
-  requested_domain: string | null;
-  new_project_url: string | null;
-  queued_at: string;
-  completed_at: string | null;
-}
+type DomainStatus = 'none' | 'pending_dns' | 'verifying' | 'active' | 'failed';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text);
-  toast.success('Copied to clipboard');
+  toast.success('Copied!');
 };
 
-// ── Email Domain Section ──
+// ── DNS Record Row ────────────────────────────────────────────────────────────
+
+function DnsRecordRow({ record }: { record: DnsInstruction }) {
+  return (
+    <div className="grid grid-cols-3 gap-3 rounded-lg bg-muted p-3 text-sm font-mono">
+      <div>
+        <p className="text-[10px] text-muted-foreground mb-1 font-sans">Type</p>
+        <Badge variant="outline" className="text-xs">{record.type}</Badge>
+      </div>
+      <div>
+        <p className="text-[10px] text-muted-foreground mb-1 font-sans">Name / Host</p>
+        <div className="flex items-center gap-1">
+          <span className="text-xs break-all">{record.name}</span>
+          <button onClick={() => copyToClipboard(record.name)} className="shrink-0 text-muted-foreground hover:text-foreground">
+            <Copy className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+      <div>
+        <p className="text-[10px] text-muted-foreground mb-1 font-sans">Value / Points to</p>
+        <div className="flex items-center gap-1">
+          <span className="text-xs break-all">{record.value}</span>
+          <button onClick={() => copyToClipboard(record.value)} className="shrink-0 text-muted-foreground hover:text-foreground">
+            <Copy className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+      {record.note && (
+        <p className="col-span-3 text-[10px] text-muted-foreground font-sans">{record.note}</p>
+      )}
+    </div>
+  );
+}
+
+// ── Custom Domain Section ─────────────────────────────────────────────────────
+
+function CustomDomainSection({ store, refetchStore }: { store: any; refetchStore: () => void }) {
+  const { user } = useAuth();
+  const { canUse } = useSubscription();
+  const canUseCustomDomain = canUse('customDomain');
+
+  const [inputDomain, setInputDomain] = useState('');
+  const [connecting, setConnecting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [dnsInstructions, setDnsInstructions] = useState<DnsInstructions | null>(null);
+  const [checkResult, setCheckResult] = useState<{ verified: boolean; diagnosis: string } | null>(null);
+
+  const customDomain: string | null = (store as any)?.custom_domain ?? null;
+  const domainStatus: DomainStatus = (store as any)?.domain_status ?? 'none';
+
+  // If already has a domain, pre-fill input
+  useEffect(() => {
+    if (customDomain) setInputDomain(customDomain);
+  }, [customDomain]);
+
+  const handleConnect = async () => {
+    if (!store || !inputDomain.trim()) return;
+    setConnecting(true);
+    setDnsInstructions(null);
+    setCheckResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('connect-custom-domain', {
+        body: { store_id: store.id, domain: inputDomain.trim(), action: 'connect' },
+      });
+      if (error) throw new Error(error.message);
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      setDnsInstructions((data as any).dns_instructions ?? null);
+      toast.success('Domain registered! Follow the DNS instructions below.');
+      await refetchStore();
+    } catch (err: any) {
+      toast.error(err.message ?? 'Failed to connect domain');
+    }
+    setConnecting(false);
+  };
+
+  const handleCheckStatus = useCallback(async () => {
+    if (!store?.id) return;
+    setChecking(true);
+    setCheckResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-domain-status', {
+        body: { store_id: store.id },
+      });
+      if (error) throw new Error(error.message);
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      const result = data as any;
+      setCheckResult({ verified: result.verified, diagnosis: result.diagnosis });
+      if (result.verified) {
+        toast.success('Domain is live! 🎉');
+        await refetchStore();
+      } else {
+        toast.info('DNS not ready yet. ' + result.diagnosis);
+      }
+    } catch (err: any) {
+      toast.error(err.message ?? 'Status check failed');
+    }
+    setChecking(false);
+  }, [store?.id, refetchStore]);
+
+  const handleDisconnect = async () => {
+    if (!store?.id) return;
+    if (!window.confirm(`Remove ${customDomain} from your store? Your store will still be accessible via pictocart.in/store/${store.slug}.`)) return;
+    setDisconnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('connect-custom-domain', {
+        body: { store_id: store.id, action: 'disconnect' },
+      });
+      if (error) throw new Error(error.message);
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success('Custom domain removed.');
+      setDnsInstructions(null);
+      setCheckResult(null);
+      setInputDomain('');
+      await refetchStore();
+    } catch (err: any) {
+      toast.error(err.message ?? 'Failed to disconnect');
+    }
+    setDisconnecting(false);
+  };
+
+  // ── Render: not on paid plan ───────────────────────────────────────────────
+  if (!canUseCustomDomain) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Connect Your Own Domain
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <p className="text-sm font-medium text-amber-900">Custom domain is a paid plan feature</p>
+            <p className="text-xs text-amber-800">Upgrade your plan to connect yourbrand.com to your store.</p>
+            <Button size="sm" onClick={() => (window.location.href = '/billing')}>View Plans</Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Render: domain is active ───────────────────────────────────────────────
+  if (domainStatus === 'active' && customDomain) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Globe className="h-4 w-4 text-green-600" /> Custom Domain
+            </CardTitle>
+            <Badge className="bg-green-100 text-green-800 border-green-200">Live ✓</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 p-3">
+            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+            <code className="flex-1 text-sm font-mono text-green-800">https://{customDomain}</code>
+            <Button variant="ghost" size="icon" onClick={() => copyToClipboard(`https://${customDomain}`)}>
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" asChild>
+              <a href={`https://${customDomain}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Both <code>https://{customDomain}</code> and <code>https://www.{customDomain}</code> point to your store.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+          >
+            {disconnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Unplug className="h-4 w-4 mr-2" />}
+            Remove Custom Domain
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Render: domain connected, waiting for DNS ──────────────────────────────
+  if ((domainStatus === 'pending_dns' || domainStatus === 'verifying') && customDomain) {
+    // Build instructions locally if we don't have them from the connect call
+    const isApex = !customDomain.startsWith('www.');
+    const localInstructions: DnsInstructions = dnsInstructions ?? {
+      primary: isApex
+        ? { type: 'A', name: '@', value: '76.76.21.21', note: 'Root/Apex domain — use A record' }
+        : { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', note: 'www subdomain — use CNAME' },
+      www: isApex
+        ? { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', note: 'Optional: add www so both work' }
+        : null,
+      ttl: '3600 (or lowest available)',
+      propagation_note: 'DNS changes take 5 min – 48 hrs. Click Check Status after adding the record.',
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Globe className="h-4 w-4 text-yellow-600" /> Custom Domain
+            </CardTitle>
+            <Badge variant="outline" className="border-yellow-300 text-yellow-700">Awaiting DNS</Badge>
+          </div>
+          <CardDescription>
+            Add the DNS record below at your domain registrar, then click Check Status.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Domain being configured */}
+          <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
+            <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+            <code className="text-sm font-mono flex-1">{customDomain}</code>
+          </div>
+
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-bold">1</span>
+            <span className="text-green-700 font-medium">Domain registered with PictoCart</span>
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold">2</span>
+            <span className="font-medium">Add DNS record at your registrar</span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground text-xs">(GoDaddy, Namecheap, etc.)</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-bold">3</span>
+            <span>Click Check Status — we verify and activate</span>
+          </div>
+
+          {/* DNS Records */}
+          <div className="space-y-2 pt-1">
+            <p className="text-sm font-semibold">DNS Record to Add:</p>
+            <DnsRecordRow record={localInstructions.primary} />
+            {localInstructions.www && (
+              <>
+                <p className="text-xs text-muted-foreground pt-1">Also add (recommended):</p>
+                <DnsRecordRow record={localInstructions.www} />
+              </>
+            )}
+            <p className="text-xs text-muted-foreground flex items-start gap-1.5 pt-1">
+              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              {localInstructions.propagation_note}
+            </p>
+          </div>
+
+          {/* Check result */}
+          {checkResult && (
+            <div className={`rounded-lg border p-3 text-sm ${checkResult.verified ? 'border-green-200 bg-green-50 text-green-800' : 'border-yellow-200 bg-yellow-50 text-yellow-900'}`}>
+              {checkResult.verified
+                ? <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> {checkResult.diagnosis}</span>
+                : <span className="flex items-start gap-2"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />{checkResult.diagnosis}</span>
+              }
+            </div>
+          )}
+
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={handleCheckStatus} disabled={checking}>
+              {checking ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Check Status
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+            >
+              {disconnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Unplug className="h-4 w-4 mr-2" />}
+              Cancel
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Render: no domain yet (default) ───────────────────────────────────────
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" /> Connect Your Own Domain
+        </CardTitle>
+        <CardDescription>
+          Point <strong>yourbrand.com</strong> to your store — free SSL included, no admin needed.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="domain-input">Your Domain</Label>
+          <Input
+            id="domain-input"
+            placeholder="yourbrand.com"
+            value={inputDomain}
+            onChange={(e) => setInputDomain(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+          />
+          <p className="text-xs text-muted-foreground">
+            Enter without http:// or www — e.g. <code>yourbrand.com</code> or <code>shop.yourbrand.com</code>
+          </p>
+        </div>
+
+        <Button onClick={handleConnect} disabled={connecting || !inputDomain.trim()}>
+          {connecting
+            ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            : <Globe className="h-4 w-4 mr-2" />}
+          Connect Domain
+        </Button>
+
+        {/* How it works */}
+        <div className="rounded-lg bg-muted/50 border p-4 space-y-3">
+          <p className="text-xs font-semibold text-foreground">How it works — 3 steps, takes ~5 minutes:</p>
+          <div className="space-y-2">
+            {[
+              { n: '1', text: 'Enter your domain above and click Connect' },
+              { n: '2', text: 'Add a single DNS record at your registrar (GoDaddy, Namecheap, etc.) — we show you exactly what to add' },
+              { n: '3', text: 'Come back and click Check Status — we verify instantly and your domain goes live with HTTPS' },
+            ].map(({ n, text }) => (
+              <div key={n} className="flex items-start gap-2 text-xs text-muted-foreground">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">{n}</span>
+                <span>{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Email Domain Section ──────────────────────────────────────────────────────
+// (kept intact from original — only moved below custom domain section)
 
 function EmailDomainSection({ store }: { store: any }) {
   const [emailDomain, setEmailDomain] = useState('');
@@ -62,7 +404,7 @@ function EmailDomainSection({ store }: { store: any }) {
 
   useEffect(() => {
     if (!store?.id) return;
-    const fetchEmailDomain = async () => {
+    (async () => {
       const { data } = await supabase
         .from('store_email_domains')
         .select('*')
@@ -74,8 +416,7 @@ function EmailDomainSection({ store }: { store: any }) {
         setSenderPrefix(data.sender_prefix);
       }
       setLoadingConfig(false);
-    };
-    fetchEmailDomain();
+    })();
   }, [store?.id]);
 
   const handleSetupEmailDomain = async () => {
@@ -102,12 +443,8 @@ function EmailDomainSection({ store }: { store: any }) {
         }
         throw new Error(msg);
       }
-
       const { data: updated } = await supabase
-        .from('store_email_domains')
-        .select('*')
-        .eq('store_id', store.id)
-        .single();
+        .from('store_email_domains').select('*').eq('store_id', store.id).single();
       if (updated) setEmailConfig(updated as EmailDomainConfig);
       toast.success('Email domain registered — add the DNS records below');
     } catch (err: any) {
@@ -124,8 +461,8 @@ function EmailDomainSection({ store }: { store: any }) {
         body: { action: 'verify', store_id: store.id },
       });
       if (error) throw new Error((data as any)?.error || error.message || 'Verification failed');
-      if ((data as any)?.verified) toast.success('Email domain verified and ready for customer emails!');
-      else toast.error(`Provider status: ${(data as any)?.provider_status || 'pending'}. DNS records not yet propagated.`);
+      if ((data as any)?.verified) toast.success('Email domain verified!');
+      else toast.error(`Status: ${(data as any)?.provider_status || 'pending'}. DNS not yet propagated.`);
       const { data: updated } = await supabase
         .from('store_email_domains').select('*').eq('store_id', store.id).single();
       if (updated) setEmailConfig(updated as EmailDomainConfig);
@@ -189,16 +526,14 @@ function EmailDomainSection({ store }: { store: any }) {
           {planLimitError && (
             <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
               <p className="font-medium mb-1">⏳ Awaiting platform email upgrade</p>
-              <p className="text-xs">
-                Your domain details are saved below. The moment our team upgrades the email service, click <strong>Set Up Email Domain</strong> again and verification will work instantly — no other action needed from you.
-              </p>
+              <p className="text-xs">Your domain details are saved. Click Set Up Email Domain again once the platform is upgraded.</p>
             </div>
           )}
           {!emailConfig ? (
             <>
               <div className="space-y-2">
                 <Label>Domain Name</Label>
-                <Input data-tour="domain-input" placeholder="yourstore.com" value={emailDomain} onChange={(e) => setEmailDomain(e.target.value)} />
+                <Input placeholder="yourstore.com" value={emailDomain} onChange={(e) => setEmailDomain(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Sender Prefix</Label>
@@ -213,24 +548,18 @@ function EmailDomainSection({ store }: { store: any }) {
               </Button>
             </>
           ) : emailConfig.status === 'verified' ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 p-3">
                 <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
                 <p className="text-sm font-medium text-green-800">
                   Emails sent from <strong>{emailConfig.sender_prefix}@{emailConfig.domain}</strong>
                 </p>
               </div>
-              <Button variant="destructive" size="sm" onClick={handleRemoveEmailDomain} disabled={loading}>
-                Remove Email Domain
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleVerifyEmail} disabled={verifying}>
-                {verifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                Refresh Status
-              </Button>
+              <Button variant="destructive" size="sm" onClick={handleRemoveEmailDomain} disabled={loading}>Remove Email Domain</Button>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Domain <strong>{emailConfig.domain}</strong> is registered. Add the DNS records below to verify it.
+              Domain <strong>{emailConfig.domain}</strong> registered. Add the DNS records below to verify it.
             </p>
           )}
         </CardContent>
@@ -240,38 +569,30 @@ function EmailDomainSection({ store }: { store: any }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Shield className="h-4 w-4 text-yellow-500" />
-              Email DNS Records Required
+              <Shield className="h-4 w-4 text-yellow-500" /> Email DNS Records Required
             </CardTitle>
             <CardDescription>
-              Add these records at your domain registrar to verify email sending from {emailConfig.domain}
+              Add these at your domain registrar to verify email sending from {emailConfig.domain}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {(emailConfig.dns_records as any[]).map((record: any, i: number) => (
               <div key={i} className="grid grid-cols-3 gap-3 rounded-lg bg-muted p-4 text-sm">
                 <div><p className="text-xs text-muted-foreground mb-1">Type</p><p className="font-mono font-medium">{record.type}</p></div>
-                <div><p className="text-xs text-muted-foreground mb-1">Name</p><p className="font-mono font-medium text-xs break-all">{record.name || '@'}</p></div>
-                <div><p className="text-xs text-muted-foreground mb-1">Value</p>
+                <div><p className="text-xs text-muted-foreground mb-1">Name</p><p className="font-mono text-xs break-all">{record.name || '@'}</p></div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Value</p>
                   <div className="flex items-center gap-1">
-                    <p className="font-mono font-medium text-xs break-all">{record.value}</p>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(record.value)}>
-                      <Copy className="h-3 w-3" />
-                    </Button>
+                    <p className="font-mono text-xs break-all">{record.value}</p>
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(record.value)}><Copy className="h-3 w-3" /></Button>
                   </div>
-                  <Badge variant="outline" className="mt-2 text-[10px] capitalize">
-                    {record.status || 'pending'}
-                  </Badge>
+                  <Badge variant="outline" className="mt-2 text-[10px] capitalize">{record.status || 'pending'}</Badge>
                 </div>
               </div>
             ))}
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-2 flex-wrap">
               <Button variant="outline" onClick={handleVerifyEmail} disabled={verifying}>
                 {verifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                Refresh Status
-              </Button>
-              <Button onClick={handleVerifyEmail} disabled={verifying}>
-                {verifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Verify Email Domain
               </Button>
               <Button variant="outline" size="sm" onClick={handleRemoveEmailDomain} disabled={loading}>Remove</Button>
@@ -283,112 +604,31 @@ function EmailDomainSection({ store }: { store: any }) {
   );
 }
 
-// ── Main Page ──
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 const DomainSettings = () => {
   const { store, refetchStore } = useStore();
-  const { user } = useAuth();
-  const { canUse } = useSubscription();
-  const canUseCustomDomain = canUse('customDomain');
-  const [domain, setDomain] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [request, setRequest] = useState<ProvisionRequestRow | null>(null);
-  const [loadingRequest, setLoadingRequest] = useState(true);
 
   const customDomain: string | null = (store as any)?.custom_domain ?? null;
+  const domainStatus: DomainStatus = (store as any)?.domain_status ?? 'none';
   const storeUrl = store ? `${window.location.origin}/store/${store.slug}` : '';
 
-  useEffect(() => {
-    if (!store?.id) return;
-    (async () => {
-      const { data } = await supabase
-        .from('provision_requests')
-        .select('id, status, requested_domain, new_project_url, queued_at, completed_at')
-        .eq('store_id', store.id)
-        .order('queued_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      setRequest((data as ProvisionRequestRow) ?? null);
-      if (data?.requested_domain && !domain) setDomain(data.requested_domain);
-      setLoadingRequest(false);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store?.id]);
-
-  const handleRequestSetup = async () => {
-    if (!store) return;
-    const clean = domain.replace(/^(https?:\/\/)?(www\.)?/i, '').replace(/\/.*$/, '').trim().toLowerCase();
-    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(clean)) {
-      toast.error('Enter a valid domain like mystore.com');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const { data, error } = await supabase
-        .from('provision_requests')
-        .insert({
-          store_id: store.id,
-          requested_domain: clean,
-          status: 'queued',
-          client_patch_payload: {
-            store_name: store.name,
-            store_slug: store.slug,
-            requested_domain: clean,
-            user_email: user?.email,
-            user_id: user?.id,
-          },
-        })
-        .select('id, status, requested_domain, new_project_url, queued_at, completed_at')
-        .single();
-      if (error) throw error;
-      setRequest(data as ProvisionRequestRow);
-
-      // Notify customer + admin (best-effort)
-      try {
-        if (user?.email) {
-          await supabase.functions.invoke('send-transactional-email', {
-            body: {
-              templateName: 'provision-request-received',
-              recipientEmail: user.email,
-              idempotencyKey: `provision-received-${data.id}`,
-              templateData: { storeName: store.name, requestedDomain: clean },
-            },
-          });
-        }
-      } catch (_) {}
-
-      toast.success("Request received! Our team will be in touch within 24 hours.");
-      await refetchStore();
-    } catch (err: any) {
-      toast.error(err.message ?? 'Failed to submit request');
-    }
-    setSubmitting(false);
-  };
-
   const statusBadge = () => {
-    if (!request) {
-      return customDomain
-        ? <Badge className="bg-green-100 text-green-800 border-green-200">Live</Badge>
-        : <Badge variant="secondary">Not Configured</Badge>;
-    }
-    switch (request.status) {
-      case 'live':       return <Badge className="bg-green-100 text-green-800 border-green-200">Live</Badge>;
-      case 'failed':     return <Badge variant="destructive">Failed — contact support</Badge>;
-      case 'queued':     return <Badge variant="outline" className="border-blue-300 text-blue-700">Queued</Badge>;
-      default:           return <Badge variant="outline" className="border-yellow-300 text-yellow-700">In Progress</Badge>;
-    }
+    if (domainStatus === 'active' && customDomain)
+      return <Badge className="bg-green-100 text-green-800 border-green-200">Custom Domain Live</Badge>;
+    if (domainStatus === 'pending_dns')
+      return <Badge variant="outline" className="border-yellow-300 text-yellow-700">DNS Pending</Badge>;
+    return <Badge variant="secondary">Default URL</Badge>;
   };
-
-  const requestActive = !!request && request.status !== 'live' && request.status !== 'failed';
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Domain & Email Settings</h1>
-        <p className="text-sm text-muted-foreground">Connect your own domain — our team handles SSL, DNS and project setup for you.</p>
+        <p className="text-sm text-muted-foreground">Connect your own domain in minutes — no admin needed.</p>
       </div>
 
-      {/* Store URL */}
+      {/* Store URL card — always shown */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -404,7 +644,7 @@ const DomainSettings = () => {
             {statusBadge()}
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-2">
           <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
             <code className="flex-1 text-sm font-mono truncate">{storeUrl}</code>
             <Button variant="ghost" size="icon" onClick={() => copyToClipboard(storeUrl)}><Copy className="h-4 w-4" /></Button>
@@ -412,7 +652,7 @@ const DomainSettings = () => {
               <a href={storeUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
             </Button>
           </div>
-          {customDomain && (
+          {customDomain && domainStatus === 'active' && (
             <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 p-3">
               <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
               <code className="flex-1 text-sm font-mono text-green-800 truncate">https://{customDomain}</code>
@@ -422,91 +662,10 @@ const DomainSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Custom Domain Setup */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            {customDomain ? 'Your Custom Domain' : 'Connect Your Own Domain'}
-          </CardTitle>
-          <CardDescription>
-            We'll build you a dedicated, lightning-fast storefront on your domain. No DNS setup needed from your side — our team takes care of everything.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loadingRequest ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : customDomain ? (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-              <div className="flex items-center gap-2 text-green-800">
-                <CheckCircle2 className="h-5 w-5" />
-                <p className="text-sm font-medium">
-                  Live at <strong>https://{customDomain}</strong>
-                </p>
-              </div>
-              <p className="mt-2 text-xs text-green-700">
-                Need to change something? Email <a href="mailto:support@pictocart.in" className="underline">support@pictocart.in</a>.
-              </p>
-            </div>
-          ) : requestActive ? (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-blue-900">
-                <Clock className="h-5 w-5" />
-                <p className="text-sm font-medium">
-                  We're setting up <strong>{request?.requested_domain}</strong>
-                </p>
-              </div>
-              <p className="text-xs text-blue-800">
-                Our team is creating your dedicated storefront. You'll receive an email within 24 hours when it's ready.
-                Status: <span className="font-mono">{request?.status}</span>
-              </p>
-            </div>
-          ) : !canUseCustomDomain ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-amber-900">
-                <Sparkles className="h-5 w-5" />
-                <p className="text-sm font-medium">Custom domain is a paid plan feature</p>
-              </div>
-              <p className="text-xs text-amber-800">
-                Upgrade to a plan that includes custom domains to connect your own brand URL.
-              </p>
-              <Button size="sm" onClick={() => (window.location.href = '/billing')}>
-                View Plans
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label>Your Domain</Label>
-                <Input
-                  placeholder="yourbrand.com"
-                  value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter without http:// or www — e.g. <code>yourbrand.com</code>
-                </p>
-              </div>
-              <Button onClick={handleRequestSetup} disabled={submitting || !domain.trim()}>
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                Request Setup
-              </Button>
-              <div className="rounded-lg bg-muted/50 border p-3 text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">What happens next:</p>
-                <ol className="list-decimal ml-4 space-y-0.5">
-                  <li>You submit your domain here</li>
-                  <li>Our team builds your dedicated storefront with the theme you chose</li>
-                  <li>We email you simple DNS instructions (or set them up if you bought through us)</li>
-                  <li>Your store goes live with HTTPS — usually within 24 hours</li>
-                </ol>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {/* Custom Domain section */}
+      {store && <CustomDomainSection store={store} refetchStore={refetchStore} />}
 
+      {/* Email Domain section */}
       {store && <EmailDomainSection store={store} />}
     </div>
   );
