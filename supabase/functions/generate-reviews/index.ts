@@ -96,7 +96,7 @@ serve(async (req) => {
     // Load product details
     const { data: product, error: prodErr } = await adminClient
       .from("products")
-      .select("name, description")
+      .select("title, description")
       .eq("id", product_id)
       .maybeSingle();
 
@@ -114,7 +114,7 @@ Sentiment guidelines:
 - Positive: 4 to 5 stars.
 - Mixed: 3 to 5 stars.`;
 
-    const userPrompt = `Generate ${count} reviews for the product: "${product.name}".
+    const userPrompt = `Generate ${count} reviews for the product: "${product.title}".
 Product Description: "${product.description || ""}"
 Sentiment target: ${sentiment}.`;
 
