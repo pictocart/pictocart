@@ -86,6 +86,31 @@ serve(async (req) => {
     const vercelToken = Deno.env.get("VERCEL_TOKEN");
     const vercelProjectId = Deno.env.get("VERCEL_PROJECT_ID");
 
+    // ── FORCE ACTIVATE ────────────────────────────────────────────────────────
+    if (action === "activate") {
+      await admin
+        .from("stores")
+        .update({
+          domain_status: "active",
+        })
+        .eq("id", store_id);
+
+      return json({ success: true, action: "activated" });
+    }
+
+    // ── PUBLISH AND ACTIVATE ──────────────────────────────────────────────────
+    if (action === "publish-activate") {
+      await admin
+        .from("stores")
+        .update({
+          is_published: true,
+          domain_status: "active",
+        })
+        .eq("id", store_id);
+
+      return json({ success: true, action: "published-activated" });
+    }
+
     // ── DISCONNECT ────────────────────────────────────────────────────────────
     if (action === "disconnect") {
       const oldDomain = store.custom_domain;

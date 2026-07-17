@@ -88,7 +88,7 @@ const AdminDomains = () => {
 
   // ── Connect/Disconnect mutation (calls edge function as admin) ────────────
   const domainMutation = useMutation({
-    mutationFn: async ({ store_id, domain, action }: { store_id: string; domain?: string; action: 'connect' | 'disconnect' }) => {
+    mutationFn: async ({ store_id, domain, action }: { store_id: string; domain?: string; action: 'connect' | 'disconnect' | 'activate' | 'publish-activate' }) => {
       const { data, error } = await supabase.functions.invoke('connect-custom-domain', {
         body: { store_id, domain, action },
       });
@@ -102,6 +102,10 @@ const AdminDomains = () => {
         toast.success(`Domain saved as DNS pending!`);
         // Show copyable DNS instructions popup
         setInstructionsDomain(vars.domain ?? null);
+      } else if (vars.action === 'activate') {
+        toast.success('Domain manually marked as Active (Force Live)!');
+      } else if (vars.action === 'publish-activate') {
+        toast.success('Store successfully published & domain activated!');
       } else {
         toast.success('Domain removed');
       }
@@ -306,18 +310,10 @@ const AdminDomains = () => {
                               size="sm"
                               variant="outline"
                               className="h-7 text-xs text-orange-700 border-orange-200 hover:bg-orange-50 font-semibold"
-                              onClick={async () => {
-                                const { error } = await supabase
-                                  .from('stores')
-                                  .update({ is_published: true, domain_status: 'active' })
-                                  .eq('id', store.id);
-                                if (error) {
-                                  toast.error(error.message);
-                                } else {
-                                  qc.invalidateQueries({ queryKey: ['admin-domains-stores'] });
-                                  toast.success('Store published & domain activated!');
-                                }
+                              onClick={() => {
+                                domainMutation.mutate({ store_id: store.id, action: 'publish-activate' });
                               }}
+                              disabled={domainMutation.isPending}
                             >
                               <Globe className="h-3 w-3 mr-1" />
                               Publish & Activate
@@ -357,11 +353,10 @@ const AdminDomains = () => {
                               size="sm"
                               variant="outline"
                               className="h-7 text-xs text-green-700 border-green-200 hover:bg-green-50"
-                              onClick={async () => {
-                                await supabase.from('stores').update({ domain_status: 'active' }).eq('id', store.id);
-                                qc.invalidateQueries({ queryKey: ['admin-domains-stores'] });
-                                toast.success('Marked as active');
+                              onClick={() => {
+                                domainMutation.mutate({ store_id: store.id, action: 'activate' });
                               }}
+                              disabled={domainMutation.isPending}
                             >
                               <ShieldCheck className="h-3 w-3 mr-1" />
                               Force Live
