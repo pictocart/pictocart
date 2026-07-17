@@ -67,7 +67,14 @@ const ReviewsModeration = () => {
         .order('name');
       if (!error && data) {
         setProducts(data);
-        if (data.length > 0) {
+        
+        // Handle auto-open via query param
+        const params = new URLSearchParams(window.location.search);
+        const urlProductId = params.get('product_id');
+        if (urlProductId && data.some(p => p.id === urlProductId)) {
+          setSelectedProduct(urlProductId);
+          setGenOpen(true);
+        } else if (data.length > 0) {
           setSelectedProduct(data[0].id);
         }
       }

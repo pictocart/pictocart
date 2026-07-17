@@ -127,6 +127,7 @@ const navTree: NavEntry[] = [
       { label: 'Site-wide Offer', icon: Sparkles, path: '/site-offer' },
       { label: 'AI Copywriter', icon: MessageSquare, path: '/marketing/copywriter' },
       { label: 'Blog Posts', icon: FileText, path: '/blog-posts' },
+      { label: 'Product Reviews', icon: Star, path: '/reviews' },
       { label: 'Testimonials', icon: Star, path: '/testimonials' },
       { label: 'Google Reviews', icon: Star, path: '/google-reviews' },
       { label: 'Subscribers', icon: Mail, path: '/subscribers' },

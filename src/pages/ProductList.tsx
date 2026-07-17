@@ -5,7 +5,7 @@ import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Grid3X3, List, Trash2, Package, Copy, MoreVertical, Pencil } from 'lucide-react';
+import { Plus, Search, Grid3X3, List, Trash2, Package, Copy, MoreVertical, Pencil, Sparkles } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -267,6 +267,9 @@ const ProductList = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDuplicate(product)}>
                           <Copy className="mr-2 h-3.5 w-3.5" /> Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/reviews?product_id=${product.id}`)}>
+                          <Sparkles className="mr-2 h-3.5 w-3.5 text-violet-600" /> AI Reviews
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => deleteProduct.mutate(product.id)}
