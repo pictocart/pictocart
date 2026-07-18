@@ -120,7 +120,7 @@ const Onboarding = () => {
     setSaving(true);
     try {
       const selectedTemplate = THEME_TEMPLATES.find((t) => t.id === data.selectedThemeId);
-      const isMaster = data.selectedThemeId?.startsWith('theme-');
+      const isMaster = data.selectedThemeId?.startsWith('theme-') || data.selectedThemeId?.startsWith('layout1-');
       const themeData: any = isMaster
         ? { theme_id: data.selectedThemeId, name: data.selectedThemeId, manifest_ref: data.selectedThemeId }
         : selectedTemplate

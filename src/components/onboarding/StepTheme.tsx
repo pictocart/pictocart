@@ -219,12 +219,15 @@ const StepTheme = ({ data, setData }: Props) => {
 
 
   const recommended = data.category && data.category !== 'other'
-    ? themes.filter((t) => matchesCategory(t.category, data.category))
+    ? themes.filter((t) => matchesCategory(t.category, data.category) && !t.theme_id.startsWith('layout1-'))
     : [];
   const recommendedIds = new Set(recommended.map((t) => t.id));
-  const trending = themes.filter((t) => t.is_default && !recommendedIds.has(t.id));
+  const trending = themes.filter((t) => t.is_default && !recommendedIds.has(t.id) && !t.theme_id.startsWith('layout1-'));
   const trendingIds = new Set([...recommendedIds, ...trending.map((t) => t.id)]);
-  const others = themes.filter((t) => !trendingIds.has(t.id));
+  const others = themes.filter((t) => !trendingIds.has(t.id) && !t.theme_id.startsWith('layout1-'));
+
+  // Layout 1 themes — always shown in their own section at the bottom
+  const layout1Themes = themes.filter((t) => t.theme_id.startsWith('layout1-'));
 
   // Merge generated theme into recommended section if done
   const aiInRecommended = genTheme && genState === 'done'
@@ -300,6 +303,64 @@ const StepTheme = ({ data, setData }: Props) => {
                     onClick={() => setData(d => ({ ...d, selectedThemeId: t.theme_id }))} />
                 ))}
               </Section>
+            )}
+
+            {/* ── Layout 1 — Clothing Themes ── */}
+            {layout1Themes.length > 0 && (
+              <div className="space-y-3">
+                {/* Section header with gradient badge */}
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="h-3.5 w-3.5 text-violet-500" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Layout 1 — Fashion &amp; Clothing
+                  </span>
+                  <span className="rounded-full bg-violet-500/15 border border-violet-500/30 px-2 py-0.5 text-[9px] font-bold text-violet-600 uppercase tracking-wider">
+                    2 Layouts · 4 Themes
+                  </span>
+                </div>
+
+                {/* Sub-layout 1.1 */}
+                <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                      Layout 1.1
+                    </span>
+                    <span className="h-px flex-1 bg-border" />
+                    <span className="text-[9px] font-semibold text-muted-foreground">Classic Boutique</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                    Left sidebar filters · Centered serif navbar · 4-col uniform product grid · Multi-col footer
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    {layout1Themes.filter(t => t.theme_id.includes('noir') || t.theme_id.includes('ivory')).map((t) => (
+                      <ThemeCard key={t.id} theme={t}
+                        selected={data.selectedThemeId === t.theme_id}
+                        onClick={() => setData(d => ({ ...d, selectedThemeId: t.theme_id }))} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sub-layout 1.2 */}
+                <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                      Layout 1.2
+                    </span>
+                    <span className="h-px flex-1 bg-border" />
+                    <span className="text-[9px] font-semibold text-muted-foreground">Street Style Hub</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                    Hamburger nav + visible search bar · No sidebar · 2-col masonry grid · Sticky cart bar · Minimal footer
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    {layout1Themes.filter(t => t.theme_id.includes('neon') || t.theme_id.includes('blush')).map((t) => (
+                      <ThemeCard key={t.id} theme={t}
+                        selected={data.selectedThemeId === t.theme_id}
+                        onClick={() => setData(d => ({ ...d, selectedThemeId: t.theme_id }))} />
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* AI Generate CTA card — hide if already done */}
