@@ -6,8 +6,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/* ─── Supabase Storage base URL ────────────────────────────────────── */
 const STORAGE = 'https://wuqznkpaldtvpfpdtllp.supabase.co/storage/v1/object/public/theme-previews/layout-themes';
+const heroImg  = (id: string) => `${STORAGE}/hero/${id}.svg`;
+const prodImg  = (id: string, n: number) => `${STORAGE}/products/${id}-${n}.svg`;
 
 /* ─── Data ──────────────────────────────────────────────────────────── */
 interface Theme {
@@ -69,7 +70,7 @@ const LAYOUTS: Record<string, LayoutData> = {
             textPrimary: '#f5f0eb',
             textMuted: '#888',
             preview: 'dark',
-            imageUrl: `${STORAGE}/noir-atelier.svg`,
+            imageUrl: heroImg('noir-atelier'),
             tags: ['Dark', 'Gold', 'Luxury', 'Minimal'],
           },
           {
@@ -81,7 +82,7 @@ const LAYOUTS: Record<string, LayoutData> = {
             textPrimary: '#1a1612',
             textMuted: '#8a7f72',
             preview: 'light',
-            imageUrl: `${STORAGE}/ivory-luxe.svg`,
+            imageUrl: heroImg('ivory-luxe'),
             tags: ['Light', 'Ivory', 'Warm', 'Airy'],
           },
         ],
@@ -123,7 +124,7 @@ const LAYOUTS: Record<string, LayoutData> = {
             textPrimary: '#f8fafc',
             textMuted: '#94a3b8',
             preview: 'dark',
-            imageUrl: `${STORAGE}/neon-drip.svg`,
+            imageUrl: heroImg('neon-drip'),
             tags: ['Dark', 'Neon', 'Bold', 'Street'],
           },
           {
@@ -135,7 +136,7 @@ const LAYOUTS: Record<string, LayoutData> = {
             textPrimary: '#1a0a12',
             textMuted: '#9b6e80',
             preview: 'light',
-            imageUrl: `${STORAGE}/blush-street.svg`,
+            imageUrl: heroImg('blush-street'),
             tags: ['Light', 'Blush', 'Pink', 'Feminine'],
           },
         ],
@@ -257,6 +258,21 @@ const ThemeCard = ({
 
       {/* ── Card body ── */}
       <div className="flex flex-col flex-1 p-5 gap-3">
+        {/* Products strip */}
+        <div className="grid grid-cols-4 gap-1.5 -mt-1">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n}
+                 className="rounded-lg overflow-hidden aspect-square"
+                 style={{ backgroundColor: theme.bg + '80', border: `1px solid ${theme.accent}20` }}>
+              <img
+                src={prodImg(theme.id, n)}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </div>
         {/* Name + accent dot */}
         <div className="flex items-start justify-between gap-2">
           <div>
