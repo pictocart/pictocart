@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, ExternalLink } from "lucide-react";
+import { THEMES } from "@/themes";
 import MasterThemeRenderer from "@/components/theme/MasterThemeRenderer";
+import { Button } from "@/components/ui/button";
 
 export default function AdminThemePreview() {
   const { themeId } = useParams();
@@ -20,8 +22,23 @@ export default function AdminThemePreview() {
     })();
   }, [themeId]);
 
+  const isDedicated = themeId ? themeId in THEMES : false;
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
-  if (!manifest) return <div className="p-8 text-center text-muted-foreground">Theme not found.</div>;
+  if (!manifest) {
+    if (isDedicated) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
+          <h2 className="text-xl font-bold">{themeId === 'couture' ? 'Couture' : themeId} — Dedicated Theme</h2>
+          <p className="text-muted-foreground max-w-md">This is a dedicated React theme without a manifest. Preview it on the storefront by installing it from the merchant Themes page, or visit the store with <code className="bg-muted px-2 py-0.5 rounded text-sm">?preview_theme={themeId}</code>.</p>
+          <Button asChild variant="outline">
+            <Link to="/admin/themes"><ExternalLink className="mr-1 h-4 w-4" /> Back to Themes</Link>
+          </Button>
+        </div>
+      );
+    }
+    return <div className="p-8 text-center text-muted-foreground">Theme not found.</div>;
+  }
 
   return (
     <div>

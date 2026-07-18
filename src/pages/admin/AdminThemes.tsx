@@ -354,11 +354,9 @@ const MasterProjectsTab = () => {
                 </label>
                 {t.description && <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>}
                 <div className="mt-auto flex gap-1.5 pt-2">
-                  {t.lovable_project_url && (
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => window.open(t.lovable_project_url!, '_blank')}>
-                      <ExternalLink className="mr-1 h-3 w-3" /> Preview
-                    </Button>
-                  )}
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => window.open(t.lovable_project_url || `/admin/themes/preview/${t.theme_id}`, '_blank')} title={t.lovable_project_url ? '' : 'No Lovable project URL — opening admin preview'}>
+                    <ExternalLink className="mr-1 h-3 w-3" /> Preview
+                  </Button>
                   <Dialog open={editing?.id === t.id} onOpenChange={(o) => !o && setEditing(null)}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" onClick={() => setEditing(t)}><Pencil className="h-3.5 w-3.5" /></Button>

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="heroBg_couture" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1A1A2E"/>
+      <stop offset="100%" stop-color="#16213E"/>
+    </linearGradient>
+    <linearGradient id="cardShade_couture" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E94560" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#1A1A2E"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="#1A1A2E"/>
+
+  <!-- Full-screen hero area -->
+  <rect y="0" width="800" height="220" fill="url(#heroBg_couture)"/>
+  <!-- Hero decorative circles -->
+  <circle cx="680" cy="110" r="160" fill="#E94560" opacity="0.06"/>
+  <circle cx="550" cy="50" r="80" fill="#E94560" opacity="0.08"/>
+  <circle cx="740" cy="180" r="60" fill="#E94560" opacity="0.05"/>
+
+  <!-- Center hero content -->
+  <text x="400" y="90" fill="#E94560" font-family="sans-serif" font-size="10" font-weight="700" letter-spacing="6" text-anchor="middle">NEW SEASON</text>
+  <text x="400" y="140" fill="#FFFFFF" font-family="Georgia,serif" font-size="42" font-weight="900" text-anchor="middle" letter-spacing="1">Where Fashion</text>
+  <text x="400" y="185" fill="#FFFFFF" font-family="Georgia,serif" font-size="42" font-weight="900" text-anchor="middle" letter-spacing="1">Meets Attitude</text>
+  <!-- CTA -->
+  <rect x="325" y="200" width="150" height="14" rx="2" fill="#E94560"/>
+  <text x="400" y="211" fill="#FFFFFF" font-family="sans-serif" font-size="7" font-weight="700" text-anchor="middle" letter-spacing="3">EXPLORE COLLECTION</text>
+
+  <!-- Minimal nav bar -->
+  <rect width="800" height="40" fill="#1A1A2E" opacity="0.95"/>
+  <text x="30" y="26" fill="#FFFFFF" font-family="sans-serif" font-size="11" font-weight="700" letter-spacing="4">BRAND</text>
+  <text x="620" y="26" fill="#9CA3AF" font-family="sans-serif" font-size="9" letter-spacing="2">NEW IN</text>
+  <text x="680" y="26" fill="#9CA3AF" font-family="sans-serif" font-size="9" letter-spacing="2">COLLECTIONS</text>
+  <text x="760" y="26" fill="#9CA3AF" font-family="sans-serif" font-size="9" letter-spacing="2">LOOKBOOK</text>
+
+  <!-- Section label -->
+  <text x="40" y="248" fill="#E94560" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="4">FEATURED</text>
+
+  <!-- 3-column product grid -->
+  <rect x="40" y="260" width="226" height="150" rx="2" fill="#16213E"/>
+  <rect x="40" y="260" width="226" height="85" rx="2" fill="url(#cardShade_couture)"/>
+  <rect x="120" y="278" width="65" height="50" rx="1" fill="#E94560" opacity="0.25"/>
+  <text x="56" y="363" fill="#F8FAFC" font-family="sans-serif" font-size="10">Silk Blouse</text>
+  <text x="56" y="380" fill="#E94560" font-family="sans-serif" font-size="10" font-weight="700">₹2,499</text>
+  <rect x="56" y="391" width="195" height="14" rx="2" fill="#E94560" opacity="0.15"/>
+  <text x="153" y="402" fill="#E94560" font-family="sans-serif" font-size="6" text-anchor="middle" letter-spacing="2">QUICK VIEW</text>
+
+  <rect x="287" y="260" width="226" height="150" rx="2" fill="#16213E"/>
+  <rect x="287" y="260" width="226" height="85" rx="2" fill="url(#cardShade_couture)"/>
+  <rect x="367" y="278" width="65" height="50" rx="1" fill="#E94560" opacity="0.25"/>
+  <text x="303" y="363" fill="#F8FAFC" font-family="sans-serif" font-size="10">Tailored Blazer</text>
+  <text x="303" y="380" fill="#E94560" font-family="sans-serif" font-size="10" font-weight="700">₹3,899</text>
+  <rect x="303" y="391" width="195" height="14" rx="2" fill="#E94560" opacity="0.15"/>
+  <text x="400" y="402" fill="#E94560" font-family="sans-serif" font-size="6" text-anchor="middle" letter-spacing="2">QUICK VIEW</text>
+
+  <rect x="534" y="260" width="226" height="150" rx="2" fill="#16213E"/>
+  <rect x="534" y="260" width="226" height="85" rx="2" fill="url(#cardShade_couture)"/>
+  <rect x="614" y="278" width="65" height="50" rx="1" fill="#E94560" opacity="0.25"/>
+  <text x="550" y="363" fill="#F8FAFC" font-family="sans-serif" font-size="10">Wide Trousers</text>
+  <text x="550" y="380" fill="#E94560" font-family="sans-serif" font-size="10" font-weight="700">₹1,799</text>
+  <rect x="550" y="391" width="195" height="14" rx="2" fill="#E94560" opacity="0.15"/>
+  <text x="647" y="402" fill="#E94560" font-family="sans-serif" font-size="6" text-anchor="middle" letter-spacing="2">QUICK VIEW</text>
+
+  <!-- Lookbook section label -->
+  <text x="40" y="434" fill="#E94560" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="4">THE LOOKBOOK</text>
+
+  <!-- 3 lookbook blocks -->
+  <rect x="40" y="445" width="226" height="46" rx="2" fill="#16213E"/>
+  <rect x="287" y="445" width="226" height="46" rx="2" fill="#16213E"/>
+  <rect x="534" y="445" width="226" height="46" rx="2" fill="#16213E"/>
+
+  <!-- Theme name watermark -->
+  <text x="790" y="494" fill="#6B7280" font-family="sans-serif" font-size="8" text-anchor="end" opacity="0.6">Couture — Fashion Edit</text>
+</svg>

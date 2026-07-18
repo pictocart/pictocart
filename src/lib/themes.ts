@@ -194,6 +194,7 @@ export const FONT_OPTIONS = [
   'Playfair Display',
   'Space Grotesk',
   'DM Sans',
+  'Syne',
   'Poppins',
   'Lora',
   'Roboto',
