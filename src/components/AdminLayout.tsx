@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   Handshake,
   Receipt,
+  Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ const adminNavItems = [
   { label: 'Provisioning', icon: Rocket, path: '/admin/provisioning' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Themes', icon: Palette, path: '/admin/themes' },
+  { label: 'Layouts', icon: Layers, path: '/admin/layouts' },
   { label: 'Plans', icon: Crown, path: '/admin/plans' },
   { label: 'Plan Offer', icon: Sparkles, path: '/admin/plan-offer' },
   { label: 'Revenue', icon: IndianRupee, path: '/admin/revenue' },
@@ -81,7 +83,9 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
         <nav className="flex-1 overflow-y-auto p-2 space-y-1">
           {adminNavItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = item.path === '/admin/layouts'
+              ? location.pathname.startsWith('/admin/layouts')
+              : location.pathname === item.path;
             return (
               <Link
                 key={item.path}
