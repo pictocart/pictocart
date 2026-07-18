@@ -116,6 +116,10 @@ const AdminThemeMasterPreview = lazy(() => import("@/pages/admin/AdminThemeMaste
 const AdminRevenue = lazy(() => import("@/pages/admin/AdminRevenue"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminProfile = lazy(() => import("@/pages/admin/AdminProfile"));
+const AdminLayouts = lazy(() => import("@/pages/admin/AdminLayouts"));
+const AdminLayoutDetail = lazy(() => import("@/pages/admin/AdminLayoutDetail"));
+const AdminSubLayout = lazy(() => import("@/pages/admin/AdminSubLayout"));
+const AdminLayoutTheme = lazy(() => import("@/pages/admin/AdminLayoutTheme"));
 
 const AdminSecurity = lazy(() => import("@/pages/admin/AdminSecurity"));
 const AdminProvisioning = lazy(() => import("@/pages/admin/AdminProvisioning"));
@@ -354,6 +358,10 @@ const AppRoutes = () => {
             <Route path="/admin/partner-payouts" element={<AdminPartnerPayouts />} />
             <Route path="/admin/partner-analytics" element={<AdminPartnerAnalytics />} />
             <Route path="/admin/domains" element={<AdminDomains />} />
+            <Route path="/admin/layouts" element={<AdminLayouts />} />
+            <Route path="/admin/layouts/:layoutId" element={<AdminLayoutDetail />} />
+            <Route path="/admin/layouts/:layoutId/:subLayoutSlug" element={<AdminSubLayout />} />
+            <Route path="/admin/layouts/:layoutId/:subLayoutSlug/:themeId" element={<AdminLayoutTheme />} />
           </Route>
           <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
           <Route path="/admin/themes/preview-live/:themeId" element={<AdminThemeLivePreview />} />
