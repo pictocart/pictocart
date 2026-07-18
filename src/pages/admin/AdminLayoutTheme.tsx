@@ -4,6 +4,7 @@ import {
   Truck, CreditCard, RotateCcw, Tag, Zap, Shield, Package, MessageCircle,
   Smartphone, Globe, BarChart2, Share2, ImageIcon, Layers, Eye, Lock,
   ChevronLeft, ChevronDown, Sparkles, Users, Bell, Percent,
+  ShoppingBag, ZoomIn,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -175,21 +176,21 @@ const heroUrl  = (id: string) => `${IMG_BASE}/hero/${id}.svg`;
 const prodUrl  = (id: string, n: number) => `${IMG_BASE}/products/${id}-${n}.svg`;
 
 const PRODUCTS = [
-  { name: 'Silk Midi Dress',   price: '₹2,499', badge: 'NEW'  },
-  { name: 'Linen Blazer',      price: '₹3,899', badge: 'SALE' },
-  { name: 'Wide Leg Trousers', price: '₹1,799', badge: ''     },
-  { name: 'Knit Cardigan',     price: '₹2,199', badge: 'HOT'  },
+  { name: 'Silk Midi Dress',   price: '₹2,499', badge: 'NEW',  stars: 5 },
+  { name: 'Linen Blazer',      price: '₹3,899', badge: 'SALE', stars: 4 },
+  { name: 'Wide Leg Trousers', price: '₹1,799', badge: '',     stars: 5 },
+  { name: 'Knit Cardigan',     price: '₹2,199', badge: 'HOT',  stars: 4 },
 ];
 
-/* ─── Mini storefront preview ───────────────────────────────────────── */
-const StorefrontPreview = ({ theme }: { theme: ThemeMeta }) => {
+/* ════════════════════════════════════════════════════════════
+   LAYOUT 1.1 — RUNWAY EDITORIAL
+   Cinematic hero · 2-col tall cards · lookbook strip · minimal trust bar
+════════════════════════════════════════════════════════════ */
+const EditorialPreview = ({ theme }: { theme: ThemeMeta }) => {
   const isDark = theme.preview === 'dark';
-
   return (
-    <div
-      className="relative w-full overflow-hidden rounded-2xl border shadow-2xl"
-      style={{ backgroundColor: theme.bg, borderColor: theme.border, fontFamily: 'system-ui' }}
-    >
+    <div className="relative w-full overflow-hidden rounded-2xl border shadow-2xl"
+         style={{ backgroundColor: theme.bg, borderColor: theme.border }}>
       {/* Browser chrome */}
       <div className="flex items-center gap-1.5 px-4 py-2.5 border-b"
            style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
@@ -201,98 +202,106 @@ const StorefrontPreview = ({ theme }: { theme: ThemeMeta }) => {
           yourbrand.com
         </div>
       </div>
-
-      {/* Navbar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b"
+      {/* Navbar — centered serif brand, minimal */}
+      <div className="relative flex items-center justify-between px-8 py-4 border-b"
            style={{ borderColor: theme.border }}>
-        <span className="text-sm font-black tracking-widest uppercase" style={{ color: theme.accent }}>BRAND</span>
-        <div className="hidden sm:flex gap-5">
-          {['New Arrivals', 'Women', 'Men', 'Sale'].map((l) => (
-            <span key={l} className="text-[10px] font-medium" style={{ color: theme.textMuted }}>{l}</span>
+        <div className="flex gap-5">
+          {['Women', 'Men', 'New In'].map(l => (
+            <span key={l} className="text-[10px] tracking-widest uppercase font-medium"
+                  style={{ color: theme.textMuted }}>{l}</span>
           ))}
         </div>
-        <div className="flex items-center gap-2.5">
+        <span className="text-base font-black tracking-[0.3em] uppercase absolute left-1/2 -translate-x-1/2"
+              style={{ color: theme.textPrimary, fontFamily: 'Georgia,serif' }}>ATELIER</span>
+        <div className="flex items-center gap-3">
           <Search className="h-3.5 w-3.5" style={{ color: theme.textMuted }} />
           <Heart className="h-3.5 w-3.5" style={{ color: theme.textMuted }} />
           <div className="relative">
-            <ShoppingCart className="h-3.5 w-3.5" style={{ color: theme.textPrimary }} />
-            <span className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full text-[7px] font-bold
-                             flex items-center justify-center text-white"
+            <ShoppingBag className="h-3.5 w-3.5" style={{ color: theme.textPrimary }} />
+            <span className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full text-[7px] font-bold flex items-center justify-center text-white"
                   style={{ backgroundColor: theme.accent }}>2</span>
           </div>
         </div>
       </div>
-
-      {/* ── Hero banner — real Supabase image ── */}
-      <div className="relative overflow-hidden" style={{ height: '220px' }}>
-        <img
-          src={heroUrl(theme.id)}
-          alt={`${theme.name} hero`}
-          className="w-full h-full object-cover"
-          style={{ objectPosition: 'left center' }}
-          loading="lazy"
-        />
-        {/* Overlay to keep text readable if image is loading */}
-        <div className="absolute inset-0 pointer-events-none"
-             style={{ background: `linear-gradient(to right, ${theme.bg}cc 0%, transparent 60%)` }} />
+      {/* Cinematic hero — text overlay left, image fills */}
+      <div className="relative overflow-hidden" style={{ height: '240px' }}>
+        <img src={heroUrl(theme.id)} alt="hero"
+             className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+        <div className="absolute inset-0" style={{ background: isDark
+          ? 'linear-gradient(to right,rgba(13,13,13,.92) 35%,rgba(13,13,13,.3) 65%,transparent)'
+          : 'linear-gradient(to right,rgba(250,248,244,.95) 35%,rgba(250,248,244,.4) 65%,transparent)' }} />
+        <div className="absolute left-8 top-1/2 -translate-y-1/2 space-y-3 max-w-[200px]">
+          <p className="text-[8px] tracking-[0.3em] uppercase font-medium" style={{ color: theme.accent }}>S/S 2025 Collection</p>
+          <p className="text-2xl font-black leading-tight" style={{ color: theme.textPrimary, fontFamily: 'Georgia,serif' }}>Effortless<br/>Elegance.</p>
+          <div className="flex gap-2 pt-1">
+            <button className="px-4 py-1.5 text-[9px] font-bold tracking-wider uppercase"
+                    style={{ backgroundColor: theme.accent, color: '#fff', borderRadius: '2px' }}>Shop Now</button>
+            <button className="px-4 py-1.5 text-[9px] font-medium tracking-wider uppercase border"
+                    style={{ borderColor: theme.accent, color: theme.accent, borderRadius: '2px' }}>Lookbook</button>
+          </div>
+        </div>
       </div>
-
-      {/* ── Product grid — real Supabase product images ── */}
-      <div className="p-4" style={{ backgroundColor: theme.bg }}>
-        <p className="text-[9px] font-bold uppercase tracking-widest mb-3"
-           style={{ color: theme.textMuted }}>Trending Now</p>
-        <div className="grid grid-cols-4 gap-2">
-          {PRODUCTS.map((p, i) => (
-            <div key={i} className="group/card rounded-xl overflow-hidden"
-                 style={{ backgroundColor: theme.surface, border: `1px solid ${theme.border}` }}>
-              {/* Product image from storage */}
-              <div className="relative overflow-hidden" style={{ height: '110px', backgroundColor: theme.accent + '12' }}>
-                <img
-                  src={prodUrl(theme.id, i + 1)}
-                  alt={p.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
-                  loading="lazy"
-                />
-                {p.badge && (
-                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[7px]
-                                   font-black text-white z-10"
-                        style={{ backgroundColor: p.badge === 'SALE' ? '#ef4444' : p.badge === 'HOT' ? '#f97316' : theme.accent }}>
-                    {p.badge}
-                  </span>
-                )}
-                <button className="absolute top-1.5 right-1.5 opacity-0 group-hover/card:opacity-100
-                                   transition-opacity z-10">
-                  <Heart className="h-3 w-3" style={{ color: theme.accent }} />
-                </button>
+      {/* Section divider */}
+      <div className="flex items-center gap-4 px-8 pt-5 pb-3">
+        <span className="text-[8px] font-bold tracking-[0.3em] uppercase" style={{ color: theme.textMuted }}>New Arrivals</span>
+        <div className="flex-1 h-px" style={{ backgroundColor: theme.border }} />
+        <span className="text-[8px] font-medium" style={{ color: theme.accent }}>View All →</span>
+      </div>
+      {/* 2-col editorial cards — tall, large images, size swatches */}
+      <div className="grid grid-cols-2 gap-3 px-8 pb-5">
+        {PRODUCTS.slice(0, 2).map((p, i) => (
+          <div key={i} className="group/card relative overflow-hidden"
+               style={{ borderRadius: '3px', border: `1px solid ${theme.border}` }}>
+            <div className="relative overflow-hidden" style={{ height: '155px' }}>
+              <img src={prodUrl(theme.id, i + 1)} alt={p.name}
+                   className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105" loading="lazy" />
+              {p.badge && (
+                <span className="absolute top-2 left-2 px-2 py-0.5 text-[7px] font-black tracking-wider uppercase text-white"
+                      style={{ backgroundColor: p.badge === 'SALE' ? '#ef4444' : theme.accent }}>{p.badge}</span>
+              )}
+              <button className="absolute top-2 right-2 h-6 w-6 rounded-full flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity"
+                      style={{ backgroundColor: theme.surface }}>
+                <Heart className="h-3 w-3" style={{ color: theme.accent }} />
+              </button>
+            </div>
+            <div className="p-3 space-y-1.5">
+              <p className="text-[11px] font-semibold tracking-wide" style={{ color: theme.textPrimary, fontFamily: 'Georgia,serif' }}>{p.name}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold" style={{ color: theme.accent }}>{p.price}</p>
+                <div className="flex gap-0.5">{[1,2,3,4,5].map(s => <Star key={s} className="h-2 w-2" style={{ fill: s <= (p.stars||4) ? '#f59e0b' : 'transparent', color: '#f59e0b' }} />)}</div>
               </div>
-              <div className="p-2">
-                <p className="text-[8px] font-semibold leading-tight truncate"
-                   style={{ color: theme.textPrimary }}>{p.name}</p>
-                <p className="text-[8px] font-bold mt-0.5" style={{ color: theme.accent }}>{p.price}</p>
-                <div className="flex mt-1">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} className="h-2 w-2"
-                          style={{ fill: s <= 4 ? '#f59e0b' : 'transparent', color: '#f59e0b' }} />
-                  ))}
-                </div>
+              <div className="flex gap-1 pt-0.5">
+                {['XS','S','M','L'].map((sz,si) => (
+                  <span key={sz} className="h-4 w-5 flex items-center justify-center text-[7px] font-medium border"
+                        style={{ borderColor: si===1 ? theme.accent : theme.border, color: si===1 ? theme.accent : theme.textMuted, borderRadius:'2px' }}>{sz}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Lookbook strip */}
+      <div className="px-8 pb-5 space-y-2">
+        <p className="text-[8px] tracking-[0.3em] uppercase font-medium" style={{ color: theme.textMuted }}>The Lookbook</p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {[1,2,3,4].map(n => (
+            <div key={n} className="relative overflow-hidden group/lb" style={{ height: '55px', borderRadius: '2px' }}>
+              <img src={prodUrl(theme.id, n)} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <div className="absolute inset-0 opacity-0 group-hover/lb:opacity-100 transition-opacity flex items-center justify-center"
+                   style={{ backgroundColor: theme.accent + 'aa' }}>
+                <ZoomIn className="h-3 w-3 text-white" />
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Trust bar */}
-      <div className="flex items-center justify-around px-4 py-3 border-t text-center"
+      {/* Trust bar — horizontal, spaced */}
+      <div className="flex items-center justify-around px-8 py-3 border-t"
            style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
-        {[
-          { icon: Truck,      label: 'Free Delivery' },
-          { icon: RotateCcw,  label: 'Easy Returns'  },
-          { icon: Shield,     label: 'Secure Pay'    },
-          { icon: Star,       label: '4.8★ Rating'   },
-        ].map(({ icon: Icon, label }) => (
-          <div key={label} className="flex flex-col items-center gap-0.5">
+        {[{icon:Truck,label:'Free Delivery'},{icon:RotateCcw,label:'15-Day Returns'},{icon:Shield,label:'Secure Pay'},{icon:Star,label:'4.9★ Rated'}].map(({icon:Icon,label}) => (
+          <div key={label} className="flex items-center gap-1.5">
             <Icon className="h-3 w-3" style={{ color: theme.accent }} />
-            <span className="text-[8px] font-medium" style={{ color: theme.textMuted }}>{label}</span>
+            <span className="text-[8px] tracking-wide" style={{ color: theme.textMuted }}>{label}</span>
           </div>
         ))}
       </div>
@@ -300,7 +309,178 @@ const StorefrontPreview = ({ theme }: { theme: ThemeMeta }) => {
   );
 };
 
-/* ─── Feature group accordion ───────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   LAYOUT 1.2 — STREET STYLE HUB
+   Promo ticker · bold logo nav · story rings · masonry grid · countdown
+════════════════════════════════════════════════════════════ */
+const StreetPreview = ({ theme }: { theme: ThemeMeta }) => {
+  const isDark = theme.preview === 'dark';
+  const CATS = ['All Drops','Oversized','Cargo','Hoodies','Sneakers'];
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl border shadow-2xl"
+         style={{ backgroundColor: theme.bg, borderColor: theme.border }}>
+      {/* Browser chrome */}
+      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b"
+           style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
+        <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
+        <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
+        <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
+        <div className="mx-3 flex-1 h-5 rounded-md text-[9px] flex items-center px-2"
+             style={{ backgroundColor: isDark ? '#ffffff10' : '#00000008', color: theme.textMuted }}>
+          yourbrand.com
+        </div>
+      </div>
+      {/* Promo ticker */}
+      <div className="py-1.5 text-[8px] font-black tracking-widest uppercase text-center"
+           style={{ backgroundColor: theme.accent, color: '#fff' }}>
+        🔥 FLASH SALE ENDS IN 02:34:00 &nbsp;·&nbsp; FREE SHIP ABOVE ₹999 &nbsp;·&nbsp; NEW DROP EVERY FRIDAY
+      </div>
+      {/* Bold navbar */}
+      <div className="flex items-center justify-between px-5 py-3 border-b"
+           style={{ borderColor: theme.border }}>
+        <span className="text-lg font-black tracking-tight uppercase"
+              style={{ color: theme.textPrimary }}>
+          DRIP<span style={{ color: theme.accent }}>.</span>
+        </span>
+        <div className="hidden sm:flex items-center gap-3">
+          {['Drops','Brands'].map(l => (
+            <span key={l} className="text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: theme.textMuted }}>{l}</span>
+          ))}
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded"
+                style={{ backgroundColor: theme.accent, color: '#fff' }}>SALE</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Search className="h-3.5 w-3.5" style={{ color: theme.textMuted }} />
+          <div className="relative">
+            <ShoppingCart className="h-3.5 w-3.5" style={{ color: theme.textPrimary }} />
+            <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full text-[7px] font-black flex items-center justify-center text-white"
+                  style={{ backgroundColor: theme.accent }}>3</span>
+          </div>
+        </div>
+      </div>
+      {/* Story rings */}
+      <div className="flex gap-3 px-5 py-3 border-b overflow-x-auto"
+           style={{ borderColor: theme.border }}>
+        {CATS.map((cat, i) => (
+          <div key={cat} className="flex flex-col items-center gap-1 shrink-0">
+            <div className="h-12 w-12 rounded-full p-0.5"
+                 style={{ background: i===0 ? `linear-gradient(135deg,${theme.accent},#ff8c00)` : isDark ? '#ffffff18' : '#00000012' }}>
+              <div className="h-full w-full rounded-full overflow-hidden"
+                   style={{ backgroundColor: theme.surface, border: `1.5px solid ${theme.bg}` }}>
+                <img src={prodUrl(theme.id,(i%4)+1)} alt={cat} className="w-full h-full object-cover" loading="lazy" />
+              </div>
+            </div>
+            <span className="text-[7px] font-semibold whitespace-nowrap"
+                  style={{ color: i===0 ? theme.accent : theme.textMuted }}>{cat}</span>
+          </div>
+        ))}
+      </div>
+      {/* Hero with countdown */}
+      <div className="relative overflow-hidden" style={{ height: '160px' }}>
+        <img src={heroUrl(theme.id)} alt="hero"
+             className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+        <div className="absolute inset-0"
+             style={{ background: `linear-gradient(to bottom,transparent 20%,${theme.bg}dd 90%)` }} />
+        <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between">
+          <div>
+            <p className="text-[8px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>⚡ Limited Drop</p>
+            <p className="text-xl font-black leading-tight" style={{ color: theme.textPrimary }}>Street Essentials</p>
+          </div>
+          <div className="flex gap-1">
+            {['02','34','11'].map((v,i) => (
+              <div key={i} className="text-center px-2 py-1 rounded-md" style={{ backgroundColor: theme.accent, minWidth: '28px' }}>
+                <p className="text-[11px] font-black text-white leading-none">{v}</p>
+                <p className="text-[6px] text-white/70">{['HR','MIN','SEC'][i]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Masonry staggered grid */}
+      <div className="px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: theme.textPrimary }}>🔥 Trending Drops</p>
+          <div className="flex gap-1">
+            {['Latest','Popular','Price'].map(f => (
+              <span key={f} className="text-[8px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: isDark ? '#ffffff10' : '#00000008', color: theme.textMuted }}>{f}</span>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {/* Left col */}
+          <div className="space-y-2">
+            {PRODUCTS.slice(0,2).map((p,i) => (
+              <div key={i} className="group/card relative overflow-hidden rounded-xl"
+                   style={{ backgroundColor: theme.surface, border: `1px solid ${theme.border}` }}>
+                <div className="relative overflow-hidden" style={{ height: i===0 ? '120px' : '95px' }}>
+                  <img src={prodUrl(theme.id,i+1)} alt={p.name}
+                       className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110" loading="lazy" />
+                  {p.badge && (
+                    <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[7px] font-black text-white"
+                          style={{ backgroundColor: p.badge==='SALE' ? '#ef4444' : p.badge==='HOT' ? '#f97316' : theme.accent }}>{p.badge}</span>
+                  )}
+                  <button className="absolute bottom-0 left-0 right-0 py-1.5 text-[8px] font-black uppercase tracking-wider text-white translate-y-full group-hover/card:translate-y-0 transition-transform"
+                          style={{ backgroundColor: theme.accent }}>+ Quick Add</button>
+                </div>
+                <div className="p-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-[8px] font-bold truncate" style={{ color: theme.textPrimary }}>{p.name}</p>
+                    <p className="text-[9px] font-black" style={{ color: theme.accent }}>{p.price}</p>
+                  </div>
+                  <Heart className="h-3 w-3 shrink-0" style={{ color: theme.textMuted }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Right col */}
+          <div className="space-y-2">
+            {PRODUCTS.slice(2,4).map((p,i) => (
+              <div key={i} className="group/card relative overflow-hidden rounded-xl"
+                   style={{ backgroundColor: theme.surface, border: `1px solid ${theme.border}` }}>
+                <div className="relative overflow-hidden" style={{ height: i===0 ? '95px' : '120px' }}>
+                  <img src={prodUrl(theme.id,i+3)} alt={p.name}
+                       className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110" loading="lazy" />
+                  {p.badge && (
+                    <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[7px] font-black text-white"
+                          style={{ backgroundColor: p.badge==='HOT' ? '#f97316' : theme.accent }}>{p.badge}</span>
+                  )}
+                  <button className="absolute bottom-0 left-0 right-0 py-1.5 text-[8px] font-black uppercase tracking-wider text-white translate-y-full group-hover/card:translate-y-0 transition-transform"
+                          style={{ backgroundColor: theme.accent }}>+ Quick Add</button>
+                </div>
+                <div className="p-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-[8px] font-bold truncate" style={{ color: theme.textPrimary }}>{p.name}</p>
+                    <p className="text-[9px] font-black" style={{ color: theme.accent }}>{p.price}</p>
+                  </div>
+                  <Heart className="h-3 w-3 shrink-0" style={{ color: theme.textMuted }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Trust bar — bold pills */}
+      <div className="flex items-center gap-2 px-4 py-3 border-t overflow-x-auto"
+           style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
+        {[{icon:Truck,label:'Free Ship'},{icon:RotateCcw,label:'7-Day Return'},{icon:Shield,label:'Safe Pay'},{icon:Zap,label:'4.8★ Rated'}].map(({icon:Icon,label}) => (
+          <div key={label} className="flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1"
+               style={{ backgroundColor: theme.accent+'15', border:`1px solid ${theme.accent}30` }}>
+            <Icon className="h-2.5 w-2.5" style={{ color: theme.accent }} />
+            <span className="text-[8px] font-bold" style={{ color: theme.textPrimary }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Route to correct preview ──────────────────────────────────────── */
+const StorefrontPreview = ({ theme }: { theme: ThemeMeta }) =>
+  theme.subLayoutSlug === 'layout-1-1'
+    ? <EditorialPreview theme={theme} />
+    : <StreetPreview theme={theme} />;
 const FeatureGroupPanel = ({ group, theme }: { group: FeatureGroup; theme: ThemeMeta }) => {
   const [open, setOpen] = useState(true);
   const active = group.items.filter((f) => f.status === 'active').length;
