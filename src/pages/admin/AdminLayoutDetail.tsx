@@ -104,11 +104,11 @@ const Card11 = ({ sub, layoutId }: { sub: SubLayout; layoutId: string }) => {
                  border border-zinc-800 bg-zinc-950 shadow-2xl
                  hover:shadow-[0_0_60px_rgba(201,169,110,0.15)]
                  hover:-translate-y-1 transition-all duration-500"
-      style={{ minHeight: 420 }}
+      style={{ minHeight: 360 }}
     >
       <div className="flex h-full">
         {/* ── Left: hero image panel ── */}
-        <div className="relative w-[46%] shrink-0 overflow-hidden">
+        <div className="relative w-[42%] shrink-0 overflow-hidden">
           <img
             src={heroImg('noir-atelier')}
             alt="Editorial Preview"
@@ -239,7 +239,7 @@ const Card12 = ({ sub, layoutId }: { sub: SubLayout; layoutId: string }) => {
                  bg-[#0f0f1a] border border-[#1e1e35]
                  shadow-2xl hover:shadow-[0_0_60px_rgba(255,61,107,0.18)]
                  hover:-translate-y-1 transition-all duration-500"
-      style={{ minHeight: 420 }}
+      style={{ minHeight: 360 }}
     >
       {/* ── Top: Mosaic of product images ── */}
       <div className="grid grid-cols-3 gap-0.5 h-48 overflow-hidden relative">
@@ -405,8 +405,8 @@ const AdminLayoutDetail = () => {
         </p>
       </div>
 
-      {/* Cards — stacked vertically, each uniquely styled */}
-      <div className="space-y-6">
+      {/* Cards — side by side in a 2-col grid */}
+      <div className="grid grid-cols-2 gap-5">
         {sub11 && <Card11 sub={sub11} layoutId={layoutId} />}
         {sub12 && <Card12 sub={sub12} layoutId={layoutId} />}
       </div>
