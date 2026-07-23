@@ -40,3 +40,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local scratch and utility scripts
+check-sections.mjs
+check.mjs
+footer-section.txt
+gen-preview-file.cjs
+header-footer-extract.txt
+header-section.txt
+seed-19-demo-themes.cjs
+seed-tailwind-themes.cjs
+tsc_err.txt
+tsc_out.txt
+update-manifests.mjs
+write-preview.cjs
+check-theme.mjs
+
+# Hidden agent specs and scratch folders
+.kiro/
+.zcode/
+scratch/
