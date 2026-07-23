@@ -15,6 +15,272 @@ interface Props {
   storeId?: string;
 }
 
+async function generateProductViaNvidiaFallback(
+  imageUrl: string,
+  category?: string,
+  storeName?: string,
+  productType?: string,
+  productHint?: string
+) {
+  let base64ImageUrl = imageUrl;
+  if (imageUrl.startsWith("http")) {
+    try {
+      if (imageUrl.includes("/storage/v1/object/public/")) {
+        const parts = imageUrl.split("/storage/v1/object/public/");
+        const pathParts = parts[1].split("/");
+        const bucket = pathParts[0];
+        const filePath = pathParts.slice(1).join("/");
+        
+        const { data: blob, error } = await supabase.storage.from(bucket).download(filePath);
+        if (!error && blob) {
+          base64ImageUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } else {
+        const imgRes = await fetch(imageUrl);
+        if (imgRes.ok) {
+          const arrayBuffer = await imgRes.arrayBuffer();
+          const uint8 = new Uint8Array(arrayBuffer);
+          let binary = "";
+          const len = uint8.byteLength;
+          for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(uint8[i]);
+          }
+          const base64 = btoa(binary);
+          const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+          base64ImageUrl = `data:${contentType};base64,${base64}`;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to convert image to base64 for NVIDIA client-side fallback:", err);
+    }
+  }
+
+  let metadataDesc = "";
+  const typeKey = (productType || "physical").toLowerCase();
+  if (typeKey.includes("food")) {
+    metadataDesc = "- metadata: Object with keys: ingredients, nutritional_info, shelf_life, allergens";
+  } else if (typeKey.includes("fashion")) {
+    metadataDesc = "- metadata: Object with keys: material, care_instructions, fit_type, gender";
+  } else if (typeKey.includes("electronics")) {
+    metadataDesc = "- metadata: Object with keys: warranty_period, model_number, power_rating, connectivity";
+  } else if (typeKey.includes("beauty")) {
+    metadataDesc = "- metadata: Object with keys: ingredients, skin_type, usage_instructions, expiry_date";
+  } else if (typeKey.includes("handmade")) {
+    metadataDesc = "- metadata: Object with keys: making_time, material, customization_available (boolean)";
+  } else if (typeKey.includes("digital")) {
+    metadataDesc = "- metadata: Object with keys: file_format, license_type";
+  } else if (typeKey.includes("service")) {
+    metadataDesc = "- metadata: Object with keys: duration, delivery_method, booking_required (boolean)";
+  } else {
+    metadataDesc = "- metadata: empty object {}";
+  }
+
+  const normalizedType = typeKey.includes("food") ? "food" :
+                         typeKey.includes("fashion") ? "fashion" :
+                         typeKey.includes("electronics") ? "electronics" :
+                         typeKey.includes("beauty") ? "beauty" :
+                         typeKey.includes("handmade") ? "handmade" :
+                         typeKey.includes("digital") ? "digital" :
+                         typeKey.includes("service") ? "service" : "physical";
+
+  const prompt = `You are an expert e-commerce product analyst.
+Analyze this product image and generate COMPREHENSIVE product details. Fill EVERY field.
+Store name: ${storeName || "Pic To Cart"}
+Store category: ${category || "general"}
+Product type: ${normalizedType}
+${productHint ? `Hint: ${productHint}` : ""}
+
+Return a single JSON object with these fields:
+- title: Catchy product title (2-6 words)
+- description: Detailed description (60-120 words), features + benefits
+- shortDescription: One-line summary (under 20 words)
+- tags: Array of 5-8 search tags
+- category: Best-fit product category
+- suggestedPrice: Suggested INR price (number)
+- seoTitle: SEO title (under 60 chars)
+- seoDescription: SEO meta description (under 160 chars)
+- highlights: Array of 4-6 short bullet selling points
+- product_type: "${normalizedType}"
+${metadataDesc}
+
+Rules:
+- Respond ONLY with a valid JSON object. Do not include markdown fences, backticks, or any conversational text.`;
+
+  const apiKey = "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";
+  
+  try {
+    const response = await fetch("/api/nvidia/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "meta/llama-3.2-11b-vision-instruct",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt + "\n\nCRITICAL: Return ONLY a raw valid JSON object. Do not include markdown blocks or backticks." },
+              { type: "image_url", image_url: { url: base64ImageUrl } }
+            ]
+          }
+        ]
+      })
+    });
+
+    if (response.ok) {
+      const aiData = await response.json();
+      const content = aiData.choices?.[0]?.message?.content || "";
+      return parseRobustProductJSON(content);
+    }
+  } catch (e) {
+    console.error("NVIDIA local model 1 fallback failed:", e);
+    if (e instanceof Error && e.message.startsWith("AI refusal")) throw e;
+  }
+
+  const response = await fetch("/api/nvidia/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "meta/llama-3.2-90b-vision-instruct",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt + "\n\nCRITICAL: Return ONLY a raw valid JSON object. Do not include markdown blocks or backticks." },
+            { type: "image_url", image_url: { url: base64ImageUrl } }
+          ]
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const txt = await response.text();
+    throw new Error(`NVIDIA Vision Error: ${response.status} - ${txt}`);
+  }
+
+  const aiData = await response.json();
+  const content = aiData.choices?.[0]?.message?.content || "";
+  return parseRobustProductJSON(content);
+}
+
+function parseRobustProductJSON(text: string): any {
+  const cleaned = text.trim();
+  try {
+    return JSON.parse(cleaned.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+  } catch (parseErr) {
+    console.warn("Standard JSON parsing failed, attempting fallback markdown extraction...");
+    
+    if (cleaned.toLowerCase().includes("cannot") || cleaned.toLowerCase().includes("sorry") || cleaned.toLowerCase().includes("unable")) {
+      throw new Error(`AI refusal: ${cleaned}`);
+    }
+
+    const result: any = {
+      title: "",
+      description: "",
+      shortDescription: "",
+      tags: [],
+      category: "",
+      suggestedPrice: 0,
+      seoTitle: "",
+      seoDescription: "",
+      highlights: [],
+      product_type: "physical",
+      metadata: {}
+    };
+
+    const lines = cleaned.split("\n");
+    let currentKey = "";
+    let currentTextBuffer = "";
+
+    const keyMap: Record<string, string> = {
+      title: "title",
+      description: "description",
+      "short description": "shortDescription",
+      shortdescription: "shortDescription",
+      tags: "tags",
+      category: "category",
+      "suggested price": "suggestedPrice",
+      suggestedprice: "suggestedPrice",
+      price: "suggestedPrice",
+      "seo title": "seoTitle",
+      seotitle: "seoTitle",
+      "seo description": "seoDescription",
+      seodescription: "seoDescription",
+      highlights: "highlights",
+      "product type": "product_type",
+      product_type: "product_type"
+    };
+
+    const assignField = (obj: any, key: string, val: string) => {
+      if (key === "title") obj.title = val;
+      else if (key === "description") obj.description = val;
+      else if (key === "shortDescription") obj.shortDescription = val;
+      else if (key === "tags") obj.tags = val;
+      else if (key === "category") obj.category = val;
+      else if (key === "suggestedPrice") obj.suggestedPrice = val;
+      else if (key === "seoTitle") obj.seoTitle = val;
+      else if (key === "seoDescription") obj.seoDescription = val;
+      else if (key === "highlights") obj.highlights = val;
+      else if (key === "product_type") obj.product_type = val;
+      else {
+        obj.metadata[key] = val;
+      }
+    };
+
+    for (const line of lines) {
+      const match = line.match(/^\s*[\*\-]?\s*\*\*([^*]+)\*\*:\s*(.*)$/i);
+      if (match) {
+        if (currentKey && currentTextBuffer) {
+          assignField(result, currentKey, currentTextBuffer.trim());
+        }
+        const boldKey = match[1].toLowerCase().trim().replace(/_/g, " ");
+        currentKey = keyMap[boldKey] || boldKey;
+        currentTextBuffer = match[2] || "";
+      } else {
+        if (currentKey) {
+          const listMatch = line.match(/^\s*[\*\-\+]\s*(.*)$/);
+          if (listMatch) {
+            currentTextBuffer += "\n" + listMatch[1];
+          } else {
+            currentTextBuffer += " " + line.trim();
+          }
+        }
+      }
+    }
+
+    if (currentKey && currentTextBuffer) {
+      assignField(result, currentKey, currentTextBuffer.trim());
+    }
+
+    if (typeof result.highlights === "string") {
+      result.highlights = result.highlights.split("\n").map((h: string) => h.replace(/^\s*[\*\-\+]\s*/, "").trim()).filter(Boolean);
+    }
+    if (typeof result.tags === "string") {
+      result.tags = result.tags.split(/,/).map((t: string) => t.trim().replace(/^\s*[\*\-\+]\s*/, "")).filter(Boolean);
+    }
+    if (typeof result.suggestedPrice === "string") {
+      const numeric = result.suggestedPrice.replace(/[^0-9]/g, "");
+      result.suggestedPrice = numeric ? Number(numeric) : 0;
+    }
+
+    if (!result.title && result.description) {
+      result.title = result.description.split(" ").slice(0, 4).join(" ");
+    }
+
+    return result;
+  }
+}
+
 const StepAIGenerate = ({ data, setData, storeId }: Props) => {
   const [generating, setGenerating] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -28,28 +294,15 @@ const StepAIGenerate = ({ data, setData, storeId }: Props) => {
 
     setGenerating(true);
     try {
-      const { data: result, error } = await supabase.functions.invoke('generate-product', {
-        body: {
-          imageUrl: data.productImageUrl,
-          category: data.category,
-          storeName: data.storeName,
-          store_id: storeId,
-        },
-      });
+      console.log("Generating product details client-side via NVIDIA Vision API...");
+      const aiProduct = await generateProductViaNvidiaFallback(
+        data.productImageUrl,
+        data.category,
+        data.storeName
+      );
 
-      let parsedErr: any = null;
-      if (error && (error as any).context?.clone) {
-        try { parsedErr = await (error as any).context.clone().json(); } catch { /* ignore */ }
-      }
-      const errMsg = parsedErr?.error || result?.error || error?.message;
-      if (errMsg === 'INSUFFICIENT_CREDITS') {
-        toast.error('You need credits in your wallet to generate. Please recharge.');
-        throw new Error('INSUFFICIENT_CREDITS');
-      }
-      if (errMsg) throw new Error(errMsg);
-
-      if (result?.product) {
-        setData((d) => ({ ...d, aiProduct: result.product }));
+      if (aiProduct) {
+        setData((d) => ({ ...d, aiProduct }));
         toast.success('Product details generated!');
       }
     } catch (e: any) {
@@ -68,10 +321,14 @@ const StepAIGenerate = ({ data, setData, storeId }: Props) => {
           suggestedPrice: 0,
           seoTitle: '',
           seoDescription: '',
+          highlights: [],
+          product_type: 'physical',
+          metadata: {},
         },
       }));
+    } finally {
+      setGenerating(false);
     }
-    setGenerating(false);
   };
 
   const updateField = (field: string, value: any) => {

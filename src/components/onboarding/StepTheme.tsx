@@ -486,20 +486,6 @@ const StepTheme = ({ data, setData }: Props) => {
                 ))}
               </Section>
             )}
-
-
-
-            {/* AI Generate CTA card — hide if already done */}
-            {genState !== 'done' && (
-              <Section title='Did not find any of the themes to your liking! Generate a theme with AI, absolutely free.' icon={<Wand2 className="h-3 w-3" />}>
-                <AIGenerateCTA
-                  storeName={data.storeName}
-                  category={data.category}
-                  used={genState === 'used'}
-                  onClick={() => genState === 'idle' && setGenState('confirm')}
-                />
-              </Section>
-            )}
           </div>
         )}
       </div>
@@ -1339,8 +1325,8 @@ const CustomThemeBuilderModal = ({ onClose, data, setData, themes }: BuilderModa
   // The manifest's pages object is built from this state at save time.
   const [pages, setPages] = useState<Record<string, Array<{ id: string; label: string; enabled: boolean; style: string; compulsive?: boolean }>>>(() => {
     // Hydrate from existing customThemeConfig if present, otherwise use defaults.
-    if (data.customThemeConfig?.pages) {
-      return JSON.parse(JSON.stringify(data.customThemeConfig.pages));
+    if ((data.customThemeConfig as any)?.pages) {
+      return JSON.parse(JSON.stringify((data.customThemeConfig as any).pages));
     }
     const initial: Record<string, any> = {};
     for (const page of Object.keys(PAGE_SECTION_DEFAULTS)) {
@@ -1361,7 +1347,7 @@ const CustomThemeBuilderModal = ({ onClose, data, setData, themes }: BuilderModa
   const interpretAIPrompt = (promptText: string) => {
     const text = promptText.toLowerCase();
     
-    const palette = customPalette ? { ...customPalette } : {
+    const palette: Record<string, any> = customPalette ? { ...customPalette } : {
       primary: '#6366f1',
       secondary: '#10b981',
       accent: '#6366f1',

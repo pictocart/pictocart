@@ -134,7 +134,9 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
     ? [{ type: "page_title", props: { title: "Collections" } }, { type: "collections_grid", props: { items: collectionsItems } }]
     : page === "collection_detail" && (!manifest?.pages?.collection_detail?.sections?.length)
       ? [{ type: "collection_detail", props: { items: collectionsItems } }]
-      : (manifest?.pages?.[page]?.sections ?? []);
+      : page === "shop" && (!manifest?.pages?.shop?.sections?.length)
+        ? [{ type: "page_title", props: { title: "All Products" } }, { type: "product_grid", props: { style: "grid_clean" } }]
+        : (manifest?.pages?.[page]?.sections ?? []);
 
   return (
     <div style={style} data-master-theme>
@@ -1262,12 +1264,21 @@ function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overl
             )}
             <Overlay overlay={overlay} />
             <div className={`relative h-full w-full flex ${alignClass(contentAlign)} px-6`}>
-              <div className="max-w-3xl" style={{ color: "#fff" }}>
+              <div 
+                className={s.content_bg ? "max-w-3xl p-6 md:p-10 rounded-2xl backdrop-blur-sm text-left" : "max-w-3xl"} 
+                style={{ 
+                  color: "#fff",
+                  backgroundColor: s.content_bg || undefined,
+                  boxShadow: s.content_bg ? "0 10px 30px -10px rgba(0, 0, 0, 0.15)" : undefined,
+                  width: s.content_bg ? "fit-content" : undefined,
+                  maxWidth: "100%"
+                }}
+              >
                 {s.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3 opacity-90">{s.kicker}</div>}
                 {s.title && <h1 className="text-4xl md:text-6xl leading-[1.05]" style={headingFont}>{s.title}</h1>}
                 {s.sub && <p className="mt-4 text-base md:text-lg opacity-90 max-w-xl">{s.sub}</p>}
                 {(s.cta || s.cta_secondary) && (
-                  <div className="mt-7 flex gap-3 flex-wrap" style={{ justifyContent: (contentAlign?.endsWith("-center") || !contentAlign) ? "center" : (contentAlign?.endsWith("-right") ? "flex-end" : "flex-start") }}>
+                  <div className="mt-7 flex gap-3 flex-wrap" style={{ justifyContent: (s.content_bg || (contentAlign?.endsWith("-center") || !contentAlign)) ? "center" : (contentAlign?.endsWith("-right") ? "flex-end" : "flex-start") }}>
                     {s.cta && <HeroBtn kind="primary" label={s.cta} href={s.cta_href || shopHref} cfg={buttons?.primary} />}
                     {s.cta_secondary && <HeroBtn kind="secondary" label={s.cta_secondary} href={s.cta_secondary_href || shopHref} cfg={buttons?.secondary} />}
                   </div>
@@ -1392,6 +1403,17 @@ function Hero({ p, dna, storeSlug }: any) {
   const parallax = effects.parallax;
   const kenBurns = effects.ken_burns;
   const buttons = p.buttons || {};
+  const contentBgStyle = p.content_bg ? {
+    backgroundColor: p.content_bg,
+    padding: "2rem",
+    borderRadius: "16px",
+    backdropFilter: "blur(8px)",
+    boxShadow: "0 10px 30px -10px rgba(0, 0, 0, 0.15)",
+    width: "fit-content",
+    maxWidth: "100%",
+    textAlign: "left",
+  } as React.CSSProperties : {};
+
   const freePos = !!buttons.free_position && v !== "slider";
 
   const Btns = freePos ? null : (
@@ -1430,7 +1452,7 @@ function Hero({ p, dna, storeSlug }: any) {
         <HeroVideo video={p.video} />
         <Overlay overlay={overlay} />
         <div className={`relative h-full w-full flex ${alignClass(contentAlign)} px-6 py-24`} style={{ color: "#fff" }}>
-          <div className="max-w-3xl">
+          <div className="max-w-3xl" style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3 opacity-90">{p.kicker}</div>}
             {p.title && <h1 className="text-5xl md:text-7xl leading-[1.05]" style={headingFont}>{p.title}</h1>}
             {p.sub && <p className="mt-5 text-lg opacity-90 max-w-xl">{p.sub}</p>}
@@ -1446,10 +1468,12 @@ function Hero({ p, dna, storeSlug }: any) {
     return wrap(
       <section className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface, minHeight: "40vh" }}>
         <div className="px-6 md:px-12 py-12 md:py-16 flex flex-col justify-center">
-          {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
-          <h1 className="text-3xl md:text-5xl leading-tight" style={headingFont}>{p.title}</h1>
-          {p.sub && <p className="mt-3 text-base" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
-          {Btns}
+          <div style={contentBgStyle}>
+            {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
+            <h1 className="text-3xl md:text-5xl leading-tight" style={headingFont}>{p.title}</h1>
+            {p.sub && <p className="mt-3 text-base" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
+            {Btns}
+          </div>
         </div>
         <div className="min-h-[260px]">{p.image && <img src={p.image} className="w-full h-full object-cover" style={{ objectPosition: p.focal || "50% 50%" }} />}</div>
       </section>
@@ -1461,7 +1485,7 @@ function Hero({ p, dna, storeSlug }: any) {
     return wrap(
       <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[60vh]"}`} style={{ background: `linear-gradient(135deg, ${dna.palette?.primary} 0%, ${dna.palette?.accent} 100%)`, color: dna.palette?.primary_fg || "#fff" }}>
         <div className={`relative h-full w-full flex ${alignClass(contentAlign)} px-6 py-24`}>
-          <div className="max-w-3xl">
+          <div className="max-w-3xl" style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3 opacity-90">{p.kicker}</div>}
             {p.title && <h1 className="text-5xl md:text-7xl leading-[1.05]" style={headingFont}>{p.title}</h1>}
             {p.sub && <p className="mt-5 text-lg opacity-90 max-w-xl">{p.sub}</p>}
@@ -1476,10 +1500,12 @@ function Hero({ p, dna, storeSlug }: any) {
     return wrap(
       <section className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface }}>
         <div className="px-6 md:px-12 py-20 md:py-32 flex flex-col justify-center">
-          {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
-          <h1 className="text-5xl md:text-6xl leading-tight" style={headingFont}>{p.title}</h1>
-          {p.sub && <p className="mt-5 text-lg" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
-          {Btns}
+          <div style={contentBgStyle}>
+            {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
+            <h1 className="text-5xl md:text-6xl leading-tight" style={headingFont}>{p.title}</h1>
+            {p.sub && <p className="mt-5 text-lg" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
+            {Btns}
+          </div>
         </div>
         <div className="min-h-[400px]">{p.image && <img src={p.image} className="w-full h-full object-cover" style={{ objectPosition: p.focal || "50% 50%" }} />}</div>
       </section>
@@ -1517,7 +1543,7 @@ function Hero({ p, dna, storeSlug }: any) {
         )}
         <Overlay overlay={overlay} />
         <div className={`relative h-full w-full flex ${alignClass(contentAlign || "center-center")} px-6 py-24`} style={{ color: "#fff" }}>
-          <div className="max-w-3xl">
+          <div className="max-w-3xl" style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.4em] mb-4 opacity-80">{p.kicker}</div>}
             <h1 className="text-5xl md:text-7xl" style={headingFont}>{p.title}</h1>
             {p.sub && <p className="mt-5 opacity-90 max-w-xl">{p.sub}</p>}
@@ -1530,10 +1556,12 @@ function Hero({ p, dna, storeSlug }: any) {
   if (v === "minimal_left") {
     return wrap(
       <section className="max-w-6xl mx-auto px-6 py-32 relative">
-        {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-6" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
-        <h1 className="text-5xl md:text-7xl max-w-2xl" style={headingFont}>{p.title}</h1>
-        {p.sub && <p className="mt-6 text-lg max-w-md" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
-        {Btns}
+        <div style={contentBgStyle}>
+          {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-6" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
+          <h1 className="text-5xl md:text-7xl max-w-2xl" style={headingFont}>{p.title}</h1>
+          {p.sub && <p className="mt-6 text-lg max-w-md" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
+          {Btns}
+        </div>
       </section>
     );
   }
@@ -1542,10 +1570,12 @@ function Hero({ p, dna, storeSlug }: any) {
       <section className="relative overflow-hidden" style={{ background: dna.palette?.surface }}>
         <div className="absolute -right-20 -top-10 w-2/3 h-full">{p.image && <img src={p.image} className="w-full h-full object-cover" style={{ clipPath: "polygon(20% 0, 100% 0, 100% 100%, 0% 100%)", objectPosition: p.focal || "50% 50%" }} />}</div>
         <div className="relative max-w-6xl mx-auto px-6 py-32 md:py-40">
-          {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
-          <h1 className="text-5xl md:text-7xl max-w-xl" style={headingFont}>{p.title}</h1>
-          {p.sub && <p className="mt-5 max-w-sm" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
-          {Btns}
+          <div style={contentBgStyle}>
+            {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
+            <h1 className="text-5xl md:text-7xl max-w-xl" style={headingFont}>{p.title}</h1>
+            {p.sub && <p className="mt-5 max-w-sm" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
+            {Btns}
+          </div>
         </div>
       </section>
     );
@@ -1556,10 +1586,12 @@ function Hero({ p, dna, storeSlug }: any) {
       {p.image && <img src={p.image} alt="" className={`absolute inset-0 w-full h-full object-cover opacity-60 ${kenBurns ? "animate-[ken-burns_18s_ease-out_infinite]" : ""}`} style={{ objectPosition: p.focal || "50% 50%" }} />}
       <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${dna.palette?.bg}00, ${dna.palette?.bg}cc)` }} />
       <div className="relative max-w-6xl mx-auto px-6 py-32 md:py-40">
-        {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
-        <h1 className="text-5xl md:text-7xl leading-[1.05] max-w-3xl" style={headingFont}>{p.title}</h1>
-        {p.sub && <p className="mt-6 text-lg max-w-xl" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
-        {Btns}
+        <div style={contentBgStyle}>
+          {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
+          <h1 className="text-5xl md:text-7xl leading-[1.05] max-w-3xl" style={headingFont}>{p.title}</h1>
+          {p.sub && <p className="mt-6 text-lg max-w-xl" style={{ color: dna.palette?.muted }}>{p.sub}</p>}
+          {Btns}
+        </div>
       </div>
     </section>
   );

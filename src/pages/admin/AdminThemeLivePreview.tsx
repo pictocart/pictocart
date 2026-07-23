@@ -285,6 +285,7 @@ export default function AdminThemeLivePreview(){
   const[products,setProducts]=useState<any[]>([]);
   const[sellerCategories,setSellerCategories]=useState<any[]>([]);
 
+  // 1. Load theme manifest file
   useEffect(()=>{
     if(isLayout1){setLoading(false);return;}
     (async()=>{
@@ -293,9 +294,73 @@ export default function AdminThemeLivePreview(){
     })();
   },[themeId,isLayout1]);
 
+  // 2. Listen to visual editor message events (sync layout config)
+  useEffect(() => {
+    const onMessage = (ev: MessageEvent) => {
+      if (ev.data?.type === "customiser:update") {
+        if (ev.data.overrides) setOverrides(ev.data.overrides);
+        if (ev.data.page) setPage(ev.data.page);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    
+    // Notify customiser parent that live-preview is ready to receive states
+    window.parent.postMessage({ type: "customiser:ready" }, "*");
+
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  // 3. Load active store products catalog & category records
+  useEffect(() => {
+    if (!storeSlug) return;
+    (async () => {
+      try {
+        const { data: storeData, error: storeError } = await supabase
+          .from("stores")
+          .select("id, resolved_storefront_manifest")
+          .eq("slug", storeSlug)
+          .maybeSingle();
+        if (storeError || !storeData) return;
+
+        if (storeData.resolved_storefront_manifest) {
+          setManifest(storeData.resolved_storefront_manifest);
+        }
+
+        const { data: prodsData, error: prodsError } = await supabase
+          .from("products")
+          .select("id, title, category, price, images, compare_at_price")
+          .eq("store_id", storeData.id);
+        if (!prodsError && prodsData) {
+          setProducts(prodsData);
+        }
+
+        const { data: catsData, error: catsError } = await supabase
+          .from("categories")
+          .select("*")
+          .eq("store_id", storeData.id)
+          .order("sort_order", { ascending: true });
+        if (!catsError && catsData) {
+          setSellerCategories(catsData);
+        }
+      } catch (err) {
+        console.error("Error loading live preview store details", err);
+      }
+    })();
+  }, [storeSlug]);
+
   if(isLayout1) return<Layout1Preview themeId={themeId!}/>;
   if(loading) return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}><Loader2 size={24} className="animate-spin"/></div>;
   if(!manifest) return<div style={{padding:32,textAlign:"center",color:"#888"}}>Theme not found.</div>;
 
-  return<MasterThemeRenderer manifest={manifest} page={page} overrides={overrides} storeSlug={storeSlug} onNavigate={setPage} products={products} sellerCategories={sellerCategories}/>;
+  const activeProduct = products.length > 0 ? products[0] : {
+    id: "dummy-1",
+    title: "Sample Product Title",
+    price: 999,
+    compare_at_price: 1499,
+    images: ["https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800"],
+    category: "Clothing",
+    description: "This is a premium quality sample product designed to demonstrate your theme's product detail page layout."
+  };
+
+  return <MasterThemeRenderer manifest={manifest} page={page} overrides={overrides} storeSlug={storeSlug} onNavigate={setPage} products={products} sellerCategories={sellerCategories} product={activeProduct}/>;
 }

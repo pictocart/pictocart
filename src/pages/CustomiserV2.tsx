@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import {
   Loader2, RotateCcw, Save, Upload, Trash2, Image as ImageIcon,
   Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown,
-  PanelTop, PanelBottom, Palette, Megaphone,
+  PanelTop, PanelBottom, Palette, Megaphone, Maximize2, Minimize2,
 } from "lucide-react";
 import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from "@/components/store-design/PromoTickerEditor";
 import type { PromoTickerConfig } from "@/components/storefront/PromoTicker";
@@ -118,6 +118,21 @@ export default function CustomiserV2() {
   const [hydrated, setHydrated] = useState<string | null>(null);
   const [pagesDialogOpen, setPagesDialogOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(800);
+
+  useEffect(() => {
+    if (!mainRef.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    resizeObserver.observe(mainRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
 
@@ -167,6 +182,11 @@ export default function CustomiserV2() {
     if (tabParam === "ticker") setSelected({ kind: "ticker" });
   }, [tabParam]);
 
+  const overridesRef = useRef(overrides);
+  const pageRef = useRef(page);
+  useEffect(() => { overridesRef.current = overrides; }, [overrides]);
+  useEffect(() => { pageRef.current = page; }, [page]);
+
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage(
       { type: "customiser:update", overrides, page }, "*",
@@ -177,13 +197,13 @@ export default function CustomiserV2() {
     const onReady = (ev: MessageEvent) => {
       if (ev.data?.type === "customiser:ready") {
         iframeRef.current?.contentWindow?.postMessage(
-          { type: "customiser:update", overrides, page }, "*",
+          { type: "customiser:update", overrides: overridesRef.current, page: pageRef.current }, "*",
         );
       }
     };
     window.addEventListener("message", onReady);
     return () => window.removeEventListener("message", onReady);
-  }, [overrides, page]);
+  }, []);
 
   const isMaster = activeThemeId?.startsWith("theme-") || activeThemeId?.startsWith("layout1-") || activeThemeId?.startsWith("custom-theme-");
   const sections: any[] = useMemo(() => {
@@ -198,6 +218,12 @@ export default function CustomiserV2() {
     }
     if (page === "collection_detail") {
       return [{ type: "collection_detail", props: {} }];
+    }
+    if (page === "shop") {
+      return [
+        { type: "page_title", props: { title: "All Products" } },
+        { type: "product_grid", props: { style: "grid_clean" } },
+      ];
     }
     return [];
   }, [manifest, page]);
@@ -431,6 +457,16 @@ export default function CustomiserV2() {
             <button onClick={() => setDevice("desktop")} className={`p-1.5 ${device === "desktop" ? "bg-muted" : ""}`} title="Desktop"><Monitor className="h-3.5 w-3.5" /></button>
             <button onClick={() => setDevice("mobile")} className={`p-1.5 ${device === "mobile" ? "bg-muted" : ""}`} title="Mobile"><Smartphone className="h-3.5 w-3.5" /></button>
           </div>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="gap-1 px-2.5 h-8 text-xs" 
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? "Exit Fullscreen Preview" : "Fullscreen Preview"}
+          >
+            {isFullscreen ? <Minimize2 className="h-3.5 w-3.5 text-indigo-600" /> : <Maximize2 className="h-3.5 w-3.5 text-indigo-600" />}
+            <span className="hidden sm:inline">{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+          </Button>
           <Button size="sm" variant="outline" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset page</Button>
           <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}</Button>
         </div>
@@ -438,7 +474,29 @@ export default function CustomiserV2() {
 
       <div className="flex flex-1 min-h-0">
         {/* Left: Pages + Sections */}
-        <aside className="border-r flex flex-col shrink-0" style={{ width: leftWidth }}>
+        <aside className="border-r flex flex-col shrink-0 transition-all duration-200" style={{ width: isFullscreen ? 0 : leftWidth, display: isFullscreen ? "none" : "flex" }}>
+          <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold border-b bg-muted/10">Global Layout</div>
+          <div className="px-2 py-2 space-y-0.5">
+            {/* Synthetic Header row */}
+            <button
+              onClick={() => selectAndScroll({ kind: "header" })}
+              className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "header" ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-muted text-muted-foreground"}`}
+            >
+              <span className="flex items-center gap-1.5"><PanelTop className="h-3.5 w-3.5 text-indigo-600" /> Header & Navbar</span>
+              {Object.keys(headerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+            </button>
+
+            {/* Synthetic Footer row */}
+            <button
+              onClick={() => selectAndScroll({ kind: "footer" })}
+              className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "footer" ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-muted text-muted-foreground"}`}
+            >
+              <span className="flex items-center gap-1.5"><PanelBottom className="h-3.5 w-3.5 text-indigo-600" /> Footer Layout</span>
+              {Object.keys(footerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+            </button>
+          </div>
+          <Separator />
+
           <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">Pages</div>
           <ScrollArea className="flex-1">
             <div className="px-2 pb-3 space-y-0.5">
@@ -493,15 +551,6 @@ export default function CustomiserV2() {
                 {Object.keys(paletteOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
               </button>
 
-              {/* Synthetic Header row */}
-              <button
-                onClick={() => selectAndScroll({ kind: "header" })}
-                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "header" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
-              >
-                <span className="flex items-center gap-1.5"><PanelTop className="h-3 w-3" /> Header</span>
-                {Object.keys(headerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
-              </button>
-
               {sections.length === 0 && <div className="px-2 py-3 text-[11px] text-muted-foreground">No sections on this page.</div>}
               {sections.map((s, i) => {
                 const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
@@ -519,53 +568,70 @@ export default function CustomiserV2() {
                 );
               })}
 
-              {/* Synthetic Footer row */}
-              <button
-                onClick={() => selectAndScroll({ kind: "footer" })}
-                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "footer" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
-              >
-                <span className="flex items-center gap-1.5"><PanelBottom className="h-3 w-3" /> Footer</span>
-                {Object.keys(footerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
-              </button>
-
             </div>
           </ScrollArea>
         </aside>
 
         {/* Drag handle — left panel */}
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          onMouseDown={startDrag("left")}
-          className="w-1 cursor-col-resize bg-border/40 hover:bg-primary/60 active:bg-primary transition-colors shrink-0"
-          title="Drag to resize"
-        />
-
-        {/* Middle: Live preview */}
-        <main className="flex-1 bg-muted/40 flex items-center justify-center overflow-hidden p-4">
+        {!isFullscreen && (
           <div
-            className="bg-background shadow-lg rounded-md overflow-hidden border transition-all"
-            style={{
-              width: device === "mobile" ? 390 : "100%",
-              height: "100%",
-              maxWidth: device === "mobile" ? 390 : 1280,
-            }}
-          >
-            <iframe ref={iframeRef} src={previewUrl} title="Live preview" className="w-full h-full border-0" />
-          </div>
-        </main>
+            role="separator"
+            aria-orientation="vertical"
+            onMouseDown={startDrag("left")}
+            className="w-1 cursor-col-resize bg-border/40 hover:bg-primary/60 active:bg-primary transition-colors shrink-0"
+            title="Drag to resize"
+          />
+        )}
+
+        {/* Middle: Live preview with auto-scaled desktop preview */}
+        {(() => {
+          const previewScale = device === "mobile" ? 1 : (containerWidth ? Math.min(1, (containerWidth - 32) / 1200) : 0.85);
+          return (
+            <main ref={mainRef} className="flex-1 bg-muted/40 flex items-center justify-center overflow-hidden p-4 relative">
+              <div
+                className="bg-background shadow-lg rounded-md overflow-hidden border transition-all duration-200"
+                style={device === "mobile" ? {
+                  width: 390,
+                  height: "100%",
+                  maxWidth: 390,
+                } : {
+                  width: 1200,
+                  height: `${100 / previewScale}%`,
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: "top center",
+                  position: "absolute",
+                  top: 16,
+                }}
+              >
+                <iframe 
+                  ref={iframeRef} 
+                  src={previewUrl} 
+                  onLoad={() => {
+                    iframeRef.current?.contentWindow?.postMessage(
+                      { type: "customiser:update", overrides: overridesRef.current, page: pageRef.current }, "*"
+                    );
+                  }}
+                  title="Live preview" 
+                  className="w-full h-full border-0" 
+                />
+              </div>
+            </main>
+          );
+        })()}
 
         {/* Drag handle — right panel */}
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          onMouseDown={startDrag("right")}
-          className="w-1 cursor-col-resize bg-border/40 hover:bg-primary/60 active:bg-primary transition-colors shrink-0"
-          title="Drag to resize"
-        />
+        {!isFullscreen && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onMouseDown={startDrag("right")}
+            className="w-1 cursor-col-resize bg-border/40 hover:bg-primary/60 active:bg-primary transition-colors shrink-0"
+            title="Drag to resize"
+          />
+        )}
 
         {/* Right: Inspector */}
-        <aside className="border-l flex flex-col shrink-0" style={{ width: rightWidth }}>
+        <aside className="border-l flex flex-col shrink-0 transition-all duration-200" style={{ width: isFullscreen ? 0 : rightWidth, display: isFullscreen ? "none" : "flex" }}>
           <InspectorHeader selected={selected} headerOv={headerOv} footerOv={footerOv} sections={sections} sectionOverrides={sectionOverrides}
             onResetHeader={resetHeader} onResetFooter={resetFooter} onResetSection={resetSection} />
           <ScrollArea className="flex-1">
@@ -694,12 +760,18 @@ function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload }: { head
       <div>
         <Label className="text-xs">Logo</Label>
         <div className="mt-1.5 flex items-start gap-3">
-          <div className="w-16 h-16 rounded-md border bg-muted overflow-hidden flex items-center justify-center shrink-0">
-            {headerOv.logo_url
-              ? <img src={headerOv.logo_url} alt="" className="w-full h-full object-contain" />
-              : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+          <div className={`w-16 h-16 border bg-muted overflow-hidden flex items-center justify-center shrink-0 ${headerOv.logo_shape === 'circle' ? 'rounded-full' : 'rounded-md'}`}>
+            {headerOv.logo_url ? (
+              <img 
+                src={headerOv.logo_url} 
+                alt="" 
+                className={headerOv.logo_shape === 'circle' ? "w-full h-full object-cover" : "w-full h-full object-contain p-1"} 
+              />
+            ) : (
+              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+            )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" asChild>
               <label className="cursor-pointer">
                 <Upload className="mr-1 h-3.5 w-3.5" /> {headerOv.logo_url ? "Replace" : "Upload"}
@@ -707,14 +779,25 @@ function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload }: { head
               </label>
             </Button>
             {headerOv.logo_url && (
-              <Button size="sm" variant="outline" onClick={() => onChange("logo_url", "")}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remove</Button>
+              <Button size="sm" variant="outline" onClick={() => onChange("logo_url", "")}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remove Logo</Button>
             )}
+            <div className="flex flex-col gap-0.5 min-w-[120px]">
+              <Label className="text-[9px] font-semibold text-muted-foreground">Logo Shape</Label>
+              <select
+                value={headerOv.logo_shape || 'rectangle'}
+                onChange={(e) => onChange('logo_shape', e.target.value)}
+                className="h-7 rounded border border-input bg-background px-2 py-0 text-xs focus-visible:outline-none"
+              >
+                <option value="rectangle">Rectangle</option>
+                <option value="circle">Circle (Round)</option>
+              </select>
+            </div>
           </div>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">PNG/SVG with transparent background works best.</p>
       </div>
 
-      {headerOv.logo_url && (
+      {headerOv.logo_url && headerOv.logo_shape !== 'circle' && (
         <div className="space-y-3 rounded-md border bg-muted/30 p-3">
           <div className="flex items-center justify-between">
             <div>
@@ -758,21 +841,62 @@ function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload }: { head
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      {/* Typography settings */}
+      <div className="grid grid-cols-2 gap-4 border-t pt-4">
+        <div className="space-y-1">
+          <Label className="text-xs">Font Family</Label>
+          <select
+            value={headerOv.nav_font || 'Inter'}
+            onChange={(e) => onChange('nav_font', e.target.value)}
+            className="w-full rounded border border-input bg-background px-2.5 py-1.5 text-xs focus-visible:outline-none"
+          >
+            <option value="Inter">Inter (Sans)</option>
+            <option value="Playfair Display">Playfair (Serif)</option>
+            <option value="Montserrat">Montserrat</option>
+            <option value="Outfit">Outfit</option>
+            <option value="Cinzel">Cinzel</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Font Weight</Label>
+          <select
+            value={headerOv.nav_weight || '500'}
+            onChange={(e) => onChange('nav_weight', e.target.value)}
+            className="w-full rounded border border-input bg-background px-2.5 py-1.5 text-xs focus-visible:outline-none"
+          >
+            <option value="400">Regular (400)</option>
+            <option value="500">Medium (500)</option>
+            <option value="600">Semibold (600)</option>
+            <option value="700">Bold (700)</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-1 border-t pt-4">
+        <Label className="text-xs">Link Gap (Pixels)</Label>
+        <Input 
+          type="number" 
+          value={headerOv.nav_gap ?? 16} 
+          onChange={(e) => onChange('nav_gap', Number(e.target.value))} 
+          className="h-8 text-xs w-full" 
+        />
+      </div>
+
+      <div className="flex items-center justify-between border-t pt-4">
         <div>
-          <Label className="text-xs">Show store name</Label>
-          <p className="text-[10px] text-muted-foreground">Hide if your logo already includes the name.</p>
+          <Label className="text-xs font-semibold">Show Brand Display</Label>
+          <p className="text-[10px] text-muted-foreground">Show Store Name text on Header.</p>
         </div>
         <Switch checked={headerOv.show_name !== false} onCheckedChange={(v) => onChange("show_name", v)} />
       </div>
 
-      <div>
+      <div className="space-y-1">
         <Label className="text-xs">Brand name (shown in header & footer)</Label>
         <Input value={headerOv.brand_name ?? ""} onChange={(e) => onChange("brand_name", e.target.value)} placeholder={storeName} className="h-8 text-sm mt-1" />
       </div>
 
-      <div>
-        <Label className="text-xs">Navigation links</Label>
+      <div className="border-t pt-4">
+        <Label className="text-xs font-semibold">Header Navigation Menu Links</Label>
         <div className="mt-2 space-y-2">
           {links.map((l, i) => (
             <div key={i} className="flex gap-1.5 items-center">
@@ -1263,6 +1387,26 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
               <Input value={s.kicker ?? ""} placeholder="Kicker" onChange={(e) => setSlide(i, { kicker: e.target.value })} className="h-7 text-xs" />
               <Input value={s.title ?? ""}  placeholder="Headline" onChange={(e) => setSlide(i, { title:  e.target.value })} className="h-7 text-xs" />
               <Textarea value={s.sub ?? ""} placeholder="Sub headline" rows={2} onChange={(e) => setSlide(i, { sub: e.target.value })} className="text-xs" />
+              <div className="space-y-1">
+                <Label className="text-[10px]">Content Background Color</Label>
+                <div className="flex gap-1.5 items-center">
+                  <input
+                    type="color"
+                    value={s.content_bg || "#000000"}
+                    onChange={(e) => setSlide(i, { content_bg: e.target.value })}
+                    className="w-6 h-6 rounded cursor-pointer border border-input"
+                  />
+                  <Input
+                    value={s.content_bg || ""}
+                    placeholder="#000000 or transparent"
+                    onChange={(e) => setSlide(i, { content_bg: e.target.value })}
+                    className="h-7 text-[11px] flex-1"
+                  />
+                  {s.content_bg && (
+                    <button type="button" onClick={() => setSlide(i, { content_bg: "" })} className="text-[10px] hover:underline px-1 text-muted-foreground">Reset</button>
+                  )}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-1.5">
                 <Input value={s.cta ?? ""}      placeholder="CTA label" onChange={(e) => setSlide(i, { cta: e.target.value })}      className="h-7 text-xs" />
                 <Input value={s.cta_href ?? ""} placeholder="CTA link"  onChange={(e) => setSlide(i, { cta_href: e.target.value })} className="h-7 text-xs" />
@@ -1366,6 +1510,28 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
           <Input value={merged.kicker ?? ""} placeholder="Kicker" onChange={(e) => onUpdate(idx, "kicker", e.target.value)} className="h-8 text-xs" />
           <Input value={merged.title ?? ""}  placeholder="Headline" onChange={(e) => onUpdate(idx, "title",  e.target.value)} className="h-8 text-xs" />
           <Textarea rows={2} value={merged.sub ?? ""} placeholder="Sub headline" onChange={(e) => onUpdate(idx, "sub", e.target.value)} className="text-xs" />
+          
+          <div className="space-y-1">
+            <Label className="text-[10px]">Content Box Background Color</Label>
+            <div className="flex gap-1.5 items-center">
+              <input
+                type="color"
+                value={merged.content_bg || "#000000"}
+                onChange={(e) => onUpdate(idx, "content_bg", e.target.value)}
+                className="w-6 h-6 rounded cursor-pointer border border-input"
+              />
+              <Input
+                value={merged.content_bg || ""}
+                placeholder="#000000 or transparent"
+                onChange={(e) => onUpdate(idx, "content_bg", e.target.value)}
+                className="h-7 text-[11px] flex-1"
+              />
+              {merged.content_bg && (
+                <button type="button" onClick={() => onUpdate(idx, "content_bg", "")} className="text-[10px] hover:underline px-1 text-muted-foreground">Reset</button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-1.5">
             <Input value={merged.cta ?? ""}      placeholder="CTA label" onChange={(e) => onUpdate(idx, "cta",      e.target.value)} className="h-7 text-xs" />
             <Input value={merged.cta_href ?? ""} placeholder="CTA link"  onChange={(e) => onUpdate(idx, "cta_href", e.target.value)} className="h-7 text-xs" />
@@ -1412,8 +1578,10 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
 
       <HeroButtonsPanel
         buttons={merged.buttons || {}}
-        hasPrimary={!!merged.cta}
-        hasSecondary={!!merged.cta_secondary}
+        hasPrimary={!!merged.cta || !!(merged.slides?.[0]?.cta)}
+        hasSecondary={!!merged.cta_secondary || !!(merged.slides?.[0]?.cta_secondary)}
+        primaryLabel={merged.cta || (merged.slides?.[0]?.cta)}
+        secondaryLabel={merged.cta_secondary || (merged.slides?.[0]?.cta_secondary)}
         onChange={(next: any) => onUpdate(idx, "buttons", next)}
       />
 
@@ -1521,12 +1689,12 @@ function ColorRow({ label, value, onChange, placeholder }: any) {
   );
 }
 
-function ButtonStyleEditor({ kind, cfg, onChange }: { kind: "primary" | "secondary"; cfg: any; onChange: (next: any) => void }) {
+function ButtonStyleEditor({ kind, cfg, label, onChange }: { kind: "primary" | "secondary"; cfg: any; label?: string; onChange: (next: any) => void }) {
   const set = (k: string, v: any) => onChange({ ...cfg, [k]: v });
   const isPrimary = kind === "primary";
   return (
     <div className="border rounded-md p-2.5 space-y-2 bg-muted/30">
-      <div className="text-[11px] font-semibold uppercase tracking-wide">{isPrimary ? "Primary button" : "Secondary button"}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide">{isPrimary ? "Primary button" : "Secondary button"}{label ? ` ("${label}")` : ""}</div>
       <ColorRow label="BG" value={cfg.bg} onChange={(v: string) => set("bg", v)} placeholder={isPrimary ? "primary" : "transparent"} />
       <ColorRow label="Text" value={cfg.color} onChange={(v: string) => set("color", v)} placeholder={isPrimary ? "on-primary" : "#fff"} />
       <ColorRow label="Border" value={cfg.border_color} onChange={(v: string) => set("border_color", v)} placeholder="auto" />
@@ -1618,7 +1786,7 @@ function ButtonPositionCanvas({ buttons, onMove }: { buttons: any; onMove: (kind
   );
 }
 
-function HeroButtonsPanel({ buttons, hasPrimary, hasSecondary, onChange }: { buttons: any; hasPrimary: boolean; hasSecondary: boolean; onChange: (next: any) => void }) {
+function HeroButtonsPanel({ buttons, hasPrimary, hasSecondary, primaryLabel, secondaryLabel, onChange }: { buttons: any; hasPrimary: boolean; hasSecondary: boolean; primaryLabel?: string; secondaryLabel?: string; onChange: (next: any) => void }) {
   const primary = buttons.primary || {};
   const secondary = buttons.secondary || {};
   const freePos = !!buttons.free_position;
@@ -1648,10 +1816,10 @@ function HeroButtonsPanel({ buttons, hasPrimary, hasSecondary, onChange }: { but
       )}
 
       {hasPrimary && (
-        <ButtonStyleEditor kind="primary" cfg={primary} onChange={(next) => onChange({ ...buttons, primary: next })} />
+        <ButtonStyleEditor kind="primary" cfg={primary} label={primaryLabel} onChange={(next) => onChange({ ...buttons, primary: next })} />
       )}
       {hasSecondary && (
-        <ButtonStyleEditor kind="secondary" cfg={secondary} onChange={(next) => onChange({ ...buttons, secondary: next })} />
+        <ButtonStyleEditor kind="secondary" cfg={secondary} label={secondaryLabel} onChange={(next) => onChange({ ...buttons, secondary: next })} />
       )}
       {!hasPrimary && !hasSecondary && (
         <p className="text-[11px] text-muted-foreground">Add a CTA label above to style buttons.</p>

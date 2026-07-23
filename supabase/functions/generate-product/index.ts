@@ -16,6 +16,28 @@ async function sha256Hex(s: string) {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function getBase64ImageUrl(imageUrl: string): Promise<string> {
+  if (!imageUrl.startsWith("http")) return imageUrl;
+  try {
+    const imgRes = await fetch(imageUrl);
+    if (imgRes.ok) {
+      const arrayBuffer = await imgRes.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+      let binary = "";
+      const len = uint8.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(uint8[i]);
+      }
+      const base64 = btoa(binary);
+      const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+      return `data:${contentType};base64,${base64}`;
+    }
+  } catch (err) {
+    console.error("Failed to convert image to base64:", err);
+  }
+  return imageUrl;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -100,11 +122,7 @@ serve(async (req) => {
     if (!wallet || wallet.balance < required) return json({ error: "INSUFFICIENT_CREDITS", required, balance: wallet?.balance ?? 0 }, 402);
 
     // 3. Call AI
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    if (!LOVABLE_API_KEY && !GROQ_API_KEY) {
-      throw new Error("Neither LOVABLE_API_KEY nor GROQ_API_KEY is configured");
-    }
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY") || "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";
 
     const prompt = `You are an expert e-commerce product analyst for an Indian online store${storeName ? ` called "${storeName}"` : ""}.
 Analyze this product image and generate COMPREHENSIVE product details. Fill EVERY field — never leave one blank. Make educated, realistic guesses from the image when not certain.
@@ -140,58 +158,17 @@ Rules:
 
     let content = "";
     let aiData: any = null;
+    const errors: string[] = [];
 
-    if (LOVABLE_API_KEY) {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // --- Try 1: NVIDIA Vision (nvidia/llama-3.2-11b-vision-instruct) ---
+    try {
+      console.log("Attempting product generation via NVIDIA integrate API (nvidia/llama-3.2-11b-vision-instruct)...");
+      const base64ImageUrl = await getBase64ImageUrl(imageUrl);
+      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: imageUrl } }] }],
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) return json({ error: "Rate limit exceeded. Please try again." }, 429);
-        if (response.status === 402) return json({ error: "Platform AI credits exhausted." }, 402);
-        const txt = await response.text();
-        console.error("AI gateway error:", response.status, txt);
-        throw new Error(`AI gateway error: ${response.status}`);
-      }
-
-      aiData = await response.json();
-      content = aiData.choices?.[0]?.message?.content || "";
-    } else {
-      // Convert image URL to base64 data URL for Groq to bypass public access restrictions
-      let base64ImageUrl = imageUrl;
-      if (imageUrl.startsWith("http")) {
-        try {
-          const imgRes = await fetch(imageUrl);
-          if (imgRes.ok) {
-            const arrayBuffer = await imgRes.arrayBuffer();
-            const uint8 = new Uint8Array(arrayBuffer);
-            let binary = "";
-            const len = uint8.byteLength;
-            for (let i = 0; i < len; i++) {
-              binary += String.fromCharCode(uint8[i]);
-            }
-            const base64 = btoa(binary);
-            const contentType = imgRes.headers.get("content-type") || "image/jpeg";
-            base64ImageUrl = `data:${contentType};base64,${base64}`;
-          } else {
-            console.warn(`Failed to fetch image for base64 conversion: ${imgRes.status}`);
-          }
-        } catch (err) {
-          console.error("Failed to convert image to base64 for Groq:", err);
-        }
-      }
-
-      // Fallback to Groq Vision (does not support response_format: {type: "json_object"})
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "meta-llama/llama-4-scout-17b-16e-instruct",
+          model: "nvidia/llama-3.2-11b-vision-instruct",
           messages: [
             {
               role: "user",
@@ -204,14 +181,53 @@ Rules:
         }),
       });
 
-      if (!response.ok) {
-        const txt = await response.text();
-        console.error("Groq vision error:", response.status, txt);
-        throw new Error(`Groq vision error: ${response.status} - ${txt}`);
+      if (response.ok) {
+        aiData = await response.json();
+        content = aiData.choices?.[0]?.message?.content || "";
+      } else {
+        const errText = await response.text();
+        errors.push(`NVIDIA Vision error (${response.status}): ${errText}`);
       }
+    } catch (err) {
+      errors.push(`NVIDIA Vision fetch error: ${err.message}`);
+    }
 
-      aiData = await response.json();
-      content = aiData.choices?.[0]?.message?.content || "";
+    // --- Try 2: NVIDIA Vision Alternative (meta/llama-3.2-11b-vision-instruct) ---
+    if (!content) {
+      try {
+        console.log("Attempting product generation via NVIDIA integrate API (meta/llama-3.2-11b-vision-instruct) alternative...");
+        const base64ImageUrl = await getBase64ImageUrl(imageUrl);
+        const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "meta/llama-3.2-11b-vision-instruct",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: prompt + "\n\nCRITICAL: Return ONLY a raw valid JSON object. Do not include markdown blocks or backticks." },
+                  { type: "image_url", image_url: { url: base64ImageUrl } }
+                ]
+              }
+            ]
+          }),
+        });
+
+        if (response.ok) {
+          aiData = await response.json();
+          content = aiData.choices?.[0]?.message?.content || "";
+        } else {
+          const errText = await response.text();
+          errors.push(`NVIDIA Meta Vision error (${response.status}): ${errText}`);
+        }
+      } catch (err) {
+        errors.push(`NVIDIA Meta Vision fetch error: ${err.message}`);
+      }
+    }
+
+    if (!content) {
+      throw new Error(`All NVIDIA vision attempts failed. Errors: ${errors.join(" | ")}`);
     }
     let product;
     try {
