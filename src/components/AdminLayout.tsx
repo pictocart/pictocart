@@ -23,6 +23,7 @@ import {
   Handshake,
   Receipt,
   Layers,
+  Boxes,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -32,10 +33,10 @@ const adminNavItems = [
   { label: 'Overview', icon: LayoutDashboard, path: '/admin' },
   { label: 'Stores', icon: Store, path: '/admin/stores' },
   { label: 'Domains', icon: Globe, path: '/admin/domains' },
+  { label: 'Theme Components', icon: Layers, path: '/admin/theme-components' },
   { label: 'Provisioning', icon: Rocket, path: '/admin/provisioning' },
   { label: 'Users', icon: Users, path: '/admin/users' },
   { label: 'Themes', icon: Palette, path: '/admin/themes' },
-  { label: 'Layouts', icon: Layers, path: '/admin/layouts' },
   { label: 'Plans', icon: Crown, path: '/admin/plans' },
   { label: 'Plan Offer', icon: Sparkles, path: '/admin/plan-offer' },
   { label: 'Revenue', icon: IndianRupee, path: '/admin/revenue' },

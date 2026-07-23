@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { useCart } from '@/hooks/useCart';
 import { useValidateCoupon } from '@/hooks/useCoupons';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useFulfillment } from '@/hooks/useFulfillment';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Check, ChevronLeft, CreditCard, Banknote, Smartphone, Tag, X } from 'lucide-react';
+import { Loader2, Check, ChevronLeft, CreditCard, Banknote, Smartphone, Tag, X, Phone, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import PincodeChecker from '@/components/storefront/PincodeChecker';
 import SEOHead from '@/components/storefront/SEOHead';
@@ -36,7 +37,10 @@ const StorefrontCheckout = () => {
   const { store, loading } = useStorefront(slug || '');
   const { items, totalPrice, clearCart, fulfillmentMode, tableLabel, appliedCoupon, setAppliedCoupon, clearCoupon } = useCart(slug || '');
   const { settings } = useFulfillment(store?.id);
-  const { user } = useCustomerAuth(slug || '');
+  
+  // Destructure auth methods from hook
+  const { user, signInWithEmail, signUpWithEmail } = useCustomerAuth(slug || '');
+  
   const [placing, setPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<{ number: string; trackingCode: string | null } | null>(null);
   const isGuestMode = fulfillmentMode === 'dine_in' || fulfillmentMode === 'takeaway';
@@ -47,12 +51,190 @@ const StorefrontCheckout = () => {
   const { validateCoupon, incrementUsage, findBestAutoCoupon } = useValidateCoupon();
   const [couponCode, setCouponCode] = useState(appliedCoupon?.code || '');
   const [couponLoading, setCouponLoading] = useState(false);
+  
+  // Checkout Multi-step, Saved Addresses & Delivery Instructions states
+  const [checkoutStep, setCheckoutStep] = useState(1);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showNewAddressForm, setShowNewAddressForm] = useState(true);
+  const [deliveryInstructions, setDeliveryInstructions] = useState('');
+
+  // Login Modal states
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+
   const track = useTrackEvent();
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    try {
+      if (authMode === 'signup') {
+        const { error } = await signUpWithEmail(authEmail, authPassword, authName);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success('Account created and logged in!');
+          setShowLoginModal(false);
+        }
+      } else {
+        const { error } = await signInWithEmail(authEmail, authPassword);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success('Logged in successfully!');
+          setShowLoginModal(false);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Authentication failed');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user && !isGuestMode && store) {
+      setShowLoginModal(true);
+    }
+  }, [user, isGuestMode, store]);
+
+  // Load Saved Addresses
+  useEffect(() => {
+    if (!user || !store) {
+      setSavedAddresses([]);
+      return;
+    }
+    supabase
+      .from('customers')
+      .select('saved_addresses')
+      .eq('user_id', user.id)
+      .eq('store_id', store.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.saved_addresses && Array.isArray(data.saved_addresses)) {
+          const list = data.saved_addresses as any[];
+          setSavedAddresses(list);
+          const def = list.find((a: any) => a.isDefault);
+          if (def) {
+            setSelectedAddressId(def.id);
+            setShowNewAddressForm(false);
+            setForm((f) => ({
+              ...f,
+              name: def.name || '',
+              phone: def.phone || '',
+              house: def.house || '',
+              street: def.street || '',
+              landmark: def.landmark || '',
+              city: def.city || '',
+              state: def.state || '',
+              pincode: def.pincode || '',
+              addressType: def.label?.toLowerCase() === 'home' ? 'home' : def.label?.toLowerCase() === 'office' ? 'office' : 'other',
+            }));
+          } else if (list.length > 0) {
+            setSelectedAddressId(list[0].id);
+            setShowNewAddressForm(false);
+            const first = list[0];
+            setForm((f) => ({
+              ...f,
+              name: first.name || '',
+              phone: first.phone || '',
+              house: first.house || '',
+              street: first.street || '',
+              landmark: first.landmark || '',
+              city: first.city || '',
+              state: first.state || '',
+              pincode: first.pincode || '',
+              addressType: first.label?.toLowerCase() === 'home' ? 'home' : first.label?.toLowerCase() === 'office' ? 'office' : 'other',
+            }));
+          }
+        }
+      });
+  }, [user, store]);
+
+  const handleSelectAddress = (addr: any) => {
+    setSelectedAddressId(addr.id);
+    setShowNewAddressForm(false);
+    setForm((f) => ({
+      ...f,
+      name: addr.name || f.name,
+      phone: addr.phone || f.phone,
+      house: addr.house || '',
+      street: addr.street || '',
+      landmark: addr.landmark || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      pincode: addr.pincode || '',
+      addressType: addr.label?.toLowerCase() === 'home' ? 'home' : addr.label?.toLowerCase() === 'office' ? 'office' : 'other',
+    }));
+  };
+
+  const handleChooseNewAddress = () => {
+    setSelectedAddressId(null);
+    setShowNewAddressForm(true);
+    setForm((f) => ({
+      ...f,
+      house: '',
+      street: '',
+      landmark: '',
+      city: '',
+      state: '',
+      pincode: '',
+      addressType: 'home',
+    }));
+  };
+
+  const steps = isGuestMode 
+    ? [{ step: 1, label: 'Contact Details' }, { step: 3, label: 'Payment & Notes' }]
+    : [{ step: 1, label: 'Contact Details' }, { step: 2, label: 'Delivery Address' }, { step: 3, label: 'Payment & Notes' }];
+
+  const validateStep1 = () => {
+    if (!form.name.trim()) { toast.error('Please enter your full name'); return false; }
+    if (!form.phone.trim() || form.phone.length < 10) { toast.error('Please enter a valid phone number'); return false; }
+    return true;
+  };
+
+  const validateStep2 = () => {
+    if (isGuestMode) return true;
+    if (!showNewAddressForm) {
+      if (!selectedAddressId) { toast.error('Please select a delivery address'); return false; }
+      return true;
+    }
+    if (!form.house.trim()) { toast.error('Please enter House/Flat No.'); return false; }
+    if (!form.street.trim()) { toast.error('Please enter Street/Area'); return false; }
+    if (!form.city.trim()) { toast.error('Please enter City'); return false; }
+    if (!form.pincode.trim() || form.pincode.length !== 6) { toast.error('Please enter a valid 6-digit Pincode'); return false; }
+    return true;
+  };
+
+  const nextStep = () => {
+    if (checkoutStep === 1) {
+      if (validateStep1()) {
+        setCheckoutStep(isGuestMode ? 3 : 2);
+      }
+    } else if (checkoutStep === 2) {
+      if (validateStep2()) {
+        setCheckoutStep(3);
+      }
+    }
+  };
+
+  const prevStep = () => {
+    if (checkoutStep === 3) {
+      setCheckoutStep(isGuestMode ? 1 : 2);
+    } else if (checkoutStep === 2) {
+      setCheckoutStep(1);
+    }
+  };
+
   useEffect(() => {
     if (store?.id && items.length > 0) {
       track({ store_id: store.id, event_type: 'checkout_start', value: totalPrice, metadata: { item_count: items.length } });
     }
-    // Auto-apply best coupon only if none already applied (could have come from cart page)
     (async () => {
       if (!store?.id || items.length === 0 || appliedCoupon) return;
       const cartLines = items.map((i) => ({ productId: i.productId, price: i.price, quantity: i.quantity }));
@@ -63,17 +245,21 @@ const StorefrontCheckout = () => {
         toast.success(`Auto-applied "${best.coupon.code}" — you save ₹${Math.round(best.discount).toLocaleString('en-IN')}`);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store?.id, items.length, totalPrice]);
 
   const [form, setForm] = useState({
     name: '',
     email: '',
     phone: '',
+    house: '',
+    street: '',
+    landmark: '',
     address: '',
     city: '',
     state: '',
+    country: 'India',
     pincode: '',
+    addressType: 'home' as 'home' | 'office' | 'other',
     paymentMethod: 'cod',
   });
 
@@ -163,7 +349,7 @@ const StorefrontCheckout = () => {
 
   if (!store) return null;
 
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts, borderRadius } = theme;
 
   const handleField = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -241,12 +427,21 @@ const StorefrontCheckout = () => {
       tax: totalTax,
       shipping: fulfillmentMode === 'delivery' ? 0 : 0,
       total: finalTotal,
-      notes: appliedCoupon ? `Coupon: ${appliedCoupon.code} (-₹${discount})` : null,
+      notes: [
+        appliedCoupon ? `Coupon: ${appliedCoupon.code} (-₹${discount})` : null,
+        deliveryInstructions ? `Instructions: ${deliveryInstructions}` : null
+      ].filter(Boolean).join(' | '),
       customer_name: form.name || (fulfillmentMode === 'dine_in' ? `Table ${tableLabel ?? ''}`.trim() : ''),
       customer_email: form.email || null,
       customer_phone: form.phone || null,
       customer_address: fulfillmentMode === 'delivery' ? {
-        address: form.address, city: form.city, state: form.state, pincode: form.pincode,
+        address: [form.house, form.street].filter(Boolean).join(', ') || form.address,
+        landmark: form.landmark,
+        city: form.city,
+        state: form.state,
+        country: form.country,
+        pincode: form.pincode,
+        address_type: form.addressType,
       } : null,
       payment_method: paymentMethod,
       payment_status: paymentStatus,
@@ -260,8 +455,8 @@ const StorefrontCheckout = () => {
 
     if (error) throw error;
 
-    // Save address to customer's profile (delivery + signed-in only)
-    if (fulfillmentMode === 'delivery' && user?.id) {
+    // Save address to customer's profile (delivery + signed-in + new address form only)
+    if (fulfillmentMode === 'delivery' && user?.id && showNewAddressForm) {
       try {
         const { data: existing } = await supabase
           .from('customers')
@@ -272,14 +467,17 @@ const StorefrontCheckout = () => {
         const current: any[] = Array.isArray(existing?.saved_addresses) ? existing!.saved_addresses as any[] : [];
         const normalize = (s: string) => (s || '').trim().toLowerCase();
         const duplicate = current.find((a: any) =>
-          normalize(a.address) === normalize(form.address) &&
+          normalize(a.address) === normalize([form.house, form.street].filter(Boolean).join(', ') || form.address) &&
           normalize(a.pincode) === normalize(form.pincode) &&
           normalize(a.phone) === normalize(form.phone)
         );
         if (!duplicate) {
           const newAddr = {
-            id: Date.now().toString(), label: 'Home', name: form.name,
-            address: form.address, landmark: '', city: form.city, state: form.state,
+            id: Date.now().toString(), label: form.addressType || 'Home', name: form.name,
+            house: form.house, street: form.street,
+            address: [form.house, form.street].filter(Boolean).join(', ') || form.address,
+            landmark: form.landmark, city: form.city, state: form.state,
+            country: form.country,
             pincode: form.pincode, phone: form.phone, isDefault: current.length === 0,
           };
           await supabase.from('customers').upsert(
@@ -476,7 +674,7 @@ const StorefrontCheckout = () => {
       navigate(`/store/${slug}/account/auth?redirect=checkout`);
       return;
     }
-    if (!form.name || !form.phone || !form.address || !form.city || !form.pincode) {
+    if (!form.name || !form.phone || (!form.house && !form.address && !form.street) || !form.city || !form.pincode) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -554,88 +752,244 @@ const StorefrontCheckout = () => {
 
   return (
     <StorefrontLayout store={store}>
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SEOHead
+        title={`Checkout · ${store.name}`}
+        description={`Secure checkout for ${store.name}`}
+        url={`${window.location.origin}/store/${slug}/checkout`}
+      />
+      
+      <div className="max-w-4xl mx-auto px-4 py-8 relative">
         <Link
           to={`/store/${slug}/cart`}
           className="inline-flex items-center gap-1 text-sm opacity-60 hover:opacity-100 mb-6"
         >
           <ChevronLeft className="h-4 w-4" /> Back to cart
         </Link>
-
+ 
         <h1 className="text-2xl font-bold mb-8" style={{ fontFamily: fonts.heading }}>
           Checkout
         </h1>
-
+ 
         <div className="grid md:grid-cols-5 gap-8">
           {/* Form */}
-          <div className="md:col-span-3 space-y-5">
-            <h2 className="text-sm font-semibold mb-3" style={{ fontFamily: fonts.heading }}>
-              Contact Information
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                placeholder="Full Name *"
-                value={form.name}
-                onChange={(e) => handleField('name', e.target.value)}
-                className="col-span-2 w-full px-3 py-2.5 text-sm border"
-                style={inputStyle}
-              />
-              <input
-                placeholder="Phone *"
-                value={form.phone}
-                onChange={(e) => handleField('phone', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border"
-                style={inputStyle}
-              />
-              <input
-                placeholder="Email"
-                value={form.email}
-                onChange={(e) => handleField('email', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border"
-                style={inputStyle}
-              />
+          <div className="md:col-span-3 space-y-6">
+            
+            {/* Step Tracker */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b" style={{ borderColor: colors.secondary }}>
+              {steps.map((s, index) => {
+                const isActive = checkoutStep === s.step;
+                const isCompleted = checkoutStep > s.step;
+                return (
+                  <div key={s.step} className="flex items-center gap-2">
+                    <span 
+                      className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                      style={{
+                        backgroundColor: isActive ? colors.primary : isCompleted ? '#16a34a' : colors.secondary,
+                        color: isActive || isCompleted ? '#fff' : colors.text + '80'
+                      }}
+                    >
+                      {isCompleted ? '✓' : index + 1}
+                    </span>
+                    <span 
+                      className="text-xs font-semibold"
+                      style={{ color: isActive ? colors.primary : colors.text + '60' }}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
-            {!isDineIn && !isTakeaway && (
-              <>
-                <h2 className="text-sm font-semibold mb-3 pt-3" style={{ fontFamily: fonts.heading }}>
-                  Shipping Address
+            {/* STEP 1: Contact Details */}
+            {checkoutStep === 1 && (
+              <div className="space-y-4">
+                <h2 className="text-sm font-semibold mb-3" style={{ fontFamily: fonts.heading }}>
+                  Contact Information
                 </h2>
                 <div className="grid grid-cols-2 gap-3">
                   <input
-                    placeholder="Address *"
-                    value={form.address}
-                    onChange={(e) => handleField('address', e.target.value)}
+                    placeholder="Full Name *"
+                    value={form.name}
+                    onChange={(e) => handleField('name', e.target.value)}
                     className="col-span-2 w-full px-3 py-2.5 text-sm border"
                     style={inputStyle}
                   />
                   <input
-                    placeholder="City *"
-                    value={form.city}
-                    onChange={(e) => handleField('city', e.target.value)}
+                    placeholder="Phone *"
+                    value={form.phone}
+                    onChange={(e) => handleField('phone', e.target.value)}
                     className="w-full px-3 py-2.5 text-sm border"
                     style={inputStyle}
                   />
                   <input
-                    placeholder="State"
-                    value={form.state}
-                    onChange={(e) => handleField('state', e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border"
-                    style={inputStyle}
-                  />
-                  <input
-                    placeholder="Pincode *"
-                    value={form.pincode}
-                    onChange={(e) => handleField('pincode', e.target.value)}
+                    placeholder="Email"
+                    value={form.email}
+                    onChange={(e) => handleField('email', e.target.value)}
                     className="w-full px-3 py-2.5 text-sm border"
                     style={inputStyle}
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="w-full py-3 text-sm font-semibold text-white mt-4"
+                  style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius}px` }}
+                >
+                  {isGuestMode ? 'Continue to Payment' : 'Continue to Shipping Address'}
+                </button>
+              </div>
+            )}
+
+            {/* STEP 2: Shipping/Delivery Address */}
+            {checkoutStep === 2 && !isGuestMode && (
+              <div className="space-y-4">
+                <h2 className="text-sm font-semibold" style={{ fontFamily: fonts.heading }}>
+                  Delivery Address
+                </h2>
+                
+                {/* Saved Addresses Selector */}
+                {savedAddresses.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs opacity-60">Select from saved addresses:</p>
+                    <div className="grid gap-3 grid-cols-1">
+                      {savedAddresses.map((addr) => {
+                        const isSelected = selectedAddressId === addr.id && !showNewAddressForm;
+                        return (
+                          <div 
+                            key={addr.id}
+                            onClick={() => handleSelectAddress(addr)}
+                            className="p-4 border cursor-pointer transition-all flex items-start gap-3 hover:shadow-sm"
+                            style={{
+                              borderColor: isSelected ? colors.primary : colors.secondary,
+                              borderRadius: `${borderRadius}px`,
+                              backgroundColor: isSelected ? colors.primary + '08' : colors.card,
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="savedAddress"
+                              checked={isSelected}
+                              onChange={() => handleSelectAddress(addr)}
+                              className="mt-1 accent-current"
+                              style={{ accentColor: colors.primary }}
+                            />
+                            <div className="flex-1 text-sm">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-xs uppercase bg-black/5 px-2 py-0.5 rounded text-muted-foreground">{addr.label || 'Home'}</span>
+                                {addr.isDefault && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Default</span>}
+                              </div>
+                              <p className="font-semibold">{addr.name}</p>
+                              <p className="opacity-70 mt-0.5">{addr.address || `${addr.house}, ${addr.street}`}</p>
+                              <p className="opacity-70">{addr.city}, {addr.state} - {addr.pincode}</p>
+                              <p className="opacity-50 text-xs mt-1">Phone: {addr.phone}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Option to Deliver to New Address */}
+                <button
+                  type="button"
+                  onClick={handleChooseNewAddress}
+                  className="w-full py-3 text-xs font-semibold border border-dashed rounded-lg transition hover:bg-black/5"
+                  style={{
+                    borderColor: showNewAddressForm ? colors.primary : colors.secondary,
+                    color: showNewAddressForm ? colors.primary : colors.text,
+                    backgroundColor: showNewAddressForm ? colors.primary + '05' : 'transparent'
+                  }}
+                >
+                  ➕ Deliver to a New Address
+                </button>
+
+                {/* New Address Form */}
+                {showNewAddressForm && (
+                  <div className="grid grid-cols-2 gap-3 p-4 border rounded-xl bg-card" style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px` }}>
+                    <input
+                      placeholder="House / Flat No. *"
+                      value={form.house}
+                      onChange={(e) => handleField('house', e.target.value)}
+                      className="col-span-2 w-full px-3 py-2.5 text-sm border"
+                      style={inputStyle}
+                    />
+                    <input
+                      placeholder="Street / Area *"
+                      value={form.street}
+                      onChange={(e) => handleField('street', e.target.value)}
+                      className="col-span-2 w-full px-3 py-2.5 text-sm border"
+                      style={inputStyle}
+                    />
+                    <input
+                      placeholder="Landmark (optional)"
+                      value={form.landmark}
+                      onChange={(e) => handleField('landmark', e.target.value)}
+                      className="col-span-2 w-full px-3 py-2.5 text-sm border"
+                      style={inputStyle}
+                    />
+                    <input
+                      placeholder="City *"
+                      value={form.city}
+                      onChange={(e) => handleField('city', e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border"
+                      style={inputStyle}
+                    />
+                    <input
+                      placeholder="State"
+                      value={form.state}
+                      onChange={(e) => handleField('state', e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border"
+                      style={inputStyle}
+                    />
+                    <input
+                      placeholder="Country"
+                      value={form.country}
+                      onChange={(e) => handleField('country', e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border"
+                      style={inputStyle}
+                    />
+                    <input
+                      placeholder="Pincode *"
+                      value={form.pincode}
+                      onChange={(e) => handleField('pincode', e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border"
+                      style={inputStyle}
+                    />
+                    
+                    {/* Address Type Selection */}
+                    <div className="col-span-2 flex gap-2 mt-2">
+                      {(['home', 'office', 'other'] as const).map((type) => (
+                        <label
+                          key={type}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border text-xs font-medium cursor-pointer capitalize transition-colors"
+                          style={{
+                            borderColor: form.addressType === type ? colors.primary : colors.secondary,
+                            backgroundColor: form.addressType === type ? colors.primary + '15' : 'transparent',
+                            borderRadius: `${borderRadius / 2}px`,
+                            color: form.addressType === type ? colors.primary : colors.text,
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="addressType"
+                            value={type}
+                            checked={form.addressType === type}
+                            onChange={() => handleField('addressType', type)}
+                            className="sr-only"
+                          />
+                          {type === 'home' ? '🏠' : type === 'office' ? '🏢' : '📍'} {type}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Pincode Delivery Check */}
                 {(() => {
-                  const settings = store?.settings as any;
-                  const shipping = settings?.shipping;
+                  const storeSettings = store?.settings as any;
+                  const shipping = storeSettings?.shipping;
                   if ((shipping?.configured || shipping?.api_token) && shipping?.pickup?.pincode) {
                     return (
                       <PincodeChecker
@@ -647,66 +1001,127 @@ const StorefrontCheckout = () => {
                   }
                   return null;
                 })()}
-              </>
-            )}
 
-            {isDineIn && tableLabel && (
-              <div
-                className="flex items-center gap-2 p-3 text-sm"
-                style={{ backgroundColor: colors.primary + '10', borderRadius: `${borderRadius / 2}px`, color: colors.primary }}
-              >
-                <span className="font-semibold">Table {tableLabel}</span>
-                <span className="opacity-70">· We'll bring your order to your table.</span>
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button"
+                    onClick={prevStep}
+                    className="flex-1 py-3 text-sm font-semibold border hover:bg-black/5"
+                    style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px` }}
+                  >
+                    Back
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={nextStep}
+                    className="flex-1 py-3 text-sm font-semibold text-white"
+                    style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius}px` }}
+                  >
+                    Continue to Payment
+                  </button>
+                </div>
               </div>
             )}
 
-            <h2 className="text-sm font-semibold mb-3 pt-3" style={{ fontFamily: fonts.heading }}>
-              Payment Method
-            </h2>
-            <div className="space-y-2">
-              {paymentMethods.map((pm) => {
-                const disabled = (!pm.always && !razorpayAvailable) || !!pm.disabledReason;
-                return (
-                  <label
-                    key={pm.id}
-                    className={`flex items-center gap-3 p-3 border cursor-pointer transition-colors ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    style={{
-                      borderColor: form.paymentMethod === pm.id ? colors.primary : colors.secondary,
-                      borderRadius: `${borderRadius / 2}px`,
-                      backgroundColor: form.paymentMethod === pm.id ? colors.primary + '10' : 'transparent',
-                    }}
-                    onClick={(e) => { if (disabled) e.preventDefault(); }}
+            {/* STEP 3: Payment & Instructions */}
+            {checkoutStep === 3 && (
+              <div className="space-y-4">
+                {isDineIn && tableLabel && (
+                  <div
+                    className="flex items-center gap-2 p-3 text-sm"
+                    style={{ backgroundColor: colors.primary + '10', borderRadius: `${borderRadius / 2}px`, color: colors.primary }}
                   >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={pm.id}
-                      checked={form.paymentMethod === pm.id}
-                      onChange={(e) => !disabled && handleField('paymentMethod', e.target.value)}
-                      disabled={disabled}
-                      className="sr-only"
-                    />
-                    <div
-                      className="h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0"
-                      style={{ borderColor: form.paymentMethod === pm.id ? colors.primary : colors.secondary }}
-                    >
-                      {form.paymentMethod === pm.id && (
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
-                      )}
-                    </div>
-                    <pm.icon className="h-4 w-4 shrink-0 opacity-60" />
-                    <span className="text-sm">{pm.label}</span>
-                    {pm.disabledReason ? (
-                      <span className="ml-auto text-[10px] opacity-70">{pm.disabledReason}</span>
-                    ) : disabled && (
-                      <span className="ml-auto text-[10px] opacity-60">Not available</span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+                    <span className="font-semibold">Table {tableLabel}</span>
+                    <span className="opacity-70">· We'll bring your order to your table.</span>
+                  </div>
+                )}
 
+                <h2 className="text-sm font-semibold mb-3" style={{ fontFamily: fonts.heading }}>
+                  Payment Method
+                </h2>
+                <div className="space-y-2">
+                  {paymentMethods.map((pm) => {
+                    const disabled = (!pm.always && !razorpayAvailable) || !!pm.disabledReason;
+                    return (
+                      <label
+                        key={pm.id}
+                        className={`flex items-center gap-3 p-3 border cursor-pointer transition-colors ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        style={{
+                          borderColor: form.paymentMethod === pm.id ? colors.primary : colors.secondary,
+                          borderRadius: `${borderRadius / 2}px`,
+                          backgroundColor: form.paymentMethod === pm.id ? colors.primary + '10' : 'transparent',
+                        }}
+                        onClick={(e) => { if (disabled) e.preventDefault(); }}
+                      >
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value={pm.id}
+                          checked={form.paymentMethod === pm.id}
+                          onChange={(e) => !disabled && handleField('paymentMethod', e.target.value)}
+                          disabled={disabled}
+                          className="sr-only"
+                        />
+                        <div
+                          className="h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                          style={{ borderColor: form.paymentMethod === pm.id ? colors.primary : colors.secondary }}
+                        >
+                          {form.paymentMethod === pm.id && (
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.primary }} />
+                          )}
+                        </div>
+                        <pm.icon className="h-4 w-4 shrink-0 opacity-60" />
+                        <span className="text-sm">{pm.label}</span>
+                        {pm.disabledReason ? (
+                          <span className="ml-auto text-[10px] opacity-70">{pm.disabledReason}</span>
+                        ) : disabled && (
+                          <span className="ml-auto text-[10px] opacity-60">Not available</span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {/* Delivery Instructions */}
+                <div className="space-y-2 pt-3">
+                  <h2 className="text-sm font-semibold" style={{ fontFamily: fonts.heading }}>
+                    Delivery Instructions / Order Notes
+                  </h2>
+                  <textarea
+                    placeholder="e.g. Leave at the gate, call before delivery, don't ring the bell..."
+                    value={deliveryInstructions}
+                    onChange={(e) => setDeliveryInstructions(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border resize-none outline-none focus:ring-1"
+                    style={{ ...inputStyle, '--tw-ring-color': colors.primary } as any}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button"
+                    onClick={prevStep}
+                    className="flex-1 py-3 text-sm font-semibold border hover:bg-black/5"
+                    style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px` }}
+                  >
+                    Back
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handlePlaceOrder}
+                    disabled={placing}
+                    className="flex-1 py-3 text-sm font-semibold text-white flex items-center justify-center gap-2"
+                    style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius}px` }}
+                  >
+                    {placing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {placing ? 'Processing...' : isDineIn ? 'Place Order' : form.paymentMethod === 'cod' ? 'Place Order (COD)' : 'Pay Now'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+ 
           {/* Order Summary */}
           <div className="md:col-span-2">
             <div
@@ -726,7 +1141,7 @@ const StorefrontCheckout = () => {
                   </div>
                 ))}
               </div>
-
+ 
               {/* Coupon Code */}
               <div className="pt-2">
                 {appliedCoupon ? (
@@ -768,7 +1183,7 @@ const StorefrontCheckout = () => {
                   </div>
                 )}
               </div>
-
+ 
               <div className="space-y-1 pt-2 border-t" style={{ borderColor: colors.text + '15' }}>
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
@@ -785,11 +1200,15 @@ const StorefrontCheckout = () => {
                   <span style={{ color: colors.primary }}>₹{finalTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
-
+ 
               <button
-                onClick={handlePlaceOrder}
+                onClick={() => {
+                  if (checkoutStep === 1) nextStep();
+                  else if (checkoutStep === 2) nextStep();
+                  else handlePlaceOrder();
+                }}
                 disabled={placing}
-                className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60 transition-transform hover:scale-[1.01]"
                 style={{
                   backgroundColor: colors.primary,
                   color: '#fff',
@@ -799,6 +1218,10 @@ const StorefrontCheckout = () => {
                 {placing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {placing
                   ? 'Processing...'
+                  : checkoutStep === 1
+                  ? (isGuestMode ? 'Continue to Payment →' : 'Continue to Shipping →')
+                  : checkoutStep === 2
+                  ? 'Continue to Payment →'
                   : isDineIn
                   ? 'Place Order (Pay at Counter)'
                   : form.paymentMethod === 'cod'
@@ -809,6 +1232,85 @@ const StorefrontCheckout = () => {
           </div>
         </div>
       </div>
+
+      {/* Checkout Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div 
+            className="w-full max-w-md p-6 space-y-6 bg-white text-black shadow-2xl border" 
+            style={{ borderRadius: `${borderRadius}px`, borderColor: colors.secondary }}
+          >
+            <div className="text-center">
+              <h3 className="text-xl font-bold" style={{ fontFamily: fonts.heading }}>
+                {authMode === 'signup' ? 'Create Account' : 'Welcome Back'}
+              </h3>
+              <p className="text-sm opacity-60 mt-1">
+                {authMode === 'signup' ? 'Sign up to speed up checkout and save addresses' : 'Sign in to access saved addresses'}
+              </p>
+            </div>
+
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {authMode === 'signup' && (
+                <input
+                  placeholder="Full Name *"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border"
+                  style={inputStyle}
+                  required
+                />
+              )}
+              <input
+                type="email"
+                placeholder="Email address *"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                className="w-full px-3 py-2 text-sm border"
+                style={inputStyle}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password *"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                className="w-full px-3 py-2 text-sm border"
+                style={inputStyle}
+                required
+                minLength={6}
+              />
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-3 text-sm font-semibold text-white flex items-center justify-center gap-2 transition hover:opacity-90"
+                style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius / 2}px` }}
+              >
+                {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {authMode === 'signup' ? 'Sign Up & Continue' : 'Sign In & Continue'}
+              </button>
+            </form>
+
+            <div className="text-center space-y-2">
+              <button
+                type="button"
+                onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                className="text-xs font-semibold underline"
+                style={{ color: colors.primary }}
+              >
+                {authMode === 'login' ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+              </button>
+              <div className="border-t pt-2 my-2" style={{ borderColor: colors.secondary }} />
+              <button
+                type="button"
+                onClick={() => setShowLoginModal(false)}
+                className="text-xs font-medium opacity-50 hover:opacity-100"
+              >
+                Continue as Guest
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </StorefrontLayout>
   );
 };

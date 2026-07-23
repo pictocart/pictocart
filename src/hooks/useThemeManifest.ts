@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 export function useThemeManifest(themeId: string | null | undefined) {
   return useQuery({
     queryKey: ["theme-manifest", themeId],
-    enabled: !!themeId && themeId.startsWith("theme-"),
+    enabled: !!themeId && (themeId.startsWith("theme-") || themeId.startsWith("custom-theme-") || themeId.startsWith("layout1-")),
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase

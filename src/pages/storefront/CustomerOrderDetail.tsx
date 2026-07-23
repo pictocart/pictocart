@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { Loader2, ChevronLeft, Truck, MapPin, CreditCard, FileText, Package, Copy, Star, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -39,7 +40,7 @@ const CustomerOrderDetail = () => {
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
-  const theme = useMemo(() => (store ? resolveTheme(store.theme) : null), [store]);
+  const theme = useMemo(() => (store ? resolveTheme(getStoreThemeTokens(store)) : null), [store]);
 
   if (storeLoading || loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   if (!store || !user || !theme) return null;

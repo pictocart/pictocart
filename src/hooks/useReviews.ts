@@ -15,14 +15,17 @@ export interface Review {
 }
 
 export const useProductReviews = (productId: string) => {
+  const cleanProductId = productId ? productId.replace(/-theme-style-\d+$/, '') : '';
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanProductId);
   return useQuery({
     queryKey: ['reviews', productId],
     queryFn: async () => {
+      if (!isUuid) return [];
       const sb = supabase as any;
       const { data, error } = await sb
         .from('reviews')
         .select('*')
-        .eq('product_id', productId)
+        .eq('product_id', cleanProductId)
         .eq('moderation_status', 'approved')
         .order('created_at', { ascending: false });
       if (error) throw error;

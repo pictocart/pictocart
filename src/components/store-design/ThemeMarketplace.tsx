@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Crown, Eye, Check, ShoppingCart, Loader2, Palette } from 'lucide-react';
 import { toast } from 'sonner';
+import { buildResolvedStorefrontManifest, getStorefrontConfig } from '@/lib/storefrontManifest';
 
 const ThemePreview = ({ pack }: { pack: ThemePack }) => {
   const config = pack.theme_config || {};
@@ -110,7 +111,10 @@ const ThemeMarketplace = ({ onApply }: Props) => {
         await purchaseMutation.mutateAsync(pack.id);
       }
 
-      // Apply theme config + homepage sections to store
+      // homepage_sections is rendering config — goes only into
+      // resolved_storefront_manifest.config. `applied_theme_pack` is a
+      // purchase/entitlement marker, not rendering config, so it stays in
+      // `stores.settings` (business/purchase data), untouched otherwise.
       const currentSettings = (store.settings || {}) as any;
       const homeSections = (pack.pages?.home || []).map((section: any) => ({
         ...section,
@@ -129,18 +133,31 @@ const ThemeMarketplace = ({ onApply }: Props) => {
 
       const newSettings = {
         ...currentSettings,
-        homepage_sections: homeSections,
         applied_theme_pack: pack.id,
       };
+      const newConfig = {
+        ...getStorefrontConfig(store),
+        homepage_sections: homeSections,
+      };
+
+      const resolved_storefront_manifest = await buildResolvedStorefrontManifest({
+        ...store,
+        theme: newTheme,
+        theme_id: newTheme.name,
+        theme_tokens: newTheme,
+      } as any, newConfig as any);
 
       const { error } = await supabase.from('stores').update({
         theme: newTheme,
+        theme_id: newTheme.name,
+        theme_tokens: newTheme,
         settings: newSettings,
+        resolved_storefront_manifest: resolved_storefront_manifest as any,
       }).eq('id', store.id);
 
       if (error) throw error;
 
-      setStore({ ...store, theme: newTheme, settings: newSettings });
+      setStore({ ...store, theme: newTheme, theme_id: newTheme.name, theme_tokens: newTheme, settings: newSettings, resolved_storefront_manifest });
       toast.success(`"${pack.name}" theme applied!`);
       onApply?.();
     } catch (e: any) {

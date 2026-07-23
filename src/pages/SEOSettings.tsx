@@ -8,10 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Search, Globe, Share2 } from 'lucide-react';
+import { buildResolvedStorefrontManifest, getStorefrontConfig } from '@/lib/storefrontManifest';
 
 const SEOSettings = () => {
   const { store, setStore } = useStore();
-  const settings = (store?.settings || {}) as any;
+  const settings = getStorefrontConfig(store) as any;
   const seo = settings.seo || {};
 
   const [form, setForm] = useState({
@@ -26,7 +27,7 @@ const SEOSettings = () => {
   // Sync form with store data when store loads or updates
   useEffect(() => {
     if (!store) return;
-    const s = ((store.settings || {}) as any).seo || {};
+    const s = getStorefrontConfig(store).seo || {};
     setForm({
       meta_title: s.meta_title || store.name || '',
       meta_description: s.meta_description || store.description || '',
@@ -34,22 +35,25 @@ const SEOSettings = () => {
       google_analytics_id: s.google_analytics_id || '',
     });
     setInitialized(true);
-  }, [store?.id, store?.settings]);
+  }, [store?.id]);
 
   const handleSave = async () => {
     if (!store) return;
     setSaving(true);
-    const newSettings = { ...settings, seo: form };
+    // seo is rendering config — goes only into resolved_storefront_manifest.config,
+    // `stores.settings` untouched.
+    const newConfig = { ...settings, seo: form };
+    const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
     const { error } = await supabase
       .from('stores')
-      .update({ settings: newSettings })
+      .update({ resolved_storefront_manifest: resolved_storefront_manifest as any })
       .eq('id', store.id);
 
     if (error) {
       toast.error('Failed to save SEO settings');
     } else {
       toast.success('SEO settings saved');
-      setStore({ ...store, settings: newSettings });
+      setStore({ ...store, resolved_storefront_manifest });
     }
     setSaving(false);
   };

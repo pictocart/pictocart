@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import HomepageBuilder, { type HomepageSection } from '@/components/store-design/HomepageBuilder';
 import HeaderEditor, { DEFAULT_HEADER, type HeaderConfig } from '@/components/store-design/HeaderEditor';
 import FooterEditor, { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
-import ThemeSectionsEditor from '@/components/store-design/ThemeSectionsEditor';
+import MultiPageThemeEditor from '@/components/store-design/MultiPageThemeEditor';
 import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from '@/components/store-design/PromoTickerEditor';
 import type { PromoTickerConfig } from '@/components/storefront/PromoTicker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,13 +21,14 @@ import { useQuery } from '@tanstack/react-query';
 import { usePremiumThemePurchase } from '@/hooks/usePremiumThemePurchase';
 import { applyMasterTheme } from '@/lib/applyMasterTheme';
 import { getPremiumTrialStatus } from '@/lib/premiumThemeTrial';
+import { buildResolvedStorefrontManifest, getStoreThemeId, getStorefrontConfig } from '@/lib/storefrontManifest';
 
 const Customise = () => {
   const { store, setStore, refetchStore } = useStore();
   const [saving, setSaving] = useState(false);
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const settings = (store?.settings || {}) as any;
+  const settings = getStorefrontConfig(store) as any;
 
   const [homepageSections, setHomepageSections] = useState<HomepageSection[]>(settings.homepage_sections || []);
   const [headerConfig, setHeaderConfig] = useState<HeaderConfig>({ ...DEFAULT_HEADER, ...(settings.header || {}) });
@@ -45,7 +46,7 @@ const Customise = () => {
 
   useEffect(() => {
     if (!store?.id || hydratedId === store.id) return;
-    const s = (store?.settings || {}) as any;
+    const s = getStorefrontConfig(store) as any;
     setHomepageSections(s.homepage_sections || []);
     setHeaderConfig({ ...DEFAULT_HEADER, ...(s.header || {}) });
     setFooterConfig({ ...DEFAULT_FOOTER, ...(s.footer || {}) });
@@ -61,8 +62,8 @@ const Customise = () => {
     setHydratedId(store.id);
   }, [store, hydratedId]);
 
-  const activeThemeName = (store?.theme as any)?.theme_id || (store?.theme as any)?.name || 'minimal-light';
-  const isMasterTheme = activeThemeName.startsWith('theme-');
+  const activeThemeName = getStoreThemeId(store) || 'minimal-light';
+  const isMasterTheme = activeThemeName.startsWith('theme-') || activeThemeName.startsWith('layout1-');
 
   // === PREMIUM PAYWALL CHECK ===
   const { data: themeMeta } = useQuery({
@@ -99,7 +100,11 @@ const Customise = () => {
       return;
     }
     setSaving(true);
-    const newSettings = {
+    // Rendering-config keys go ONLY into resolved_storefront_manifest.config —
+    // `stores.settings` is left untouched so it keeps holding just the
+    // non-theme business data (payments/shipping/fssai/policies/etc), instead
+    // of the same config living in two places.
+    const newConfig = {
       ...settings,
       homepage_sections: homepageSections,
       header: headerConfig,
@@ -109,11 +114,12 @@ const Customise = () => {
       theme_overrides: themeOverrides,
       features,
     };
-    const { error } = await supabase.from('stores').update({ settings: newSettings }).eq('id', store.id);
+    const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
+    const { error } = await supabase.from('stores').update({ resolved_storefront_manifest: resolved_storefront_manifest as any }).eq('id', store.id);
     if (error) {
       toast.error('Save failed');
     } else {
-      setStore({ ...store, settings: newSettings });
+      setStore({ ...store, resolved_storefront_manifest });
       toast.success('Customisations saved');
     }
     setSaving(false);
@@ -185,7 +191,7 @@ const Customise = () => {
 
           {isMasterTheme && store && (
             <TabsContent value="theme" className="space-y-4">
-              <ThemeSectionsEditor
+              <MultiPageThemeEditor
                 themeId={activeThemeName}
                 storeId={store.id}
                 overrides={themeOverrides}

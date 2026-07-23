@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/hooks/useStore';
+import { getStoreThemeId } from '@/lib/storefrontManifest';
 
 export interface ThemeVersion {
   id: string;
@@ -23,7 +24,7 @@ export interface ThemeUpdateInfo {
 
 export const useThemeUpdate = () => {
   const { store } = useStore();
-  const activeThemeId = (store?.theme as any)?.theme_id || (store?.theme as any)?.name;
+  const activeThemeId = getStoreThemeId(store);
 
   return useQuery({
     queryKey: ['theme-update', store?.id, activeThemeId],

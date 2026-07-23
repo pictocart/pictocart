@@ -1,10 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
+import { buildResolvedStorefrontManifest, getStorefrontConfig } from '@/lib/storefrontManifest';
 
 /**
  * Apply a master theme (theme-xxxxxx) to a store. Sets the store.theme
- * pointer and seeds store.settings.theme_overrides with the manifest's
- * default copy/images so the Customise screen can edit (and the user
- * can delete) the theme's stock assets.
+ * pointer and seeds resolved_storefront_manifest.config.theme_overrides with
+ * the manifest's default copy/images so the Customise screen can edit (and
+ * the user can delete) the theme's stock assets.
+ *
+ * `theme_overrides` is rendering config, so it is written ONLY into
+ * `resolved_storefront_manifest.config` — `stores.settings` keeps holding
+ * just the non-theme business data the caller passed in as `currentSettings`
+ * (payments/shipping/fssai/policies/etc), so the same config doesn't end up
+ * duplicated in two columns.
  *
  * Returns the new (theme, settings) for optimistic UI updates.
  */
@@ -19,11 +26,12 @@ export async function applyMasterTheme(storeId: string, themeId: string, current
   if (verErr) throw verErr;
   if (!ver?.files_manifest) throw new Error('Theme has no published version yet');
 
-  // Need the store's name + logo to seed branding overrides so this theme
-  // immediately looks like THIS merchant, not the theme's stock brand.
+  // Need the full store row so the resolved manifest snapshot doesn't lose
+  // fields like slug/banner_url/category/resolved_storefront_manifest that
+  // aren't part of this function's job to change.
   const { data: store } = await supabase
     .from('stores')
-    .select('name, logo_url')
+    .select('name, logo_url, slug, banner_url, category, resolved_storefront_manifest, home_page_kind, home_page_id, home_page_product_id')
     .eq('id', storeId)
     .maybeSingle();
 
@@ -39,16 +47,17 @@ export async function applyMasterTheme(storeId: string, themeId: string, current
     seedSections[i] = { ...(s.props ?? {}) };
   });
 
-  const newSettings: any = {
-    ...currentSettings,
-    theme_overrides: {
-      brand_name: store?.name ?? dna.name,
-      logo_url:   store?.logo_url ?? null,
-      palette:    { ...palette },
-      fonts:      { ...fonts },
-      sections:   seedSections,
-    },
+  const themeOverrides = {
+    brand_name: store?.name ?? dna.name,
+    logo_url:   store?.logo_url ?? null,
+    palette:    { ...palette },
+    fonts:      { ...fonts },
+    sections:   seedSections,
   };
+
+  // `theme_overrides` is rendering config — stays out of `stores.settings`,
+  // goes only into resolved_storefront_manifest.config below.
+  const newSettings: any = { ...currentSettings };
 
   // If the merchant switched away from a premium theme they had reserved
   // on a free trial, clear the pending entry so the trial banner stops
@@ -75,9 +84,29 @@ export async function applyMasterTheme(storeId: string, themeId: string, current
     fonts: { heading: fonts.heading, body: fonts.body },
   };
 
+  const newConfig = {
+    ...getStorefrontConfig(store as any),
+    theme_overrides: themeOverrides,
+  };
+
+  const resolved_storefront_manifest = await buildResolvedStorefrontManifest({
+    id: storeId,
+    name: store?.name ?? dna.name ?? '',
+    slug: store?.slug ?? '',
+    logo_url: store?.logo_url ?? null,
+    banner_url: store?.banner_url ?? null,
+    category: store?.category ?? null,
+    theme: newTheme,
+    theme_id: themeId,
+    theme_tokens: newTheme,
+    home_page_kind: store?.home_page_kind ?? null,
+    home_page_id: store?.home_page_id ?? null,
+    home_page_product_id: store?.home_page_product_id ?? null,
+  } as any, newConfig as any);
+
   const { error } = await supabase
     .from('stores')
-    .update({ theme: newTheme as any, settings: newSettings as any })
+    .update({ theme: newTheme as any, theme_id: themeId, theme_tokens: newTheme as any, settings: newSettings as any, resolved_storefront_manifest: resolved_storefront_manifest as any })
     .eq('id', storeId);
   if (error) throw error;
 

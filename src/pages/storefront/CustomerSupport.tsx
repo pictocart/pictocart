@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useCustomerTickets, useCreateTicket, useTicket, useSendTicketMessage } from '@/hooks/useSupportTickets';
 import { Loader2, Plus, MessageCircle, Send, ChevronLeft, Mail, Phone, HelpCircle } from 'lucide-react';
@@ -36,7 +37,7 @@ const CustomerSupport = () => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   if (!store || !user) return null;
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts, borderRadius } = theme;
   const br = `${borderRadius}px`, brHalf = `${borderRadius / 2}px`;
 

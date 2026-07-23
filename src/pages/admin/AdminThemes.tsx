@@ -391,7 +391,7 @@ const CostMatrixTab = () => {
     queryFn: async () => {
       const [{ data: themes }, { data: stores }, { data: provReqs }, { data: metrics }, { data: packs }, { data: purchases }] = await Promise.all([
         supabase.from('theme_master_projects').select('id, theme_id, name, category, price'),
-        supabase.from('stores').select('id, theme'),
+        supabase.from('stores').select('id, theme, theme_id'),
         supabase.from('provision_requests').select('theme_master_id, status'),
         supabase.from('theme_master_metrics').select('theme_id, total_cost_inr, image_count'),
         supabase.from('theme_packs').select('id, name, price, sales_count, ai_generation_cost'),
@@ -399,7 +399,7 @@ const CostMatrixTab = () => {
       ]);
       const installs = new Map<string, number>();
       (stores || []).forEach((s: any) => {
-        const tid = s.theme?.theme_id || s.theme?.name;
+        const tid = s.theme_id || s.theme?.theme_id || s.theme?.name;
         if (tid) installs.set(tid, (installs.get(tid) || 0) + 1);
       });
       const provisions = new Map<string, number>();

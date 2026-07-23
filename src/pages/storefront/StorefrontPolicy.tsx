@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import SEOHead from '@/components/storefront/SEOHead';
 import { Loader2, ChevronLeft } from 'lucide-react';
 
@@ -90,7 +91,7 @@ const StorefrontPolicy = () => {
     );
   }
 
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts } = theme;
   const settings = (store as any).settings || {};
   const storeInfo = settings.store_info || settings.business_info || {};

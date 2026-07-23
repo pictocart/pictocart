@@ -6,10 +6,11 @@ import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from '@/components/store-desi
 import type { PromoTickerConfig } from '@/components/storefront/PromoTicker';
 import { toast } from 'sonner';
 import { Save, ExternalLink, Megaphone } from 'lucide-react';
+import { buildResolvedStorefrontManifest, getStorefrontConfig } from '@/lib/storefrontManifest';
 
 const PromoTickerPage = () => {
   const { store, setStore } = useStore();
-  const settings = (store?.settings || {}) as any;
+  const settings = getStorefrontConfig(store) as any;
   const [config, setConfig] = useState<PromoTickerConfig>({
     ...DEFAULT_PROMO_TICKER,
     ...(settings.promo_ticker || {}),
@@ -19,7 +20,7 @@ const PromoTickerPage = () => {
 
   useEffect(() => {
     if (!store?.id || hydratedId === store.id) return;
-    const s = (store.settings as any) || {};
+    const s = getStorefrontConfig(store) as any;
     setConfig({ ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) });
     setHydratedId(store.id);
   }, [store, hydratedId]);
@@ -27,15 +28,18 @@ const PromoTickerPage = () => {
   const handleSave = async () => {
     if (!store) return;
     setSaving(true);
-    const newSettings = { ...settings, promo_ticker: config };
+    // promo_ticker is rendering config — goes only into
+    // resolved_storefront_manifest.config, `stores.settings` untouched.
+    const newConfig = { ...settings, promo_ticker: config };
+    const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
     const { error } = await supabase
       .from('stores')
-      .update({ settings: newSettings })
+      .update({ resolved_storefront_manifest: resolved_storefront_manifest as any })
       .eq('id', store.id);
     if (error) {
       toast.error('Save failed');
     } else {
-      setStore({ ...store, settings: newSettings });
+      setStore({ ...store, resolved_storefront_manifest });
       toast.success('Promo ticker saved');
     }
     setSaving(false);

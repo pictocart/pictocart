@@ -33,6 +33,7 @@ const AdminUsers = () => {
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
+  const [permanentDeleteUser, setPermanentDeleteUser] = useState<AdminUser | null>(null);
   const [viewUser, setViewUser] = useState<AdminUser | null>(null);
   const [resetUser, setResetUser] = useState<AdminUser | null>(null);
   const [newPassword, setNewPassword] = useState('');

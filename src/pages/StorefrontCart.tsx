@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { useCart } from '@/hooks/useCart';
 import { useValidateCoupon } from '@/hooks/useCoupons';
 import { Loader2, Minus, Plus, Trash2, ShoppingBag, Tag, X } from 'lucide-react';
@@ -76,7 +77,7 @@ const StorefrontCart = () => {
     );
   }
 
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts, borderRadius } = theme;
 
   const inputStyle = {

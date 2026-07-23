@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
     const theme = (store.theme ?? {}) as Record<string, unknown>;
     const themeId = (theme.theme_id || theme.name || 'minimal-light') as string;
-    const manifestRef = (theme.manifest_ref as string | undefined) || (typeof themeId === 'string' && themeId.startsWith('theme-') ? themeId : undefined);
+    const manifestRef = (theme.manifest_ref as string | undefined) || (typeof themeId === 'string' && (themeId.startsWith('theme-') || themeId.startsWith('layout1-')) ? themeId : undefined);
 
     // Fetch master-theme manifest (single source of truth for layout + defaults)
     let themeManifest: unknown = null;

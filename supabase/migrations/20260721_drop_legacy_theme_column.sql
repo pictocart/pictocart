@@ -1,0 +1,31 @@
+-- Drops the legacy `stores.theme` JSON column now that `theme_id` +
+-- `theme_tokens` (and `resolved_storefront_manifest`) fully mirror it
+-- everywhere it used to be read or written.
+--
+-- DO NOT RUN THIS UNTIL:
+--   1. `migrate/backfill-storefront-manifest.mjs` has been run successfully
+--      against production (theme_id / theme_tokens / resolved_storefront_manifest
+--      populated for every store row).
+--   2. The app has been deployed with the manifest-based read/write paths
+--      (Storefront, StorefrontProduct, StorefrontLayout, MasterThemeRenderer,
+--      Customise, CustomiserV2, ThemeMarketplace, Onboarding, Themes.tsx,
+--      applyMasterTheme.ts, useThemeUpdate.ts, PremiumThemePendingCard.tsx)
+--      and manually smoke-tested:
+--        - storefront home page loads with correct theme
+--        - product page loads with correct theme
+--        - theme apply (Themes page, ThemeMarketplace) works
+--        - Customise / CustomiserV2 save works
+--        - onboarding theme selection + go-live works
+--   3. You've run a final check that no code still reads/writes
+--      `stores.theme` directly (search the codebase for `store.theme`,
+--      `store?.theme`, and `.update({ theme:` before running this).
+--
+-- This migration is intentionally NOT auto-applied by any script in this
+-- repo. Run it manually (e.g. via the Supabase SQL editor or CLI) only when
+-- you're confident the above prerequisites are satisfied. It is safe to
+-- leave `stores.theme` in place indefinitely if you'd rather keep the
+-- rollback safety net a while longer — nothing in the app requires it to
+-- be dropped.
+
+-- alter table public.stores
+--   drop column if exists theme;

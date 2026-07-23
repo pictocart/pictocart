@@ -4590,6 +4590,7 @@ export type Database = {
           layout_slug: string | null
           logo_url: string | null
           name: string
+          resolved_storefront_manifest: Json | null
           onboarding_step: number | null
           owned_by_partner_id: string | null
           partner_handover_status:
@@ -4599,6 +4600,8 @@ export type Database = {
           settings: Json | null
           slug: string
           theme: Json | null
+          theme_id: string | null
+          theme_tokens: Json | null
           theme_update_dismissed_version: string | null
           updated_at: string
           user_id: string
@@ -4623,6 +4626,7 @@ export type Database = {
           layout_slug?: string | null
           logo_url?: string | null
           name: string
+          resolved_storefront_manifest?: Json | null
           onboarding_step?: number | null
           owned_by_partner_id?: string | null
           partner_handover_status?:
@@ -4632,6 +4636,8 @@ export type Database = {
           settings?: Json | null
           slug: string
           theme?: Json | null
+          theme_id?: string | null
+          theme_tokens?: Json | null
           theme_update_dismissed_version?: string | null
           updated_at?: string
           user_id: string
@@ -4656,6 +4662,7 @@ export type Database = {
           layout_slug?: string | null
           logo_url?: string | null
           name?: string
+          resolved_storefront_manifest?: Json | null
           onboarding_step?: number | null
           owned_by_partner_id?: string | null
           partner_handover_status?:
@@ -4665,6 +4672,8 @@ export type Database = {
           settings?: Json | null
           slug?: string
           theme?: Json | null
+          theme_id?: string | null
+          theme_tokens?: Json | null
           theme_update_dismissed_version?: string | null
           updated_at?: string
           user_id?: string

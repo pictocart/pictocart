@@ -13,6 +13,7 @@ interface Props {
   colors: any;
   fonts: any;
   borderRadius: number;
+  allowMockFallback?: boolean;
 }
 
 const StarRating = ({ rating, size = 16, color }: { rating: number; size?: number; color: string }) => (
@@ -48,22 +49,55 @@ const InteractiveStars = ({ rating, onChange, color }: { rating: number; onChang
   </div>
 );
 
-const ReviewSection = ({ productId, storeId, storeSlug, colors, fonts, borderRadius }: Props) => {
-  const { data: reviews = [], isLoading } = useProductReviews(productId);
+const ReviewSection = ({ productId, storeId, storeSlug, colors, fonts, borderRadius, allowMockFallback = false }: Props) => {
+  const { data: dbReviews = [], isLoading } = useProductReviews(productId);
   const { user } = useCustomerAuth(storeSlug);
   const submitReview = useSubmitReview();
   const [showForm, setShowForm] = useState(false);
   const [rating, setRating] = useState(0);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  const mockReviews = [
+    {
+      id: 'rev-1',
+      rating: 5,
+      customer_name: 'Anjali Sharma',
+      title: 'Amazing sound!',
+      body: 'Absolutely amazing headphones! The noise cancellation is top-notch and the sound stage is extremely balanced. Highly recommended for daily office commutes.',
+      created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: 'rev-2',
+      rating: 4,
+      customer_name: 'Vikram Malhotra',
+      title: 'Very comfortable',
+      body: 'Great build quality and very comfortable to wear for long hours. Bass is deep but clean. Charging speed is super fast.',
+      created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: 'rev-3',
+      rating: 5,
+      customer_name: 'Suresh Raina',
+      title: 'Best buy of the year',
+      body: 'Super fast delivery and premium packaging. Value for money product. The battery lasts forever!',
+      created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+    }
+  ];
+
+  const reviews = (dbReviews.length > 0 ? dbReviews : (allowMockFallback ? mockReviews : [])) as any[];
 
   const { average, count } = getAverageRating(reviews);
-  const userHasReviewed = reviews.some((r) => r.user_id === user?.id);
+  const userHasReviewed = reviews.some((r: any) => r.user_id === user?.id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) { toast.error('Please select a rating'); return; }
-    if (!user) return;
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
 
     try {
       await submitReview.mutateAsync({
@@ -131,7 +165,7 @@ const ReviewSection = ({ productId, storeId, storeSlug, colors, fonts, borderRad
           )}
 
           {/* Write review button */}
-          {user && !userHasReviewed && !showForm && (
+          {!userHasReviewed && !showForm && (
             <button
               onClick={() => setShowForm(true)}
               className="px-4 py-2 text-sm font-semibold"
@@ -143,16 +177,6 @@ const ReviewSection = ({ productId, storeId, storeSlug, colors, fonts, borderRad
             >
               Write a Review
             </button>
-          )}
-
-          {!user && (
-            <Link
-              to={`/store/${storeSlug}/account/auth`}
-              className="inline-block px-4 py-2 text-sm font-medium border"
-              style={{ borderColor: colors.secondary, borderRadius: `${borderRadius / 2}px` }}
-            >
-              Sign in to write a review
-            </Link>
           )}
 
           {/* Review Form */}
@@ -215,6 +239,35 @@ const ReviewSection = ({ productId, storeId, storeSlug, colors, fonts, borderRad
             <p className="text-sm opacity-40 text-center py-4">No reviews yet. Be the first to review!</p>
           )}
         </>
+      )}
+
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white text-black max-w-sm w-full p-6 shadow-2xl border flex flex-col" style={{ borderRadius: `${borderRadius}px`, borderColor: colors.secondary }}>
+            <h3 className="text-lg font-bold mb-2" style={{ fontFamily: fonts.heading }}>Sign In Required</h3>
+            <p className="text-sm opacity-80 leading-relaxed mb-6">
+              You need to sign in to submit a review. Please sign in or create an account to share your feedback.
+            </p>
+            <div className="flex gap-2">
+              <Link 
+                to={`/store/${storeSlug}/account/auth?redirect=product`}
+                className="flex-1 py-2 text-white font-semibold text-sm text-center transition hover:opacity-90 flex items-center justify-center"
+                style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius / 2}px` }}
+              >
+                Sign In
+              </Link>
+              <button 
+                type="button"
+                onClick={() => setShowLoginPrompt(false)}
+                className="flex-1 py-2 border text-sm font-semibold transition hover:bg-black/5"
+                style={{ borderColor: colors.secondary, borderRadius: `${borderRadius / 2}px` }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

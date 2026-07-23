@@ -51,6 +51,7 @@ const Investors = lazy(() => import("@/pages/Investors"));
 const ProductForm = lazy(() => import("@/pages/ProductForm"));
 const Customise = lazy(() => import("@/pages/CustomiserV2"));
 const CustomiseLegacy = lazy(() => import("@/pages/Customise"));
+const CustomiseSections = lazy(() => import("@/pages/CustomiseSections"));
 const PromoTickerPage = lazy(() => import("@/pages/PromoTicker"));
 const Sourcing = lazy(() => import("@/pages/Sourcing"));
 const AdminThemeLivePreview = lazy(() => import("@/pages/admin/AdminThemeLivePreview"));
@@ -107,25 +108,25 @@ const CustomerWishlist = lazy(() => import("@/pages/storefront/CustomerWishlist"
 const StorefrontBlog = lazy(() => import("@/pages/storefront/StorefrontBlog"));
 const StorefrontBlogPost = lazy(() => import("@/pages/storefront/StorefrontBlogPost"));
 const StorefrontPolicy = lazy(() => import("@/pages/storefront/StorefrontPolicy"));
+const StorefrontSearch = lazy(() => import("@/pages/storefront/StorefrontSearch"));
 // Admin (rare access — always lazy)
 const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
 const AdminStores = lazy(() => import("@/pages/admin/AdminStores"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminThemes = lazy(() => import("@/pages/admin/AdminThemes"));
+const AdminThemeImporter = lazy(() => import("@/pages/admin/AdminThemeImporter"));
 const AdminThemeMasterPreview = lazy(() => import("@/pages/admin/AdminThemeMasterPreview"));
 const AdminRevenue = lazy(() => import("@/pages/admin/AdminRevenue"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminProfile = lazy(() => import("@/pages/admin/AdminProfile"));
-const AdminLayouts = lazy(() => import("@/pages/admin/AdminLayouts"));
-const AdminLayoutDetail = lazy(() => import("@/pages/admin/AdminLayoutDetail"));
-const AdminSubLayout = lazy(() => import("@/pages/admin/AdminSubLayout"));
-const AdminLayoutTheme = lazy(() => import("@/pages/admin/AdminLayoutTheme"));
+
 
 const AdminSecurity = lazy(() => import("@/pages/admin/AdminSecurity"));
 const AdminProvisioning = lazy(() => import("@/pages/admin/AdminProvisioning"));
 const AdminPlans = lazy(() => import("@/pages/admin/AdminPlans"));
 const AdminLaunchChecklist = lazy(() => import("@/pages/admin/AdminLaunchChecklist"));
 const AdminCreditsEconomy = lazy(() => import("@/pages/admin/AdminCreditsEconomy"));
+const AdminThemeComponentLibrary = lazy(() => import("@/pages/admin/AdminThemeComponentLibrary"));
 
 const AdminHealth = lazy(() => import("@/pages/admin/AdminHealth"));
 const AdminDisputes = lazy(() => import("@/pages/admin/AdminDisputes"));
@@ -248,6 +249,7 @@ const AppRoutes = () => {
           <Route path="/account/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
           <Route path="/account/wishlist" element={<CustomerRoute><CustomerWishlist /></CustomerRoute>} />
           <Route path="/p/:pageSlug" element={<StorefrontCustomPage />} />
+          <Route path="/search" element={<StorefrontSearch />} />
           <Route path="/:policyType" element={<StorefrontPolicy />} />
           <Route path="*" element={<NotFound />} />
         </>
@@ -297,6 +299,7 @@ const AppRoutes = () => {
             <Route path="/reviews" element={<ReviewsModeration />} />
             <Route path="/customise" element={<Customise />} />
             <Route path="/customise/legacy" element={<CustomiseLegacy />} />
+            <Route path="/customise/sections" element={<CustomiseSections />} />
             <Route path="/promo-ticker" element={<PromoTickerPage />} />
             <Route path="/sourcing" element={<Sourcing />} />
             <Route path="/settings/payments" element={<PaymentSettings />} />
@@ -342,6 +345,7 @@ const AppRoutes = () => {
             <Route path="/admin/stores" element={<AdminStores />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/themes" element={<AdminThemes />} />
+            <Route path="/admin/themes/import" element={<AdminThemeImporter />} />
             <Route path="/admin/revenue" element={<AdminRevenue />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
@@ -358,10 +362,8 @@ const AppRoutes = () => {
             <Route path="/admin/partner-payouts" element={<AdminPartnerPayouts />} />
             <Route path="/admin/partner-analytics" element={<AdminPartnerAnalytics />} />
             <Route path="/admin/domains" element={<AdminDomains />} />
-            <Route path="/admin/layouts" element={<AdminLayouts />} />
-            <Route path="/admin/layouts/:layoutId" element={<AdminLayoutDetail />} />
-            <Route path="/admin/layouts/:layoutId/:subLayoutSlug" element={<AdminSubLayout />} />
-            <Route path="/admin/layouts/:layoutId/:subLayoutSlug/:themeId" element={<AdminLayoutTheme />} />
+            <Route path="/admin/theme-components" element={<AdminThemeComponentLibrary />} />
+
           </Route>
           <Route path="/admin/themes/preview/:themeId" element={<AdminRoute><AdminThemeMasterPreview /></AdminRoute>} />
           <Route path="/admin/themes/preview-live/:themeId" element={<AdminThemeLivePreview />} />
@@ -397,6 +399,7 @@ const AppRoutes = () => {
           <Route path="/store/:slug/about" element={<Storefront page="about" />} />
           <Route path="/store/:slug/contact" element={<Storefront page="contact" />} />
           <Route path="/store/:slug/product/:productId" element={<StorefrontProduct />} />
+          <Route path="/store/:slug/product/:productId/:themeId" element={<StorefrontProduct />} />
           <Route path="/store/:slug/cart" element={<StorefrontCart />} />
           <Route path="/store/:slug/checkout" element={<StorefrontCheckout />} />
           <Route path="/store/:slug/menu" element={<StorefrontMenu />} />
@@ -417,6 +420,7 @@ const AppRoutes = () => {
           <Route path="/store/:slug/account/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
           <Route path="/store/:slug/account/wishlist" element={<CustomerRoute><CustomerWishlist /></CustomerRoute>} />
           <Route path="/store/:slug/p/:pageSlug" element={<StorefrontCustomPage />} />
+          <Route path="/store/:slug/search" element={<StorefrontSearch />} />
           <Route path="/store/:slug/:policyType" element={<StorefrontPolicy />} />
           <Route path="*" element={<NotFound />} />
         </>

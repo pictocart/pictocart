@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Mail, Phone, ArrowRight, Eye, EyeOff } from 'lucide-react';
@@ -103,7 +104,7 @@ const CustomerAuth = () => {
     return <Navigate to={destinationAfterAuth()} replace />;
   }
 
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts, borderRadius } = theme;
 
   const inputStyle = {

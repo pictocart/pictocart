@@ -93,6 +93,25 @@ const ProductForm = () => {
   const [newCatSaving, setNewCatSaving] = useState(false);
   const aiCredits = useAICredits({ onInsufficient: () => setRechargeOpen(true) });
 
+  const [dbQuestions, setDbQuestions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchDbQuestions = async () => {
+      if (!id) return;
+      const { data } = await supabase
+        .from('product_questions')
+        .select('*')
+        .eq('product_id', id)
+        .order('created_at', { ascending: true });
+      if (data) {
+        setDbQuestions(data);
+      }
+    };
+    if (isEdit) {
+      fetchDbQuestions();
+    }
+  }, [id, isEdit]);
+
   // AI Product Reviews states
   const [genReviewsOpen, setGenReviewsOpen] = useState(false);
   const [reviewCount, setReviewCount] = useState('3');
@@ -257,6 +276,14 @@ const ProductForm = () => {
     try {
       if (isEdit && id) {
         await updateProduct.mutateAsync({ id, ...payload });
+        
+        // Save answers back to database questions table
+        for (const q of dbQuestions) {
+          await supabase
+            .from('product_questions')
+            .update({ answer: q.answer })
+            .eq('id', q.id);
+        }
       } else {
         await createProduct.mutateAsync(payload);
       }
@@ -599,6 +626,54 @@ const ProductForm = () => {
               <VariantMatrix category={category} options={variants} onChange={setVariants} />
             </CardContent>
           </Card>
+
+          {/* Customer Q&A Manager */}
+          {isEdit && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span>Customer Q&A Manager</span>
+                  <Badge variant="secondary">{dbQuestions.length}</Badge>
+                </CardTitle>
+                <p className="text-[11px] text-muted-foreground">
+                  Answer queries submitted by customers on the storefront product page.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(dbQuestions.length === 0) ? (
+                  <p className="text-sm text-muted-foreground text-center py-4 bg-muted/30 rounded-lg">
+                    No customer questions asked yet.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {dbQuestions.map((q, idx) => (
+                      <div key={q.id || idx} className="p-3 border rounded-lg bg-muted/10 space-y-2 text-left">
+                        <div className="flex justify-between text-[11px] text-muted-foreground">
+                          <span className="font-semibold text-foreground">{q.customer_name}</span>
+                          <span>{q.created_at ? new Date(q.created_at).toLocaleDateString() : ''}</span>
+                        </div>
+                        <p className="text-xs font-medium">{q.question}</p>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">Answer</Label>
+                          <Textarea
+                            value={q.answer || ''}
+                            onChange={(e) => {
+                              const updatedQuestions = [...dbQuestions];
+                              updatedQuestions[idx] = { ...q, answer: e.target.value };
+                              setDbQuestions(updatedQuestions);
+                            }}
+                            placeholder="Type the answer here..."
+                            rows={2}
+                            className="text-xs"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right column — sidebar */}

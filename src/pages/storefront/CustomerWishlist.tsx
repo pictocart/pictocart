@@ -3,6 +3,7 @@ import { useStorefront } from '@/hooks/useStorefront';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useWishlist } from '@/hooks/useWishlist';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import WishlistButton from '@/components/storefront/WishlistButton';
 import { Loader2, Heart, ChevronLeft } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -13,7 +14,7 @@ const CustomerWishlist = () => {
   const { store, products, loading: storeLoading } = useStorefront(slug || '');
   const { user } = useCustomerAuth(slug || '');
   const { wishlistItems, wishlistProductIds, toggle } = useWishlist(store?.id, user?.id);
-  const theme = store ? resolveTheme(store.theme) : null;
+  const theme = store ? resolveTheme(getStoreThemeTokens(store)) : null;
 
   if (storeLoading || !store) {
     return (

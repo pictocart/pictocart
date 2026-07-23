@@ -15,23 +15,52 @@ import SiteOfferBanner from './SiteOfferBanner';
 import ThemeNavbar from './ThemeNavbar';
 import { usePublicNavCustomPages } from '@/hooks/useCustomPages';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
+import { useThemeManifest } from '@/hooks/useThemeManifest';
+import { Header as ThemeHeader, Footer as ThemeFooter, Theme3DPageBackground } from '@/components/theme/MasterThemeRenderer';
+import {
+  getManifestDna,
+  getManifestFooter,
+  getManifestHeader,
+  getManifestPalette,
+  getResolvedManifest,
+  getStoreBranding,
+  getStorefrontConfig,
+  getStoreThemeId,
+  getStoreThemeTokens,
+  type ThemeManifest,
+  type ThemeTokens,
+} from '@/lib/storefrontManifest';
+
+type LooseRecord = Record<string, any>;
+type StoreLike = {
+  id?: string;
+  user_id?: string | null;
+  name: string;
+  slug: string;
+  logo_url?: string | null;
+  theme?: ThemeTokens | null;
+  settings?: LooseRecord | null;
+  resolved_storefront_manifest?: Record<string, unknown> | null;
+  theme_id?: string | null;
+  theme_tokens?: ThemeTokens | null;
+};
+
+type ExtendedColors = ThemeTemplate['colors'] & {
+  primary_fg?: string;
+  surface?: string;
+  muted?: string;
+  border?: string;
+};
 
 interface Props {
   children: ReactNode;
-  store: {
-    id?: string;
-    user_id?: string | null;
-    name: string;
-    slug: string;
-    logo_url?: string | null;
-    theme?: any;
-    settings?: any;
-  };
+  store: StoreLike;
   products?: any[];
   footerConfig?: FooterConfig;
+  themeOverride?: ThemeTokens | null;
 }
 
-function resolveTheme(themeData: any): ThemeTemplate {
+function resolveTheme(themeData: ThemeTokens | null | undefined): ThemeTemplate {
   const base = THEME_TEMPLATES.find((t) => t.id === themeData?.name) || THEME_TEMPLATES[0];
   const flattenedColors = Object.fromEntries(
     Object.entries({
@@ -42,7 +71,7 @@ function resolveTheme(themeData: any): ThemeTemplate {
       text: themeData?.text,
       card: themeData?.card,
     }).filter(([, value]) => typeof value === 'string' && value.length > 0)
-  );
+  ) as Partial<ThemeTemplate['colors']>;
 
   return {
     ...base,
@@ -51,13 +80,27 @@ function resolveTheme(themeData: any): ThemeTemplate {
       ...flattenedColors,
       ...(themeData?.colors || {}),
     },
-    fonts: themeData?.fonts || base.fonts,
+    fonts: {
+      heading: themeData?.fonts?.heading || base.fonts.heading,
+      body: themeData?.fonts?.body || base.fonts.body,
+    },
     borderRadius: themeData?.borderRadius ?? base.borderRadius,
   };
 }
 
-const StorefrontLayout = ({ children, store, products = [], footerConfig }: Props) => {
-  const theme = resolveTheme(store.theme);
+function normalizeFooterConfig(input: LooseRecord | null | undefined): FooterConfig {
+  return {
+    ...DEFAULT_FOOTER,
+    ...(input || {}),
+  };
+}
+
+const StorefrontLayout = ({ children, store, products = [], footerConfig, themeOverride }: Props) => {
+  const branding = getStoreBranding(store);
+  const storefrontConfig = getStorefrontConfig(store) as LooseRecord;
+  const resolvedManifest = getResolvedManifest(store);
+  const storeThemeTokens = getStoreThemeTokens(store);
+  const theme = resolveTheme(themeOverride || storeThemeTokens);
   const { colors, fonts } = theme;
   const { totalItems } = useCart(store.slug);
   const { user } = useCustomerAuth(store.slug);
@@ -66,7 +109,76 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
   const [searchOpen, setSearchOpen] = useState(false);
   const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split('@')?.[0] || 'Account';
 
-  // Fallback: if parent did not pass products, fetch them so the search overlay still works on cart/account/etc.
+  const themeId = themeOverride?.theme_id || getStoreThemeId(store) || '';
+  const isThemeManifestTheme = !!themeId && (themeId.startsWith('theme-') || themeId.startsWith('custom-theme-') || themeId.startsWith('layout1-'));
+
+  // Always fetch the theme manifest when using a manifest-based theme.
+  // This ensures preview_theme works correctly even when the store has a
+  // cached resolved_storefront_manifest from a different theme.
+  const { data: dbManifest } = useThemeManifest(isThemeManifestTheme ? themeId : null);
+
+  // Prefer dbManifest when the theme IDs don't match (e.g. during preview),
+  // otherwise fall back to the store's resolved manifest snapshot.
+  const resolvedManifestThemeId = (resolvedManifest as any)?.theme_id as string | undefined;
+  const useDbManifest = isThemeManifestTheme && (
+    !resolvedManifest?.manifest ||
+    (resolvedManifestThemeId && resolvedManifestThemeId !== themeId)
+  );
+  const manifestData = ((useDbManifest ? dbManifest : resolvedManifest?.manifest) || dbManifest || null) as ThemeManifest | null;
+  const baseDna = getManifestDna(manifestData) as LooseRecord;
+  const manifestPalette = getManifestPalette(manifestData) as LooseRecord;
+  // When using a manifest-based theme (theme-style-*), the manifest palette takes
+  // priority so the dark/custom bg, fg, primary colors are respected on all pages.
+  const mergedPalette = isThemeManifestTheme && Object.keys(manifestPalette).length > 0
+    ? {
+        ...((themeOverride?.colors || storeThemeTokens?.colors || {}) as LooseRecord),
+        ...manifestPalette,
+      }
+    : {
+        ...manifestPalette,
+        ...((themeOverride?.colors || storeThemeTokens?.colors || {}) as LooseRecord),
+      };
+  const headerManifest = getManifestHeader(manifestData) as LooseRecord | null;
+  const footerManifest = getManifestFooter(manifestData) as LooseRecord | null;
+
+  const extendedColors: ExtendedColors = {
+    ...colors,
+    primary: String(mergedPalette.primary || colors.primary),
+    secondary: String(mergedPalette.surface || mergedPalette.secondary || colors.secondary),
+    accent: String(mergedPalette.accent || colors.accent),
+    background: String(mergedPalette.bg || mergedPalette.background || colors.background),
+    text: String(mergedPalette.fg || mergedPalette.text || colors.text),
+    card: String(mergedPalette.surface || mergedPalette.card || colors.card),
+    primary_fg: typeof mergedPalette.primary_fg === 'string' ? mergedPalette.primary_fg : '#ffffff',
+    surface: typeof mergedPalette.surface === 'string' ? mergedPalette.surface : colors.card,
+    muted: typeof mergedPalette.muted === 'string' ? mergedPalette.muted : '#888888',
+    border: typeof mergedPalette.border === 'string' ? mergedPalette.border : colors.secondary,
+  };
+
+  const headingFont = (baseDna.fonts?.heading as string | undefined) || fonts.heading;
+  const bodyFont = (baseDna.fonts?.body as string | undefined) || fonts.body;
+  const headerStyle = (manifestData?.header_style || baseDna.layout?.header_style || 'classic') as string;
+  const brandName = branding.name || (baseDna.name as string | undefined) || store.name;
+  const headerOv: LooseRecord = {
+    logo_url: branding.logo_url || '',
+    brand_name: brandName,
+    ...((manifestData?.header_settings || {}) as LooseRecord),
+    ...((storefrontConfig?.theme_overrides?.header || {}) as LooseRecord),
+  };
+
+  useEffect(() => {
+    const hasCustomHtml = !!headerManifest?.is_custom_html || !!footerManifest?.is_custom_html;
+    if (hasCustomHtml) {
+      const id = 'tailwind-play-cdn';
+      if (!document.getElementById(id)) {
+        const script = document.createElement('script');
+        script.id = id;
+        script.src = 'https://cdn.tailwindcss.com';
+        document.head.appendChild(script);
+      }
+    }
+  }, [headerManifest, footerManifest]);
+
   const { data: fetchedProducts = [] } = useQuery({
     queryKey: ['storefront-layout-products', store.id],
     enabled: !!store.id && products.length === 0,
@@ -84,16 +196,16 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
   });
   const searchProducts = products.length > 0 ? products : fetchedProducts;
 
-  const footer = footerConfig || (store.settings as any)?.footer || DEFAULT_FOOTER;
-  const headerConfig = (store.settings as any)?.header || {};
+  const footer = normalizeFooterConfig((footerConfig as LooseRecord) || storefrontConfig?.footer);
+  const headerConfig = (storefrontConfig?.header || {}) as LooseRecord;
 
   const { data: navCustomPages = [] } = usePublicNavCustomPages(store.id);
   const customNavLinks = navCustomPages.map((p) => ({ label: p.title, href: `/p/${p.slug}` }));
-  const baseNavLinks: any[] = Array.isArray(headerConfig?.nav_links) ? headerConfig.nav_links : [];
+  const baseNavLinks = Array.isArray(headerConfig?.nav_links) ? headerConfig.nav_links : [];
   const mergedNavLinks = [...baseNavLinks, ...customNavLinks];
 
   useEffect(() => {
-    [fonts.heading, fonts.body].forEach((font) => {
+    [headingFont, bodyFont].forEach((font) => {
       const id = `gfont-${font.replace(/\s+/g, '-')}`;
       if (!document.getElementById(id)) {
         const link = document.createElement('link');
@@ -103,48 +215,101 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig }: Prop
         document.head.appendChild(link);
       }
     });
-  }, [fonts]);
+  }, [headingFont, bodyFont]);
+
+  const layoutStyleObj: React.CSSProperties = {
+    backgroundColor: extendedColors.background,
+    color: extendedColors.text,
+    fontFamily: bodyFont,
+    ['--p' as any]: extendedColors.primary,
+    ['--pf' as any]: extendedColors.primary_fg || '#ffffff',
+    ['--ac' as any]: extendedColors.accent,
+    ['--bg' as any]: extendedColors.background,
+    ['--sf' as any]: extendedColors.surface || extendedColors.card,
+    ['--fg' as any]: extendedColors.text,
+    ['--mu' as any]: extendedColors.muted || '#888888',
+    ['--bd' as any]: extendedColors.border || extendedColors.secondary,
+    ['--r' as any]: `${theme.borderRadius}px`,
+    ['--hf' as any]: `${headingFont}, serif`,
+  };
+
+  // Detect 3D themes for global background
+  const is3DTheme = isThemeManifestTheme && (
+    themeId.includes('theme-style-15') ||
+    themeId.includes('theme-style-16') ||
+    themeId.includes('theme-style-17')
+  );
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: colors.background, color: colors.text, fontFamily: fonts.body }}>
-      {/* Site-wide festive offer banner (auto-hidden when no active offer) */}
+    <div className="min-h-screen flex flex-col" style={layoutStyleObj}>
+      {is3DTheme && <Theme3DPageBackground themeId={themeId} palette={mergedPalette} />}
       <SiteOfferBanner storeId={store.id} />
-      {/* Customer-facing promotional ticker (merchant-configurable) */}
-      <PromoTicker storeSlug={store.slug} config={(store.settings as any)?.promo_ticker} />
-      {/* Owner-only premium-theme free-trial countdown */}
-      <PremiumTrialTicker storeId={store.id} storeUserId={store.user_id} settings={store.settings} />
-      {/* Theme-aware sticky navbar */}
-      <ThemeNavbar
-        store={store}
-        colors={colors}
-        fonts={fonts}
-        borderRadius={theme.borderRadius}
-        navStyle={theme.preview?.navStyle ?? 'top'}
-        totalItems={totalItems}
-        user={user}
-        customerName={customerName}
-        menuEnabled={menuEnabled}
-        mergedNavLinks={mergedNavLinks}
-        headerConfig={headerConfig}
-        onSearchOpen={() => setSearchOpen(true)}
-      />
+      <PromoTicker storeSlug={store.slug} config={storefrontConfig?.promo_ticker} />
+      <PremiumTrialTicker storeId={store.id} storeUserId={store.user_id} settings={storefrontConfig} />
 
-      <main className="flex-1 pb-16 md:pb-0">{children}</main>
+      {isThemeManifestTheme && manifestData ? (
+        headerManifest?.is_custom_html && headerManifest?.html ? (
+          <div dangerouslySetInnerHTML={{ __html: String(headerManifest.html) }} />
+        ) : (
+          <ThemeHeader dna={{ ...baseDna, palette: mergedPalette }} brandName={brandName} variant={headerStyle} storeSlug={store.slug} headerOv={headerOv} />
+        )
+      ) : (
+        <ThemeNavbar
+          store={{ name: brandName, slug: store.slug, logo_url: branding.logo_url }}
+          colors={extendedColors}
+          fonts={{ heading: headingFont, body: bodyFont }}
+          borderRadius={theme.borderRadius}
+          navStyle={theme.preview?.navStyle ?? 'top'}
+          totalItems={totalItems}
+          user={user}
+          customerName={customerName}
+          menuEnabled={menuEnabled}
+          mergedNavLinks={mergedNavLinks}
+          headerConfig={headerConfig}
+          onSearchOpen={() => setSearchOpen(true)}
+        />
+      )}
 
-      {/* Custom Footer */}
-      <StorefrontFooter store={store} config={footer} colors={colors} />
+      <main className="flex-1 pb-16 md:pb-0 relative" style={{ zIndex: 1 }}>{children}</main>
 
-      <BottomNav colors={colors} onSearchOpen={() => setSearchOpen(true)} storeId={store.id} />
+      {isThemeManifestTheme && manifestData ? (
+        footerManifest?.is_custom_html && footerManifest?.html ? (
+          <div dangerouslySetInnerHTML={{ __html: String(footerManifest.html) }} />
+        ) : (
+          <div data-section-anchor="footer" style={{ scrollMarginTop: 80 }}>
+            <ThemeFooter
+              footer={footerManifest as any}
+              dna={{ ...baseDna, palette: mergedPalette }}
+              brandName={brandName}
+              storeSlug={store.slug}
+              footerOv={(storefrontConfig?.theme_overrides?.footer || {}) as any}
+              hasPolicies={true}
+              variant={String(manifestData.footer_style || storefrontConfig?.theme_overrides?.footer?.style || '')}
+            />
+          </div>
+        )
+      ) : (
+        <StorefrontFooter store={{ name: brandName, slug: store.slug }} config={footer} colors={extendedColors} />
+      )}
+
+      <BottomNav colors={extendedColors} onSearchOpen={() => setSearchOpen(true)} storeId={store.id} />
 
       {searchOpen && (
-        <SearchOverlay products={searchProducts} storeSlug={store.slug} colors={colors} fonts={fonts} borderRadius={theme.borderRadius} onClose={() => setSearchOpen(false)} />
+        <SearchOverlay
+          products={searchProducts}
+          storeSlug={store.slug}
+          colors={extendedColors}
+          fonts={{ heading: headingFont, body: bodyFont }}
+          borderRadius={theme.borderRadius}
+          onClose={() => setSearchOpen(false)}
+        />
       )}
 
       <StorefrontAssistant
         storeSlug={store.slug}
-        storeName={store.name}
-        colors={colors}
-        fonts={fonts}
+        storeName={brandName}
+        colors={extendedColors}
+        fonts={{ heading: headingFont, body: bodyFont }}
         borderRadius={theme.borderRadius}
       />
     </div>

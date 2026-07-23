@@ -8,6 +8,7 @@ import { ExternalLink, Check, Sparkles, Loader2, Crown, Lock } from 'lucide-reac
 import { toast } from 'sonner';
 import { THEME_TEMPLATES } from '@/lib/themes';
 import { ThemeUpdateBanner } from '@/components/ThemeUpdateBanner';
+import { getStoreThemeId } from '@/lib/storefrontManifest';
 
 interface ThemeMaster {
   id: string;
@@ -32,7 +33,7 @@ const swatchFor = (theme_id: string) => {
 
 const Themes = () => {
   const { store, setStore } = useStore();
-  const activeThemeId = (store?.theme as any)?.theme_id || (store?.theme as any)?.name;
+  const activeThemeId = getStoreThemeId(store);
 
   const { data: themes = [], isLoading } = useQuery({
     queryKey: ['theme-masters'],
@@ -66,22 +67,29 @@ const Themes = () => {
   const installTheme = async (theme: ThemeMaster) => {
     if (!store) return;
     try {
-      if (theme.theme_id.startsWith('theme-')) {
+      if (theme.theme_id.startsWith('theme-') || theme.theme_id.startsWith('layout1-')) {
         const { applyMasterTheme } = await import('@/lib/applyMasterTheme');
         const { theme: newTheme, settings: newSettings } = await applyMasterTheme(
           store.id,
           theme.theme_id,
           store.settings || {}
         );
-        setStore({ ...store, theme: newTheme as any, settings: newSettings as any });
+        setStore({ ...store, theme: newTheme as any, theme_id: theme.theme_id, theme_tokens: newTheme as any, settings: newSettings as any });
       } else {
         const newTheme = { theme_id: theme.theme_id, name: theme.theme_id };
+        const { buildResolvedStorefrontManifest } = await import('@/lib/storefrontManifest');
+        const resolved_storefront_manifest = await buildResolvedStorefrontManifest({
+          ...store,
+          theme: newTheme,
+          theme_id: theme.theme_id,
+          theme_tokens: newTheme,
+        } as any);
         const { error } = await supabase
           .from('stores')
-          .update({ theme: newTheme as any })
+          .update({ theme: newTheme as any, theme_id: theme.theme_id, theme_tokens: newTheme as any, resolved_storefront_manifest: resolved_storefront_manifest as any })
           .eq('id', store.id);
         if (error) throw error;
-        setStore({ ...store, theme: newTheme as any });
+        setStore({ ...store, theme: newTheme as any, theme_id: theme.theme_id, theme_tokens: newTheme as any, resolved_storefront_manifest });
       }
       toast.success(`"${theme.name}" is now your active theme.`);
     } catch (e: any) {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +18,7 @@ interface Props {
   onChange: (next: any) => void;
 }
 
-const EDITABLE_TEXT_KEYS = ['title', 'sub', 'kicker', 'cta', 'cta_secondary', 'body'];
+const EDITABLE_TEXT_KEYS = ['title', 'sub', 'kicker', 'cta', 'cta_secondary', 'body', 'html'];
 const SECTION_LABEL: Record<string, string> = {
   hero: 'Hero',
   usp_strip: 'Trust Strip',
@@ -32,6 +33,20 @@ const SECTION_LABEL: Record<string, string> = {
 export default function ThemeSectionsEditor({ themeId, storeId, overrides, onChange }: Props) {
   const { data: manifest, isLoading } = useThemeManifest(themeId);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+
+  const { data: storeProducts = [] } = useQuery({
+    queryKey: ['customizer-store-products', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, title')
+        .eq('store_id', storeId)
+        .eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!storeId,
+  });
 
   if (isLoading) {
     return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -158,6 +173,53 @@ export default function ThemeSectionsEditor({ themeId, storeId, overrides, onCha
                   </div>
                 );
               })}
+              {['product_grid', 'trending', 'featured_products', 'new_arrivals'].includes(s.type) && (
+                <div className="space-y-1.5 pt-2 border-t mt-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Select Products (Max 8)</Label>
+                    {'selected_product_ids' in ov && (
+                      <button
+                        onClick={() => resetField(i, 'selected_product_ids')}
+                        className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"
+                      >
+                        <RotateCcw className="h-3 w-3" /> reset to default
+                      </button>
+                    )}
+                  </div>
+                  <div className="border rounded-md p-2 max-h-40 overflow-y-auto space-y-1 bg-background">
+                    {storeProducts.map((prod: any) => {
+                      const selectedIds = merged.selected_product_ids || [];
+                      const checked = selectedIds.includes(prod.id);
+                      return (
+                        <label key={prod.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted p-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              let nextIds = [...selectedIds];
+                              if (e.target.checked) {
+                                if (nextIds.length >= 8) {
+                                  toast.error('You can select a maximum of 8 products');
+                                  return;
+                                }
+                                nextIds.push(prod.id);
+                              } else {
+                                nextIds = nextIds.filter((id: string) => id !== prod.id);
+                              }
+                              updateField(i, 'selected_product_ids', nextIds);
+                            }}
+                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="truncate">{prod.title}</span>
+                        </label>
+                      );
+                    })}
+                    {storeProducts.length === 0 && (
+                      <div className="text-xs text-muted-foreground text-center py-2">No active products found</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         );

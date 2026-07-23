@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import { usePublishedBlogPosts } from '@/hooks/useBlogPosts';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import SEOHead from '@/components/storefront/SEOHead';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
@@ -13,7 +14,7 @@ const StorefrontBlog = () => {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   if (!store) return <div className="min-h-screen flex items-center justify-center"><p>Store not found</p></div>;
 
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts, borderRadius } = theme;
 
   return (

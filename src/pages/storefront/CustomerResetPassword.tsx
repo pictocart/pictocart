@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { Loader2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,7 +43,7 @@ const CustomerResetPassword = () => {
   }
   if (!store) return null;
 
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts, borderRadius } = theme;
 
   const inputStyle = {

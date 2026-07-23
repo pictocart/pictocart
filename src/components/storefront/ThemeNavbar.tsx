@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Search, User, Menu, X, Utensils, ChevronRight } from 'lucide-react';
 
 interface NavProps {
@@ -25,6 +25,9 @@ const TopNav = ({
 }: NavProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [searchVal, setSearchVal] = useState('');
+  const navigate = useNavigate();
+  const isPlatform = window.location.pathname.startsWith('/store/');
   const slug = store.slug;
   const br = `${borderRadius}px`;
 
@@ -83,8 +86,31 @@ const TopNav = ({
               <Utensils className="h-4 w-4" /> Menu
             </Link>
           )}
-          <button onClick={onSearchOpen} className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm opacity-60 hover:opacity-100 border rounded-full" style={{ borderColor: colors.secondary }}>
-            <Search className="h-4 w-4" /> Search
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchVal.trim()) {
+                navigate(isPlatform ? `/store/${slug}/search?q=${encodeURIComponent(searchVal.trim())}` : `/search?q=${encodeURIComponent(searchVal.trim())}`);
+              }
+            }} 
+            className="hidden md:flex items-center relative max-w-[160px] lg:max-w-[240px] w-full"
+          >
+            <input
+              placeholder="Search..."
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+              className="w-full pl-3 pr-8 py-1.5 text-xs border outline-none bg-transparent"
+              style={{ borderColor: colors.secondary, borderRadius: br, color: colors.text }}
+            />
+            <button type="submit" className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-65 hover:opacity-100">
+              <Search className="h-3.5 w-3.5" style={{ color: colors.text }} />
+            </button>
+          </form>
+          <button 
+            onClick={() => navigate(isPlatform ? `/store/${slug}/search` : `/search`)} 
+            className="md:hidden p-1 opacity-60 hover:opacity-100"
+          >
+            <Search className="h-5 w-5" style={{ color: colors.text }} />
           </button>
           <Link
             to={user ? `/store/${slug}/account` : `/store/${slug}/account/auth`}
@@ -157,6 +183,8 @@ const HamburgerNav = ({
 }: NavProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
+  const isPlatform = window.location.pathname.startsWith('/store/');
   const slug = store.slug;
   const location = useLocation();
 
@@ -188,7 +216,7 @@ const HamburgerNav = ({
 
           {/* Right: cart + hamburger */}
           <div className="flex items-center gap-4">
-            <button onClick={onSearchOpen} className="opacity-60 hover:opacity-100 transition-opacity">
+            <button onClick={() => navigate(isPlatform ? `/store/${slug}/search` : `/search`)} className="opacity-60 hover:opacity-100 transition-opacity">
               <Search className="h-5 w-5" style={{ color: colors.text }} />
             </button>
             <Link to={`/store/${slug}/cart`} className="relative">

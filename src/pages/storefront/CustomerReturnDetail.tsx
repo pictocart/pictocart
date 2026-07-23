@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { useCustomerReturn } from '@/hooks/useCustomerReturns';
 import { Loader2, ChevronLeft, Undo2, Repeat2, IndianRupee, ClipboardCheck, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -22,7 +23,7 @@ const CustomerReturnDetail = () => {
 
   if (storeLoading || isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   if (!store) return null;
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts, borderRadius } = theme;
   const br = `${borderRadius}px`, brHalf = `${borderRadius / 2}px`;
 

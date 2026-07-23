@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { deriveLegacyThemeFields } from '@/lib/storefrontManifest';
 
 export interface Store {
   id: string;
@@ -12,7 +13,10 @@ export interface Store {
   logo_url: string | null;
   banner_url: string | null;
   theme: any;
+  theme_id?: string | null;
+  theme_tokens?: any;
   settings: any;
+  resolved_storefront_manifest?: any;
   is_published: boolean;
   onboarding_step: number;
   created_at: string;
@@ -57,7 +61,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-    setStore(((data as Store[] | null)?.[0]) ?? null);
+    const row = ((data as Store[] | null)?.[0]) ?? null;
+    setStore(row ? (deriveLegacyThemeFields(row) as Store) : null);
     setFetchedForUserId(user.id);
     setLoading(false);
   }, [user]);

@@ -5,6 +5,7 @@ import { useStoreMenu, type MenuItem } from '@/hooks/useMenu';
 import { useFulfillment, type FulfillmentMode } from '@/hooks/useFulfillment';
 import { useCart } from '@/hooks/useCart';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -107,7 +108,7 @@ const StorefrontMenu = ({ forceMode, tableFromParam }: Props) => {
       .filter((s) => s.items.length > 0);
   }, [sections, query]);
 
-  const themeColors = useMemo(() => resolveTheme(store?.theme).colors, [store?.theme]);
+  const themeColors = useMemo(() => resolveTheme(getStoreThemeTokens(store)).colors, [store]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;

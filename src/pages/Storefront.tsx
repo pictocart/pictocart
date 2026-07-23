@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { generateDefaultSections } from '@/lib/defaultSections';
@@ -10,6 +10,7 @@ import { useProductReviews, getAverageRating } from '@/hooks/useReviews';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreBranding, getStorefrontConfig, getStoreHomePage, getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { CustomPageSections } from '@/components/storefront/CustomPageSections';
 import StorefrontFooter from '@/components/storefront/StorefrontFooter';
 import NewsletterSection from '@/components/storefront/NewsletterSection';
@@ -27,7 +28,7 @@ import { useFulfillment } from '@/hooks/useFulfillment';
 
 import SEOHead from '@/components/storefront/SEOHead';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
-import { Loader2, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Star, ChevronLeft, ChevronRight, Heart, Search, ShoppingBag, Menu, ShoppingCart } from 'lucide-react';
 
 const HeroSlider = ({ images, title, subtitle, sizeMode, useFixedHeight, heightClass, colors, fonts, borderRadius }: {
   images: string[]; title: string; subtitle?: string; sizeMode: string; useFixedHeight: boolean; heightClass: string;
@@ -115,22 +116,35 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
   );
 
   const previewThemeId = searchParams.get('preview_theme');
-  const themeData = previewThemeId
-    ? { ...(store.theme as any), theme_id: previewThemeId, name: previewThemeId }
-    : store.theme;
+  // Only set when param is present; only clear when we're on home page WITHOUT param
+  // (navigating to /shop, /cart etc during preview should keep the theme active)
+  if (previewThemeId) {
+    localStorage.setItem('storefront_preview_theme', previewThemeId);
+  } else if (!searchParams.get('preview_theme') && (page === 'home' || window.location.pathname === `/store/${slug}`)) {
+    // Clear only when explicitly visiting home without preview param
+    localStorage.removeItem('storefront_preview_theme');
+  }
+  const sessionPreviewTheme = localStorage.getItem('storefront_preview_theme');
+  const branding = getStoreBranding(store);
+  const storefrontConfig = getStorefrontConfig(store);
+  const homePage = getStoreHomePage(store);
+  const storeThemeTokens = getStoreThemeTokens(store);
+  const themeData = (previewThemeId || sessionPreviewTheme)
+    ? { ...(storeThemeTokens || {}), theme_id: (previewThemeId || sessionPreviewTheme), name: (previewThemeId || sessionPreviewTheme) }
+    : storeThemeTokens;
   const theme = resolveTheme(themeData);
   const { colors, fonts, borderRadius } = theme;
 
   // Home-page routing override — let sellers point "/" at any page (WordPress-style).
   if (page === 'home') {
-    const kind = (store as any).home_page_kind as string | undefined;
-    if (kind === 'custom' && (store as any).home_page_id) {
+    const kind = homePage.kind as string | undefined;
+    if (kind === 'custom' && homePage.id) {
       return <CustomHomePage store={store} themeData={themeData} />;
     }
     if (kind === 'shop') page = 'shop';
     else if (kind === 'collections') page = 'collections';
-    else if (kind === 'product' && (store as any).home_page_product_id) {
-      return <Navigate to={`/store/${slug}/product/${(store as any).home_page_product_id}`} replace />;
+    else if (kind === 'product' && homePage.product_id) {
+      return <Navigate to={`/store/${slug}/product/${homePage.product_id}`} replace />;
     }
   }
 
@@ -139,15 +153,14 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
   // generic section renderer below when the theme_id isn't registered.
   const resolvedThemeId = String((themeData as any)?.theme_id ?? (themeData as any)?.name ?? '');
   const hasDedicatedTheme = resolvedThemeId in THEMES;
-  const isMasterTheme = resolvedThemeId.startsWith('theme-');
+  const isMasterTheme = resolvedThemeId.startsWith('theme-') || resolvedThemeId.startsWith('layout1-') || resolvedThemeId.startsWith('custom-theme-');
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
   const filtered = selectedCategory ? products.filter((p) => p.category === selectedCategory) : products;
-  const settings = (store.settings || {}) as any;
-  const seo = settings.seo || {};
-  const rawSections = Array.isArray(settings.homepage_sections) ? settings.homepage_sections : [];
-  const homepageSections = rawSections.length > 0 ? rawSections : generateDefaultSections(store.name, store.category);
+  const seo = storefrontConfig.seo || {};
+  const rawSections = Array.isArray(storefrontConfig.homepage_sections) ? storefrontConfig.homepage_sections : [];
+  const homepageSections = rawSections.length > 0 ? rawSections : generateDefaultSections(branding.name, branding.category);
   const bannerCarouselSections = homepageSections.filter((section: any) => section.type === 'banner_carousel');
-  const footerConfig: FooterConfig = { ...DEFAULT_FOOTER, ...(settings.footer || {}) };
+  const footerConfig: FooterConfig = { ...DEFAULT_FOOTER, ...(storefrontConfig.footer || {}) };
   const showCategoryFilters = categories.length > 0 && !homepageSections.some((section: any) => section.type === 'category_grid');
 
   const renderSection = (section: any, index: number) => {
@@ -161,7 +174,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
     );
     switch (section.type) {
       case 'hero':
-        const heroImage = section.image || store.banner_url;
+        const heroImage = section.image || branding.banner_url;
         const heroImages = section.isSlider && section.images?.length ? section.images : (heroImage ? [heroImage] : []);
         const isSlider = section.isSlider && heroImages.length > 1;
         const sizeMode = section.height || 'medium';
@@ -257,7 +270,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
             <h2 className="text-lg md:text-xl font-bold mb-4" style={{ fontFamily: fonts.heading }}>{section.title || 'Featured Products'}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {products.slice(0, 8).map((product) => (
-                <Link key={product.id} to={`/store/${slug}/product/${product.id}`} className="group overflow-hidden transition-all hover:shadow-lg" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
+                <Link key={product.id} to={`/store/${slug}/product/${product.id}${previewThemeId ? `/${previewThemeId}` : ''}`} className="group overflow-hidden transition-all hover:shadow-lg" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
                   <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>
                     {product.images?.[0] ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No image</div>}
                     {(product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0) && (
@@ -267,7 +280,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
                   <div className="p-2.5">
                     <h3 className="text-xs font-semibold truncate">{product.title}</h3>
                     <span className="text-xs font-bold" style={{ color: colors.primary }}>₹{Number(product.price).toLocaleString('en-IN')}</span>
-                    <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
+                    <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}${previewThemeId ? `/${previewThemeId}` : ''}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
                   </div>
                 </Link>
               ))}
@@ -406,10 +419,214 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
             {section.announcementText || section.title || '🎉 Free shipping on orders above ₹999!'}
           </div>
         );
+      case 'video_banner':
+        const videoUrl = section.videoUrl || '';
+        const videoHeight = section.height === 'large' ? 'h-[500px]' : section.height === 'small' ? 'h-[250px]' : 'h-[380px]';
+        return wrapAnimated(
+          <section className={`relative overflow-hidden w-full ${videoHeight}`} style={{ marginTop: section.topMargin ? `${section.topMargin}px` : '0px' }}>
+            {videoUrl ? (
+              <video src={videoUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-slate-900 flex items-center justify-center text-xs opacity-50">No video URL provided</div>
+            )}
+            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-center p-4">
+              {section.title && <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-3" style={{ fontFamily: fonts.heading }}>{section.title}</h2>}
+              {section.subtitle && <p className="text-sm md:text-base text-white/80 max-w-md mb-6">{section.subtitle}</p>}
+              {section.buttonText && (
+                <a href={section.buttonLink || '#products'} className="px-6 py-2.5 text-sm font-bold text-white transition-transform hover:scale-105" style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius}px` }}>
+                  {section.buttonText}
+                </a>
+              )}
+            </div>
+          </section>
+        );
+      case 'faq':
+        const faqItems = section.items?.length ? section.items : [
+          { q: 'What is your return policy?', a: 'We offer a 7-day hassle-free return policy for all unused items.' },
+          { q: 'How long does shipping take?', a: 'Standard shipping takes 3-5 business days. Express shipping takes 1-2 business days.' },
+          { q: 'Do you ship internationally?', a: 'Currently we only ship within India. International shipping will be coming soon!' }
+        ];
+        return wrapAnimated(
+          <section className="max-w-4xl mx-auto px-4 py-12">
+            <h2 className="text-xl md:text-2xl font-bold mb-6 text-center" style={{ fontFamily: fonts.heading }}>{section.title || 'Frequently Asked Questions'}</h2>
+            <div className="space-y-3">
+              {faqItems.map((item: any, idx: number) => (
+                <details key={idx} className="group border p-4 transition-all duration-300" style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px`, backgroundColor: colors.card }}>
+                  <summary className="flex justify-between items-center font-semibold text-sm cursor-pointer list-none select-none">
+                    <span>{item.q}</span>
+                    <span className="transition group-open:rotate-180">▼</span>
+                  </summary>
+                  <p className="mt-3 text-xs leading-relaxed opacity-70 border-t pt-3" style={{ borderColor: colors.secondary }}>{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        );
+      case 'blog_posts':
+        const defaultPosts = [
+          { title: 'Summer Style Guide: What to Wear This Season', date: 'July 15, 2026', excerpt: 'Discover the hottest trends and wardrobe essentials to keep you looking cool all summer long.', image: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400' },
+          { title: 'The Art of Layering: A Guide for Fashion Enthusiasts', date: 'June 28, 2026', excerpt: 'Learn how to combine different textures, lengths, and colors to create beautiful layered looks.', image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400' }
+        ];
+        const posts = section.posts?.length ? section.posts : defaultPosts;
+        return wrapAnimated(
+          <section className="max-w-6xl mx-auto px-4 py-12">
+            <h2 className="text-xl md:text-2xl font-bold mb-8 text-center" style={{ fontFamily: fonts.heading }}>{section.title || 'From Our Blog'}</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {posts.map((post: any, idx: number) => (
+                <article key={idx} className="overflow-hidden border flex flex-col h-full" style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px`, backgroundColor: colors.card }}>
+                  <img src={post.image} alt={post.title} className="h-48 w-full object-cover" />
+                  <div className="p-5 flex flex-col justify-between flex-1">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider opacity-50">{post.date}</span>
+                      <h3 className="text-base font-bold mt-1.5 mb-2 line-clamp-2" style={{ fontFamily: fonts.heading }}>{post.title}</h3>
+                      <p className="text-xs opacity-70 mb-4 line-clamp-3 leading-relaxed">{post.excerpt}</p>
+                    </div>
+                    <Link to={`/store/${slug}/blog`} className="text-xs font-bold inline-block hover:opacity-80" style={{ color: colors.primary }}>Read Article →</Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        );
+      case 'map_and_contact':
+        return wrapAnimated(
+          <section className="max-w-6xl mx-auto px-4 py-12">
+            <div className="grid md:grid-cols-2 gap-8 items-center" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
+              <div className="p-6 md:p-8 space-y-4">
+                <h2 className="text-xl font-bold" style={{ fontFamily: fonts.heading }}>{section.title || 'Visit Our Store'}</h2>
+                {section.subtitle && <p className="text-xs opacity-70">{section.subtitle}</p>}
+                <div className="space-y-3 text-xs leading-relaxed">
+                  <div className="flex gap-2">
+                    <span>📍</span>
+                    <div>
+                      <p className="font-semibold">Address</p>
+                      <p className="opacity-70">{section.address || '123 Luxury Lane, Phase 1, New Delhi - 110001'}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <span>⏰</span>
+                    <div>
+                      <p className="font-semibold">Store Hours</p>
+                      <p className="opacity-70">{section.hours || 'Mon - Sun: 11:00 AM - 9:00 PM'}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <span>📞</span>
+                    <div>
+                      <p className="font-semibold">Phone</p>
+                      <p className="opacity-70">{section.phone || '+91 98765 43210'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="h-64 md:h-full min-h-[300px] w-full relative overflow-hidden" style={{ borderRadius: `0 ${borderRadius}px ${borderRadius}px 0` }}>
+                <iframe
+                  title="Store Location"
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  style={{ border: 0, filter: 'grayscale(0.3)' }}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(section.address || '123 Luxury Lane, New Delhi')}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </section>
+        );
+      case 'stats_counter':
+        const stats = section.stats?.length ? section.stats : [
+          { number: '10k+', label: 'Happy Customers' },
+          { number: '15+', label: 'Cities Covered' },
+          { number: '4.8★', label: 'Average Rating' },
+          { number: '100%', label: 'Quality Guarantee' }
+        ];
+        return wrapAnimated(
+          <section className="py-10 px-4" style={{ backgroundColor: colors.secondary }}>
+            <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+              {stats.map((s: any, idx: number) => (
+                <div key={idx} className="p-4 rounded-lg" style={{ backgroundColor: colors.card, border: `1px solid ${colors.secondary}` }}>
+                  <p className="text-2xl md:text-3xl font-extrabold" style={{ color: colors.primary, fontFamily: fonts.heading }}>{s.number}</p>
+                  <p className="text-[10px] md:text-xs uppercase tracking-wider opacity-60 mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      case 'featured_collection_carousel':
+        return wrapAnimated(
+          <section className="max-w-6xl mx-auto px-4 py-8">
+            <h2 className="text-lg md:text-xl font-bold mb-4" style={{ fontFamily: fonts.heading }}>{section.title || 'Trending Items'}</h2>
+            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-none">
+              {products.slice(0, 10).map((product) => (
+                <Link 
+                  key={product.id} 
+                  to={`/store/${slug}/product/${product.id}${previewThemeId ? `/${previewThemeId}` : ''}`} 
+                  className="min-w-[200px] md:min-w-[240px] snap-center group overflow-hidden transition-all hover:shadow-lg active:scale-[0.98] shrink-0" 
+                  style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}
+                >
+                  <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>
+                    {product.images?.[0] ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No image</div>}
+                  </div>
+                  <div className="p-3">
+                    <h3 className="text-xs font-semibold truncate">{product.title}</h3>
+                    <span className="text-xs font-bold" style={{ color: colors.primary }}>₹{Number(product.price).toLocaleString('en-IN')}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        );
+      case 'scrolling_announcement':
+        const messages = section.messages?.length ? section.messages : [
+          '⚡ GET 15% OFF WITH CODE AURORA15',
+          '🚚 FREE EXPRESS SHIPPING ON ALL ORDERS',
+          '🎁 FESTIVE PREMIUM GIFT WRAPPING AVAILABLE',
+          '✨ 100% BUYER SATISFACTION GUARANTEED'
+        ];
+        return wrapAnimated(
+          <div className="py-2.5 overflow-hidden flex whitespace-nowrap border-y select-none" style={{ backgroundColor: colors.primary, color: '#fff', borderColor: colors.secondary }}>
+            <div className="animate-marquee flex gap-12 text-xs font-bold uppercase tracking-widest">
+              {[...messages, ...messages].map((msg: string, idx: number) => (
+                <span key={idx} className="mx-4">{msg}</span>
+              ))}
+            </div>
+          </div>
+        );
+      case 'hero_video_split':
+        const videoSplitUrl = section.videoUrl || '';
+        return wrapAnimated(
+          <section className="max-w-6xl mx-auto px-4 py-8">
+            <div className="grid md:grid-cols-2 gap-8 items-center rounded-2xl overflow-hidden" style={{ border: `1px solid ${colors.secondary}`, backgroundColor: colors.card }}>
+              <div className="h-96 w-full relative">
+                {videoSplitUrl ? (
+                  <video src={videoSplitUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 bg-slate-900 flex items-center justify-center text-xs opacity-50">No video URL provided</div>
+                )}
+              </div>
+              <div className="p-8 space-y-6">
+                {section.badge && <span className="inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: colors.secondary, color: colors.primary, borderRadius: `${borderRadius / 2}px` }}>{section.badge}</span>}
+                <h2 className="text-3xl font-extrabold leading-tight" style={{ fontFamily: fonts.heading }}>{section.title || 'Experience Luxury'}</h2>
+                <p className="text-sm opacity-70 leading-relaxed">{section.subtitle || 'Immerse yourself in our brand story and explore items created with high craftsmanship.'}</p>
+                <div className="flex gap-4">
+                  <a href={section.buttonLink || '#products'} className="px-6 py-2.5 text-xs font-bold text-white transition-transform hover:scale-105" style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius}px` }}>
+                    {section.buttonText || 'Discover More'}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
       default:
         return null;
     }
   };
+
+  // Layout1 themes (special handling - embedded themes, not from database)
+  // const isLayout1Theme = resolvedThemeId.startsWith('layout1-');
+  // if (isLayout1Theme) {
+  //   return <Layout1ThemeView slug={slug || ''} themeId={resolvedThemeId} seo={seo} store={store} products={products} page={page} />;
+  // }
 
   // Master theme (AI-generated) — render manifest with Customise overrides applied.
   if (isMasterTheme) {
@@ -424,7 +641,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
   // Classic theme: simple Collections page fallback
   if (page === 'collections' || page === 'collection_detail') {
     return (
-      <StorefrontLayout store={store} products={products} footerConfig={footerConfig}>
+      <StorefrontLayout store={store} products={products} footerConfig={footerConfig} themeOverride={themeData}>
         <SEOHead title={`Collections · ${store.name}`} description={store.description || `Shop collections at ${store.name}`} url={`${window.location.origin}/store/${slug}/collections`} />
         <ClassicCollections slug={slug || ''} storeId={store.id} colors={colors} fonts={fonts} borderRadius={borderRadius} />
       </StorefrontLayout>
@@ -433,7 +650,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
 
 
   return (
-    <StorefrontLayout store={store} products={products} footerConfig={footerConfig}>
+    <StorefrontLayout store={store} products={products} footerConfig={footerConfig} themeOverride={themeData}>
       <SEOHead title={seo.meta_title || store.name} description={seo.meta_description || store.description || `Shop at ${store.name}`} ogImage={seo.og_image || store.banner_url || undefined} url={`${window.location.origin}/store/${slug}`} />
 
       {homepageSections.map(renderSection)}
@@ -485,7 +702,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
             {filtered.map((product) => (
-              <Link key={product.id} to={`/store/${slug}/product/${product.id}`} className="group overflow-hidden transition-all hover:shadow-lg active:scale-[0.98]" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
+              <Link key={product.id} to={`/store/${slug}/product/${product.id}${previewThemeId ? `/${previewThemeId}` : ''}`} className="group overflow-hidden transition-all hover:shadow-lg active:scale-[0.98]" style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
                 <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>
                   {product.images?.[0] ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No image</div>}
                   {(product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0) && (
@@ -503,7 +720,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
                     <span className="text-xs md:text-sm font-bold" style={{ color: colors.primary }}>₹{Number(product.price).toLocaleString('en-IN')}</span>
                     {product.compare_at_price && product.compare_at_price > product.price && <span className="text-[10px] md:text-xs line-through opacity-40">₹{Number(product.compare_at_price).toLocaleString('en-IN')}</span>}
                   </div>
-                  <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
+                  <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}${previewThemeId ? `/${previewThemeId}` : ''}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
                   <ProductCardActions storeSlug={slug!} product={product} primaryColor={colors.primary} primaryFg="#fff" borderRadius={borderRadius} />
 
                 </div>
@@ -539,12 +756,284 @@ const DedicatedThemeView = ({ slug, themeId, seo, store }: { slug: string; theme
 };
 
 /**
+ * Renders Layout1 themes (layout1-noir-atelier, layout1-neon-drip, etc.)
+ * These are embedded themes that don't need database manifest lookup.
+ */
+const Layout1ThemeView = ({ slug, themeId, seo, store, products, page = 'home' }: { slug: string; themeId: string; seo: any; store: any; products: any[]; page?: string }) => {
+  // Theme configuration from our Layout1 system
+  const L1_THEMES: Record<string, any> = {
+    "layout1-noir-atelier": {
+      accent: "#c9a96e", bg: "#0d0d0d", surface: "#1a1a1a", 
+      textPrimary: "#f5f0eb", textMuted: "#888", border: "#2a2a2a",
+      label: "Noir Atelier", ff: "Georgia,serif", sub: "1.1"
+    },
+    "layout1-ivory-luxe": {
+      accent: "#8b6914", bg: "#faf8f4", surface: "#f0ece4",
+      textPrimary: "#1a1612", textMuted: "#8a7f72", border: "#e8e0d4",
+      label: "Ivory Luxe", ff: "Georgia,serif", sub: "1.1"
+    },
+    "layout1-neon-drip": {
+      accent: "#ff3d6b", bg: "#0f0f1a", surface: "#1a1a2e",
+      textPrimary: "#f8fafc", textMuted: "#94a3b8", border: "#1e1e35",
+      label: "Neon Drip", ff: "system-ui", sub: "1.2"
+    },
+  };
+
+  const theme = L1_THEMES[themeId];
+  if (!theme) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold">Theme not found</h2>
+          <p className="text-sm text-muted-foreground">Layout1 theme {themeId} is not available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const NavComponent = theme.sub === "1.1" ? Layout1Nav1 : Layout1Nav2;
+  
+  return (
+    <div style={{ backgroundColor: theme.bg, color: theme.textPrimary, minHeight: "100vh", fontFamily: "system-ui" }}>
+      <SEOHead
+        title={seo.meta_title || store.name}
+        description={seo.meta_description || store.description || `Shop at ${store.name}`}
+        ogImage={seo.og_image || store.banner_url || undefined}
+        url={`${window.location.origin}/store/${slug}${page !== 'home' ? '/' + page : ''}`}
+      />
+      
+      <NavComponent theme={theme} storeName={store.name} />
+      
+      <div style={{ padding: 20, textAlign: "center" }}>
+        <h1 style={{ fontFamily: theme.ff, fontSize: 32, fontWeight: 900, color: theme.textPrimary, marginBottom: 16 }}>
+          Welcome to {store.name}
+        </h1>
+        <p style={{ fontSize: 14, color: theme.textMuted, marginBottom: 20 }}>
+          {store.description || `Discover amazing products at ${store.name}`}
+        </p>
+        
+        {/* Product Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, maxWidth: 1200, margin: "0 auto" }}>
+          {products.slice(0, 8).map(product => (
+            <Layout1ProductCard key={product.id} product={product} theme={theme} storeSlug={slug} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Layout1 Navigation Components
+const Layout1Nav1 = ({ theme, storeName }: any) => (
+  <>
+    <div style={{ backgroundColor: theme.accent, color: "#fff", textAlign: "center", padding: "7px 16px", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+      Free Shipping above ₹999 | New Collection Live
+    </div>
+    <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 32px", borderBottom: "1px solid " + theme.border, backgroundColor: theme.surface, position: "sticky", top: 0, zIndex: 50 }}>
+      <div style={{ fontFamily: theme.ff, fontWeight: 900, fontSize: 17, letterSpacing: "0.25em", textTransform: "uppercase", color: theme.textPrimary }}>
+        {storeName}
+      </div>
+      <div style={{ display: "flex", gap: 28 }}>
+        {["New In", "Shop", "About", "Contact"].map((link, i) => (
+          <span key={link} style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: i === 0 ? theme.accent : theme.textMuted, cursor: "pointer" }}>
+            {link}
+          </span>
+        ))}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <Search size={16} color={theme.textMuted} style={{ cursor: "pointer" }} />
+        <Heart size={16} color={theme.textMuted} style={{ cursor: "pointer" }} />
+        <ShoppingBag size={18} color={theme.textPrimary} style={{ cursor: "pointer" }} />
+      </div>
+    </nav>
+  </>
+);
+
+const Layout1Nav2 = ({ theme, storeName }: any) => (
+  <nav style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid " + theme.border, backgroundColor: theme.bg, position: "sticky", top: 0, zIndex: 50 }}>
+    <Menu size={20} color={theme.textPrimary} style={{ cursor: "pointer", flexShrink: 0 }} />
+    <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 999, border: "1px solid " + theme.border, backgroundColor: theme.bg === "#0f0f1a" ? "#ffffff0a" : "#00000008" }}>
+      <Search size={13} color={theme.textMuted} />
+      <span style={{ fontSize: 12, color: theme.textMuted }}>Search products...</span>
+    </div>
+    <div style={{ fontSize: 16, fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.02em", flexShrink: 0, color: theme.textPrimary }}>
+      {storeName}<span style={{ color: theme.accent }}>.</span>
+    </div>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 999, backgroundColor: theme.accent, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+      <ShoppingCart size={13} />Cart
+    </div>
+  </nav>
+);
+
+// Layout1 Product Card Component  
+const Layout1ProductCard = ({ product, theme, storeSlug }: any) => (
+  <div 
+    onClick={() => {
+      const pTheme = localStorage.getItem('storefront_preview_theme');
+      window.location.href = `/store/${storeSlug}/product/${product.id}${pTheme ? `/${pTheme}` : ''}`;
+    }}
+    style={{ 
+      borderRadius: 10, overflow: "hidden", backgroundColor: theme.surface, 
+      border: "1px solid " + theme.border, cursor: "pointer", 
+      transition: "transform .2s" 
+    }}
+    onMouseEnter={(e: any) => e.currentTarget.style.transform = "translateY(-3px)"}
+    onMouseLeave={(e: any) => e.currentTarget.style.transform = "none"}
+  >
+    <div style={{ position: "relative", height: 200 }}>
+      <img 
+        src={product.images?.[0] || '/api/placeholder/200/200'} 
+        alt={product.name} 
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
+      <button 
+        onClick={(e: any) => e.stopPropagation()} 
+        style={{ 
+          position: "absolute", top: 8, right: 8, background: theme.surface + "ee", 
+          border: "none", borderRadius: "50%", width: 28, height: 28, 
+          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" 
+        }}
+      >
+        <Heart size={13} color={theme.accent} />
+      </button>
+    </div>
+    <div style={{ padding: "10px 12px 12px" }}>
+      <p style={{ fontFamily: theme.ff, fontSize: 12, fontWeight: 600, color: theme.textPrimary, marginBottom: 4 }}>
+        {product.title || product.name}
+      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: theme.accent }}>
+          ₹{product.price?.toLocaleString("en-IN") || 'N/A'}
+        </p>
+        <div style={{ display: "flex", gap: 1 }}>
+          {[1, 2, 3, 4, 5].map(s => (
+            <Star key={s} size={10} style={{ fill: s <= 4 ? "#f59e0b" : "transparent", color: "#f59e0b" }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+/**
  * Renders an AI-generated master theme (theme-xxxxxx). Pulls manifest from
  * theme_master_versions and overlays per-section edits from
  * store.settings.theme_overrides.
  */
 const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }: { slug: string; themeId: string; seo: any; store: any; products: any[]; page?: string }) => {
-  const { data: manifest, isLoading } = useThemeManifest(themeId);
+  const searchParams = new URLSearchParams(window.location.search);
+  const previewCustom = searchParams.get('preview_custom') === '1';
+
+  const isCustom = themeId.startsWith('custom-theme-');
+  // custom-theme- IDs are stored in theme_master_versions just like theme-style- IDs.
+  // Only skip the DB fetch when in preview_custom mode (which uses a base theme for layout).
+  const queryThemeId = previewCustom ? 'theme-style-1' : themeId;
+  const { data: dbManifest, isLoading: manifestLoading } = useThemeManifest(queryThemeId);
+
+  const manifest = useMemo(() => {
+    if (previewCustom && dbManifest) {
+      const nav = searchParams.get('nav') || 'classic';
+      const footer = searchParams.get('footer') || 'classic';
+      const sectionsRaw = searchParams.get('sections') || 'hero:centered,category:grid_4,product:grid_clean,promo:classic_split';
+      
+      const parsedSections = sectionsRaw.split(',').filter(Boolean).map(item => {
+        const [id, style] = item.split(':');
+        return { id, style };
+      });
+      
+      const cleanUspStyle = (val: string) => {
+        if (val.includes("classic")) return "classic";
+        if (val.includes("minimal_center")) return "minimal_center";
+        if (val.includes("left_border")) return "left_border_columns";
+        if (val.includes("card")) return "card_style";
+        if (val.includes("compact")) return "compact_banner";
+        if (val.includes("accent")) return "accent_row";
+        return "classic";
+      };
+
+      const copy = JSON.parse(JSON.stringify(dbManifest));
+      copy.header_style = nav;
+      copy.footer_style = footer;
+
+      const p_primary = searchParams.get('palette_primary');
+      const p_accent = searchParams.get('palette_accent');
+      const p_bg = searchParams.get('palette_bg');
+      const p_fg = searchParams.get('palette_fg');
+      const p_navbar_bg = searchParams.get('palette_navbar_bg');
+      const f_heading = searchParams.get('font_heading');
+      const f_body = searchParams.get('font_body');
+
+      if (p_primary || p_accent || p_bg || p_fg || p_navbar_bg || f_heading || f_body) {
+        copy.dna = copy.dna || {};
+        copy.dna.palette = { ...copy.dna.palette };
+        copy.dna.fonts = { ...copy.dna.fonts };
+        
+        if (p_primary) copy.dna.palette.primary = p_primary;
+        if (p_accent) copy.dna.palette.accent = p_accent;
+        if (p_bg) copy.dna.palette.bg = p_bg;
+        if (p_fg) copy.dna.palette.fg = p_fg;
+        if (p_navbar_bg) copy.dna.palette.navbar_bg = p_navbar_bg;
+        if (f_heading) copy.dna.fonts.heading = f_heading;
+        if (f_body) copy.dna.fonts.body = f_body;
+      }
+      
+      if (copy.pages?.home?.sections) {
+        const baseSections = copy.pages.home.sections || [];
+        copy.pages.home.sections = parsedSections.map((s: any) => {
+          let matchType = s.id;
+          if (s.id === 'product') matchType = 'product_grid';
+          if (s.id === 'category') matchType = 'category_grid';
+          if (s.id === 'promo') matchType = 'promo_banner';
+          if (s.id === 'usp_strip') matchType = 'usp_strip';
+          if (s.id === 'new_arrivals') matchType = 'new_arrivals';
+
+          let match = baseSections.find((b: any) => b.type === matchType);
+          
+          if (!match) {
+            if (matchType === 'new_arrivals') {
+              const pGrid = baseSections.find((b: any) => b.type === 'product_grid');
+              if (pGrid) {
+                match = JSON.parse(JSON.stringify(pGrid));
+                match.type = 'new_arrivals';
+              }
+            } else if (matchType === 'usp_strip') {
+              match = {
+                type: 'usp_strip',
+                props: {
+                  title: 'Why Shop With Us',
+                  items: [
+                    { icon: 'Shield', title: 'Secured Checkout', sub: 'SSL Certified Payment Methods' },
+                    { icon: 'Truck', title: 'Free Global Shipping', sub: 'On orders over $50' },
+                    { icon: 'RefreshCw', title: 'Easy returns', sub: '30-day refund window policy' }
+                  ]
+                }
+              };
+            }
+          }
+
+          if (match) {
+            const cloned = JSON.parse(JSON.stringify(match));
+            cloned.props = cloned.props || {};
+            cloned.props.style = s.id === 'usp_strip' ? cleanUspStyle(s.style) : s.style;
+            return cloned;
+          }
+
+          return {
+            type: matchType,
+            props: {
+              style: s.id === 'usp_strip' ? cleanUspStyle(s.style) : s.style
+            }
+          };
+        });
+      }
+      return copy;
+    }
+    // Both theme-style- and custom-theme- manifests now come from dbManifest
+    // (queryThemeId is always set to themeId, never null).
+    return dbManifest ?? null;
+  }, [previewCustom, dbManifest, store, window.location.search]);
+
+  const isLoading = manifestLoading;
   const { data: sellerCategories = [] } = useQuery({
     queryKey: ['storefront-categories-full', store?.id],
     queryFn: async () => {
@@ -577,26 +1066,29 @@ const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }:
       </div>
     );
   }
-  const overrides = (store.settings as any)?.theme_overrides || {};
-  const headerLogo = overrides?.header?.logo_url ?? overrides?.logo_url ?? store.logo_url ?? "";
+  const branding = getStoreBranding(store);
+  const storefrontConfig = getStorefrontConfig(store) as any;
+  const overrides = storefrontConfig?.theme_overrides || {};
+  const headerLogo = overrides?.header?.logo_url ?? overrides?.logo_url ?? branding.logo_url ?? "";
   return (
     <>
       <SEOHead
-        title={seo.meta_title || store.name}
-        description={seo.meta_description || store.description || `Shop at ${store.name}`}
-        ogImage={seo.og_image || store.banner_url || undefined}
+        title={seo.meta_title || branding.name}
+        description={seo.meta_description || store.description || `Shop at ${branding.name}`}
+        ogImage={seo.og_image || branding.banner_url || undefined}
         url={`${window.location.origin}/store/${slug}${page !== 'home' ? '/' + page : ''}`}
       />
       {/* Customer-facing promotional ticker — also visible on master-theme storefronts */}
-      <PromoTicker storeSlug={slug} config={(store.settings as any)?.promo_ticker} />
+      <PromoTicker storeSlug={slug} config={storefrontConfig?.promo_ticker} />
       {/* Owner-only premium-theme free-trial countdown */}
-      <PremiumTrialTicker storeId={store.id} storeUserId={(store as any).user_id} settings={store.settings} />
+      <PremiumTrialTicker storeId={store.id} storeUserId={store.user_id} settings={storefrontConfig} />
       <MasterThemeRenderer
         manifest={manifest}
         page={page}
         overrides={{
           ...overrides,
-          brand_name: overrides?.brand_name || store.name,
+          category: branding.category,
+          brand_name: overrides?.brand_name || branding.name,
           header: { ...(overrides?.header || {}), logo_url: headerLogo },
         }}
         storeSlug={slug}
@@ -674,10 +1166,10 @@ const CustomHomePage = ({ store, themeData }: { store: any; themeData: any }) =>
   });
   const theme = resolveTheme(themeData);
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-  if (!page) return <StorefrontLayout store={store}><div className="py-24 text-center text-sm text-muted-foreground">Home page is being prepared.</div></StorefrontLayout>;
+  if (!page) return <StorefrontLayout store={store} themeOverride={themeData}><div className="py-24 text-center text-sm text-muted-foreground">Home page is being prepared.</div></StorefrontLayout>;
   const seo = page.seo || {};
   return (
-    <StorefrontLayout store={store}>
+    <StorefrontLayout store={store} themeOverride={themeData}>
       <SEOHead
         title={seo.meta_title || store.name}
         description={seo.meta_description || page.description || store.description || ''}

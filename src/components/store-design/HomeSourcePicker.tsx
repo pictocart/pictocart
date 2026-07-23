@@ -9,6 +9,7 @@ import { useCustomPages } from "@/hooks/useCustomPages";
 import { useProducts } from "@/hooks/useProducts";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { buildResolvedStorefrontManifest } from "@/lib/storefrontManifest";
 
 type Kind = "default" | "shop" | "collections" | "product" | "custom";
 
@@ -45,9 +46,12 @@ export default function HomeSourcePicker({ store, onStoreUpdated }: { store: any
       home_page_id: homeKind === "custom" ? homePageId : null,
       home_page_product_id: homeKind === "product" ? homeProductId : null,
     };
-    const { error } = await (supabase as any).from("stores").update(patch).eq("id", storeId);
+    // Keep the resolved manifest snapshot's home_page in sync so any reader
+    // that prefers the resolved manifest still sees the latest choice.
+    const resolved_storefront_manifest = await buildResolvedStorefrontManifest({ ...store, ...patch } as any);
+    const { error } = await (supabase as any).from("stores").update({ ...patch, resolved_storefront_manifest }).eq("id", storeId);
     if (error) toast.error(error.message);
-    else { toast.success("Home page updated"); onStoreUpdated?.(patch); }
+    else { toast.success("Home page updated"); onStoreUpdated?.({ ...patch, resolved_storefront_manifest }); }
     setSaving(false);
   };
 

@@ -27,6 +27,7 @@ const ShippingSettings = () => {
   const [pickup, setPickup] = useState<PickupAddress>(emptyPickup);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [cutoffTime, setCutoffTime] = useState('17:00');
 
   const [srEmail, setSrEmail] = useState('');
   const [srPassword, setSrPassword] = useState('');
@@ -45,6 +46,7 @@ const ShippingSettings = () => {
       const s = (store.settings as any)?.shipping;
       if (s?.pickup) setPickup({ ...emptyPickup, ...s.pickup });
       if (s?.shiprocket_pickup_name) setSrPickupName(s.shiprocket_pickup_name);
+      if (s?.same_day_cutoff) setCutoffTime(s.same_day_cutoff);
       const { data } = await supabase
         .from('store_secrets' as any)
         .select('shiprocket_email, shiprocket_password')
@@ -71,10 +73,12 @@ const ShippingSettings = () => {
     const settings = {
       ...((store.settings as any) || {}),
       shipping: {
+        ...(store.settings?.shipping || {}),
         configured: !!(srEmail && srPassword),
         pickup,
         shiprocket_pickup_name: srPickupName,
         preferred_courier: 'shiprocket',
+        same_day_cutoff: cutoffTime,
       },
     };
     const { error } = await supabase.from('stores').update({ settings }).eq('id', store.id);
@@ -553,6 +557,39 @@ const ShippingSettings = () => {
                 Case-sensitive. Default is <span className="font-mono">Primary</span>.
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Same-day Dispatch Cut-off Time */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Settings2 className="h-4 w-4" /> Same-day Dispatch Cut-off Time
+          </CardTitle>
+          <CardDescription>
+            Specify the daily cut-off time for same-day dispatch. Orders placed before this time will show as "dispatching today" on the product detail page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-xs space-y-2">
+            <Label>Daily Cut-off Time</Label>
+            <Input
+              type="time"
+              value={cutoffTime}
+              onChange={(e) => setCutoffTime(e.target.value)}
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Current setting: {cutoffTime ? (
+                (() => {
+                  const [hour, minute] = cutoffTime.split(':').map(Number);
+                  const period = hour >= 12 ? 'PM' : 'AM';
+                  const displayHour = hour % 12 || 12;
+                  return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
+                })()
+              ) : 'Not set (Default: 5:00 PM)'}
+            </p>
           </div>
         </CardContent>
       </Card>

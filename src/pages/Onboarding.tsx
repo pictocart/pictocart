@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/hooks/useStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, SkipForward, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { THEME_TEMPLATES } from '@/lib/themes';
 import { getReferralCode, clearReferralCookie } from '@/lib/referralCookie';
+import { getStoreThemeId, getStoreThemeTokens } from '@/lib/storefrontManifest';
 import PicToCartLogo from '@/components/PicToCartLogo';
 
 import StepStoreName from '@/components/onboarding/StepStoreName';
@@ -53,6 +55,11 @@ export interface OnboardingData {
   emailTemplatesGenerated: boolean;
   slugAvailable: boolean;
   fssaiNumber?: string;
+  customThemeConfig?: {
+    nav: string;
+    footer: string;
+    sections: Array<{ id: string; enabled: boolean; style: string }>;
+  };
 }
 
 const defaultData: OnboardingData = {
@@ -70,12 +77,14 @@ const defaultData: OnboardingData = {
   emailTemplatesGenerated: false,
   slugAvailable: false,
   fssaiNumber: '',
+  customThemeConfig: undefined,
 };
 
 const Onboarding = () => {
   const { user } = useAuth();
   const { store, setStore } = useStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(defaultData);
   const [saving, setSaving] = useState(false);
@@ -89,43 +98,37 @@ const Onboarding = () => {
     if (hasResumed.current || !store) return;
     hasResumed.current = true;
     if (store.onboarding_step !== null && store.onboarding_step < TOTAL_STEPS) {
-      // Resume to saved step, but never skip past a step whose data is missing.
       // Without this guard, a stale onboarding_step can land users on Theme
-      // even though they never picked a Category.
+      // selection when they reload while already fully signed up.
       let resumeStep = store.onboarding_step + 1;
-      if (!store.category && resumeStep > 2) resumeStep = 2;
-      if (!store.name && resumeStep > 1) resumeStep = 1;
+      // boundary check
+      if (resumeStep > TOTAL_STEPS) resumeStep = TOTAL_STEPS;
       setCurrentStep(resumeStep);
-      setData((d) => ({
+      
+      // Seed data with loaded store values
+      setData(d => ({
         ...d,
         storeName: store.name || '',
         slug: store.slug || '',
-        category: store.category || '',
         description: store.description || '',
+        category: store.category || '',
         logoUrl: store.logo_url || '',
-        selectedThemeId: (store.theme as any)?.theme_id || (store.theme as any)?.name || '',
+        selectedThemeId: getStoreThemeId(store),
       }));
     } else if (store.onboarding_step !== null && store.onboarding_step >= TOTAL_STEPS) {
       navigate('/dashboard', { replace: true });
     }
-  }, [store]);
+  }, [store, navigate]);
 
   const progress = (currentStep / TOTAL_STEPS) * 100;
 
   const saveStep = async (step: number) => {
     if (!user) return;
-    // Prevent the resume effect from re-firing when setStore() updates state
-    // mid-save and racing with goNext's setCurrentStep.
-    hasResumed.current = true;
     setSaving(true);
     try {
-      const selectedTemplate = THEME_TEMPLATES.find((t) => t.id === data.selectedThemeId);
-      const isMaster = data.selectedThemeId?.startsWith('theme-') || data.selectedThemeId?.startsWith('layout1-');
-      const themeData: any = isMaster
-        ? { theme_id: data.selectedThemeId, name: data.selectedThemeId, manifest_ref: data.selectedThemeId }
-        : selectedTemplate
-        ? { theme_id: selectedTemplate.id, name: selectedTemplate.id, primary_color: selectedTemplate.colors.primary, ...selectedTemplate.colors, fonts: selectedTemplate.fonts }
-        : { theme_id: 'minimal-light', name: 'minimal-light', primary_color: '#F97316' };
+      const themeData = data.selectedThemeId
+        ? { theme_id: data.selectedThemeId }
+        : (getStoreThemeTokens(store) || THEME_TEMPLATES[0]);
 
       if (!store) {
         const refCode = getReferralCode();
@@ -153,6 +156,7 @@ const Onboarding = () => {
           .single();
         if (!error && newStore) {
           setStore(newStore as any);
+          queryClient.invalidateQueries({ queryKey: ['storefront', newStore.slug] });
           // Create referral record (best-effort, non-blocking)
           if (refCode) {
             const { data: partner } = await supabase
@@ -193,7 +197,10 @@ const Onboarding = () => {
           .eq('id', store.id)
           .select()
           .single();
-        if (!error && updated) setStore(updated as any);
+        if (!error && updated) {
+          setStore(updated as any);
+          queryClient.invalidateQueries({ queryKey: ['storefront', updated.slug] });
+        }
       }
     } catch (e) {
       console.error('Save step error:', e);
@@ -250,10 +257,142 @@ const Onboarding = () => {
       case 4: return <StepGoLive data={data} store={store} onFinish={async () => {
         await saveStep(TOTAL_STEPS);
         if (store) {
+          let isPremiumMaster = false;
           // If a master theme (theme-xxxx) was chosen, seed its manifest into
           // store.theme + theme_overrides so the customiser has defaults to edit.
-          let isPremiumMaster = false;
-          if (data.selectedThemeId?.startsWith('theme-')) {
+          if (data.selectedThemeId?.startsWith('custom-theme-') && data.customThemeConfig) {
+            try {
+              const cfg = data.customThemeConfig;
+              const { data: ver } = await supabase
+                .from('theme_master_versions')
+                .select('files_manifest, version')
+                .eq('theme_id', 'theme-style-1')
+                .order('version', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (ver?.files_manifest) {
+                const manifest = JSON.parse(JSON.stringify(ver.files_manifest));
+                const cleanUspStyle = (val: string) => {
+                  if (val.includes("classic")) return "classic";
+                  if (val.includes("minimal_center")) return "minimal_center";
+                  if (val.includes("left_border")) return "left_border_columns";
+                  if (val.includes("card")) return "card_style";
+                  if (val.includes("compact")) return "compact_banner";
+                  if (val.includes("accent")) return "accent_row";
+                  return "classic";
+                };
+
+                manifest.header_style = cfg.nav;
+                manifest.footer_style = cfg.footer;
+                if (manifest.pages?.home?.sections) {
+                  const baseSections = manifest.pages.home.sections || [];
+                  manifest.pages.home.sections = cfg.sections
+                    .filter((s: any) => s.enabled)
+                    .map((s: any) => {
+                      let matchType = s.id;
+                      if (s.id === 'product') matchType = 'product_grid';
+                      if (s.id === 'category') matchType = 'category_grid';
+                      if (s.id === 'promo') matchType = 'promo_banner';
+                      if (s.id === 'usp_strip') matchType = 'usp_strip';
+                      if (s.id === 'new_arrivals') matchType = 'new_arrivals';
+
+                      let match = baseSections.find((b: any) => b.type === matchType);
+                      
+                      if (!match) {
+                        if (matchType === 'new_arrivals') {
+                          const pGrid = baseSections.find((b: any) => b.type === 'product_grid');
+                          if (pGrid) {
+                            match = JSON.parse(JSON.stringify(pGrid));
+                            match.type = 'new_arrivals';
+                          }
+                        } else if (matchType === 'usp_strip') {
+                          match = {
+                            type: 'usp_strip',
+                            props: {
+                              title: 'Why Shop With Us',
+                              items: [
+                                { icon: 'Shield', title: 'Secured Checkout', sub: 'SSL Certified Payment Methods' },
+                                { icon: 'Truck', title: 'Free Global Shipping', sub: 'On orders over $50' },
+                                { icon: 'RefreshCw', title: 'Easy returns', sub: '30-day refund window policy' }
+                              ]
+                            }
+                          };
+                        }
+                      }
+
+                      if (match) {
+                        const cloned = JSON.parse(JSON.stringify(match));
+                        cloned.props = cloned.props || {};
+                        cloned.props.style = s.id === 'usp_strip' ? cleanUspStyle(s.style) : s.style;
+                        return cloned;
+                      }
+
+                      return {
+                        type: matchType,
+                        props: {
+                          style: s.id === 'usp_strip' ? cleanUspStyle(s.style) : s.style
+                        }
+                      };
+                    });
+                }
+
+                const dna = manifest?.dna ?? {};
+                const palette = dna.palette ?? {};
+                const fonts = dna.fonts ?? {};
+                const home = manifest?.pages?.home?.sections ?? [];
+
+                const seedSections: Record<string, any> = {};
+                home.forEach((s: any, i: number) => {
+                  seedSections[i] = { ...(s.props ?? {}) };
+                });
+
+                const themeOverrides = {
+                  brand_name: store?.name ?? dna.name,
+                  logo_url:   store?.logo_url ?? null,
+                  palette:    { ...palette },
+                  fonts:      { ...fonts },
+                  sections:   seedSections,
+                };
+
+                const newTheme = {
+                  theme_id: data.selectedThemeId,
+                  name: 'Custom Theme',
+                  manifest_ref: data.selectedThemeId,
+                  version: ver.version,
+                  primary_color: palette.primary,
+                  colors: {
+                    primary: palette.primary,
+                    secondary: palette.surface,
+                    accent: palette.accent,
+                    background: palette.bg,
+                    text: palette.fg,
+                    card: palette.surface,
+                  },
+                  fonts: { heading: fonts.heading, body: fonts.body },
+                  manifest: manifest
+                };
+
+                const { buildResolvedStorefrontManifest, getStorefrontConfig } = await import('@/lib/storefrontManifest');
+                // theme_overrides is rendering config — goes only into
+                // resolved_storefront_manifest.config; `stores.settings` stays
+                // untouched (business data only).
+                const newConfig = { ...getStorefrontConfig(store as any), theme_overrides: themeOverrides };
+                const resolved_storefront_manifest = await buildResolvedStorefrontManifest({
+                  ...store,
+                  theme: newTheme,
+                  theme_id: data.selectedThemeId,
+                  theme_tokens: newTheme,
+                } as any, newConfig as any);
+                await supabase
+                  .from('stores')
+                  .update({ theme: newTheme as any, theme_id: data.selectedThemeId, theme_tokens: newTheme as any, resolved_storefront_manifest: resolved_storefront_manifest as any })
+                  .eq('id', store.id);
+              }
+            } catch (e) {
+              console.error('Failed to apply custom theme on finish:', e);
+            }
+          } else if (data.selectedThemeId?.startsWith('theme-') || data.selectedThemeId?.startsWith('layout1-')) {
             try {
               // Check if premium
               const { data: meta } = await supabase
@@ -289,30 +428,43 @@ const Onboarding = () => {
               console.error('Failed to create onboarding product:', e);
             }
           }
-          // Auto-generate default homepage sections if none exist
+          // Re-fetch the full row (theme apply above may have just written
+          // theme_id/theme_tokens/resolved_storefront_manifest) so we build the
+          // final resolved snapshot from up-to-date data instead of stale state.
           const { data: freshStore } = await supabase
-            .from('stores').select('settings').eq('id', store.id).maybeSingle();
-          const currentSettings = (freshStore?.settings as any) || (store.settings as any) || {};
+            .from('stores').select('*').eq('id', store.id).maybeSingle();
+          const liveStore = (freshStore || store) as any;
+          const currentSettings = { ...(liveStore.settings || {}) };
 
           // Tag pending premium theme so dashboard + customise show the paywall.
           // Merchants get a 14-day free trial of any premium theme — after that
           // the Customiser locks and a storefront ticker urges them to pay.
+          // This is purchase/entitlement state, not rendering config, so it
+          // stays in `stores.settings`.
           const purchased: string[] = currentSettings.purchased_themes || [];
           if (isPremiumMaster && !purchased.includes(data.selectedThemeId)) {
             const { buildPendingPremiumTheme } = await import('@/lib/premiumThemeTrial');
             currentSettings.pending_premium_theme = buildPendingPremiumTheme(data.selectedThemeId);
           }
 
-          if (!currentSettings.homepage_sections?.length) {
+          // homepage_sections default-seeding IS rendering config, so it goes
+          // only into resolved_storefront_manifest.config, built fresh here so
+          // it doesn't miss what the theme-apply step above already set.
+          const { getStorefrontConfig, buildResolvedStorefrontManifest } = await import('@/lib/storefrontManifest');
+          const existingConfig = getStorefrontConfig(liveStore);
+          let homepageSections = existingConfig.homepage_sections;
+          if (!homepageSections?.length) {
             const { generateDefaultSections } = await import('@/lib/defaultSections');
-            const defaultSections = generateDefaultSections(data.storeName || store.name, data.category || store.category || undefined);
-            currentSettings.homepage_sections = defaultSections;
+            homepageSections = generateDefaultSections(data.storeName || store.name, data.category || store.category || undefined);
           }
+          const newConfig = { ...existingConfig, homepage_sections: homepageSections };
+          const resolved_storefront_manifest = await buildResolvedStorefrontManifest(liveStore, newConfig as any);
 
           await supabase.from('stores').update({
             is_published: true,
             onboarding_step: TOTAL_STEPS,
             settings: currentSettings,
+            resolved_storefront_manifest: resolved_storefront_manifest as any,
           }).eq('id', store.id);
           // Update the context cache synchronously so the dashboard's
           // "Your store is live at … View" ribbon renders immediately on

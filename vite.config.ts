@@ -11,6 +11,13 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      "/api/nvidia": {
+        target: "https://integrate.api.nvidia.com/v1",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/nvidia/, ""),
+      }
+    }
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

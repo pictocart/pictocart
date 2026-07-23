@@ -135,6 +135,10 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
 
   const wrapCls = variant === 'stacked' ? 'flex flex-col gap-2 items-stretch' : 'flex flex-wrap items-center gap-2';
 
+  const canCancel = ['pending', 'confirmed', 'new'].includes(order.status);
+  const canReturn = order.status === 'delivered';
+  const canExchange = order.status === 'delivered';
+
   return (
     <div className={wrapCls}>
       <Link to={`/store/${slug}/account/orders/${order.id}`} className={btn} style={{ borderColor: primaryColor + '40', color: primaryColor }}>
@@ -153,11 +157,11 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
         </button>
       )}
 
-      {elig.canCancel && (
+      {canCancel && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <button className={btn} style={{ borderColor: '#ef444440', color: '#ef4444' }}>
-              <XCircle className="h-3.5 w-3.5" /> Cancel
+              <XCircle className="h-3.5 w-3.5" /> Cancel Order
             </button>
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -177,7 +181,7 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
         </AlertDialog>
       )}
 
-      {elig.canReturn ? (
+      {canReturn ? (
         <RequestReturnButton order={order} primaryColor={primaryColor} mode="return" />
       ) : elig.status === 'delivered' && elig.returnReason ? (
         <button className={btn} disabled title={elig.returnReason || undefined}>
@@ -185,7 +189,7 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
         </button>
       ) : null}
 
-      {elig.canExchange ? (
+      {canExchange ? (
         <RequestReturnButton order={order} primaryColor={primaryColor} mode="exchange" />
       ) : elig.status === 'delivered' && elig.exchangeReason ? (
         <button className={btn} disabled title={elig.exchangeReason || undefined}>

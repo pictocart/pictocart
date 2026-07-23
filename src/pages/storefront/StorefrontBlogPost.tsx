@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { useStorefront } from '@/hooks/useStorefront';
 import { useBlogPost } from '@/hooks/useBlogPosts';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
+import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import SEOHead from '@/components/storefront/SEOHead';
 import ShareButton from '@/components/storefront/ShareButton';
 import { Loader2, ArrowLeft } from 'lucide-react';
@@ -17,7 +18,7 @@ const StorefrontBlogPost = () => {
   if (!store) return <div className="min-h-screen flex items-center justify-center"><p>Store not found</p></div>;
   if (!post) return <div className="min-h-screen flex items-center justify-center"><p>Post not found</p></div>;
 
-  const theme = resolveTheme(store.theme);
+  const theme = resolveTheme(getStoreThemeTokens(store));
   const { colors, fonts, borderRadius } = theme;
 
   return (

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useStore } from "@/hooks/useStore";
-import { useThemeManifest } from "@/hooks/useThemeManifest";
+import { useThemeManifest } from '@/hooks/useThemeManifest';
+import { buildResolvedStorefrontManifest, getStoreThemeId, getStorefrontConfig, getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,10 +102,12 @@ const COLOR_KEYS: Array<{ key: string; label: string }> = [
 
 export default function CustomiserV2() {
   const { store, setStore } = useStore();
-  const settings = (store?.settings || {}) as any;
-  const activeThemeId =
-    (store?.theme as any)?.theme_id || (store?.theme as any)?.name || "";
-  const { data: manifest, isLoading } = useThemeManifest(activeThemeId);
+  const settings = getStorefrontConfig(store) as any;
+  const activeThemeId = getStoreThemeId(store) || "";
+  const isCustom = activeThemeId?.startsWith("custom-theme-");
+  const { data: dbManifest, isLoading: manifestLoading } = useThemeManifest(isCustom ? null : activeThemeId);
+  const manifest = isCustom ? (getStoreThemeTokens(store) as any)?.manifest : dbManifest;
+  const isLoading = isCustom ? false : manifestLoading;
 
   const [overrides, setOverrides] = useState<any>(settings.theme_overrides || {});
   const [promoTicker, setPromoTicker] = useState<PromoTickerConfig>({ ...DEFAULT_PROMO_TICKER, ...(settings.promo_ticker || {}) });
@@ -153,7 +156,7 @@ export default function CustomiserV2() {
 
   useEffect(() => {
     if (!store?.id || hydrated === store.id) return;
-    const s = (store.settings as any) || {};
+    const s = getStorefrontConfig(store) as any;
     setOverrides(s.theme_overrides || {});
     setPromoTicker({ ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) });
     setHydrated(store.id);
@@ -182,7 +185,7 @@ export default function CustomiserV2() {
     return () => window.removeEventListener("message", onReady);
   }, [overrides, page]);
 
-  const isMaster = activeThemeId?.startsWith("theme-");
+  const isMaster = activeThemeId?.startsWith("theme-") || activeThemeId?.startsWith("layout1-") || activeThemeId?.startsWith("custom-theme-");
   const sections: any[] = useMemo(() => {
     const manifestSections = (manifest as any)?.pages?.[page]?.sections ?? [];
     if (manifestSections.length > 0) return manifestSections;
@@ -386,11 +389,14 @@ export default function CustomiserV2() {
   const save = async () => {
     if (!store) return;
     setSaving(true);
-    const newSettings = { ...settings, theme_overrides: overrides, promo_ticker: promoTicker };
-    const { error } = await supabase.from("stores").update({ settings: newSettings }).eq("id", store.id);
+    // Rendering-config keys go ONLY into resolved_storefront_manifest.config;
+    // `stores.settings` is left untouched (business data stays single-source there).
+    const newConfig = { ...settings, theme_overrides: overrides, promo_ticker: promoTicker };
+    const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
+    const { error } = await supabase.from("stores").update({ resolved_storefront_manifest: resolved_storefront_manifest as any }).eq("id", store.id);
     if (error) toast.error("Failed to save");
     else {
-      setStore({ ...store, settings: newSettings });
+      setStore({ ...store, resolved_storefront_manifest });
       toast.success("Saved — live on your store");
     }
     setSaving(false);
@@ -1150,6 +1156,13 @@ const HERO_STYLES: Array<{ value: string; label: string; hint: string }> = [
   { value: "asymmetric",       label: "Asymmetric",          hint: "Diagonal image cut" },
   { value: "gradient",         label: "Gradient",            hint: "Brand gradient, no image" },
   { value: "centered",         label: "Centered (default)",  hint: "Classic centered hero" },
+  { value: "floating_card",    label: "Floating Card",       hint: "Glassmorphic overlay card" },
+  { value: "split_column",     label: "Split Column",        hint: "3-column editorial collage" },
+  { value: "dual_image",       label: "Dual Image Collage",  hint: "Overlapping portrait images" },
+  { value: "minimal_stripe",   label: "Minimal Stripe",      hint: "Clean horizontal brand banner" },
+  { value: "left_sticky",      label: "Left Sticky Text",    hint: "Sticky header, scrolling gallery" },
+  { value: "parallax_underlay",label: "Parallax Underlay",   hint: "Parallax scrolling background" },
+  { value: "circle_mask",      label: "Circle Mask Grid",    hint: "Geometric circular image layout" },
 ];
 
 const HEIGHT_OPTIONS = [

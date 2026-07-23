@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { applyMasterTheme } from '@/lib/applyMasterTheme';
 import { getPremiumTrialStatus, PREMIUM_THEME_TRIAL_DAYS, type PendingPremiumTheme } from '@/lib/premiumThemeTrial';
+import { getStoreThemeId, getStorefrontConfig } from '@/lib/storefrontManifest';
 
 /**
  * Shows when the merchant chose a premium theme but skipped payment.
@@ -24,8 +25,8 @@ const PremiumThemePendingCard = () => {
     return () => clearInterval(id);
   }, []);
 
-  const pending = (store?.settings as any)?.pending_premium_theme as PendingPremiumTheme | undefined;
-  const activeThemeId = (store?.theme as any)?.theme_id || (store?.theme as any)?.name;
+  const pending = (getStorefrontConfig(store) as any)?.pending_premium_theme as PendingPremiumTheme | undefined;
+  const activeThemeId = getStoreThemeId(store);
   // Merchant switched theme — pending reservation is stale, don't show.
   const stale = !!pending && !!activeThemeId && pending.theme_id !== activeThemeId;
   const trial = getPremiumTrialStatus(stale ? undefined : pending);
