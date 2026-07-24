@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
@@ -1297,6 +1297,11 @@ function ContactForm({ p, dna, storeSlug }: any) {
   const [sent, setSent] = useState(false);
   const [termsContent, setTermsContent] = useState("");
 
+  // Previous messages history for logged-in users
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   useEffect(() => {
     if (user) {
       setName(user.user_metadata?.full_name || "");
@@ -1304,6 +1309,58 @@ function ContactForm({ p, dna, storeSlug }: any) {
       setContactPhone(user.phone || user.user_metadata?.phone || "");
     }
   }, [user]);
+
+  const fetchHistory = useCallback(async () => {
+    if (!user?.id || !storeSlug) return;
+    setHistoryLoading(true);
+    try {
+      const { data: store } = await supabase
+        .from("stores").select("id").eq("slug", storeSlug).maybeSingle();
+      if (!store?.id) return;
+
+      const userEmail = (user.email || user.user_metadata?.customer_email || "").toLowerCase();
+
+      // Fetch by customer_user_id OR by email (covers messages sent before login was linked)
+      const [byId, byEmail] = await Promise.all([
+        (supabase as any)
+          .from("contact_messages")
+          .select("id, subject, message, status, created_at")
+          .eq("customer_user_id", user.id)
+          .eq("store_id", store.id),
+        userEmail
+          ? (supabase as any)
+              .from("contact_messages")
+              .select("id, subject, message, status, created_at, customer_user_id")
+              .eq("email", userEmail)
+              .eq("store_id", store.id)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      // Merge + deduplicate by id, newest first
+      const merged = [...(byId.data || []), ...(byEmail.data || [])];
+      const seen = new Set<string>();
+      const unique = merged.filter((m: any) => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
+      unique.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setHistory(unique);
+
+      // Backfill customer_user_id on old messages that matched by email but have no user id
+      const toBackfill = (byEmail.data || []).filter((m: any) => !m.customer_user_id).map((m: any) => m.id);
+      if (toBackfill.length > 0) {
+        await (supabase as any)
+          .from("contact_messages")
+          .update({ customer_user_id: user.id })
+          .in("id", toBackfill);
+      }
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [user?.id, storeSlug]);
+
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
   useEffect(() => {
     const fetchStoreTerms = async () => {
@@ -1345,17 +1402,25 @@ function ContactForm({ p, dna, storeSlug }: any) {
         subject: subject.trim() || "(No subject)",
         message: message.trim(),
         status: "unread",
+        customer_user_id: user?.id ?? null,
       });
       if (error) throw error;
       setSent(true);
       setName(""); setSenderEmail(""); setContactPhone(""); setSubject(""); setMessage("");
       toast.success("Message sent! We'll get back to you soon.");
+      fetchHistory();
     } catch (err: any) {
       console.error("contact_form submit", err);
       toast.error("Failed to send message. Please try again.");
     } finally {
       setSending(false);
     }
+  };
+
+  const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+    unread:  { label: "Sent",    cls: "bg-blue-100 text-blue-700" },
+    read:    { label: "Seen",    cls: "bg-gray-100 text-gray-600" },
+    replied: { label: "Replied", cls: "bg-green-100 text-green-700" },
   };
 
   return (
@@ -1491,6 +1556,66 @@ function ContactForm({ p, dna, storeSlug }: any) {
               {sending ? "Sending…" : "Send Message"}
             </button>
           </form>
+          )}
+
+          {/* ── Previous Messages History (logged-in users only) ── */}
+          {user && (
+            <div className="pt-5 border-t" style={{ borderColor: dna.palette?.border }}>
+              <h4 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: dna.palette?.muted }}>
+                Your Previous Messages
+              </h4>
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin" style={{ color: dna.palette?.muted }} />
+                </div>
+              ) : history.length === 0 ? (
+                <p className="text-xs py-4 text-center opacity-50" style={{ color: dna.palette?.muted }}>
+                  No previous messages yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {history.map((msg) => {
+                    const badge = STATUS_BADGE[msg.status] ?? STATUS_BADGE.unread;
+                    const isOpen = expandedId === msg.id;
+                    return (
+                      <div key={msg.id} className="border rounded-xl overflow-hidden" style={{ borderColor: dna.palette?.border, background: dna.palette?.bg }}>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(isOpen ? null : msg.id)}
+                          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:opacity-80 transition"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold truncate" style={{ color: dna.palette?.fg }}>
+                              {msg.subject || "(No subject)"}
+                            </p>
+                            <p className="text-[10px] mt-0.5" style={{ color: dna.palette?.muted }}>
+                              {new Date(msg.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}{" "}
+                              {new Date(msg.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                          <span className={`shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full ${badge.cls}`}>
+                            {badge.label}
+                          </span>
+                          <X className="h-3.5 w-3.5 shrink-0 transition-transform" style={{ color: dna.palette?.muted, transform: isOpen ? "rotate(0deg)" : "rotate(45deg)" }} />
+                        </button>
+                        {isOpen && (
+                          <div className="px-4 pb-4 pt-2 border-t space-y-3" style={{ borderColor: dna.palette?.border }}>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: dna.palette?.fg }}>
+                              {msg.message}
+                            </p>
+                            {msg.status === "replied" && (
+                              <p className="text-xs font-semibold px-3 py-2 rounded-lg" style={{ background: "var(--p)" + "18", color: "var(--p)" }}>
+                                ✓ Store has replied — check your email inbox for their response.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

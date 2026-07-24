@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
@@ -9,7 +9,7 @@ import { useCustomerReturns } from '@/hooks/useCustomerReturns';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Loader2, Package, MapPin, LogOut, Plus, Trash2, User, Edit2, Check, ChevronRight, Heart, Shield,
-  Search, Undo2, MessageCircle, UserCheck, ShieldCheck, Mail, Phone, Calendar, Lock
+  Search, Undo2, MessageCircle, UserCheck, ShieldCheck, Mail, Phone, Calendar, Lock, Clock, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -79,6 +79,59 @@ const CustomerAccount = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingAddrId, setEditingAddrId] = useState<string | null>(null);
   const [addrForm, setAddrForm] = useState({ label: '', name: '', address: '', landmark: '', city: '', state: '', pincode: '', phone: '', isDefault: false });
+
+  // Contact message history state
+  const [msgHistory, setMsgHistory] = useState<any[]>([]);
+  const [msgHistoryLoading, setMsgHistoryLoading] = useState(false);
+  const [msgExpandedId, setMsgExpandedId] = useState<string | null>(null);
+
+  const fetchMsgHistory = useCallback(async () => {
+    if (!user?.id || !store?.id) return;
+    setMsgHistoryLoading(true);
+    try {
+      const userEmail = (user.email || user.user_metadata?.customer_email || '').toLowerCase();
+
+      const [byId, byEmail] = await Promise.all([
+        (supabase as any)
+          .from('contact_messages')
+          .select('id, subject, message, status, created_at')
+          .eq('customer_user_id', user.id)
+          .eq('store_id', store.id),
+        userEmail
+          ? (supabase as any)
+              .from('contact_messages')
+              .select('id, subject, message, status, created_at, customer_user_id')
+              .eq('email', userEmail)
+              .eq('store_id', store.id)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const merged = [...(byId.data || []), ...(byEmail.data || [])];
+      const seen = new Set<string>();
+      const unique = merged.filter((m: any) => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
+      unique.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setMsgHistory(unique);
+
+      // Backfill customer_user_id on old unlinked messages
+      const toBackfill = (byEmail.data || []).filter((m: any) => !m.customer_user_id).map((m: any) => m.id);
+      if (toBackfill.length > 0) {
+        await (supabase as any)
+          .from('contact_messages')
+          .update({ customer_user_id: user.id })
+          .in('id', toBackfill);
+      }
+    } finally {
+      setMsgHistoryLoading(false);
+    }
+  }, [user?.id, store?.id]);
+
+  useEffect(() => {
+    if (tab === 'support') fetchMsgHistory();
+  }, [tab, fetchMsgHistory]);
 
   useEffect(() => {
     if (!user) return;
@@ -803,22 +856,89 @@ const CustomerAccount = () => {
                     <h2 className="text-lg font-bold flex items-center gap-2" style={{ fontFamily: fonts.heading }}>
                       <MessageCircle className="h-5 w-5" style={{ color: colors.primary }} /> Customer Support
                     </h2>
+                    <p className="text-xs opacity-50 mt-1">Messages you've sent to this store.</p>
                   </div>
-                  
-                  <div className="text-center py-10 border rounded-xl" style={{ borderColor: colors.secondary }}>
-                    <div className="h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-muted" style={{ backgroundColor: colors.primary + '12', color: colors.primary }}>
-                      <MessageCircle className="h-6 w-6" />
-                    </div>
-                    <p className="text-sm font-bold">Need Help with Your Orders?</p>
-                    <p className="text-xs opacity-50 mb-6 max-w-sm mx-auto mt-1">Connect with our support team to trace orders, request returns, or clarify bills.</p>
-                    <Link 
-                      to={`/store/${slug}/contact`} 
-                      className="inline-block px-6 py-2.5 text-xs font-bold text-white transition-transform hover:scale-102" 
+
+                  {/* Send new message link */}
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-sm opacity-60">Have a new question?</p>
+                    <Link
+                      to={`/store/${slug}/contact`}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white rounded-lg transition hover:opacity-90"
                       style={{ backgroundColor: colors.primary, borderRadius: brHalf }}
                     >
-                      Open Support Center
+                      <MessageCircle className="h-3.5 w-3.5" /> Send a Message
                     </Link>
                   </div>
+
+                  {/* Message history */}
+                  {msgHistoryLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : msgHistory.length === 0 ? (
+                    <div className="text-center py-14 border rounded-xl" style={{ borderColor: colors.secondary }}>
+                      <Mail className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm font-semibold opacity-60">No messages yet</p>
+                      <p className="text-xs opacity-40 mt-1">Messages you send via the Contact page will appear here.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {msgHistory.map((msg: any) => {
+                        const statusMap: Record<string, { label: string; color: string }> = {
+                          unread:  { label: 'Sent',    color: '#3b82f6' },
+                          read:    { label: 'Seen',    color: '#6b7280' },
+                          replied: { label: 'Replied', color: '#10b981' },
+                        };
+                        const s = statusMap[msg.status] ?? statusMap.unread;
+                        const isOpen = msgExpandedId === msg.id;
+                        return (
+                          <div
+                            key={msg.id}
+                            className="border overflow-hidden transition-shadow hover:shadow-sm"
+                            style={{ borderColor: colors.secondary, borderRadius: br, backgroundColor: colors.card }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setMsgExpandedId(isOpen ? null : msg.id)}
+                              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold truncate">{msg.subject || '(No subject)'}</p>
+                                <p className="text-xs opacity-50 mt-0.5 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {format(new Date(msg.created_at), 'dd MMM yyyy, hh:mm a')}
+                                </p>
+                              </div>
+                              <span
+                                className="shrink-0 text-[10px] font-bold px-2.5 py-0.5 rounded-full border"
+                                style={{ color: s.color, borderColor: s.color + '30', backgroundColor: s.color + '12' }}
+                              >
+                                {s.label}
+                              </span>
+                              <X
+                                className="h-4 w-4 shrink-0 transition-transform"
+                                style={{ color: colors.text, opacity: 0.4, transform: isOpen ? 'rotate(0deg)' : 'rotate(45deg)' }}
+                              />
+                            </button>
+                            {isOpen && (
+                              <div className="px-4 pb-4 pt-2 border-t space-y-3" style={{ borderColor: colors.secondary }}>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">{msg.message}</p>
+                                {msg.status === 'replied' && (
+                                  <p
+                                    className="text-xs font-semibold px-3 py-2 rounded-lg"
+                                    style={{ backgroundColor: colors.primary + '15', color: colors.primary }}
+                                  >
+                                    ✓ Store has replied — check your email inbox for their response.
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 

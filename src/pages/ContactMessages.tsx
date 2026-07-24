@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Loader2, Mail, Search, Inbox, MailOpen, X, Clock, Reply } from 'lucide-react';
+import { Loader2, Mail, Phone, Search, Inbox, MailOpen, X, Clock, Reply } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -12,6 +12,7 @@ type ContactMessage = {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
   subject: string;
   message: string;
   status: 'unread' | 'read' | 'replied';
@@ -172,6 +173,11 @@ export default function ContactMessages() {
                   <Clock className="h-3 w-3" />
                   {format(new Date(msg.created_at), 'dd MMM yyyy, hh:mm a')}
                 </div>
+                {msg.phone && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <Phone className="h-2.5 w-2.5" /> {msg.phone}
+                  </p>
+                )}
               </button>
             ))}
           </div>
@@ -191,6 +197,14 @@ export default function ContactMessages() {
                         {selected.email}
                       </a>
                     </div>
+                    {selected.phone && (
+                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                        <Phone className="h-3.5 w-3.5" />
+                        <a href={`tel:${selected.phone}`} className="hover:underline text-primary">
+                          {selected.phone}
+                        </a>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-1">
                       <Clock className="h-3 w-3" />
                       {format(new Date(selected.created_at), 'dd MMM yyyy, hh:mm a')}
