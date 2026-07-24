@@ -4,6 +4,8 @@ import { useStore } from "@/hooks/useStore";
 import { useThemeManifest } from '@/hooks/useThemeManifest';
 import { buildResolvedStorefrontManifest, getStoreThemeId, getStorefrontConfig, getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { supabase } from "@/integrations/supabase/client";
+import { useCategories } from "@/hooks/useCategories";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,15 +19,15 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
   Loader2, RotateCcw, Save, Upload, Trash2, Image as ImageIcon,
-  Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown,
-  PanelTop, PanelBottom, Palette, Megaphone, Maximize2, Minimize2,
+  Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown, Search, ShoppingBag,
+  PanelTop, PanelBottom, Palette, Megaphone, Maximize2, Minimize2, Menu,
 } from "lucide-react";
 import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from "@/components/store-design/PromoTickerEditor";
 import type { PromoTickerConfig } from "@/components/storefront/PromoTicker";
 import PagesTab from "@/components/store-design/PagesTab";
 import HomeSourcePicker from "@/components/store-design/HomeSourcePicker";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, FileText as FileTextIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sparkles, FileText as FileTextIcon, LayoutGrid } from "lucide-react";
 
 const PAGES = [
   { id: "home", label: "Home" },
@@ -57,7 +59,7 @@ const SECTION_LABEL: Record<string, string> = {
 
 
 
-const TEXT_KEYS = ["title", "sub", "kicker", "cta", "cta_secondary", "body", "email", "phone"];
+const TEXT_KEYS = ["title", "sub", "kicker", "cta", "cta_secondary", "body", "email", "phone", "address", "hours"];
 const ICON_OPTIONS = ["truck", "shield", "refresh", "headphones", "lock", "tag", "gift", "sparkles"];
 
 const NAV_PAGE_OPTIONS = [
@@ -102,6 +104,22 @@ const COLOR_KEYS: Array<{ key: string; label: string }> = [
 
 export default function CustomiserV2() {
   const { store, setStore } = useStore();
+  const { categories, updateCategory, deleteCategory } = useCategories();
+  const queryClient = useQueryClient();
+  const { data: products = [] } = useQuery({
+    queryKey: ['customiser-products', store?.id],
+    queryFn: async () => {
+      if (!store?.id) return [];
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('store_id', store.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!store?.id,
+  });
   const settings = getStorefrontConfig(store) as any;
   const activeThemeId = getStoreThemeId(store) || "";
   const isCustom = activeThemeId?.startsWith("custom-theme-");
@@ -119,6 +137,27 @@ export default function CustomiserV2() {
   const [pagesDialogOpen, setPagesDialogOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [targetSectionIndex, setTargetSectionIndex] = useState<number | null>(null);
+
+  const handleToggleVisibility = (idx: number, isCurrentlyHidden: boolean) => {
+    if (!isCurrentlyHidden) {
+      setTargetSectionIndex(idx);
+      setConfirmOpen(true);
+    } else {
+      updateField(idx, "hidden", false);
+    }
+  };
+
+  const confirmHideSection = () => {
+    if (targetSectionIndex !== null) {
+      updateField(targetSectionIndex, "hidden", true);
+      setConfirmOpen(false);
+      setTargetSectionIndex(null);
+    }
+  };
+
   const mainRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(800);
 
@@ -189,9 +228,9 @@ export default function CustomiserV2() {
 
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage(
-      { type: "customiser:update", overrides, page }, "*",
+      { type: "customiser:update", overrides, page, refreshCategories: true }, "*",
     );
-  }, [overrides, page]);
+  }, [overrides, page, categories]);
 
   useEffect(() => {
     const onReady = (ev: MessageEvent) => {
@@ -228,7 +267,8 @@ export default function CustomiserV2() {
     return [];
   }, [manifest, page]);
   const sectionOverrides: Record<string, any> =
-    overrides?.pages?.[page]?.sections ?? {};
+    overrides?.pages?.[page]?.sections ??
+    (page === "home" ? overrides?.sections ?? {} : {});
 
   const updateField = (idx: number, key: string, value: any) => {
     setOverrides((prev: any) => {
@@ -444,37 +484,44 @@ export default function CustomiserV2() {
   }
 
   const previewUrl = `/admin/themes/preview-live/${activeThemeId}?page=${page}&storeSlug=${store?.slug ?? ""}`;
+  const iframeUrl = `/admin/themes/preview-live/${activeThemeId}?storeSlug=${store?.slug ?? ""}`;
 
   return (
-    <div className="-m-4 md:-m-6 h-[calc(100vh-4rem)] flex flex-col bg-background">
-      <div className="border-b px-4 h-12 flex items-center justify-between gap-3">
+    <div className={`flex flex-col bg-background ${isFullscreen ? "fixed inset-0 z-[9999] h-screen w-screen" : "-m-4 md:-m-6 h-[calc(100vh-4rem)]"}`}>
+      <div className="border-b px-4 h-12 flex items-center justify-between gap-3 bg-card shrink-0">
         <div className="flex items-center gap-3">
           <h1 className="font-semibold text-sm">Customise</h1>
           <Badge variant="outline" className="text-[10px]">{activeThemeId}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex border rounded-md overflow-hidden">
+          <div className="flex border rounded-md overflow-hidden bg-background">
             <button onClick={() => setDevice("desktop")} className={`p-1.5 ${device === "desktop" ? "bg-muted" : ""}`} title="Desktop"><Monitor className="h-3.5 w-3.5" /></button>
             <button onClick={() => setDevice("mobile")} className={`p-1.5 ${device === "mobile" ? "bg-muted" : ""}`} title="Mobile"><Smartphone className="h-3.5 w-3.5" /></button>
           </div>
           <Button 
             size="sm" 
             variant="outline" 
-            className="gap-1 px-2.5 h-8 text-xs" 
+            className="gap-1 px-2.5 h-8 text-xs bg-background" 
             onClick={() => setIsFullscreen(!isFullscreen)}
-            title={isFullscreen ? "Exit Fullscreen Preview" : "Fullscreen Preview"}
+            title={isFullscreen ? "Exit Fullscreen Workspace" : "Fullscreen Workspace"}
           >
             {isFullscreen ? <Minimize2 className="h-3.5 w-3.5 text-indigo-600" /> : <Maximize2 className="h-3.5 w-3.5 text-indigo-600" />}
             <span className="hidden sm:inline">{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
           </Button>
-          <Button size="sm" variant="outline" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset page</Button>
+          <Button size="sm" variant="outline" className="bg-background" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset page</Button>
           <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}</Button>
         </div>
       </div>
 
       <div className="flex flex-1 min-h-0">
         {/* Left: Pages + Sections */}
-        <aside className="border-r flex flex-col shrink-0 transition-all duration-200" style={{ width: isFullscreen ? 0 : leftWidth, display: isFullscreen ? "none" : "flex" }}>
+        <aside 
+          className="border-r flex flex-col shrink-0 transition-all duration-200 overflow-hidden bg-background" 
+          style={{ 
+            width: leftCollapsed ? 0 : leftWidth, 
+            display: leftCollapsed ? "none" : "flex" 
+          }}
+        >
           <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold border-b bg-muted/10">Global Layout</div>
           <div className="px-2 py-2 space-y-0.5">
             {/* Synthetic Header row */}
@@ -556,15 +603,32 @@ export default function CustomiserV2() {
                 const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
                 const edited = Object.keys(ov).length > 0;
                 const isSel = selected?.kind === "section" && selected.index === i;
+                const isHidden = !!ov.hidden;
                 return (
-                  <button
-                    key={i}
-                    onClick={() => selectAndScroll({ kind: "section", index: i })}
-                    className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${isSel ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
-                  >
-                    <span className="truncate">{i + 1}. {SECTION_LABEL[s.type] || s.type}</span>
-                    {edited && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
-                  </button>
+                  <div key={i} className="flex items-center gap-1.5 px-1 py-0.5 group w-full">
+                    <input
+                      type="checkbox"
+                      checked={!isHidden}
+                      onChange={() => handleToggleVisibility(i, isHidden)}
+                      className="h-3 w-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+                      title={isHidden ? "Show Section" : "Hide Section"}
+                    />
+                    <button
+                      onClick={() => selectAndScroll({ kind: "section", index: i })}
+                      className={`flex-1 text-left text-xs px-2 py-1.5 rounded-md flex items-center justify-between transition-all ${isSel ? "bg-accent text-accent-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"} ${isHidden ? "opacity-45 line-through" : ""}`}
+                    >
+                      <span className="truncate">
+                        {(() => {
+                          const mergedProps = { ...(s.props || {}), ...ov };
+                          const customTitle = mergedProps.title || mergedProps.heading;
+                          return (customTitle && typeof customTitle === "string")
+                            ? `${i + 1}. ${customTitle}`
+                            : `${i + 1}. ${SECTION_LABEL[s.type] || s.type}`;
+                        })()}
+                      </span>
+                      {edited && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                    </button>
+                  </div>
                 );
               })}
 
@@ -573,7 +637,7 @@ export default function CustomiserV2() {
         </aside>
 
         {/* Drag handle — left panel */}
-        {!isFullscreen && (
+        {!isFullscreen && !leftCollapsed && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -605,7 +669,7 @@ export default function CustomiserV2() {
               >
                 <iframe 
                   ref={iframeRef} 
-                  src={previewUrl} 
+                  src={iframeUrl} 
                   onLoad={() => {
                     iframeRef.current?.contentWindow?.postMessage(
                       { type: "customiser:update", overrides: overridesRef.current, page: pageRef.current }, "*"
@@ -631,7 +695,13 @@ export default function CustomiserV2() {
         )}
 
         {/* Right: Inspector */}
-        <aside className="border-l flex flex-col shrink-0 transition-all duration-200" style={{ width: isFullscreen ? 0 : rightWidth, display: isFullscreen ? "none" : "flex" }}>
+        <aside 
+          className="border-l flex flex-col shrink-0 transition-all duration-200 overflow-hidden bg-background" 
+          style={{ 
+            width: rightWidth, 
+            display: "flex" 
+          }}
+        >
           <InspectorHeader selected={selected} headerOv={headerOv} footerOv={footerOv} sections={sections} sectionOverrides={sectionOverrides}
             onResetHeader={resetHeader} onResetFooter={resetFooter} onResetSection={resetSection} />
           <ScrollArea className="flex-1">
@@ -683,11 +753,30 @@ export default function CustomiserV2() {
                 onColorChange={updateSectionColor}
                 onResetColors={resetSectionColors}
                 previewUrl={previewUrl}
+                categories={categories}
+                updateCategory={updateCategory}
+                deleteCategory={deleteCategory}
+                products={products}
               />
             )}
           </ScrollArea>
         </aside>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm bg-background border rounded-lg shadow-lg">
+          <DialogHeader>
+            <DialogTitle>Remove Section</DialogTitle>
+          </DialogHeader>
+          <div className="py-3 text-sm text-muted-foreground">
+            Are you sure you want to remove this section from <strong>{PAGES.find(p => p.id === page)?.label || page}</strong> page?
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button size="sm" variant="outline" className="bg-background" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+            <Button size="sm" variant="destructive" onClick={confirmHideSection}>Remove</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={pagesDialogOpen} onOpenChange={setPagesDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -704,7 +793,20 @@ export default function CustomiserV2() {
                 try { iframeRef.current?.contentWindow?.location.reload(); } catch {}
               }}
             />
-            <PagesTab store={store} onStoreUpdated={(patch: any) => store && setStore({ ...store, ...patch })} />
+            <PagesTab 
+              store={store} 
+              onStoreUpdated={(patch: any) => {
+                if (store) {
+                  const nextStore = { ...store, ...patch };
+                  setStore(nextStore);
+                  const nextSettings = getStorefrontConfig(nextStore);
+                  if (nextSettings?.theme_overrides) {
+                    setOverrides(nextSettings.theme_overrides);
+                  }
+                  try { iframeRef.current?.contentWindow?.location.reload(); } catch {}
+                }
+              }} 
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -986,21 +1088,98 @@ function FooterInspector({ footerOv, onChange }: { footerOv: any; onChange: (k: 
   );
 }
 
-function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl }: any) {
+function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, categories = [], updateCategory, deleteCategory, products = [] }: any) {
+  const handleUploadCatImage = async (catId: string, file: File) => {
+    const loadingToast = toast.loading("Uploading category image...");
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `categories/${catId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("store-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("store-assets").getPublicUrl(path);
+      const url = data.publicUrl;
+      await updateCategory.mutateAsync({ id: catId, image_url: url });
+      toast.success("Category image updated!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      toast.dismiss(loadingToast);
+    }
+  };
+
   const defaults = section?.props ?? {};
   const merged = { ...defaults, ...sectionOv };
-  const textKeys = TEXT_KEYS.filter((k) => k in defaults);
-  const hasImage = "image" in defaults;
-  const hasItems = Array.isArray(defaults.items);
-  const itemShape: "usp" | "testimonial" | "category" | "product" | "generic" =
+
+  const typeSpecificKeys: Record<string, string[]> = {
+    story: ["title", "body"],
+    page_title: ["title"],
+    contact_form: ["title", "sub", "email", "phone", "address", "hours"],
+    newsletter: ["title", "sub", "cta"],
+    values: ["title"],
+    usp_strip: ["title"],
+    promo_banner: ["title", "subtitle", "cta", "promo_code"],
+  };
+  const forcedKeys = typeSpecificKeys[section?.type] ?? [];
+  const textKeys = TEXT_KEYS.filter((k) => (k in defaults) || forcedKeys.includes(k));
+
+  const hasImage = "image" in defaults || section?.type === "story" || section?.type === "hero" || section?.type === "promo_banner";
+  const hasItems = Array.isArray(defaults.items) || section?.type === "values" || section?.type === "usp_strip" || section?.type === "testimonials";
+
+  const itemShape: "usp" | "testimonial" | "category" | "product" | "generic" | "value" =
     section?.type === "usp_strip" ? "usp"
     : section?.type === "testimonials" ? "testimonial"
+    : section?.type === "values" ? "value"
     : section?.type === "category_grid" ? "category"
     : (section?.type === "product_grid" || section?.type === "trending") ? "product"
     : "generic";
 
   const items = merged.items ?? [];
   const updateItems = (next: any[]) => onUpdate(idx, "items", next);
+  const isProductSection = 
+    section?.type === "product_grid" || 
+    section?.type === "trending" || 
+    section?.type === "featured_products" || 
+    section?.type === "new_arrivals" ||
+    section?.type === "product_detail";
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [prodQuery, setProdQuery] = useState("");
+  const [prodCategory, setProdCategory] = useState("");
+
+  const isChooseProductSection = 
+    section?.type === "product_grid" || 
+    section?.type === "trending" || 
+    section?.type === "featured_products" || 
+    section?.type === "new_arrivals";
+
+  const selectedIds = merged.selected_product_ids ?? [];
+  const currentProds = useMemo(() => {
+    return selectedIds
+      .map((id: string) => products.find((pr: any) => pr.id === id))
+      .filter(Boolean);
+  }, [selectedIds, products]);
+
+  const displayProducts = useMemo(() => {
+    if (selectedIds.length > 0) return currentProds;
+    if (section?.type === "featured_products" || section?.type === "product_grid") {
+      return products.slice(0, 8);
+    } else if (section?.type === "trending") {
+      const sliceStart = products.length >= 8 ? 4 : 0;
+      return products.slice(sliceStart, sliceStart + 8);
+    } else if (section?.type === "new_arrivals") {
+      const sliceStart = Math.max(0, products.length - 8);
+      return products.slice(sliceStart).reverse();
+    }
+    return [];
+  }, [products, selectedIds, currentProds, section?.type]);
+
+  const filteredPickerProducts = useMemo(() => {
+    return products.filter((pr: any) => {
+      const matchQ = !prodQuery.trim() || pr.title.toLowerCase().includes(prodQuery.toLowerCase());
+      const matchC = !prodCategory || pr.category === prodCategory;
+      return matchQ && matchC;
+    });
+  }, [products, prodQuery, prodCategory]);
 
   // Hero gets its own rich inspector (slider/video/overlay/height/etc.)
   if (section?.type === "hero") {
@@ -1021,6 +1200,171 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
 
   return (
     <div className="p-4 space-y-4">
+      {isProductSection && (
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/40">
+          <Label className="text-xs font-semibold flex items-center gap-1.5">
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" /> Product Grid Styling
+          </Label>
+          
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
+                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_cols ?? 4} cols</span>
+              </div>
+              <Select 
+                value={String(merged.product_cols ?? 4)} 
+                onValueChange={(val) => onUpdate(idx, "product_cols", Number(val))}
+              >
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 Columns</SelectItem>
+                  <SelectItem value="3">3 Columns</SelectItem>
+                  <SelectItem value="4">4 Columns</SelectItem>
+                  <SelectItem value="5">5 Columns</SelectItem>
+                  <SelectItem value="6">6 Columns</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-[11px] text-muted-foreground font-medium">Drag to resize Card Width</Label>
+                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_card_width ?? 220}px</span>
+              </div>
+              <Slider 
+                value={[Number(merged.product_card_width ?? 220)]} 
+                min={130} 
+                max={350} 
+                step={10} 
+                onValueChange={([val]) => onUpdate(idx, "product_card_width", val)} 
+                className="my-2"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isChooseProductSection && (
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/40 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold flex items-center gap-1.5">
+              <ShoppingBag className="h-3.5 w-3.5 text-primary" /> Products List ({selectedIds.length > 0 ? `${selectedIds.length} Selected` : "Default"})
+            </Label>
+            {selectedIds.length > 0 && (
+              <button 
+                type="button" 
+                onClick={() => onUpdate(idx, "selected_product_ids", null)}
+                className="text-[10px] text-destructive hover:underline font-semibold"
+              >
+                Reset to default
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 border rounded bg-background p-1.5">
+            {displayProducts.map((pr: any, pi: number) => (
+              <div key={pr.id || pi} className="flex items-center gap-2 text-[11px] p-1 hover:bg-muted/50 rounded transition-colors">
+                <div className="w-6 h-6 rounded bg-muted overflow-hidden shrink-0 flex items-center justify-center border">
+                  {pr.images?.[0] ? <img src={pr.images[0]} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-3 w-3 text-muted-foreground" />}
+                </div>
+                <span className="truncate flex-1 font-medium">{pr.title}</span>
+                <span className="text-[9px] text-muted-foreground font-mono">₹{pr.price}</span>
+              </div>
+            ))}
+            {displayProducts.length === 0 && (
+              <p className="text-[10px] text-muted-foreground text-center py-2">No products showing. Choose products below.</p>
+            )}
+          </div>
+
+          <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="w-full h-8 text-xs bg-background text-foreground hover:bg-muted/40">
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add / Remove Products
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md bg-background border rounded-lg shadow-lg">
+              <DialogHeader>
+                <DialogTitle>Select Section Products</DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-3 mt-2">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                    <Input 
+                      value={prodQuery} 
+                      onChange={(e) => setProdQuery(e.target.value)} 
+                      placeholder="Search products..." 
+                      className="pl-8 h-8 text-xs bg-background" 
+                    />
+                  </div>
+                  <select 
+                    value={prodCategory} 
+                    onChange={(e) => setProdCategory(e.target.value)} 
+                    className="rounded-md border border-input px-2.5 h-8 text-xs bg-background w-32"
+                  >
+                    <option value="">All Categories</option>
+                    {Array.from(new Set(products.map((p: any) => p.category).filter(Boolean))).map((cat: any) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="border rounded-lg max-h-60 overflow-y-auto divide-y bg-background">
+                  {filteredPickerProducts.map((pr: any) => {
+                    const isChecked = selectedIds.includes(pr.id);
+                    return (
+                      <label 
+                        key={pr.id} 
+                        className="flex items-center justify-between p-2.5 hover:bg-muted/50 cursor-pointer text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              let nextIds;
+                              if (isChecked) {
+                                nextIds = selectedIds.filter((id: string) => id !== pr.id);
+                              } else {
+                                nextIds = [...selectedIds, pr.id];
+                              }
+                              onUpdate(idx, "selected_product_ids", nextIds);
+                            }}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                          />
+                          <div className="w-8 h-8 rounded bg-muted overflow-hidden shrink-0 border flex items-center justify-center">
+                            {pr.images?.[0] ? <img src={pr.images[0]} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold truncate">{pr.title}</p>
+                            <p className="text-[10px] text-muted-foreground capitalize">{pr.category || "No category"}</p>
+                          </div>
+                        </div>
+                        <span className="font-mono text-[10px] font-bold text-muted-foreground ml-3">₹{pr.price}</span>
+                      </label>
+                    );
+                  })}
+                  {filteredPickerProducts.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-6">No products found</p>
+                  )}
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-[10px] text-muted-foreground font-semibold">{selectedIds.length} products selected for this section</span>
+                  <Button size="sm" onClick={() => setPickerOpen(false)}>
+                    Done
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+
       {hasImage && (
         <div>
           <Label className="text-xs">Section image</Label>
@@ -1045,10 +1389,16 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
       )}
 
       {textKeys.map((k) => {
-        const value = merged[k] ?? "";
+        const FIELD_FALLBACKS: Record<string, string> = {
+          email: "support@storeontips.com",
+          phone: "+91 98765 43210",
+          address: "123 Luxury Lane, Phase 1, New Delhi - 110001",
+          hours: "Mon - Sun: 11:00 AM - 9:00 PM",
+        };
+        const value = merged[k] ?? FIELD_FALLBACKS[k] ?? "";
         const isLong = k === "sub" || k === "body";
         return (
-          <div key={k}>
+          <div key={k} className="space-y-1">
             <div className="flex items-center justify-between mb-1">
               <Label className="text-xs capitalize">{k.replace("_", " ")}</Label>
               {k in sectionOv && (
@@ -1058,6 +1408,34 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
             {isLong
               ? <Textarea rows={3} value={value} onChange={(e) => onUpdate(idx, k, e.target.value)} className="text-sm" />
               : <Input value={value} onChange={(e) => onUpdate(idx, k, e.target.value)} className="h-8 text-sm" />}
+            
+            {/* Text Color Picker */}
+            <div className="flex items-center gap-2 mt-1 justify-end">
+              <span className="text-[9px] text-muted-foreground font-medium">Text color:</span>
+              <input 
+                type="color" 
+                value={merged[`${k}_color`] || "#000000"} 
+                onChange={(e) => onUpdate(idx, `${k}_color`, e.target.value)} 
+                className="w-4.5 h-4.5 rounded cursor-pointer border p-0 bg-transparent shrink-0" 
+              />
+              <Input 
+                value={merged[`${k}_color`] || ""} 
+                onChange={(e) => onUpdate(idx, `${k}_color`, e.target.value)} 
+                placeholder="Default" 
+                className="h-5 text-[9px] w-20 px-1 font-mono" 
+              />
+              {merged[`${k}_color`] && (
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    onUpdate(idx, `${k}_color`, null);
+                  }}
+                  className="text-[9px] text-destructive hover:underline ml-1 font-semibold"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
         );
       })}
@@ -1101,19 +1479,109 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         />
       )}
 
-      {hasItems && itemShape === "category" && (
+      {hasItems && itemShape === "value" && (
         <ItemsEditor
-          label="Categories"
+          label="Our Values"
           items={items}
           renderRow={(it, update) => (
             <div className="flex-1 space-y-1">
-              <Input value={it.name ?? ""}  onChange={(e) => update({ ...it, name:  e.target.value })} className="h-7 text-xs" placeholder="Category name" />
-              <Input value={it.image ?? ""} onChange={(e) => update({ ...it, image: e.target.value })} className="h-7 text-xs" placeholder="Image URL" />
+              <Input value={it.title ?? ""} onChange={(e) => update({ ...it, title: e.target.value })} className="h-7 text-xs" placeholder="Value Title (e.g. Quality First)" />
+              <Textarea rows={2} value={it.body ?? it.description ?? ""} onChange={(e) => update({ ...it, body: e.target.value, description: e.target.value })} className="text-xs" placeholder="Description of this value..." />
             </div>
           )}
-          blank={{ name: "New category", image: "" }}
+          blank={{ title: "New Value", body: "Description of the value" }}
           onChange={updateItems}
         />
+      )}
+
+      {hasItems && itemShape === "category" && (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">Categories (from database)</Label>
+          <div className="space-y-4">
+            {categories.map((cat: any) => {
+              return (
+                <div key={cat.id} className="p-3 border rounded-lg bg-card space-y-2">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Category name</Label>
+                    <Input 
+                      defaultValue={cat.name} 
+                      onBlur={(e) => {
+                        const nextVal = e.target.value.trim();
+                        if (nextVal && nextVal !== cat.name) {
+                          updateCategory.mutate({ id: cat.id, name: nextVal });
+                        }
+                      }} 
+                      className="h-8 text-xs mt-1" 
+                      placeholder="Category name" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Category Image</Label>
+                    <div className="flex gap-2 items-center mt-1">
+                      <div className="w-10 h-10 rounded border bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                        {cat.image_url ? (
+                          <img src={cat.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <Input 
+                        value={cat.image_url || ""} 
+                        readOnly 
+                        className="h-8 text-[10px] bg-muted/30 flex-1 truncate font-mono" 
+                        placeholder="No image uploaded" 
+                      />
+                      <Button size="sm" variant="outline" asChild className="h-8 px-2.5 shrink-0 bg-background">
+                        <label className="cursor-pointer">
+                          <Upload className="h-3.5 w-3.5 mr-1" /> Update
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => { 
+                              const f = e.target.files?.[0]; 
+                              if (f) handleUploadCatImage(cat.id, f); 
+                            }} 
+                          />
+                        </label>
+                      </Button>
+                      {cat.image_url && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => updateCategory.mutate({ id: cat.id, image_url: null })} 
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 shrink-0"
+                          title="Remove image"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {/* Delete Category Button */}
+                  <div className="flex items-center justify-between pt-1.5 border-t">
+                    <span className="text-[10px] text-muted-foreground">Manage category</span>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={async () => {
+                        if (confirm(`Are you sure you want to permanently delete the category "${cat.name}"?`)) {
+                          await deleteCategory.mutateAsync(cat.id);
+                        }
+                      }} 
+                      className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive px-2 shrink-0 font-semibold"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Category
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+            {categories.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-2">No categories found in store. Create categories in the Catalog tab.</p>
+            )}
+          </div>
+        </div>
       )}
 
       {"items" in sectionOv && (

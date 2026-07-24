@@ -29,6 +29,7 @@ interface ProductPageRendererProps {
   theme: any;
   slug: string;
   products: any[];
+  sectionOverrides?: any;
 }
 
 const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
@@ -37,7 +38,8 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
   relatedProducts,
   theme,
   slug,
-  products
+  products,
+  sectionOverrides
 }) => {
   const { colors, fonts, borderRadius = 8 } = theme;
   const navigate = useNavigate();
@@ -777,6 +779,8 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
               wishlistProductIds={new Set(wishlistProductIds)}
               isLoggedIn={!!user}
               onToggleWishlist={toggleWishlist}
+              productCols={sectionOverrides?.product_cols ?? section?.props?.product_cols}
+              productCardWidth={sectionOverrides?.product_card_width ?? section?.props?.product_card_width}
             />
           </div>
         );

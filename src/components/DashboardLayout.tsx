@@ -86,7 +86,8 @@ const navTree: NavEntry[] = [
       { label: 'Refunds', icon: Banknote, path: '/refunds' },
       { label: 'Shipments', icon: Truck, path: '/shipments' },
       { label: 'Reviews', icon: FileText, path: '/reviews' },
-      { label: 'Customers', icon: Users, path: '/customers' },
+      { label: 'My Customers', icon: Users, path: '/customers' },
+      { label: 'Contact Messages', icon: MessageSquare, path: '/messages' },
       { label: 'Coupons', icon: Ticket, path: '/coupons' },
     ],
   },
@@ -141,7 +142,6 @@ const navTree: NavEntry[] = [
     children: [
       { label: 'Themes', icon: Palette, path: '/themes' },
       { label: 'Store Design', icon: SettingsIcon, path: '/customise' },
-      { label: 'Homepage Sections', icon: Flame, path: '/customise/sections' },
       { label: 'Promo Ticker', icon: Megaphone, path: '/promo-ticker' },
       { label: 'Policies & Pages', icon: FileText, path: '/policies' },
       { label: 'Analytics', icon: TrendingUp, path: '/analytics' },
@@ -264,9 +264,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200',
-          collapsed ? 'w-16' : 'w-60',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200 w-60 overflow-hidden',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+          collapsed ? 'md:-translate-x-full md:border-r-0' : 'md:translate-x-0'
         )}
       >
         {/* Logo */}
@@ -364,7 +364,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       </aside>
 
       {/* Main content */}
-      <main className={cn('flex-1 transition-all duration-200', collapsed ? 'md:ml-16' : 'md:ml-60')}>
+      <main className={cn('flex-1 transition-all duration-200', collapsed ? 'md:ml-0' : 'md:ml-60')}>
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-background px-4 md:px-6">
           <Button
@@ -375,7 +375,16 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex-1 flex items-center justify-center md:justify-start">
+          <div className="flex-1 flex items-center justify-center md:justify-start gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => setCollapsed(!collapsed)}
+              title="Toggle Sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
             <GlobalSearch />
           </div>
           <CreditBadge />

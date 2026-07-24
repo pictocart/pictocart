@@ -178,7 +178,7 @@ const CustomerOrderDetail = () => {
               </Section>
             )}
 
-            <Link to={`/store/${slug}/account/support?order=${order.id}`} className="block p-4 border-2 border-dashed text-center hover:bg-muted/30" style={{ borderColor: colors.secondary, borderRadius: br }}>
+            <Link to={`/store/${slug}/contact`} className="block p-4 border-2 border-dashed text-center hover:bg-muted/30" style={{ borderColor: colors.secondary, borderRadius: br }}>
               <HelpCircle className="h-5 w-5 mx-auto mb-1 opacity-60" />
               <p className="text-sm font-medium">Need help with this order?</p>
               <p className="text-xs opacity-60">Contact support</p>

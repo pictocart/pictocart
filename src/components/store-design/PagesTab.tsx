@@ -5,14 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Eye, Globe, Trash2, RefreshCcw, Home, FileText, Loader2, ShoppingBag, LayoutGrid, Package } from "lucide-react";
+import { Sparkles, Eye, Globe, Trash2, RefreshCcw, Home, FileText, Loader2, ShoppingBag, LayoutGrid, Package, Lock, Clock, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCustomPages } from "@/hooks/useCustomPages";
 import { useProducts } from "@/hooks/useProducts";
 import CreatePageWizard from "./CreatePageWizard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { buildResolvedStorefrontManifest } from "@/lib/storefrontManifest";
+import { buildResolvedStorefrontManifest, getStorefrontConfig } from "@/lib/storefrontManifest";
 
 type Kind = "default" | "shop" | "collections" | "product" | "custom";
 
@@ -87,6 +87,52 @@ export default function PagesTab({ store, onStoreUpdated }: { store: any; onStor
       setRegenId(null);
     }
   };
+  const disabledPages = (getStorefrontConfig(store) as any)?.theme_overrides?.disabled_pages ?? [];
+
+  const handleToggleBuiltinPage = async (pageId: string, disable: boolean) => {
+    if (!storeId) return;
+    let nextDisabled = [...disabledPages];
+    if (disable) {
+      if (!nextDisabled.includes(pageId)) {
+        nextDisabled.push(pageId);
+      }
+    } else {
+      nextDisabled = nextDisabled.filter((id) => id !== pageId);
+    }
+    
+    const config = getStorefrontConfig(store) as any;
+    const theme_overrides = {
+      ...(config.theme_overrides || {}),
+      disabled_pages: nextDisabled,
+    };
+    const newConfig = {
+      ...config,
+      theme_overrides,
+    };
+    
+    const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
+    const { error } = await (supabase as any)
+      .from("stores")
+      .update({ resolved_storefront_manifest })
+      .eq("id", storeId);
+      
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(disable ? `Disabled /${pageId}` : `Published /${pageId}`);
+      onStoreUpdated?.({ resolved_storefront_manifest });
+    }
+  };
+
+  const BUILTIN_PAGES_LIST = [
+    { id: "shop", label: "Shop (Catalog)", path: "/shop", icon: ShoppingBag },
+    { id: "collections", label: "Collections", path: "/collections", icon: LayoutGrid },
+    { id: "about", label: "About Us", path: "/about", icon: FileText },
+    { id: "contact", label: "Contact Us", path: "/contact", icon: Phone },
+    { id: "journal", label: "Journal / Blog", path: "/blog", icon: Clock },
+    { id: "cart", label: "Shopping Cart", path: "/cart", icon: ShoppingBag },
+    { id: "checkout", label: "Checkout", path: "/checkout", icon: Lock },
+  ];
 
   const publishedPages = pages.filter((p) => p.status === "published");
 
@@ -166,6 +212,44 @@ export default function PagesTab({ store, onStoreUpdated }: { store: any; onStor
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" /> Built-in pages
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Toggle built-in store pages on or off. Turning off a page will remove it from navigation menus and return a 404 Page Not Found error if visited.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {BUILTIN_PAGES_LIST.map((pageItem) => {
+              const isDisabled = disabledPages.includes(pageItem.id);
+              return (
+                <div key={pageItem.id} className="border rounded-lg p-4 flex items-center justify-between gap-3 bg-card/50">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <pageItem.icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="font-semibold text-sm">{pageItem.label}</span>
+                      <Badge variant={!isDisabled ? "default" : "secondary"} className="text-[10px]">
+                        {!isDisabled ? "Published" : "Disabled"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground font-mono">{pageItem.path}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={!isDisabled}
+                      onCheckedChange={(checked) => handleToggleBuiltinPage(pageItem.id, !checked)}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 

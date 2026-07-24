@@ -732,7 +732,7 @@ const CustomerAccount = () => {
                     <p className="text-sm font-bold">Need Help with Your Orders?</p>
                     <p className="text-xs opacity-50 mb-6 max-w-sm mx-auto mt-1">Connect with our support team to trace orders, request returns, or clarify bills.</p>
                     <Link 
-                      to={`/store/${slug}/account/support`} 
+                      to={`/store/${slug}/contact`} 
                       className="inline-block px-6 py-2.5 text-xs font-bold text-white transition-transform hover:scale-102" 
                       style={{ backgroundColor: colors.primary, borderRadius: brHalf }}
                     >

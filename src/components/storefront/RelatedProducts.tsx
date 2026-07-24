@@ -16,12 +16,16 @@ interface Props {
   isLoggedIn: boolean;
   onToggleWishlist: (id: string) => Promise<{ action: 'added' | 'removed' }>;
   allowMockFallback?: boolean;
+  productCols?: number;
+  productCardWidth?: number;
 }
 
 const RelatedProducts = ({
   storeId, storeSlug, currentProductId, category,
   colors, fonts, borderRadius, wishlistProductIds, isLoggedIn, onToggleWishlist,
   allowMockFallback = false,
+  productCols,
+  productCardWidth,
 }: Props) => {
   const themeSuffixMatch = currentProductId?.match(/(theme-style-\d+)/);
   const themeSuffix = themeSuffixMatch ? themeSuffixMatch[1] : '';
@@ -103,12 +107,29 @@ const RelatedProducts = ({
 
   if (listToRender.length === 0) return null;
 
+  const cols = productCols || 4;
+  const cardWidth = productCardWidth;
+
   return (
     <section className="mt-10 md:mt-14">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (min-width: 768px) {
+          .related-dynamic-grid {
+            grid-template-columns: repeat(${cols}, minmax(0, 1fr)) !important;
+            display: grid !important;
+          }
+        }
+      `}} />
       <h2 className="text-lg md:text-xl font-bold mb-5" style={{ fontFamily: fonts.heading }}>
         You May Also Like
       </h2>
-      <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+      <div 
+        className={cardWidth 
+          ? "flex flex-wrap gap-4 justify-center md:justify-start" 
+          : "flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scrollbar-hide related-dynamic-grid"
+        } 
+        style={{ scrollbarWidth: 'none' }}
+      >
         {listToRender.map((p) => {
           const discount = p.compare_at_price && p.compare_at_price > p.price
             ? Math.round(((p.compare_at_price - p.price) / p.compare_at_price) * 100)
@@ -117,8 +138,17 @@ const RelatedProducts = ({
             <Link
               key={p.id}
               to={`/store/${storeSlug}/product/${p.id}${themeSuffix ? `/${themeSuffix}` : ''}`}
-              className="min-w-[160px] md:min-w-[200px] shrink-0 snap-start group overflow-hidden hover-lift"
-              style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}
+              className={cardWidth 
+                ? "shrink-0 group overflow-hidden hover-lift"
+                : "min-w-[160px] md:min-w-[200px] shrink-0 snap-start group overflow-hidden hover-lift"
+              }
+              style={{ 
+                backgroundColor: colors.card, 
+                borderRadius: `${borderRadius}px`, 
+                border: `1px solid ${colors.secondary}`,
+                width: cardWidth ? `${cardWidth}px` : undefined,
+                minWidth: cardWidth ? `${cardWidth}px` : undefined
+              }}
             >
               <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>
                 {p.images?.[0] ? (

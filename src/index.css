@@ -328,3 +328,18 @@
 .trust-badge-enter {
   animation: trust-badge-enter 0.4s ease-out both;
 }
+
+/* Expand layout container widths for storefront pages to cover full width */
+.storefront-root .max-w-7xl,
+.storefront-root .max-w-6xl,
+.storefront-root .max-w-5xl,
+.storefront-root .max-w-4xl,
+.storefront-root .max-w-3xl,
+[data-master-theme] .max-w-7xl,
+[data-master-theme] .max-w-6xl,
+[data-master-theme] .max-w-5xl,
+[data-master-theme] .max-w-4xl,
+[data-master-theme] .max-w-3xl {
+  max-width: 95% !important;
+  width: 95% !important;
+}

@@ -1,11 +1,17 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
-import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search } from "lucide-react";
+import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCardActions from "@/components/storefront/ProductCardActions";
 import ProductPageRenderer from "@/components/storefront/ProductPageRenderer";
+import CustomerAuthModal from "@/components/storefront/CustomerAuthModal";
+import { useValidateCoupon } from "@/hooks/useCoupons";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 /**
  * Manifest-driven theme renderer. Single source of truth for both the
@@ -45,6 +51,7 @@ type Overrides = {
   header?: HeaderOv;
   footer?: FooterOv;
   pages?: Record<string, { sections?: Record<string | number, any> }>;
+  disabled_pages?: string[];
 } | undefined;
 
 function loadFont(family: string) {
@@ -136,15 +143,59 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
       ? [{ type: "collection_detail", props: { items: collectionsItems } }]
       : page === "shop" && (!manifest?.pages?.shop?.sections?.length)
         ? [{ type: "page_title", props: { title: "All Products" } }, { type: "product_grid", props: { style: "grid_clean" } }]
-        : (manifest?.pages?.[page]?.sections ?? []);
+        : page === "product" && (!manifest?.pages?.product?.sections?.length)
+          ? [{ type: "product_detail", props: {} }]
+          : page === "cart" && (!manifest?.pages?.cart?.sections?.length)
+            ? [{ type: "page_title", props: { title: "Your Cart" } }, { type: "line_items", props: {} }, { type: "cart_summary", props: {} }]
+            : page === "checkout" && (!manifest?.pages?.checkout?.sections?.length)
+              ? [{ type: "page_title", props: { title: "Checkout" } }, { type: "checkout_stepper", props: {} }]
+              : page === "journal" && (!manifest?.pages?.journal?.sections?.length)
+                ? [{ type: "page_title", props: { title: "Journal" } }, { type: "journal_list", props: {} }]
+                : page === "about" && (!manifest?.pages?.about?.sections?.length)
+                  ? [{ type: "page_title", props: { title: "About Us" } }, { type: "story", props: {} }, { type: "values", props: {} }]
+                  : page === "contact" && (!manifest?.pages?.contact?.sections?.length)
+                    ? [{ type: "page_title", props: { title: "Contact Us" } }, { type: "contact_form", props: {} }]
+                    : (manifest?.pages?.[page]?.sections ?? []);
 
   return (
     <div style={style} data-master-theme>
+      <style dangerouslySetInnerHTML={{ __html: `
+        [data-section-index] {
+          --title-color: inherit;
+          --body-color: inherit;
+          --sub-color: inherit;
+          --kicker-color: inherit;
+          --cta-color: inherit;
+        }
+        [data-section-index] h1, 
+        [data-section-index] h2, 
+        [data-section-index] h3, 
+        [data-section-index] .s-title, 
+        [data-section-index] .section-title {
+          color: var(--title-color) !important;
+        }
+        [data-section-index] p:not(.s-sub):not(.s-kicker):not(.section-sub):not(.section-subtitle):not(.section-kicker), 
+        [data-section-index] .s-body, 
+        [data-section-index] .section-body, 
+        [data-section-index] .section-desc {
+          color: var(--body-color) !important;
+        }
+        [data-section-index] .s-sub, 
+        [data-section-index] .section-sub, 
+        [data-section-index] .section-subtitle {
+          color: var(--sub-color) !important;
+        }
+        [data-section-index] .s-kicker, 
+        [data-section-index] .section-kicker {
+          color: var(--kicker-color) !important;
+        }
+      `}} />
       {/* Header is first child — sticky top-0 works against window scroll */}
-      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} />
+      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} />
       {renderedSections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
+        if (ov.hidden) return null;
         const mergedProps = { ...(s.props ?? {}), ...ov };
         // Inject active product into product_detail sections
         if (s.type === "product_detail" && product) {
@@ -201,6 +252,10 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             mergedProps.items = sellerCategoryItems;
           }
         }
+        // collections: replace items with seller's real categories if they've defined any
+        if (sellerCategoryItems && s.type === "collections") {
+          mergedProps.items = sellerCategoryItems;
+        }
         const anchorMap: Record<string, string> = {
           product_grid: "products", trending: "products",
           category_grid: "categories",
@@ -211,7 +266,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         // Per-section color override: ov.colors = { primary, accent, bg, surface, fg, muted, border, primary_fg }
         const secColors = (mergedProps.colors ?? ov.colors) as Record<string, string> | undefined;
         const sectionDna = secColors ? { ...dna, palette: { ...dna.palette, ...secColors } } : dna;
-        const sectionStyle: React.CSSProperties = secColors
+        const sectionStyle: Record<string, any> = secColors
           ? {
               ["--p" as any]: sectionDna.palette.primary,
               ["--pf" as any]: sectionDna.palette.primary_fg,
@@ -224,6 +279,12 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
               color: sectionDna.palette.fg,
             }
           : {};
+
+        if (mergedProps.title_color) sectionStyle["--title-color" as any] = mergedProps.title_color;
+        if (mergedProps.body_color) sectionStyle["--body-color" as any] = mergedProps.body_color;
+        if (mergedProps.sub_color) sectionStyle["--sub-color" as any] = mergedProps.sub_color;
+        if (mergedProps.kicker_color) sectionStyle["--kicker-color" as any] = mergedProps.kicker_color;
+        if (mergedProps.cta_color) sectionStyle["--cta-color" as any] = mergedProps.cta_color;
         return (
           <div
             key={i}
@@ -243,11 +304,12 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   );
 }
 
-function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, headerOv, products }: any) {
+function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, headerOv, products, disabledPages = [] }: any) {
   const base = storeSlug ? `/store/${storeSlug}` : "";
   const navigate = useNavigate();
   const [searchVal, setSearchVal] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const suggestions = useMemo(() => {
     if (!searchVal.trim() || !products || products.length === 0) return [];
@@ -268,7 +330,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       words.forEach((word: string) => {
         const cleanWord = word.replace(/[^\w]/g, "");
         if (cleanWord.toLowerCase().startsWith(query) && cleanWord.length > 2) {
-          results.add(cleanWord.toLowerCase());
+          results.add(title.toLowerCase());
         }
       });
       if (title.toLowerCase().startsWith(query)) {
@@ -279,7 +341,18 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
     return Array.from(results).slice(0, 5);
   }, [searchVal, products]);
 
-  const ov: HeaderOv = headerOv || {};
+  const handleSearchSubmit = (val: string) => {
+    if (!val.trim()) return;
+    setSearchVal("");
+    setShowSuggestions(false);
+    if (onNavigate) {
+      onNavigate(`${base}/shop?search=${encodeURIComponent(val.trim())}`);
+    } else {
+      navigate(`${base}/shop?search=${encodeURIComponent(val.trim())}`);
+    }
+  };
+
+  const ov = headerOv || {};
   const effectiveBrand = ov.brand_name || brandName;
   const showName = ov.show_name !== false; // default true
   const logoUrl = ov.logo_url || "";
@@ -295,7 +368,8 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
     journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
   };
   const links = (ov.nav_links && ov.nav_links.length > 0 ? ov.nav_links : defaultLinks)
-    .map((l) => ({ label: l.label, page: l.page, to: `${base}${pageToPath[l.page] ?? `/${l.page}`}` }));
+    .filter((l: any) => !disabledPages.includes(l.page))
+    .map((l: any) => ({ label: l.label, page: l.page, to: `${base}${pageToPath[l.page] ?? `/${l.page}`}` }));
 
   const { totalItems } = useCart(storeSlug || "");
   const { user } = useCustomerAuth(storeSlug || "");
@@ -343,9 +417,15 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
     </button>
   );
   const AccountBtn = storeSlug ? (
-    <Link to={user ? `/store/${storeSlug}/account` : `/store/${storeSlug}/account/auth`} className="hidden md:inline-flex text-sm px-4 py-2 items-center gap-2 border" style={{ borderColor: "var(--p)", color: "var(--p)", borderRadius: "var(--r)" }}>
-      <User className="h-4 w-4" /> <span className="max-w-28 truncate">{user ? customerName : "Sign in"}</span>
-    </Link>
+    user ? (
+      <Link to={`/store/${storeSlug}/account`} className="hidden md:inline-flex text-sm px-4 py-2 items-center gap-2 border" style={{ borderColor: "var(--p)", color: "var(--p)", borderRadius: "var(--r)" }}>
+        <User className="h-4 w-4" /> <span className="max-w-28 truncate">{customerName}</span>
+      </Link>
+    ) : (
+      <button onClick={() => setAuthOpen(true)} className="hidden md:inline-flex text-sm px-4 py-2 items-center gap-2 border" style={{ borderColor: "var(--p)", color: "var(--p)", borderRadius: "var(--r)" }}>
+        <User className="h-4 w-4" /> Sign in
+      </button>
+    )
   ) : null;
   const renderLink = (l: { label: string; to: string; page: string }, cls: string) =>
     storeSlug
@@ -357,6 +437,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
 
   if (variant === "centered_logo") {
     return (
+      <>
       <header className={wrap} style={bg}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col items-center gap-2">
           {Brand}
@@ -416,9 +497,22 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
           </nav>
         </div>
       </header>
+      {authOpen && storeSlug && (
+        <CustomerAuthModal
+          storeSlug={storeSlug}
+          storeName={brandName}
+          primaryColor={dna.palette?.primary}
+          cardColor={dna.palette?.bg}
+          borderColor={dna.palette?.border}
+          textColor={dna.palette?.fg}
+          onClose={() => setAuthOpen(false)}
+        />
+      )}
+      </>
     );
   }
   return (
+    <>
     <header className={wrap} style={bg}>
       <div className={`max-w-6xl mx-auto px-6 ${variant === "minimal_thin" ? "h-12" : "h-16"} flex items-center justify-between gap-4`}>
         {Brand}
@@ -494,6 +588,18 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
         </div>
       </div>
     </header>
+    {authOpen && storeSlug && (
+      <CustomerAuthModal
+        storeSlug={storeSlug}
+        storeName={brandName}
+        primaryColor={dna.palette?.primary}
+        cardColor={dna.palette?.bg}
+        borderColor={dna.palette?.border}
+        textColor={dna.palette?.fg}
+        onClose={() => setAuthOpen(false)}
+      />
+    )}
+    </>
   );
 }
 
@@ -528,6 +634,7 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
       if (catStyle === "floating_orbs") return <CategoryFloatingOrbs p={p} dna={dna} storeSlug={storeSlug} />;
       return <CategoryBlock p={p} dna={dna} storeSlug={storeSlug} />;
     }
+    case "collections":
     case "collections_grid": return <CollectionsBlock p={p} dna={dna} storeSlug={storeSlug} />;
     case "collection_detail": return <CollectionDetailBlock p={p} dna={dna} storeSlug={storeSlug} />;
     case "trending":
@@ -557,8 +664,8 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
       <section className="py-20" style={{ background: dna.palette?.surface }}>
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-4xl mb-6" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
-            <p className="leading-relaxed" style={{ color: dna.palette?.muted }}>{p.body}</p>
+            <h2 className="text-4xl mb-6 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
+            <p className="leading-relaxed s-body" style={{ color: dna.palette?.muted }}>{p.body}</p>
           </div>
           {p.image && <img src={p.image} className="aspect-[4/5] object-cover" style={{ borderRadius: "var(--r)" }} />}
         </div>
@@ -569,8 +676,8 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
     case "newsletter": return (
       <section className="py-20 text-center" style={{ background: dna.palette?.primary, color: dna.palette?.primary_fg }}>
         <div className="max-w-xl mx-auto px-6">
-          <h2 className="text-3xl mb-3" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
-          <p className="mb-6 opacity-80">{p.sub}</p>
+          <h2 className="text-3xl mb-3 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
+          <p className="mb-6 opacity-80 s-sub">{p.sub}</p>
           <form className="flex gap-2 max-w-md mx-auto">
             <input placeholder="you@example.com" className="flex-1 px-4 py-3 text-sm" style={{ background: dna.palette?.bg, color: dna.palette?.fg, borderRadius: "var(--r)" }} />
             <button className="px-5 py-3 text-sm font-medium" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{p.cta}</button>
@@ -580,17 +687,25 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
     );
     case "page_title": return (
       <section className="max-w-6xl mx-auto px-6 pt-16 pb-8">
-        <h1 className="text-5xl" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h1>
+        <h1 className="text-5xl s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h1>
       </section>
     );
     case "values": return (
       <section className="max-w-6xl mx-auto px-6 py-12 grid md:grid-cols-3 gap-6">
-        {(p.items ?? []).map((v: string, i: number) => (
-          <div key={i} className="p-6" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
-            <Sparkles className="h-5 w-5 mb-2" style={{ color: dna.palette?.accent }} />
-            <div className="text-sm">{v}</div>
-          </div>
-        ))}
+        {(p.items ?? []).map((v: any, i: number) => {
+          const isObj = typeof v === 'object' && v !== null;
+          const title = isObj ? (v.title || v.name || "") : "";
+          const body = isObj ? (v.body || v.description || "") : v;
+          return (
+            <div key={i} className="p-6 border flex flex-col justify-between" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", borderColor: dna.palette?.border }}>
+              <div>
+                <Sparkles className="h-5 w-5 mb-3" style={{ color: dna.palette?.accent }} />
+                {title && <h3 className="font-bold text-base mb-1" style={{ color: dna.palette?.fg }}>{title}</h3>}
+                <div className="text-sm leading-relaxed opacity-85" style={{ color: dna.palette?.fg }}>{body}</div>
+              </div>
+            </div>
+          );
+        })}
       </section>
     );
     case "signup":
@@ -598,12 +713,12 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
     case "forgot_password":
     case "reset_password": return <AuthForm p={p} dna={dna} variant={s.type} storeSlug={storeSlug} />;
     case "line_items":     return <LineItems dna={dna} storeSlug={storeSlug} />;
-    case "cart_summary":   return <CartSummary p={p} dna={dna} storeSlug={storeSlug} />;
+    case "cart_summary":   return <CartSummary p={p} dna={dna} storeSlug={storeSlug} store={store} />;
     case "checkout_stepper": return <CheckoutStepper p={p} dna={dna} />;
     case "journal_strip":  return <JournalStrip p={p} dna={dna} storeSlug={storeSlug} />;
     case "journal_list":   return <JournalList p={p} dna={dna} storeSlug={storeSlug} />;
     case "account_panel":  return <AccountPanel p={p} dna={dna} storeSlug={storeSlug} />;
-    case "contact_form":   return <ContactForm p={p} dna={dna} />;
+    case "contact_form":   return <ContactForm p={p} dna={dna} storeSlug={storeSlug} />;
     case "product_detail": return <ProductDetailStub p={p} dna={dna} storeSlug={storeSlug} store={store} products={products} />;
     // --- Service industry (doctor / salon / clinic) sections -------------
     case "provider_team":      return <ProviderTeamBlock p={p} dna={dna} storeSlug={storeSlug} />;
@@ -855,7 +970,6 @@ function AuthForm({ p, dna, variant, storeSlug }: any) {
       <h1 className="text-3xl mb-6" style={{ fontFamily: "var(--hf)" }}>{p.title}</h1>
       <form className="space-y-3">
         {variant !== "reset_password" && <input type="email" placeholder="Email" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />}
-        {(variant === "signin" || variant === "signup" || variant === "reset_password") && <input type="password" placeholder={variant === "reset_password" ? "New password" : "Password"} className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />}
         {variant === "signup" && <input placeholder="Full name" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />}
         <button type="button" className="w-full px-5 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta}</button>
       </form>
@@ -867,34 +981,186 @@ function AuthForm({ p, dna, variant, storeSlug }: any) {
 }
 
 function LineItems({ dna, storeSlug }: any) {
-  const { items } = useCart(storeSlug || "");
-  if (!items?.length) return <section className={pad()}><p style={{ color: dna.palette?.muted }}>Your cart is empty.</p></section>;
+  const { items, updateQuantity, removeItem } = useCart(storeSlug || "");
+  const br = "var(--r)";
+  
+  if (!items?.length) {
+    return (
+      <section className="max-w-3xl mx-auto px-6 py-16 text-center">
+        <ShoppingBag className="h-12 w-12 mx-auto opacity-20 mb-4" />
+        <p className="text-sm opacity-50 mb-4" style={{ color: dna.palette?.muted }}>Your cart is empty</p>
+        <Link
+          to={storeSlug ? `/store/${storeSlug}/shop` : "#"}
+          className="inline-block px-6 py-2.5 text-xs font-bold text-white transition-transform hover:scale-[1.02]"
+          style={{ backgroundColor: "var(--p)", color: "var(--pf)", borderRadius: br }}
+        >
+          Continue Shopping
+        </Link>
+      </section>
+    );
+  }
+
   return (
     <section className="max-w-3xl mx-auto px-6 py-12">
-      <ul className="divide-y" style={{ borderColor: dna.palette?.border }}>
-        {items.map((it: any, i: number) => (
-          <li key={i} className="flex gap-4 py-4 items-center">
-            {it.image && <img src={it.image} className="w-16 h-16 object-cover" style={{ borderRadius: "var(--r)" }} />}
-            <div className="flex-1">
-              <div className="text-sm font-medium">{it.title}</div>
-              <div className="text-xs" style={{ color: dna.palette?.muted }}>Qty {it.quantity}</div>
+      <div className="space-y-4">
+        {items.map((item: any) => {
+          const key = `${item.productId}_${item.variant || ''}`;
+          return (
+            <div
+              key={key}
+              className="flex gap-4 p-4 border"
+              style={{ borderColor: dna.palette?.border, borderRadius: br, background: dna.palette?.surface }}
+            >
+              <div
+                className="h-20 w-20 shrink-0 overflow-hidden"
+                style={{ backgroundColor: dna.palette?.bg, borderRadius: br }}
+              >
+                {item.image ? (
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs opacity-30">No img</div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold truncate">{item.title}</h3>
+                {item.variant && <p className="text-xs opacity-50">{item.variant}</p>}
+                <p className="text-sm font-bold mt-1" style={{ color: "var(--p)" }}>
+                  ₹{item.price.toLocaleString('en-IN')}
+                </p>
+              </div>
+
+              <div className="flex flex-col items-end justify-between">
+                <button
+                  onClick={() => removeItem(item.productId, item.variant)}
+                  className="text-xs opacity-40 hover:opacity-100 hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+                <div
+                  className="flex items-center border"
+                  style={{ borderColor: dna.palette?.border, borderRadius: "8px" }}
+                >
+                  <button onClick={() => updateQuantity(item.productId, item.variant, item.quantity - 1)} className="p-1.5 hover:bg-muted/50 rounded-l">
+                    <Minus className="h-3 w-3" />
+                  </button>
+                  <span className="px-3 text-xs font-semibold">{item.quantity}</span>
+                  <button onClick={() => updateQuantity(item.productId, item.variant, item.quantity + 1)} className="p-1.5 hover:bg-muted/50 rounded-r">
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="text-sm">₹{(it.price * it.quantity).toLocaleString("en-IN")}</div>
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </div>
     </section>
   );
 }
 
-function CartSummary({ p, dna, storeSlug }: any) {
-  const { totalPrice, totalItems } = useCart(storeSlug || "");
+function CartSummary({ p, dna, storeSlug, store }: any) {
+  const {
+    items, totalPrice, finalPrice,
+    appliedCoupon, setAppliedCoupon, clearCoupon
+  } = useCart(storeSlug || "");
+  
+  const { validateCoupon } = useValidateCoupon();
+  const [couponCode, setCouponCode] = useState(appliedCoupon?.code || '');
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  useEffect(() => {
+    if (appliedCoupon?.code) setCouponCode(appliedCoupon.code);
+  }, [appliedCoupon?.code]);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim() || !items.length) return;
+    setCouponLoading(true);
+    const storeId = store?.id;
+    if (!storeId) {
+      toast.error("Store reference error");
+      setCouponLoading(false);
+      return;
+    }
+    const cartLines = items.map((i: any) => ({ productId: i.productId, price: i.price, quantity: i.quantity }));
+    const result = await validateCoupon(storeId, couponCode.trim(), totalPrice, cartLines);
+    if (result.valid && result.coupon) {
+      setAppliedCoupon({ id: result.coupon.id, code: result.coupon.code, discount: result.discount! });
+      toast.success(`Coupon applied! You save ₹${Math.round(result.discount!).toLocaleString('en-IN')}`);
+    } else {
+      toast.error(result.error || 'Invalid coupon');
+    }
+    setCouponLoading(false);
+  };
+
+  const handleRemoveCoupon = () => {
+    clearCoupon();
+    setCouponCode('');
+  };
+
+  if (!items?.length) return null;
+
+  const discount = appliedCoupon?.discount || 0;
+
   return (
-    <section className="max-w-3xl mx-auto px-6 pb-16">
+    <section className="max-w-3xl mx-auto px-6 pb-16 space-y-4">
+      {/* Coupon input */}
+      <div className="p-4 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.surface }}>
+        <Label className="text-xs font-semibold mb-2 block">Have a coupon?</Label>
+        <div className="flex gap-2">
+          <Input 
+            value={couponCode} 
+            onChange={(e) => setCouponCode(e.target.value)} 
+            placeholder="Enter promo code" 
+            disabled={!!appliedCoupon}
+            className="h-9 text-xs flex-1 bg-transparent border-input"
+          />
+          {appliedCoupon ? (
+            <Button size="sm" variant="outline" onClick={handleRemoveCoupon} className="h-9 px-3 shrink-0">
+              <X className="h-3.5 w-3.5 mr-1" /> Remove
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handleApplyCoupon} disabled={couponLoading} className="h-9 px-4 shrink-0" style={{ background: "var(--p)", color: "var(--pf)" }}>
+              {couponLoading && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+              Apply
+            </Button>
+          )}
+        </div>
+        {appliedCoupon && (
+          <p className="text-xs text-green-600 font-semibold mt-1.5 flex items-center gap-1">
+            <Tag className="h-3.5 w-3.5" /> Coupon "{appliedCoupon.code}" applied! Saving ₹{Math.round(discount).toLocaleString('en-IN')}
+          </p>
+        )}
+      </div>
+
+      {/* Cart totals */}
       <div className="p-6 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.surface }}>
-        <div className="flex justify-between text-sm mb-2"><span>Items</span><span>{totalItems}</span></div>
-        <div className="flex justify-between text-base font-medium mb-4"><span>Total</span><span>₹{totalPrice.toLocaleString("en-IN")}</span></div>
-        <Link to={storeSlug ? `/store/${storeSlug}/checkout` : "#"} className="block text-center w-full px-5 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta || "Checkout"}</Link>
+        <div className="space-y-2 mb-4">
+          <div className="flex justify-between text-sm opacity-70">
+            <span>Subtotal</span>
+            <span>₹{totalPrice.toLocaleString("en-IN")}</span>
+          </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-sm text-green-600 font-medium">
+              <span>Discount</span>
+              <span>-₹{Math.round(discount).toLocaleString("en-IN")}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm opacity-70 pb-2 border-b" style={{ borderColor: dna.palette?.border }}>
+            <span>Shipping</span>
+            <span className="text-[11px] uppercase tracking-wider font-semibold text-primary">Calculated at checkout</span>
+          </div>
+          <div className="flex justify-between text-base font-bold pt-2">
+            <span>Total</span>
+            <span style={{ color: "var(--p)" }}>₹{Math.round(finalPrice).toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+        <Link 
+          to={storeSlug ? `/store/${storeSlug}/checkout` : "#"} 
+          className="block text-center w-full px-5 py-3 text-sm font-bold shadow-md hover:opacity-95 transition-opacity" 
+          style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}
+        >
+          {p.cta || "Proceed to Checkout"}
+        </Link>
       </div>
     </section>
   );
@@ -963,16 +1229,189 @@ function AccountPanel({ p, dna, storeSlug }: any) {
   );
 }
 
-function ContactForm({ p, dna }: any) {
+function ContactForm({ p, dna, storeSlug }: any) {
+  const title = p.title || "Get In Touch";
+  const sub = p.sub || "Have a question or feedback? We would love to hear from you. Send us a message and we will respond as soon as possible.";
+  const email = p.email || "support@storeontips.com";
+  const phone = p.phone || "+91 98765 43210";
+  const address = p.address || "123 Luxury Lane, Phase 1, New Delhi - 110001";
+  const hours = p.hours || "Mon - Sun: 11:00 AM - 9:00 PM";
+
+  const [name, setName] = useState("");
+  const [senderEmail, setSenderEmail] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !senderEmail.trim() || !message.trim()) return;
+    setSending(true);
+    try {
+      // Resolve store_id from slug
+      const { data: store, error: storeErr } = await supabase
+        .from("stores")
+        .select("id")
+        .eq("slug", storeSlug || "")
+        .maybeSingle();
+      if (storeErr || !store?.id) {
+        toast.error("Could not identify the store. Please try again.");
+        setSending(false);
+        return;
+      }
+      const { error } = await (supabase as any).from("contact_messages").insert({
+        store_id: store.id,
+        name: name.trim(),
+        email: senderEmail.trim().toLowerCase(),
+        subject: subject.trim() || "(No subject)",
+        message: message.trim(),
+        status: "unread",
+      });
+      if (error) throw error;
+      setSent(true);
+      setName(""); setSenderEmail(""); setSubject(""); setMessage("");
+      toast.success("Message sent! We'll get back to you soon.");
+    } catch (err: any) {
+      console.error("contact_form submit", err);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
-    <section className={pad()}>
-      <div className="text-sm mb-6" style={{ color: dna.palette?.muted }}>{p.email} · {p.phone}</div>
-      <form className="space-y-3">
-        <input placeholder="Your name" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />
-        <input type="email" placeholder="Email" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />
-        <textarea rows={5} placeholder="Message" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />
-        <button type="button" className="px-5 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Send message</button>
-      </form>
+    <section className="max-w-6xl mx-auto px-6 py-16">
+      <div className="text-center max-w-2xl mx-auto mb-12">
+        <h2 className="text-3xl font-bold mb-3 s-title" style={{ fontFamily: "var(--hf)", color: p.title_color ?? dna.palette?.fg }}>
+          {title}
+        </h2>
+        <p className="text-sm leading-relaxed s-sub" style={{ color: p.sub_color ?? dna.palette?.muted }}>
+          {sub}
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-12 gap-8 items-start">
+        {/* Info Column */}
+        <div className="md:col-span-5 space-y-6">
+          <div className="p-6 border rounded-2xl space-y-6" style={{ borderColor: dna.palette?.border, background: dna.palette?.surface }}>
+            <h3 className="text-lg font-bold" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>
+              Contact Information
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex gap-3.5 items-start">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border" style={{ borderColor: dna.palette?.border, background: dna.palette?.bg }}>
+                  <Mail className="h-4 w-4" style={{ color: "var(--p)" }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" style={{ color: dna.palette?.muted }}>Email Us</h4>
+                  <p className="text-sm font-semibold mt-0.5 break-all" style={{ color: p.email_color ?? dna.palette?.fg }}>{email}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3.5 items-start">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border" style={{ borderColor: dna.palette?.border, background: dna.palette?.bg }}>
+                  <Phone className="h-4 w-4" style={{ color: "var(--p)" }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" style={{ color: dna.palette?.muted }}>Call Us</h4>
+                  <p className="text-sm font-semibold mt-0.5" style={{ color: p.phone_color ?? dna.palette?.fg }}>{phone}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3.5 items-start">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border" style={{ borderColor: dna.palette?.border, background: dna.palette?.bg }}>
+                  <MapPin className="h-4 w-4" style={{ color: "var(--p)" }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" style={{ color: dna.palette?.muted }}>Visit Our Store</h4>
+                  <p className="text-sm font-semibold mt-0.5 leading-relaxed" style={{ color: p.address_color ?? dna.palette?.fg }}>{address}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3.5 items-start">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border" style={{ borderColor: dna.palette?.border, background: dna.palette?.bg }}>
+                  <Clock className="h-4 w-4" style={{ color: "var(--p)" }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" style={{ color: dna.palette?.muted }}>Working Hours</h4>
+                  <p className="text-sm font-semibold mt-0.5" style={{ color: p.hours_color ?? dna.palette?.fg }}>{hours}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Abstract Map Graphic */}
+          <div className="h-48 rounded-2xl overflow-hidden relative border shadow-inner flex items-center justify-center animate-fade-in" style={{ borderColor: dna.palette?.border, background: dna.palette?.surface }}>
+            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(var(--p) 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
+            <div className="absolute w-24 h-24 rounded-full filter blur-xl opacity-10 animate-pulse" style={{ background: "var(--p)" }} />
+            <div className="z-10 text-center space-y-2 p-4">
+              <MapPin className="h-7 w-7 mx-auto animate-bounce" style={{ color: "var(--p)" }} />
+              <p className="text-xs font-bold" style={{ color: dna.palette?.fg }}>Find us on Google Maps</p>
+              <button 
+                type="button" 
+                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank')} 
+                className="text-[10px] font-bold px-3 py-1.5 border rounded-lg hover:bg-background transition"
+                style={{ borderColor: dna.palette?.border, color: dna.palette?.fg }}
+              >
+                Get Directions
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Column */}
+        <div className="md:col-span-7 p-6 md:p-8 border rounded-2xl space-y-6" style={{ borderColor: dna.palette?.border, background: dna.palette?.surface }}>
+          <h3 className="text-lg font-bold" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>
+            Send Us a Message
+          </h3>
+          {sent ? (
+            <div className="py-10 text-center space-y-3">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto" style={{ background: "var(--p)" + "22" }}>
+                <Mail className="h-7 w-7" style={{ color: "var(--p)" }} />
+              </div>
+              <p className="font-semibold" style={{ color: dna.palette?.fg }}>Message Sent!</p>
+              <p className="text-sm" style={{ color: dna.palette?.muted }}>We'll get back to you as soon as possible.</p>
+              <button
+                onClick={() => setSent(false)}
+                className="text-xs underline opacity-60 hover:opacity-100"
+                style={{ color: dna.palette?.fg }}
+              >Send another message</button>
+            </div>
+          ) : (
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold block" style={{ color: dna.palette?.muted }}>Full Name</label>
+                <input required placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-3 py-2 text-sm border focus:outline-none focus:ring-1 focus:ring-primary" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg, color: dna.palette?.fg }} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold block" style={{ color: dna.palette?.muted }}>Email Address</label>
+                <input required type="email" placeholder="email@domain.com" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} className="w-full px-3 py-2 text-sm border focus:outline-none focus:ring-1 focus:ring-primary" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg, color: dna.palette?.fg }} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase font-bold block" style={{ color: dna.palette?.muted }}>Subject</label>
+              <input placeholder="What is this about?" value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full px-3 py-2 text-sm border focus:outline-none focus:ring-1 focus:ring-primary" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg, color: dna.palette?.fg }} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase font-bold block" style={{ color: dna.palette?.muted }}>Your Message</label>
+              <textarea required rows={5} placeholder="Write your message here..." value={message} onChange={(e) => setMessage(e.target.value)} className="w-full px-3 py-2 text-sm border focus:outline-none focus:ring-1 focus:ring-primary" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg, color: dna.palette?.fg }} />
+            </div>
+            <button
+              type="submit"
+              disabled={sending}
+              className="w-full py-3 text-xs font-bold uppercase tracking-wider transition hover:opacity-90 shadow-md flex items-center justify-center gap-2"
+              style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}
+            >
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {sending ? "Sending…" : "Send Message"}
+            </button>
+          </form>
+          )}
+        </div>
+      </div>
     </section>
   );
 }
@@ -1009,6 +1448,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
         theme={themeObj}
         slug={storeSlug || ''}
         products={products || []}
+        sectionOverrides={p}
       />
     );
   }
@@ -1604,7 +2044,7 @@ function CategoryBlock({ p, dna, storeSlug }: any) {
   // when there is no slug (admin theme preview).
   const hrefFor = (name: string) =>
     storeSlug ? `/store/${storeSlug}/shop?category=${encodeURIComponent(name || "")}` : "#products";
-  const Title = <h2 className="text-3xl mb-10" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>;
+  const Title = <h2 className="text-3xl mb-10 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>;
   if (v === "carousel_strip") {
     return (
       <section className="py-16">
@@ -1853,7 +2293,7 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
   };
 
   const linkFor = (pr: any) => (storeSlug && pr.id ? `/store/${storeSlug}/product/${pr.id}` : "#");
-  const Title = p.title ? <h2 className="text-3xl mb-6" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2> : null;
+  const Title = p.title ? <h2 className="text-3xl mb-6 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2> : null;
 
   const Chips = page === "shop" && categories.length > 0 ? (
     <div className="flex flex-wrap gap-2 mb-8">
@@ -1923,15 +2363,31 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
       </section>
     );
   }
-  const cols = v === "grid_minimal" ? "md:grid-cols-3" : "md:grid-cols-4";
+  const productCols = p.product_cols ?? (v === "grid_minimal" ? 3 : 4);
+  const cardWidth = p.product_card_width;
+  const sectionId = p.id || `sec-prod-${v}`;
+
   return (
     <section id="products" className="max-w-6xl mx-auto px-6 py-20">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (min-width: 768px) {
+          .dynamic-grid-${sectionId} {
+            grid-template-columns: repeat(${productCols}, minmax(0, 1fr)) !important;
+            display: grid !important;
+          }
+        }
+      `}} />
       {Title}
       {Chips}
       {Empty}
-      <div className={`grid grid-cols-2 ${cols} gap-6`}>
+      <div 
+        className={cardWidth 
+          ? "flex flex-wrap gap-6 justify-center" 
+          : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
+        }
+      >
         {items.map((pr: any, i: number) => (
-          <div key={i} className="group">
+          <div key={i} className="group" style={cardWidth ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } : {}}>
             <Link to={linkFor(pr)} className="block">
               <div className="aspect-square mb-3 overflow-hidden relative" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
                 {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
@@ -2367,6 +2823,10 @@ function ProductsChrome({ p, dna, storeSlug }: any) {
     { id:"c4", name:"Silver Cuff Series", price:1999, compare_at:2999, image:"https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&auto=format&fit=crop&q=60", badge:"Sale" },
   ];
   const linkFor = (pr: any) => storeSlug && pr.id ? `/store/${storeSlug}/product/${pr.id}${themeId ? `/${themeId}` : ""}` : "#";
+  const productCols = p.product_cols ?? 4;
+  const cardWidth = p.product_card_width;
+  const sectionId = p.id || "sec-chrome-prod";
+
   return (
     <section className="relative py-24 overflow-hidden" style={{ background: "#050810" }}>
       <style>{`
@@ -2374,6 +2834,14 @@ function ProductsChrome({ p, dna, storeSlug }: any) {
         @keyframes shine-sweep { 0%{transform:translateX(-100%) skewX(-15deg)} 100%{transform:translateX(300%) skewX(-15deg)} }
         .chrome-card:hover .card-shine { animation: shine-sweep 0.6s ease forwards; }
       `}</style>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (min-width: 768px) {
+          .dynamic-grid-${sectionId} {
+            grid-template-columns: repeat(${productCols}, minmax(0, 1fr)) !important;
+            display: grid !important;
+          }
+        }
+      `}} />
       <StarField3D color1={P} color2="#475569" count={60} />
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {p.title && (
@@ -2382,10 +2850,15 @@ function ProductsChrome({ p, dna, storeSlug }: any) {
             <div className="h-px flex-1" style={{ background:`linear-gradient(90deg,${P}50,transparent)` }} />
           </div>
         )}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div 
+          className={cardWidth 
+            ? "flex flex-wrap gap-6 justify-center" 
+            : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
+          }
+        >
           {items.map((pr, i) => (
             <div key={i} className="chrome-card group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-3"
-              style={{ background:"linear-gradient(145deg,rgba(226,232,240,0.07) 0%,rgba(148,163,184,0.02) 100%)", border:`1px solid rgba(226,232,240,0.10)`, boxShadow:"0 8px 40px rgba(0,0,0,0.5)" }}>
+              style={{ background:"linear-gradient(145deg,rgba(226,232,240,0.07) 0%,rgba(148,163,184,0.02) 100%)", border:`1px solid rgba(226,232,240,0.10)`, boxShadow:"0 8px 40px rgba(0,0,0,0.5)", width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
               <Link to={linkFor(pr)}>
                 <div className="aspect-square overflow-hidden relative">
                   {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
@@ -2575,6 +3048,10 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
     { id:"b4", name:"Botanical Mist",  price:799,  compare_at:999,  image:"https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&auto=format&fit=crop&q=60", badge:"" },
   ];
   const linkFor = (pr: any) => storeSlug && pr.id ? `/store/${storeSlug}/product/${pr.id}${themeId ? `/${themeId}` : ""}` : "#";
+  const productCols = p.product_cols ?? 4;
+  const cardWidth = p.product_card_width;
+  const sectionId = p.id || "sec-bot-prod";
+
   return (
     <section className="relative py-24 overflow-hidden" style={{ background:"#010d08" }}>
       <style>{`
@@ -2584,6 +3061,14 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
         .bot-card:nth-child(3){animation-delay:3s}
         .bot-card:nth-child(4){animation-delay:4.5s}
       `}</style>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (min-width: 768px) {
+          .dynamic-grid-${sectionId} {
+            grid-template-columns: repeat(${productCols}, minmax(0, 1fr)) !important;
+            display: grid !important;
+          }
+        }
+      `}} />
       <StarField3D color1={N} color2={G} count={50} />
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {p.title && (
@@ -2593,10 +3078,15 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
             <div className="h-px flex-1" style={{ background:`linear-gradient(90deg,${N}50,transparent)` }} />
           </div>
         )}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div 
+          className={cardWidth 
+            ? "flex flex-wrap gap-6 justify-center" 
+            : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
+          }
+        >
           {items.map((pr, i) => (
             <div key={i} className="bot-card group relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-4"
-              style={{ background:`linear-gradient(160deg,${N}08,${G}03)`, border:`1px solid ${N}20`, boxShadow:`0 8px 40px rgba(16,185,129,0.08)` }}>
+              style={{ background:`linear-gradient(160deg,${N}08,${G}03)`, border:`1px solid ${N}20`, boxShadow:`0 8px 40px rgba(16,185,129,0.08)`, width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
               <Link to={linkFor(pr)}>
                 <div className="aspect-square overflow-hidden relative">
                   {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
@@ -2830,15 +3320,32 @@ function ProductsGlass3D({ p, dna, storeSlug }: any) {
     { id:"d4",name:"Holo Denim",      price:2499,compare_at:3999,image:"https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop&q=60",badge:"🔥" },
   ];
   const linkFor = (pr: any) => storeSlug && pr.id ? `/store/${storeSlug}/product/${pr.id}${themeId?`/${themeId}`:""}` : "#";
+  const productCols = p.product_cols ?? 4;
+  const cardWidth = p.product_card_width;
+  const sectionId = p.id || "sec-glass-prod";
+
   return (
     <section className="relative py-20 overflow-hidden" style={{ background:"linear-gradient(135deg,#050510 0%,#0d0d2b 50%,#1a0533 100%)" }}>
       <style>{`@keyframes glass-tilt{0%,100%{transform:perspective(600px) rotateX(0) rotateY(0) translateZ(0)}25%{transform:perspective(600px) rotateX(3deg) rotateY(-3deg) translateZ(10px)}75%{transform:perspective(600px) rotateX(-3deg) rotateY(3deg) translateZ(10px)}}.glass-card{animation:glass-tilt 5s ease-in-out infinite;transform-style:preserve-3d}.glass-card:nth-child(2){animation-delay:1s}.glass-card:nth-child(3){animation-delay:2s}.glass-card:nth-child(4){animation-delay:3s}`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (min-width: 768px) {
+          .dynamic-grid-${sectionId} {
+            grid-template-columns: repeat(${productCols}, minmax(0, 1fr)) !important;
+            display: grid !important;
+          }
+        }
+      `}} />
       <SparkleBackground count={40} primaryColor={primary} accentColor={accent} />
       <div className="relative z-10 max-w-6xl mx-auto px-6">
         {p.title && <h2 className="text-4xl md:text-5xl font-black text-center mb-12" style={{ fontFamily:"var(--hf)",background:`linear-gradient(90deg,${primary},${accent},#fff)`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>{p.title}</h2>}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div 
+          className={cardWidth 
+            ? "flex flex-wrap gap-6 justify-center" 
+            : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
+          }
+        >
           {items.map((pr,i)=>(
-            <div key={i} className="glass-card group cursor-pointer" style={{ animationDelay:`${i*.8}s` }}>
+            <div key={i} className="glass-card group cursor-pointer" style={{ animationDelay:`${i*.8}s`, width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
               <Link to={linkFor(pr)} className="block h-full">
                 <div className="relative rounded-2xl overflow-hidden h-full flex flex-col" style={{ background:"linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.03))",border:"1px solid rgba(255,255,255,.15)",backdropFilter:"blur(16px)",boxShadow:`0 8px 32px ${primary}25,inset 0 1px 0 rgba(255,255,255,.1)` }}>
                   <div className="aspect-square overflow-hidden relative">

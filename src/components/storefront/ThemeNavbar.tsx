@@ -15,13 +15,14 @@ interface NavProps {
   mergedNavLinks: any[];
   headerConfig: any;
   onSearchOpen: () => void;
+  onAuthOpen?: () => void;
 }
 
 // ─── TOP navbar (default — used by most themes) ──────────────────────────────
 const TopNav = ({
   store, colors, fonts, borderRadius,
   totalItems, user, customerName, menuEnabled,
-  mergedNavLinks, headerConfig, onSearchOpen,
+  mergedNavLinks, headerConfig, onSearchOpen, onAuthOpen,
 }: NavProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -113,7 +114,8 @@ const TopNav = ({
             <Search className="h-5 w-5" style={{ color: colors.text }} />
           </button>
           <Link
-            to={user ? `/store/${slug}/account` : `/store/${slug}/account/auth`}
+            to={user ? `/store/${slug}/account` : '#'}
+            onClick={!user ? (e) => { e.preventDefault(); onAuthOpen?.(); } : undefined}
             className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border transition-colors hover:opacity-80 max-w-40"
             style={{ borderColor: colors.primary, color: colors.primary }}
           >
@@ -121,7 +123,8 @@ const TopNav = ({
             <span className="truncate">{user ? customerName : 'Sign in'}</span>
           </Link>
           <Link
-            to={user ? `/store/${slug}/account` : `/store/${slug}/account/auth`}
+            to={user ? `/store/${slug}/account` : '#'}
+            onClick={!user ? (e) => { e.preventDefault(); onAuthOpen?.(); } : undefined}
             className="md:hidden inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full max-w-28"
             style={{ backgroundColor: colors.primary, color: '#fff' }}
           >
@@ -179,7 +182,7 @@ const TopNav = ({
 const HamburgerNav = ({
   store, colors, fonts, borderRadius,
   totalItems, user, customerName, menuEnabled,
-  mergedNavLinks, headerConfig, onSearchOpen,
+  mergedNavLinks, headerConfig, onSearchOpen, onAuthOpen,
 }: NavProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -292,8 +295,8 @@ const HamburgerNav = ({
         {/* Drawer footer */}
         <div className="px-6 py-6 flex items-center justify-between" style={{ borderTop: `1px solid ${colors.secondary}60` }}>
           <Link
-            to={user ? `/store/${slug}/account` : `/store/${slug}/account/auth`}
-            onClick={() => setDrawerOpen(false)}
+            to={user ? `/store/${slug}/account` : '#'}
+            onClick={!user ? (e) => { e.preventDefault(); onAuthOpen?.(); setDrawerOpen(false); } : () => setDrawerOpen(false)}
             className="flex items-center gap-2 text-sm font-medium"
             style={{ color: colors.primary }}
           >

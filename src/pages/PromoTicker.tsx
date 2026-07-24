@@ -10,10 +10,9 @@ import { buildResolvedStorefrontManifest, getStorefrontConfig } from '@/lib/stor
 
 const PromoTickerPage = () => {
   const { store, setStore } = useStore();
-  const settings = getStorefrontConfig(store) as any;
-  const [config, setConfig] = useState<PromoTickerConfig>({
-    ...DEFAULT_PROMO_TICKER,
-    ...(settings.promo_ticker || {}),
+  const [config, setConfig] = useState<PromoTickerConfig>(() => {
+    const s = getStorefrontConfig(store) as any;
+    return { ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) };
   });
   const [saving, setSaving] = useState(false);
   const [hydratedId, setHydratedId] = useState<string | null>(null);
@@ -28,19 +27,25 @@ const PromoTickerPage = () => {
   const handleSave = async () => {
     if (!store) return;
     setSaving(true);
-    // promo_ticker is rendering config — goes only into
-    // resolved_storefront_manifest.config, `stores.settings` untouched.
-    const newConfig = { ...settings, promo_ticker: config };
+    // Always read the latest settings from the current store to avoid stale closure
+    const currentSettings = getStorefrontConfig(store) as any;
+    const newConfig = { ...currentSettings, promo_ticker: config };
     const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
+    // Also persist promo_ticker into store.settings so it survives
+    // resolved_storefront_manifest rebuilds triggered by other save actions.
+    const updatedSettings = { ...(store.settings as any || {}), promo_ticker: config };
     const { error } = await supabase
       .from('stores')
-      .update({ resolved_storefront_manifest: resolved_storefront_manifest as any })
+      .update({
+        resolved_storefront_manifest: resolved_storefront_manifest as any,
+        settings: updatedSettings,
+      })
       .eq('id', store.id);
     if (error) {
       toast.error('Save failed');
     } else {
-      setStore({ ...store, resolved_storefront_manifest });
-      toast.success('Promo ticker saved');
+      setStore({ ...store, resolved_storefront_manifest, settings: updatedSettings });
+      toast.success('Promo ticker saved!');
     }
     setSaving(false);
   };

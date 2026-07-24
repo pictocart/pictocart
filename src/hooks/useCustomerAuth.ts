@@ -160,10 +160,143 @@ export const useCustomerAuth = (storeSlug: string) => {
     return { data, error: null };
   };
 
+  const sendEmailOtp = async (email: string, fullName = "", phone = "", password = "") => {
+    await clearForeignSession();
+    const { data, error } = await invokeCustomerAuth({
+      action: 'send_email_otp',
+      email,
+      fullName,
+      phone,
+      password,
+    });
+    if (error) return { data: null, error };
+    if (data?.error) {
+      return { data: null, error: { message: data.error } };
+    }
+    return { data, error: null };
+  };
+
+  const verifyEmailOtp = async (email: string, token: string) => {
+    await clearForeignSession();
+    const { data, error } = await invokeCustomerAuth({
+      action: 'verify_email_otp',
+      email,
+      token,
+    });
+    if (error) return { data: null, error };
+    if (data?.error) {
+      return { data: null, error: { message: data.error } };
+    }
+    if (data?.session) await applySession(data.session);
+    return { data, error: null };
+  };
+
+  const sendPasswordResetOtp = async (email: string) => {
+    const { data, error } = await invokeCustomerAuth({
+      action: 'send_password_reset_otp',
+      email,
+    });
+    if (error) return { data: null, error };
+    if (data?.error) {
+      return { data: null, error: { message: data.error } };
+    }
+    return { data, error: null };
+  };
+
+  const resetPasswordWithOtp = async (email: string, token: string, newPassword: string) => {
+    await clearForeignSession();
+    const { data, error } = await invokeCustomerAuth({
+      action: 'reset_password_with_otp',
+      email,
+      token,
+      newPassword,
+    });
+    if (error) return { data: null, error };
+    if (data?.error) {
+      const msg =
+        data.error === 'invalid_otp' ? 'Invalid or expired OTP. Please try again.' :
+        data.error === 'password_too_short' ? 'Password must be at least 6 characters.' :
+        data.error === 'user_not_found' ? 'No account found with that email.' :
+        'Could not reset password. Please try again.';
+      return { data: null, error: { message: msg } };
+    }
+    if (data?.session) await applySession(data.session);
+    return { data, error: null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     window.dispatchEvent(new CustomEvent(CUSTOMER_AUTH_EVENT, { detail: { storeSlug } }));
+  };
+
+  /**
+   * Send a 6-digit OTP to user's real email via the edge function's send_email_otp action.
+   * This uses our branded transactional email (not Supabase magic link).
+   * Stores name+password in sessionStorage for use after OTP verification.
+   */
+  const sendSignupOtp = async (email: string, fullName: string, password: string) => {
+    await clearForeignSession();
+    try {
+      sessionStorage.setItem(`signup_intent_${storeSlug}`, JSON.stringify({ email, fullName, password }));
+    } catch {}
+    const { data, error } = await invokeCustomerAuth({
+      action: 'send_email_otp',
+      email,
+      fullName,
+      password,
+    });
+    if (error) return { error: { message: 'Could not send verification code. Please try again.' } };
+    if (data?.error) return { error: { message: 'Could not send verification code. Please try again.' } };
+    return { error: null };
+  };
+
+  /**
+   * Verify the 6-digit OTP from send_email_otp, then create the tenant account.
+   */
+  const verifySignupOtp = async (email: string, token: string) => {
+    // Retrieve stored signup intent
+    let fullName = '';
+    let password = '';
+    try {
+      const raw = sessionStorage.getItem(`signup_intent_${storeSlug}`);
+      if (raw) { const p = JSON.parse(raw); fullName = p.fullName || ''; password = p.password || ''; }
+      sessionStorage.removeItem(`signup_intent_${storeSlug}`);
+    } catch {}
+
+    if (!password) return { data: null, error: { message: 'Session expired. Please start signup again.' } };
+
+    // Step 1: Verify OTP via edge function
+    const { data: verifyData, error: verifyError } = await invokeCustomerAuth({
+      action: 'verify_email_otp',
+      email,
+      token,
+    });
+    if (verifyError) return { data: null, error: { message: 'Invalid or expired code. Please try again.' } };
+    if (verifyData?.error) return { data: null, error: { message: 'Invalid or expired code. Please try again.' } };
+
+    // Step 2: If verify returned a session, apply it
+    if (verifyData?.session) {
+      await applySession(verifyData.session);
+      return { data: verifyData, error: null };
+    }
+
+    // Step 3: Otherwise call signup to create the tenant account with password
+    const { data: signupData, error: signupError } = await invokeCustomerAuth({
+      action: 'signup',
+      email,
+      password,
+      fullName,
+    });
+    if (signupError) return { data: null, error: { message: 'Could not create account. Please try again.' } };
+    if (signupData?.error) {
+      if (signupData.error === 'already_registered_for_this_store') {
+        return await signInWithEmail(email, password);
+      }
+      return { data: null, error: { message: 'Could not create account. Please try again.' } };
+    }
+    if (signupData?.session) await applySession(signupData.session);
+    return { data: signupData, error: null };
   };
 
   return {
@@ -176,5 +309,11 @@ export const useCustomerAuth = (storeSlug: string) => {
     verifyOtp,
     signInWithGoogle,
     signOut,
+    sendEmailOtp,
+    verifyEmailOtp,
+    sendPasswordResetOtp,
+    resetPasswordWithOtp,
+    sendSignupOtp,
+    verifySignupOtp,
   };
 };

@@ -75,6 +75,7 @@ const BlogPosts = lazy(() => import("@/pages/BlogPosts"));
 const BlogPostForm = lazy(() => import("@/pages/BlogPostForm"));
 const Subscribers = lazy(() => import("@/pages/Subscribers"));
 const Customers = lazy(() => import("@/pages/Customers"));
+const ContactMessages = lazy(() => import("@/pages/ContactMessages"));
 const StoreAnalytics = lazy(() => import("@/pages/StoreAnalytics"));
 const Categories = lazy(() => import("@/pages/Categories"));
 const Themes = lazy(() => import("@/pages/Themes"));
@@ -226,7 +227,7 @@ const AppRoutes = () => {
         // Custom Domain Storefront Routes (without /store/:slug prefix)
         <>
           <Route path="/" element={<Storefront />} />
-          <Route path="/shop" element={<Storefront page="shop" />} />
+          <Route path="/shop" element={<StorefrontSearch />} />
           <Route path="/collections" element={<Storefront page="collections" />} />
           <Route path="/collections/:categoryId" element={<Storefront page="collection_detail" />} />
           <Route path="/about" element={<Storefront page="about" />} />
@@ -297,6 +298,7 @@ const AppRoutes = () => {
             <Route path="/refunds" element={<Refunds />} />
             <Route path="/shipments" element={<Shipments />} />
             <Route path="/reviews" element={<ReviewsModeration />} />
+            <Route path="/messages" element={<ContactMessages />} />
             <Route path="/customise" element={<Customise />} />
             <Route path="/customise/legacy" element={<CustomiseLegacy />} />
             <Route path="/customise/sections" element={<CustomiseSections />} />
@@ -393,7 +395,7 @@ const AppRoutes = () => {
           {/* Public Storefront Routes */}
           <Route path="/store/preview-theme" element={<ThemePreview />} />
           <Route path="/store/:slug" element={<Storefront />} />
-          <Route path="/store/:slug/shop" element={<Storefront page="shop" />} />
+          <Route path="/store/:slug/shop" element={<StorefrontSearch />} />
           <Route path="/store/:slug/collections" element={<Storefront page="collections" />} />
           <Route path="/store/:slug/collections/:categoryId" element={<Storefront page="collection_detail" />} />
           <Route path="/store/:slug/about" element={<Storefront page="about" />} />

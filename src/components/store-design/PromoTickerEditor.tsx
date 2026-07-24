@@ -8,7 +8,7 @@ import { Megaphone, Sparkles } from 'lucide-react';
 import type { PromoTickerConfig } from '@/components/storefront/PromoTicker';
 
 export const DEFAULT_PROMO_TICKER: PromoTickerConfig = {
-  enabled: false,
+  enabled: true,
   messages: [
     '🔥 Limited time — Free shipping on all orders above ₹499',
     '🎁 Use code WELCOME10 for 10% off your first order',

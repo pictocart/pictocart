@@ -126,7 +126,7 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
           <RequestReturnButton order={order} primaryColor={primaryColor} mode="exchange" />
         )}
 
-        <Link to={`/store/${slug}/account/support?order=${order.id}`} className={btn}>
+        <Link to={`/store/${slug}/contact`} className={btn}>
           <MessageCircle className="h-3.5 w-3.5" /> Support
         </Link>
       </div>
@@ -215,7 +215,7 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
         </button>
       )}
 
-      <Link to={`/store/${slug}/account/support?order=${order.id}`} className={btn}>
+      <Link to={`/store/${slug}/contact`} className={btn}>
         <MessageCircle className="h-3.5 w-3.5" /> Support
       </Link>
     </div>

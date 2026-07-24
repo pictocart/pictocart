@@ -156,10 +156,10 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
   const isMasterTheme = resolvedThemeId.startsWith('theme-') || resolvedThemeId.startsWith('layout1-') || resolvedThemeId.startsWith('custom-theme-');
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
   const filtered = selectedCategory ? products.filter((p) => p.category === selectedCategory) : products;
-  const seo = storefrontConfig.seo || {};
+  const seo = (storefrontConfig.seo || {}) as any;
   const rawSections = Array.isArray(storefrontConfig.homepage_sections) ? storefrontConfig.homepage_sections : [];
   const homepageSections = rawSections.length > 0 ? rawSections : generateDefaultSections(branding.name, branding.category);
-  const bannerCarouselSections = homepageSections.filter((section: any) => section.type === 'banner_carousel');
+  const bannerCarouselSections = homepageSections.filter((section: any) => section.type === 'banner_carousel') as any[];
   const footerConfig: FooterConfig = { ...DEFAULT_FOOTER, ...(storefrontConfig.footer || {}) };
   const showCategoryFilters = categories.length > 0 && !homepageSections.some((section: any) => section.type === 'category_grid');
 
@@ -1069,6 +1069,31 @@ const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }:
   const branding = getStoreBranding(store);
   const storefrontConfig = getStorefrontConfig(store) as any;
   const overrides = storefrontConfig?.theme_overrides || {};
+  const disabledPages = overrides?.disabled_pages ?? [];
+
+  if (disabledPages.includes(page)) {
+    const theme = resolveTheme(getStoreThemeTokens(store));
+    const { colors, borderRadius } = theme;
+    return (
+      <StorefrontLayout store={store}>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-8">
+          <h1 className="text-6xl font-black mb-4" style={{ color: colors.primary }}>404</h1>
+          <h2 className="text-2xl font-bold mb-2">Page Not Found</h2>
+          <p className="text-sm text-muted-foreground max-w-sm mb-6">
+            This page has been disabled or is not available for this store.
+          </p>
+          <Link 
+            to={`/store/${slug}`} 
+            className="px-6 py-2.5 text-xs font-bold text-white transition-transform hover:scale-[1.02]"
+            style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius}px` }}
+          >
+            Go Back Home
+          </Link>
+        </div>
+      </StorefrontLayout>
+    );
+  }
+
   const headerLogo = overrides?.header?.logo_url ?? overrides?.logo_url ?? branding.logo_url ?? "";
   return (
     <>

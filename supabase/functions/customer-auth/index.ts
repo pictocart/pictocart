@@ -83,8 +83,13 @@ async function createPasswordSession(email: string, password: string) {
 }
 
 async function findUserByEmail(email: string) {
-  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  return data?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase()) || null;
+  // Use the admin listUsers filter which is much faster and more reliable than scanning all users
+  try {
+    const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const found = data?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    if (found) return found;
+  } catch {}
+  return null;
 }
 
 async function ensureCustomerUser(userId: string, store: any, realEmail: string, fullName = "", phone = "") {
@@ -115,7 +120,7 @@ async function ensureCustomerUser(userId: string, store: any, realEmail: string,
   }, { onConflict: "user_id,store_id" });
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -378,6 +383,275 @@ Deno.serve(async (req) => {
       }
 
       return json({ ok: true, session, user_id: userId });
+    }
+
+    if (action === "send_email_otp") {
+      const fullName = String(payload?.fullName || "").trim();
+      const phone = String(payload?.phone || "").trim();
+      // password is optional — provided during signup so user is created with the right password upfront
+      const userPassword = String(payload?.password || "").trim();
+      const customerAlias = tenantEmail(email, storeSlug);
+
+      let existing = await findUserByEmail(customerAlias);
+      if (!existing) {
+        const accountPassword = userPassword.length >= 6
+          ? userPassword
+          : Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+        const { data: created, error: createErr } = await admin.auth.admin.createUser({
+          email: customerAlias,
+          password: accountPassword,
+          email_confirm: true,
+          user_metadata: {
+            is_customer: true,
+            store_slug: storeSlug,
+            customer_email: email,
+            full_name: fullName || null,
+            phone: phone || null,
+          }
+        });
+        if (createErr) {
+          // If user already exists (race condition), try to find them
+          if (/already.*registered|already exists|duplicate/i.test(createErr.message || "")) {
+            existing = await findUserByEmail(customerAlias);
+            if (!existing) {
+              console.error("send_email_otp createUser failed", createErr);
+              return json({ error: "otp_failed", detail: createErr.message }, 400);
+            }
+            if (userPassword.length >= 6) {
+              await admin.auth.admin.updateUserById(existing.id, { password: userPassword });
+            }
+          } else {
+            console.error("send_email_otp createUser failed", createErr);
+            return json({ error: "otp_failed", detail: createErr.message }, 400);
+          }
+        } else {
+          existing = created.user;
+        }
+      } else if (userPassword.length >= 6) {
+        // User already exists — update their password to the one they just chose
+        await admin.auth.admin.updateUserById(existing.id, { password: userPassword });
+      }
+
+      await ensureCustomerUser(existing!.id, store, email, fullName, phone);
+
+      const { data: linkData, error: linkErr } = await admin.auth.admin
+        .generateLink({ type: "magiclink", email: customerAlias });
+      if (linkErr || !linkData?.properties?.email_otp) {
+        console.error("magiclink generation failed", linkErr);
+        return json({ error: "otp_failed", detail: "OTP generation failed" }, 500);
+      }
+
+      const otp = linkData.properties.email_otp;
+
+      // Send OTP directly via Resend API (bypasses queue for immediate delivery)
+      const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+      let sentDirectly = false;
+      const cleanStoreName = store.name.replace(/[\r\n<>"]/g, "").trim().slice(0, 80);
+
+      if (RESEND_API_KEY) {
+        try {
+          const emailHtml = `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;">
+              <h2 style="margin:0 0 8px;font-size:22px;color:#111;">${store.name}</h2>
+              <p style="color:#555;font-size:14px;margin:0 0 24px;">Verify your email address to create your account.</p>
+              <div style="background:#f5f5f5;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+                <p style="margin:0 0 8px;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:0.1em;">Your verification code</p>
+                <p style="margin:0;font-size:40px;font-weight:800;letter-spacing:0.35em;color:#111;font-family:monospace;">${otp}</p>
+              </div>
+              <p style="color:#888;font-size:12px;margin:0;">This code expires in 10 minutes. If you didn't request this, please ignore this email.</p>
+            </div>`;
+          const resendRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${RESEND_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: `${cleanStoreName} <noreply@pictocart.in>`,
+              to: [email],
+              subject: `${otp} is your ${store.name} verification code`,
+              html: emailHtml,
+            }),
+          });
+          if (!resendRes.ok) {
+            const errText = await resendRes.text();
+            console.warn("Resend direct send failed", resendRes.status, errText);
+          } else {
+            console.log("OTP sent via Resend directly", { email, storeSlug });
+            sentDirectly = true;
+          }
+        } catch (e) {
+          console.warn("Resend direct send error", e);
+        }
+      }
+
+      if (!sentDirectly) {
+        // Fallback to transactional email queue
+        try {
+          await admin.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "customer-otp",
+              recipientEmail: email,
+              idempotencyKey: `customer-otp-${storeSlug}-${email}-${Date.now()}`,
+              senderName: store.name,
+              templateData: { storeName: store.name, otp },
+            },
+          });
+          console.log("OTP sent via transactional email queue fallback", { email, storeSlug });
+        } catch (e) {
+          console.warn("send OTP email fallback failed", e);
+        }
+      }
+
+      return json({ ok: true });
+    }
+
+    if (action === "verify_email_otp") {
+      const token = String(payload?.token || "").trim();
+      const customerAlias = tenantEmail(email, storeSlug);
+
+      const verifyOtpRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+        body: JSON.stringify({
+          type: "magiclink",
+          email: customerAlias,
+          token: token,
+        }),
+      });
+
+      if (!verifyOtpRes.ok) {
+        const detail = await verifyOtpRes.text();
+        console.error("verify OTP failed", verifyOtpRes.status, detail);
+        return json({ error: "invalid_otp", detail }, 400);
+      }
+
+      const session = await verifyOtpRes.json();
+      return json({ ok: true, session });
+    }
+
+    // send_password_reset_otp: send a 6-digit OTP to the user's real email for password reset
+    if (action === "send_password_reset_otp") {
+      const customerAlias = tenantEmail(email, storeSlug);
+      const existing = await findUserByEmail(customerAlias);
+      if (!existing) {
+        // Don't reveal whether the user exists; silently succeed
+        return json({ ok: true });
+      }
+
+      const { data: linkData, error: linkErr } = await admin.auth.admin
+        .generateLink({ type: "magiclink", email: customerAlias });
+      if (linkErr || !linkData?.properties?.email_otp) {
+        console.error("send_password_reset_otp generateLink failed", linkErr);
+        return json({ error: "otp_failed", detail: "OTP generation failed" }, 500);
+      }
+
+      const otp = linkData.properties.email_otp;
+
+      // Send password reset OTP directly via Resend
+      const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
+      let sentDirectly = false;
+      const cleanStoreName = store.name.replace(/[\r\n<>"]/g, "").trim().slice(0, 80);
+
+      if (RESEND_KEY) {
+        try {
+          const emailHtml = `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;">
+              <h2 style="margin:0 0 8px;font-size:22px;color:#111;">${store.name}</h2>
+              <p style="color:#555;font-size:14px;margin:0 0 24px;">You requested a password reset. Use the code below:</p>
+              <div style="background:#f5f5f5;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+                <p style="margin:0 0 8px;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:0.1em;">Reset code</p>
+                <p style="margin:0;font-size:40px;font-weight:800;letter-spacing:0.35em;color:#111;font-family:monospace;">${otp}</p>
+              </div>
+              <p style="color:#888;font-size:12px;margin:0;">This code expires in 10 minutes. If you didn't request a reset, ignore this email.</p>
+            </div>`;
+          const resendRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from: `${cleanStoreName} <noreply@pictocart.in>`,
+              to: [email],
+              subject: `${otp} — your ${store.name} password reset code`,
+              html: emailHtml,
+            }),
+          });
+          if (!resendRes.ok) {
+            const errText = await resendRes.text();
+            console.warn("send password reset OTP via Resend failed", resendRes.status, errText);
+          } else {
+            console.log("Password reset OTP sent via Resend directly", { email, storeSlug });
+            sentDirectly = true;
+          }
+        } catch (e) {
+          console.warn("send password reset OTP via Resend failed", e);
+        }
+      }
+
+      if (!sentDirectly) {
+        try {
+          await admin.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "customer-otp",
+              recipientEmail: email,
+              idempotencyKey: `customer-pwd-reset-otp-${storeSlug}-${email}-${Date.now()}`,
+              senderName: store.name,
+              templateData: { storeName: store.name, otp, purpose: "password reset" },
+            },
+          });
+          console.log("Password reset OTP sent via transactional email queue fallback", { email, storeSlug });
+        } catch (e) {
+          console.warn("send password reset OTP email failed", e);
+        }
+      }
+
+      return json({ ok: true });
+    }
+
+    // reset_password_with_otp: verify OTP and set new password
+    if (action === "reset_password_with_otp") {
+      const token = String(payload?.token || "").trim();
+      const newPassword = String(payload?.newPassword || "");
+      const customerAlias = tenantEmail(email, storeSlug);
+
+      if (newPassword.length < 6) {
+        return json({ error: "password_too_short" });
+      }
+
+      // First verify the OTP to confirm identity
+      const verifyOtpRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+        body: JSON.stringify({
+          type: "magiclink",
+          email: customerAlias,
+          token: token,
+        }),
+      });
+
+      if (!verifyOtpRes.ok) {
+        const detail = await verifyOtpRes.text();
+        console.error("reset_password_with_otp verify failed", verifyOtpRes.status, detail);
+        return json({ error: "invalid_otp", detail }, 400);
+      }
+
+      // OTP verified — now update the user's password using service role
+      const existing = await findUserByEmail(customerAlias);
+      if (!existing?.id) return json({ error: "user_not_found" }, 404);
+
+      const { error: updateErr } = await admin.auth.admin.updateUserById(existing.id, {
+        password: newPassword,
+      });
+      if (updateErr) {
+        console.error("reset_password_with_otp updateUser failed", updateErr);
+        return json({ error: "password_update_failed", detail: updateErr.message }, 500);
+      }
+
+      // Sign in with the new password and return a session
+      const grant = await createPasswordSession(customerAlias, newPassword);
+      if (!grant.ok) {
+        return json({ ok: true, requires_signin: true });
+      }
+      return json({ ok: true, session: grant.body });
     }
 
     return json({ error: "unknown_action" }, 400);

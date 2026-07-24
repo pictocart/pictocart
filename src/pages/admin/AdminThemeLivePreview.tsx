@@ -296,18 +296,32 @@ export default function AdminThemeLivePreview(){
 
   // 2. Listen to visual editor message events (sync layout config)
   useEffect(() => {
+    let received = false;
     const onMessage = (ev: MessageEvent) => {
       if (ev.data?.type === "customiser:update") {
+        received = true;
         if (ev.data.overrides) setOverrides(ev.data.overrides);
         if (ev.data.page) setPage(ev.data.page);
       }
     };
     window.addEventListener("message", onMessage);
     
-    // Notify customiser parent that live-preview is ready to receive states
+    // Poll parent window until initial customiser:update is successfully received
+    const interval = setInterval(() => {
+      if (!received) {
+        window.parent.postMessage({ type: "customiser:ready" }, "*");
+      } else {
+        clearInterval(interval);
+      }
+    }, 500);
+
+    // Initial immediate post
     window.parent.postMessage({ type: "customiser:ready" }, "*");
 
-    return () => window.removeEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      clearInterval(interval);
+    };
   }, []);
 
   // 3. Load active store products catalog & category records
@@ -322,8 +336,9 @@ export default function AdminThemeLivePreview(){
           .maybeSingle();
         if (storeError || !storeData) return;
 
-        if (storeData.resolved_storefront_manifest) {
-          setManifest(storeData.resolved_storefront_manifest);
+        const m = storeData.resolved_storefront_manifest as any;
+        if (m && typeof m === "object" && m.pages) {
+          setManifest(m);
         }
 
         const { data: prodsData, error: prodsError } = await supabase

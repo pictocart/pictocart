@@ -13,6 +13,7 @@ import PremiumTrialTicker from './PremiumTrialTicker';
 import PromoTicker from './PromoTicker';
 import SiteOfferBanner from './SiteOfferBanner';
 import ThemeNavbar from './ThemeNavbar';
+import CustomerAuthModal from './CustomerAuthModal';
 import { usePublicNavCustomPages } from '@/hooks/useCustomPages';
 import { DEFAULT_FOOTER, type FooterConfig } from '@/components/store-design/FooterEditor';
 import { useThemeManifest } from '@/hooks/useThemeManifest';
@@ -107,6 +108,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
   const { enabledModes } = useFulfillment(store.id);
   const menuEnabled = enabledModes.includes('dine_in') || enabledModes.includes('takeaway');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split('@')?.[0] || 'Account';
 
   const themeId = themeOverride?.theme_id || getStoreThemeId(store) || '';
@@ -241,10 +243,17 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
   );
 
   return (
-    <div className="min-h-screen flex flex-col" style={layoutStyleObj}>
+    <div className="min-h-screen flex flex-col storefront-root" style={layoutStyleObj}>
       {is3DTheme && <Theme3DPageBackground themeId={themeId} palette={mergedPalette} />}
       <SiteOfferBanner storeId={store.id} />
-      <PromoTicker storeSlug={store.slug} config={storefrontConfig?.promo_ticker} />
+      <PromoTicker
+        storeSlug={store.slug}
+        config={
+          storefrontConfig?.promo_ticker ||
+          (store.settings as any)?.promo_ticker ||
+          undefined
+        }
+      />
       <PremiumTrialTicker storeId={store.id} storeUserId={store.user_id} settings={storefrontConfig} />
 
       {isThemeManifestTheme && manifestData ? (
@@ -267,6 +276,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
           mergedNavLinks={mergedNavLinks}
           headerConfig={headerConfig}
           onSearchOpen={() => setSearchOpen(true)}
+          onAuthOpen={() => setAuthOpen(true)}
         />
       )}
 
@@ -302,6 +312,19 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
           fonts={{ heading: headingFont, body: bodyFont }}
           borderRadius={theme.borderRadius}
           onClose={() => setSearchOpen(false)}
+        />
+      )}
+
+      {authOpen && !user && (
+        <CustomerAuthModal
+          storeSlug={store.slug}
+          storeName={brandName}
+          primaryColor={extendedColors.primary}
+          cardColor={extendedColors.card}
+          borderColor={extendedColors.border || extendedColors.secondary}
+          textColor={extendedColors.text}
+          borderRadius={theme.borderRadius}
+          onClose={() => setAuthOpen(false)}
         />
       )}
 

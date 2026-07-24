@@ -56,7 +56,7 @@ const StorefrontAssistant = ({ storeSlug, storeName, colors, fonts, borderRadius
         <button
           onClick={() => setOpen(true)}
           aria-label="Chat with shopping assistant"
-          className="fixed z-40 bottom-20 md:bottom-6 right-4 md:right-6 flex items-center gap-2 px-4 py-3 shadow-lg hover:scale-105 transition-transform"
+          className="fixed z-40 bottom-20 md:bottom-6 right-20 md:right-24 flex items-center gap-2 px-4 py-3 shadow-lg hover:scale-105 transition-transform"
           style={{ backgroundColor: colors.primary, color: colors.background, borderRadius: 999 }}
         >
           <MessageCircle className="h-5 w-5" />

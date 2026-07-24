@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import PincodeChecker from '@/components/storefront/PincodeChecker';
 import SEOHead from '@/components/storefront/SEOHead';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
+import confetti from 'canvas-confetti';
 
 declare global {
   interface Window {
@@ -66,8 +67,44 @@ const StorefrontCheckout = () => {
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
-
   const track = useTrackEvent();
+
+  // Trigger party popper/confetti animation on successful order placement
+  useEffect(() => {
+    if (orderPlaced) {
+      // Main central burst
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+      
+      // Secondary side bursts for a premium feel
+      const duration = 2 * 1000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 }
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 }
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      
+      setTimeout(frame, 200);
+    }
+  }, [orderPlaced]);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
