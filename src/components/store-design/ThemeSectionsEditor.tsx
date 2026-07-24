@@ -18,7 +18,7 @@ interface Props {
   onChange: (next: any) => void;
 }
 
-const EDITABLE_TEXT_KEYS = ['title', 'sub', 'kicker', 'cta', 'cta_secondary', 'body', 'html'];
+const EDITABLE_TEXT_KEYS = ['title', 'sub', 'subtitle', 'kicker', 'cta', 'cta_secondary', 'body', 'html', 'email', 'phone', 'address', 'hours'];
 const SECTION_LABEL: Record<string, string> = {
   hero: 'Hero',
   usp_strip: 'Trust Strip',
@@ -28,6 +28,8 @@ const SECTION_LABEL: Record<string, string> = {
   story: 'Brand Story',
   testimonials: 'Testimonials',
   newsletter: 'Newsletter',
+  map_and_contact: 'Contact Map & Info',
+  contact_form: 'Contact Form',
 };
 
 export default function ThemeSectionsEditor({ themeId, storeId, overrides, onChange }: Props) {

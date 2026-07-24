@@ -61,7 +61,7 @@ const SECTION_CATALOGUE: Record<string, { label: string; defaultProps: Record<st
   booking_widget:        { label: 'Booking Widget',       defaultProps: {} },
 };
 
-const EDITABLE_TEXT_KEYS = ['title', 'sub', 'kicker', 'subtitle', 'cta', 'cta_secondary', 'body', 'html'];
+const EDITABLE_TEXT_KEYS = ['title', 'sub', 'kicker', 'subtitle', 'cta', 'cta_secondary', 'body', 'html', 'email', 'phone', 'address', 'hours'];
 
 // ─── Helper: get page-level section list from overrides, else manifest, else default ──
 function getEffectiveSections(

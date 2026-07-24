@@ -59,7 +59,7 @@ const SECTION_LABEL: Record<string, string> = {
 
 
 
-const TEXT_KEYS = ["title", "sub", "kicker", "cta", "cta_secondary", "body", "email", "phone", "address", "hours"];
+const TEXT_KEYS = ["title", "sub", "subtitle", "kicker", "cta", "cta_secondary", "body", "email", "phone", "address", "hours"];
 const ICON_OPTIONS = ["truck", "shield", "refresh", "headphones", "lock", "tag", "gift", "sparkles"];
 
 const NAV_PAGE_OPTIONS = [
@@ -1114,6 +1114,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
     story: ["title", "body"],
     page_title: ["title"],
     contact_form: ["title", "sub", "email", "phone", "address", "hours"],
+    map_and_contact: ["title", "subtitle", "address", "hours", "phone"],
     newsletter: ["title", "sub", "cta"],
     values: ["title"],
     usp_strip: ["title"],
