@@ -89,8 +89,8 @@ export default function MultiPageThemeEditor({ themeId, storeId, overrides, onCh
   const [newSectionType, setNewSectionType] = useState<string>('');
 
   const manifestPages = useMemo(() => {
-    if (!manifest?.pages) return {};
-    return manifest.pages as Record<string, any>;
+    if (!(manifest as any)?.pages) return {};
+    return (manifest as any).pages as Record<string, any>;
   }, [manifest]);
 
   const allPageKeys = useMemo(() => {

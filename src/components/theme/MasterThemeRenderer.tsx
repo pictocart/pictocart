@@ -719,6 +719,55 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
     case "journal_list":   return <JournalList p={p} dna={dna} storeSlug={storeSlug} />;
     case "account_panel":  return <AccountPanel p={p} dna={dna} storeSlug={storeSlug} />;
     case "contact_form":   return <ContactForm p={p} dna={dna} storeSlug={storeSlug} />;
+    case "map_and_contact": {
+      const address = p.address || "123 Luxury Lane, Phase 1, New Delhi - 110001";
+      const hours = p.hours || "Mon - Sun: 11:00 AM - 9:00 PM";
+      const phone = p.phone || "+91 98765 43210";
+      return (
+        <section className="max-w-6xl mx-auto px-6 py-12 animate-fade-in">
+          <div className="grid md:grid-cols-2 gap-8 items-stretch border rounded-2xl overflow-hidden shadow-sm" style={{ borderColor: dna.palette?.border, background: dna.palette?.surface }}>
+            <div className="p-6 md:p-8 space-y-6 flex flex-col justify-center">
+              <h2 className="text-xl font-bold" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>{p.title || 'Visit Our Store'}</h2>
+              {p.subtitle && <p className="text-xs" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
+              <div className="space-y-4 text-xs leading-relaxed">
+                <div className="flex gap-3 items-start">
+                  <span className="text-sm">📍</span>
+                  <div>
+                    <p className="font-semibold" style={{ color: dna.palette?.fg }}>Address</p>
+                    <p style={{ color: dna.palette?.muted }}>{address}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="text-sm">⏰</span>
+                  <div>
+                    <p className="font-semibold" style={{ color: dna.palette?.fg }}>Store Hours</p>
+                    <p style={{ color: dna.palette?.muted }}>{hours}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="text-sm">📞</span>
+                  <div>
+                    <p className="font-semibold" style={{ color: dna.palette?.fg }}>Phone</p>
+                    <p style={{ color: dna.palette?.muted }}>{phone}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="h-64 md:h-auto min-h-[300px] w-full relative overflow-hidden border-t md:border-t-0 md:border-l" style={{ borderColor: dna.palette?.border }}>
+              <iframe
+                title="Store Location"
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                style={{ border: 0 }}
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </section>
+      );
+    }
     case "product_detail": return <ProductDetailStub p={p} dna={dna} storeSlug={storeSlug} store={store} products={products} />;
     // --- Service industry (doctor / salon / clinic) sections -------------
     case "provider_team":      return <ProviderTeamBlock p={p} dna={dna} storeSlug={storeSlug} />;
