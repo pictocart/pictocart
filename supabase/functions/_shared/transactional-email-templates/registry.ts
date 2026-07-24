@@ -19,6 +19,7 @@ import { template as partnerInvite } from './partner-invite.tsx'
 import { template as clientStoreInvite } from './client-store-invite.tsx'
 import { template as annualRenewal } from './annual-renewal.tsx'
 import { template as partnerPayoutPaid } from './partner-payout-paid.tsx'
+import { template as customerOtp } from './customer-otp.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'trial-ending': trialEnding,
@@ -31,5 +32,6 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'client-store-invite': clientStoreInvite,
   'annual-renewal': annualRenewal,
   'partner-payout-paid': partnerPayoutPaid,
+  'customer-otp': customerOtp,
 }
 

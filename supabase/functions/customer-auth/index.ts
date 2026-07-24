@@ -452,14 +452,21 @@ Deno.serve(async (req: Request) => {
       if (RESEND_API_KEY) {
         try {
           const emailHtml = `
-            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;">
-              <h2 style="margin:0 0 8px;font-size:22px;color:#111;">${store.name}</h2>
-              <p style="color:#555;font-size:14px;margin:0 0 24px;">Verify your email address to create your account.</p>
-              <div style="background:#f5f5f5;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
-                <p style="margin:0 0 8px;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:0.1em;">Your verification code</p>
-                <p style="margin:0;font-size:40px;font-weight:800;letter-spacing:0.35em;color:#111;font-family:monospace;">${otp}</p>
+            <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 48px 16px; margin: 0; min-height: 100%;">
+              <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04); overflow: hidden; border: 1px solid #e2e8f0;">
+                <div style="height: 6px; background: linear-gradient(90deg, #4f46e5, #3b82f6);"></div>
+                <div style="padding: 40px 32px 32px 32px;">
+                  <h2 style="margin: 0 0 12px 0; font-size: 26px; font-weight: 800; color: #0f172a; letter-spacing: -0.025em; text-align: center;">${store.name}</h2>
+                  <p style="margin: 0 0 32px 0; font-size: 15px; line-height: 1.6; color: #475569; text-align: center;">Verify your email address to create your account.</p>
+                  <div style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); border-radius: 14px; padding: 28px 16px; text-align: center; margin: 0 0 32px 0; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.15);">
+                    <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.15em;">Your verification code</p>
+                    <p style="margin: 0; font-size: 42px; font-weight: 800; letter-spacing: 0.25em; color: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">${otp}</p>
+                  </div>
+                  <p style="margin: 0 0 28px 0; font-size: 13px; line-height: 1.5; color: #64748b; text-align: center;">This code expires in <strong>10 minutes</strong>.<br/>If you did not request this, please ignore this email.</p>
+                  <div style="height: 1px; background-color: #f1f5f9; margin-bottom: 24px;"></div>
+                  <p style="margin: 0; font-size: 11px; color: #94a3b8; text-align: center; letter-spacing: 0.05em; text-transform: uppercase;">Powered by Pic To Cart</p>
+                </div>
               </div>
-              <p style="color:#888;font-size:12px;margin:0;">This code expires in 10 minutes. If you didn't request this, please ignore this email.</p>
             </div>`;
           const resendRes = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -557,14 +564,21 @@ Deno.serve(async (req: Request) => {
       if (RESEND_KEY) {
         try {
           const emailHtml = `
-            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;">
-              <h2 style="margin:0 0 8px;font-size:22px;color:#111;">${store.name}</h2>
-              <p style="color:#555;font-size:14px;margin:0 0 24px;">You requested a password reset. Use the code below:</p>
-              <div style="background:#f5f5f5;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
-                <p style="margin:0 0 8px;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:0.1em;">Reset code</p>
-                <p style="margin:0;font-size:40px;font-weight:800;letter-spacing:0.35em;color:#111;font-family:monospace;">${otp}</p>
+            <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 48px 16px; margin: 0; min-height: 100%;">
+              <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04); overflow: hidden; border: 1px solid #e2e8f0;">
+                <div style="height: 6px; background: linear-gradient(90deg, #4f46e5, #3b82f6);"></div>
+                <div style="padding: 40px 32px 32px 32px;">
+                  <h2 style="margin: 0 0 12px 0; font-size: 26px; font-weight: 800; color: #0f172a; letter-spacing: -0.025em; text-align: center;">${store.name}</h2>
+                  <p style="margin: 0 0 32px 0; font-size: 15px; line-height: 1.6; color: #475569; text-align: center;">You requested a password reset. Use the code below:</p>
+                  <div style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); border-radius: 14px; padding: 28px 16px; text-align: center; margin: 0 0 32px 0; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.15);">
+                    <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.15em;">Reset code</p>
+                    <p style="margin: 0; font-size: 42px; font-weight: 800; letter-spacing: 0.25em; color: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">${otp}</p>
+                  </div>
+                  <p style="margin: 0 0 28px 0; font-size: 13px; line-height: 1.5; color: #64748b; text-align: center;">This code expires in <strong>10 minutes</strong>.<br/>If you did not request a reset, ignore this email.</p>
+                  <div style="height: 1px; background-color: #f1f5f9; margin-bottom: 24px;"></div>
+                  <p style="margin: 0; font-size: 11px; color: #94a3b8; text-align: center; letter-spacing: 0.05em; text-transform: uppercase;">Powered by Pic To Cart</p>
+                </div>
               </div>
-              <p style="color:#888;font-size:12px;margin:0;">This code expires in 10 minutes. If you didn't request a reset, ignore this email.</p>
             </div>`;
           const resendRes = await fetch("https://api.resend.com/emails", {
             method: "POST",
