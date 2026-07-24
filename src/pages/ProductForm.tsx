@@ -364,7 +364,7 @@ const ProductForm = () => {
   useEffect(() => {
     const fetchDbQuestions = async () => {
       if (!id) return;
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('product_questions')
         .select('*')
         .eq('product_id', id)
@@ -569,7 +569,7 @@ const ProductForm = () => {
         
         // Save answers back to database questions table
         for (const q of dbQuestions) {
-          await supabase
+          await (supabase as any)
             .from('product_questions')
             .update({ answer: q.answer })
             .eq('id', q.id);
