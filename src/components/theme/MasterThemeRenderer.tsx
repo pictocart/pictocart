@@ -1237,12 +1237,23 @@ function ContactForm({ p, dna, storeSlug }: any) {
   const address = p.address || "123 Luxury Lane, Phase 1, New Delhi - 110001";
   const hours = p.hours || "Mon - Sun: 11:00 AM - 9:00 PM";
 
+  const { user } = useCustomerAuth(storeSlug || "");
+
   const [name, setName] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.user_metadata?.full_name || "");
+      setSenderEmail(user.email || user.user_metadata?.customer_email || "");
+      setContactPhone(user.phone || user.user_metadata?.phone || "");
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1264,13 +1275,14 @@ function ContactForm({ p, dna, storeSlug }: any) {
         store_id: store.id,
         name: name.trim(),
         email: senderEmail.trim().toLowerCase(),
+        phone: contactPhone.trim() || null,
         subject: subject.trim() || "(No subject)",
         message: message.trim(),
         status: "unread",
       });
       if (error) throw error;
       setSent(true);
-      setName(""); setSenderEmail(""); setSubject(""); setMessage("");
+      setName(""); setSenderEmail(""); setContactPhone(""); setSubject(""); setMessage("");
       toast.success("Message sent! We'll get back to you soon.");
     } catch (err: any) {
       console.error("contact_form submit", err);
@@ -1381,7 +1393,7 @@ function ContactForm({ p, dna, storeSlug }: any) {
             </div>
           ) : (
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase font-bold block" style={{ color: dna.palette?.muted }}>Full Name</label>
                 <input required placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-3 py-2 text-sm border focus:outline-none focus:ring-1 focus:ring-primary" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg, color: dna.palette?.fg }} />
@@ -1389,6 +1401,10 @@ function ContactForm({ p, dna, storeSlug }: any) {
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase font-bold block" style={{ color: dna.palette?.muted }}>Email Address</label>
                 <input required type="email" placeholder="email@domain.com" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} className="w-full px-3 py-2 text-sm border focus:outline-none focus:ring-1 focus:ring-primary" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg, color: dna.palette?.fg }} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold block" style={{ color: dna.palette?.muted }}>Phone Number</label>
+                <input placeholder="E.g. +91 99999 99999" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full px-3 py-2 text-sm border focus:outline-none focus:ring-1 focus:ring-primary" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg, color: dna.palette?.fg }} />
               </div>
             </div>
             <div className="space-y-1.5">
