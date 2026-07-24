@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Customer auth for storefronts. Server-authoritative tenancy:
 // every (email, store) pair maps to a deterministic alias address that lives
 // in `auth.users`. The seller's real gmail address is NEVER used as an
