@@ -38,7 +38,7 @@ export default function CustomerAuthModal({
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  const dest = redirectTo || `/store/${storeSlug}/account`;
+  const dest = redirectTo || `/store/${storeSlug}`;
   const pr = primaryColor;
 
   // ── styles ──────────────────────────────────────────────────────────────

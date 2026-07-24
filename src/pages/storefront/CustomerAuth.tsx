@@ -36,7 +36,7 @@ export default function CustomerAuth() {
   const dest = () => {
     if (redirectParam === 'checkout') return `/store/${slug}/checkout`;
     if (redirectParam === 'cart') return `/store/${slug}/cart`;
-    return `/store/${slug}/account`;
+    return `/store/${slug}`;
   };
 
   if (storeLoading || authLoading) {

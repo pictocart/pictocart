@@ -9,7 +9,7 @@ import { useCustomerReturns } from '@/hooks/useCustomerReturns';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Loader2, Package, MapPin, LogOut, Plus, Trash2, User, Edit2, Check, ChevronRight, Heart, Shield,
-  Search, Undo2, MessageCircle, UserCheck, ShieldCheck, Mail, Phone, Calendar
+  Search, Undo2, MessageCircle, UserCheck, ShieldCheck, Mail, Phone, Calendar, Lock
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -68,6 +68,11 @@ const CustomerAccount = () => {
   const [profilePhone, setProfilePhone] = useState('');
   const [profileEditing, setProfileEditing] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+
+  // Password change state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
 
   // Address state
   const [addresses, setAddresses] = useState<any[]>([]);
@@ -145,6 +150,36 @@ const CustomerAccount = () => {
       toast.error('Failed to update profile');
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  // Password update handler
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || !confirmPassword) {
+      toast.error('Please fill in both password fields');
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    setPasswordUpdating(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success('Password updated successfully!');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update password');
+    } finally {
+      setPasswordUpdating(false);
     }
   };
 
@@ -402,7 +437,7 @@ const CustomerAccount = () => {
                   {/* Wishlist Link Card */}
                   <Link
                     to={`/store/${slug}/account/wishlist`}
-                    className="flex items-center gap-4 p-4 border transition-all hover:shadow-md hover:scale-[1.01]"
+                    className="flex items-center gap-4 p-4 border transition-all hover:shadow-md hover:scale-[1.01] mb-6"
                     style={{ borderColor: colors.secondary, borderRadius: br, backgroundColor: colors.card }}
                   >
                     <div className="h-10 w-10 rounded-full flex items-center justify-center bg-red-50">
@@ -414,6 +449,51 @@ const CustomerAccount = () => {
                     </div>
                     <ChevronRight className="h-5 w-5 opacity-40" />
                   </Link>
+
+                  {/* Change Password Card */}
+                  <div
+                    className="p-5 border space-y-4"
+                    style={{ borderColor: colors.secondary, borderRadius: br, backgroundColor: colors.card }}
+                  >
+                    <h3 className="text-sm font-bold flex items-center gap-2" style={{ fontFamily: fonts.heading }}>
+                      <Lock className="h-4 w-4" style={{ color: colors.primary }} /> Change Password
+                    </h3>
+                    <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold opacity-50">New Password</label>
+                          <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className={inputCls}
+                            style={{ ...inputStyle, ...focusRing }}
+                            placeholder="Min 6 characters"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold opacity-50">Confirm New Password</label>
+                          <input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className={inputCls}
+                            style={{ ...inputStyle, ...focusRing }}
+                            placeholder="Repeat new password"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={passwordUpdating}
+                        className="px-5 py-2.5 text-xs font-bold text-white transition-all hover:opacity-90 flex items-center gap-2"
+                        style={{ backgroundColor: colors.primary, borderRadius: brHalf }}
+                      >
+                        {passwordUpdating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        Update Password
+                      </button>
+                    </form>
+                  </div>
 
                 </div>
               )}
