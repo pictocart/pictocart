@@ -51,11 +51,46 @@ export const installErrorReporter = () => {
   if (installed) return;
   installed = true;
 
+  const handleChunkError = () => {
+    const now = Date.now();
+    const lastReload = Number(sessionStorage.getItem('last_chunk_error_reload') || '0');
+    if (now - lastReload > 15_000) {
+      sessionStorage.setItem('last_chunk_error_reload', String(now));
+      window.location.reload();
+      return true;
+    }
+    return false;
+  };
+
   window.addEventListener('error', (e) => {
+    const msg = e.message || '';
+    const errSub = e.error instanceof Error ? e.error.message : '';
+    const isChunk = 
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('Importing a module script failed') ||
+      errSub.includes('Failed to fetch dynamically imported module') ||
+      errSub.includes('Importing a module script failed');
+
+    if (isChunk) {
+      if (handleChunkError()) return;
+    }
+
     reportError(e.error ?? e.message, { metadata: { source: 'window.error', filename: e.filename, lineno: e.lineno } });
   });
+
   window.addEventListener('unhandledrejection', (e) => {
+    const msg = e.reason instanceof Error ? e.reason.message : String(e.reason);
+    const isChunk = msg && (
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('Importing a module script failed')
+    );
+
+    if (isChunk) {
+      if (handleChunkError()) return;
+    }
+
     reportError(e.reason, { metadata: { source: 'unhandledrejection' } });
   });
+
   window.addEventListener('beforeunload', () => { void flush(); });
 };

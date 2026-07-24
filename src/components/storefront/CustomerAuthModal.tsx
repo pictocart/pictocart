@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { X, Loader2, Eye, EyeOff, Mail, ShieldCheck, ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import OtpVerifyBlock from './OtpVerifyBlock';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   storeSlug: string; storeName: string;
@@ -33,6 +34,24 @@ export default function CustomerAuthModal({
   const [submitting, setSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [btnHovered, setBtnHovered] = useState(false);
+  const [agreeToPrivacy, setAgreeToPrivacy] = useState(false);
+  const [hasPrivacy, setHasPrivacy] = useState(false);
+
+  useEffect(() => {
+    const checkPrivacy = async () => {
+      if (!storeSlug) return;
+      const { data } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('slug', storeSlug)
+        .maybeSingle();
+      const policies = (data?.settings as any)?.policies || {};
+      if (policies.privacy?.trim()) {
+        setHasPrivacy(true);
+      }
+    };
+    checkPrivacy();
+  }, [storeSlug]);
 
   useEffect(() => { if (user) onClose(); }, [user]);
   useEffect(() => {
@@ -84,6 +103,9 @@ export default function CustomerAuthModal({
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return toast.error('Please enter a valid email address');
     }
+    if (hasPrivacy && !agreeToPrivacy) {
+      return toast.error('You must agree to the Privacy Policy to proceed');
+    }
     setSubmitting(true);
     const { error } = await signInWithEmail(email, password);
     setSubmitting(false);
@@ -99,6 +121,9 @@ export default function CustomerAuthModal({
       return toast.error('Please enter a valid email address');
     }
     if (password.length < 6) return toast.error('Password must be at least 6 characters');
+    if (hasPrivacy && !agreeToPrivacy) {
+      return toast.error('You must agree to the Privacy Policy to proceed');
+    }
     setSubmitting(true);
     const { error } = await sendSignupOtp(email, fullName, password);
     setSubmitting(false);
@@ -266,6 +291,28 @@ export default function CustomerAuthModal({
                   Forgot password?
                 </button>
               </div>
+              {hasPrivacy && (
+                <label className="flex items-start gap-2.5 text-[12px] select-none cursor-pointer mt-2" style={{ color: textColor }}>
+                  <input 
+                    type="checkbox" 
+                    checked={agreeToPrivacy} 
+                    onChange={(e) => setAgreeToPrivacy(e.target.checked)} 
+                    className="mt-0.5 rounded focus:ring-primary"
+                    style={{ accentColor: pr }}
+                  />
+                  <span>
+                    I agree to the{" "}
+                    <Link 
+                      to={`/store/${storeSlug}/privacy-policy`} 
+                      target="_blank" 
+                      className="font-semibold underline hover:opacity-85 transition"
+                      style={{ color: pr }}
+                    >
+                      Privacy Policy
+                    </Link>
+                  </span>
+                </label>
+              )}
               <button type="submit" disabled={submitting}
                 onMouseEnter={() => setBtnHovered(true)}
                 onMouseLeave={() => setBtnHovered(false)}
@@ -305,6 +352,28 @@ export default function CustomerAuthModal({
                   </button>
                 </div>
               </div>
+              {hasPrivacy && (
+                <label className="flex items-start gap-2.5 text-[12px] select-none cursor-pointer mt-2" style={{ color: textColor }}>
+                  <input 
+                    type="checkbox" 
+                    checked={agreeToPrivacy} 
+                    onChange={(e) => setAgreeToPrivacy(e.target.checked)} 
+                    className="mt-0.5 rounded focus:ring-primary"
+                    style={{ accentColor: pr }}
+                  />
+                  <span>
+                    I agree to the{" "}
+                    <Link 
+                      to={`/store/${storeSlug}/privacy-policy`} 
+                      target="_blank" 
+                      className="font-semibold underline hover:opacity-85 transition"
+                      style={{ color: pr }}
+                    >
+                      Privacy Policy
+                    </Link>
+                  </span>
+                </label>
+              )}
               <button type="submit" disabled={submitting}
                 onMouseEnter={() => setBtnHovered(true)}
                 onMouseLeave={() => setBtnHovered(false)}

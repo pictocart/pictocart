@@ -682,6 +682,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
               metadata={Object.keys(metadata).length > 0 ? metadata : undefined}
               colors={colors}
               fonts={fonts}
+              refundPolicy={store.settings?.policies?.refund || null}
             />
 
             {/* Product Tags */}

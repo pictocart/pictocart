@@ -68,6 +68,7 @@ const StorefrontCheckout = () => {
   const [authName, setAuthName] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const track = useTrackEvent();
+  const [showShippingPolicy, setShowShippingPolicy] = useState(false);
 
   // Trigger party popper/confetti animation on successful order placement
   useEffect(() => {
@@ -1266,6 +1267,31 @@ const StorefrontCheckout = () => {
                   : 'Pay Now'}
               </button>
             </div>
+
+            {/* Shipping Policy Collapsible */}
+            {store.settings?.policies?.shipping?.trim() && (
+              <div 
+                className="mt-4 p-4 border text-left bg-card animate-fade-in"
+                style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px`, backgroundColor: colors.card }}
+              >
+                <button 
+                  type="button"
+                  onClick={() => setShowShippingPolicy(!showShippingPolicy)}
+                  className="w-full flex items-center justify-between font-semibold text-sm hover:opacity-80 transition"
+                  style={{ color: colors.text }}
+                >
+                  <span className="flex items-center gap-1.5">📦 Shipping Policy</span>
+                  <span className="text-xs opacity-60">{showShippingPolicy ? 'Hide' : 'Show'}</span>
+                </button>
+                {showShippingPolicy && (
+                  <div 
+                    className="mt-3 text-xs opacity-75 leading-relaxed space-y-2 border-t pt-3 policy-md"
+                    style={{ borderColor: colors.secondary, color: colors.text }}
+                    dangerouslySetInnerHTML={{ __html: md(store.settings.policies.shipping) }}
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1353,3 +1379,33 @@ const StorefrontCheckout = () => {
 };
 
 export default StorefrontCheckout;
+
+function escapeHtml(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function md(src: string): string {
+  const esc = escapeHtml(src);
+  const lines = esc.split(/\r?\n/);
+  const out: string[] = [];
+  let inList = false;
+  const flushList = () => { if (inList) { out.push('</ul>'); inList = false; } };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flushList(); out.push(''); continue; }
+    if (line.startsWith('### ')) { flushList(); out.push(`<h3>${line.slice(4)}</h3>`); continue; }
+    if (line.startsWith('## '))  { flushList(); out.push(`<h2>${line.slice(3)}</h2>`); continue; }
+    if (line.startsWith('# '))   { flushList(); out.push(`<h2>${line.slice(2)}</h2>`); continue; }
+    if (/^[-*]\s+/.test(line))   {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push(`<li>${line.replace(/^[-*]\s+/, '')}</li>`);
+      continue;
+    }
+    flushList();
+    out.push(`<p>${line}</p>`);
+  }
+  flushList();
+  return out.join('\n')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="underline" target="_blank" rel="noreferrer">$1</a>');
+}

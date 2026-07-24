@@ -1,14 +1,45 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+function escapeHtml(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function md(src: string): string {
+  const esc = escapeHtml(src);
+  const lines = esc.split(/\r?\n/);
+  const out: string[] = [];
+  let inList = false;
+  const flushList = () => { if (inList) { out.push('</ul>'); inList = false; } };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flushList(); out.push(''); continue; }
+    if (line.startsWith('### ')) { flushList(); out.push(`<h3>${line.slice(4)}</h3>`); continue; }
+    if (line.startsWith('## '))  { flushList(); out.push(`<h2>${line.slice(3)}</h2>`); continue; }
+    if (line.startsWith('# '))   { flushList(); out.push(`<h2>${line.slice(2)}</h2>`); continue; }
+    if (/^[-*]\s+/.test(line))   {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push(`<li>${line.replace(/^[-*]\s+/, '')}</li>`);
+      continue;
+    }
+    flushList();
+    out.push(`<p>${line}</p>`);
+  }
+  flushList();
+  return out.join('\n')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="underline" target="_blank" rel="noreferrer">$1</a>');
+}
+
 interface Props {
   description?: string | null;
   highlights?: string[];
   metadata?: Record<string, string>;
   colors: any;
   fonts: any;
+  refundPolicy?: string | null;
 }
 
-const ProductAccordion = ({ description, highlights, metadata, colors, fonts }: Props) => {
+const ProductAccordion = ({ description, highlights, metadata, colors, fonts, refundPolicy }: Props) => {
   // Separate fssai_license from other metadata so we can render it with a special badge
   const fssaiLicense = metadata?.fssai_license || null;
   const metaEntries = metadata
@@ -84,12 +115,31 @@ const ProductAccordion = ({ description, highlights, metadata, colors, fonts }: 
         </AccordionItem>
       )}
 
+      {refundPolicy && (
+        <AccordionItem value="refund" style={{ borderColor: colors.secondary }}>
+          <AccordionTrigger className="text-sm font-semibold hover:no-underline" style={{ fontFamily: fonts.heading }}>
+            Return & Refund Policy
+          </AccordionTrigger>
+          <AccordionContent>
+            <div 
+              className="text-sm opacity-75 space-y-2 policy-md text-left" 
+              dangerouslySetInnerHTML={{ __html: md(refundPolicy) }}
+            />
+            <style>{`
+              .policy-md h2 { font-size: 0.95rem; font-weight: 600; margin-top: 0.75rem; }
+              .policy-md h3 { font-size: 0.9rem; font-weight: 600; margin-top: 0.5rem; }
+              .policy-md ul { list-style: disc; padding-left: 1.25rem; }
+            `}</style>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
       <AccordionItem value="shipping" style={{ borderColor: colors.secondary }}>
         <AccordionTrigger className="text-sm font-semibold hover:no-underline" style={{ fontFamily: fonts.heading }}>
           Shipping & Returns
         </AccordionTrigger>
         <AccordionContent>
-          <div className="text-sm opacity-70 space-y-2">
+          <div className="text-sm opacity-70 space-y-2 text-left">
             <p>• Free shipping on orders above ₹499</p>
             <p>• Standard delivery: 5-7 business days</p>
             <p>• Express delivery available at checkout</p>

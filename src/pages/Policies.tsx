@@ -16,8 +16,6 @@ const POLICY_KEYS = [
   { key: "terms",    label: "Terms of Service", slug: "terms"           },
   { key: "refund",   label: "Refund Policy",    slug: "return-policy"   },
   { key: "shipping", label: "Shipping Policy",  slug: "shipping-policy" },
-  { key: "about",    label: "About Us",         slug: "about"           },
-  { key: "contact",  label: "Contact",          slug: "contact"         },
 ] as const;
 
 type PolicyKey = (typeof POLICY_KEYS)[number]["key"];
@@ -32,8 +30,6 @@ export default function Policies() {
       terms:    p.terms    || "",
       refund:   p.refund   || "",
       shipping: p.shipping || "",
-      about:    p.about    || "",
-      contact:  p.contact  || "",
     };
   }, [store?.id]);
 
@@ -87,7 +83,7 @@ export default function Policies() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setPolicies((p) => ({ ...p, ...data.policies }));
-      toast.success("All 6 policies generated — review and click Save to publish");
+      toast.success("All 4 policies generated — review and click Save to publish");
       setGenOpen(false);
     } catch (e: any) {
       toast.error(e?.message || "Generation failed");

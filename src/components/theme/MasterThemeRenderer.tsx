@@ -1295,6 +1295,7 @@ function ContactForm({ p, dna, storeSlug }: any) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [termsContent, setTermsContent] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -1303,6 +1304,22 @@ function ContactForm({ p, dna, storeSlug }: any) {
       setContactPhone(user.phone || user.user_metadata?.phone || "");
     }
   }, [user]);
+
+  useEffect(() => {
+    const fetchStoreTerms = async () => {
+      if (!storeSlug) return;
+      const { data } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('slug', storeSlug)
+        .maybeSingle();
+      const policies = (data?.settings as any)?.policies || {};
+      if (policies.terms?.trim()) {
+        setTermsContent(policies.terms);
+      }
+    };
+    fetchStoreTerms();
+  }, [storeSlug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1477,6 +1494,24 @@ function ContactForm({ p, dna, storeSlug }: any) {
           )}
         </div>
       </div>
+
+      {termsContent && (
+        <div className="mt-12 p-6 border rounded-2xl animate-fade-in text-left" style={{ borderColor: dna.palette?.border, background: dna.palette?.surface }}>
+          <h3 className="text-lg font-bold mb-4" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>
+            Terms of Service
+          </h3>
+          <div 
+            className="terms-md text-sm leading-relaxed space-y-3 opacity-80" 
+            style={{ color: dna.palette?.fg }}
+            dangerouslySetInnerHTML={{ __html: md(termsContent) }}
+          />
+          <style>{`
+            .terms-md h2 { font-size: 1.1rem; font-weight: 600; margin-top: 1.25rem; }
+            .terms-md h3 { font-size: 1rem;   font-weight: 600; margin-top: 1rem; }
+            .terms-md ul { list-style: disc; padding-left: 1.25rem; }
+          `}</style>
+        </div>
+      )}
     </section>
   );
 }
@@ -3543,3 +3578,33 @@ export function Theme3DPageBackground({ themeId, palette }: { themeId: string; p
 
 // ─── Named exports — delegate to the existing Header/Footer above ────────────
 export { Header, Footer };
+
+function escapeHtml(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function md(src: string): string {
+  const esc = escapeHtml(src);
+  const lines = esc.split(/\r?\n/);
+  const out: string[] = [];
+  let inList = false;
+  const flushList = () => { if (inList) { out.push('</ul>'); inList = false; } };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flushList(); out.push(''); continue; }
+    if (line.startsWith('### ')) { flushList(); out.push(`<h3>${line.slice(4)}</h3>`); continue; }
+    if (line.startsWith('## '))  { flushList(); out.push(`<h2>${line.slice(3)}</h2>`); continue; }
+    if (line.startsWith('# '))   { flushList(); out.push(`<h2>${line.slice(2)}</h2>`); continue; }
+    if (/^[-*]\s+/.test(line))   {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push(`<li>${line.replace(/^[-*]\s+/, '')}</li>`);
+      continue;
+    }
+    flushList();
+    out.push(`<p>${line}</p>`);
+  }
+  flushList();
+  return out.join('\n')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="underline" target="_blank" rel="noreferrer">$1</a>');
+}
