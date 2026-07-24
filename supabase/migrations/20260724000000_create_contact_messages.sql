@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS public.contact_messages (
   store_id    uuid NOT NULL,
   name        text NOT NULL,
   email       text NOT NULL,
+  phone       text,
   subject     text NOT NULL DEFAULT '',
   message     text NOT NULL,
   status      text NOT NULL DEFAULT 'unread' CHECK (status IN ('unread', 'read', 'replied')),
