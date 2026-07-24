@@ -33,7 +33,7 @@ const Customers = () => {
       const [ordersRes, customersRes] = await Promise.all([
         supabase
         .from('orders')
-        .select('id, order_number, customer_user_id, customer_email, customer_name, customer_phone, total, status, payment_status, fulfillment_status, created_at, items')
+        .select('id, order_number, customer_user_id, customer_email, customer_name, customer_phone, total, status, payment_status, created_at, items')
         .eq('store_id', store!.id)
         .order('created_at', { ascending: false }),
         (supabase as any)

@@ -40,7 +40,7 @@ const StorefrontCheckout = () => {
   const { settings } = useFulfillment(store?.id);
   
   // Destructure auth methods from hook
-  const { user, signInWithEmail, signUpWithEmail } = useCustomerAuth(slug || '');
+  const { user, loading: customerAuthLoading, signInWithEmail, signUpWithEmail } = useCustomerAuth(slug || '');
   
   const [placing, setPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<{ number: string; trackingCode: string | null } | null>(null);
@@ -136,10 +136,12 @@ const StorefrontCheckout = () => {
   };
 
   useEffect(() => {
-    if (!user && !isGuestMode && store) {
+    if (!customerAuthLoading && !user && !isGuestMode && store) {
       setShowLoginModal(true);
+    } else if (user) {
+      setShowLoginModal(false);
     }
-  }, [user, isGuestMode, store]);
+  }, [user, customerAuthLoading, isGuestMode, store]);
 
   // Load Saved Addresses
   useEffect(() => {
