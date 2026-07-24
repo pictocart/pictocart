@@ -1598,8 +1598,7 @@ const CustomThemeBuilderModal = ({ onClose, data, setData, themes }: BuilderModa
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      console.log("Querying Nemotron-3...");
-      const response = await fetch("/api/nvidia/chat/completions", {
+      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer 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",

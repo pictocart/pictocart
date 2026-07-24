@@ -124,7 +124,7 @@ Rules:
   const apiKey = "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";
   
   try {
-    const response = await fetch("/api/nvidia/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -154,7 +154,7 @@ Rules:
     if (e instanceof Error && e.message.startsWith("AI refusal")) throw e;
   }
 
-  const response = await fetch("/api/nvidia/chat/completions", {
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
@@ -449,14 +449,27 @@ const ProductForm = () => {
     if (images.length === 0) { toast.error('Upload at least one image to generate with AI'); return; }
     setAiLoading(true);
     try {
-      console.log("Generating product details client-side via NVIDIA Vision API...");
-      const p = await generateProductViaNvidiaFallback(
-        images[0],
-        category || store?.category,
-        store?.name,
+      console.log("Generating product details via generate-product edge function...");
+      const { data, error } = await aiCredits.invoke('generate-product', {
+        imageUrl: images[0],
+        category: category || store?.category,
+        storeName: store?.name,
         productType,
-        productHint || undefined
-      );
+        productHint: productHint || undefined,
+      });
+
+      let p = data?.product;
+
+      if (error || !p) {
+        console.warn("Edge function failed or returned no product. Trying client-side fallback...");
+        p = await generateProductViaNvidiaFallback(
+          images[0],
+          category || store?.category,
+          store?.name,
+          productType,
+          productHint || undefined
+        );
+      }
 
       if (!p) throw new Error("Could not generate details from product image");
 

@@ -113,7 +113,7 @@ Rules:
   const apiKey = "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";
   
   try {
-    const response = await fetch("/api/nvidia/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -143,7 +143,7 @@ Rules:
     if (e instanceof Error && e.message.startsWith("AI refusal")) throw e;
   }
 
-  const response = await fetch("/api/nvidia/chat/completions", {
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
