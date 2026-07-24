@@ -160,15 +160,15 @@ Rules:
     let aiData: any = null;
     const errors: string[] = [];
 
-    // --- Try 1: NVIDIA Vision (nvidia/llama-3.2-11b-vision-instruct) ---
+    // --- Try 1: NVIDIA Vision (meta/llama-3.2-11b-vision-instruct) ---
     try {
-      console.log("Attempting product generation via NVIDIA integrate API (nvidia/llama-3.2-11b-vision-instruct)...");
+      console.log("Attempting product generation via NVIDIA integrate API (meta/llama-3.2-11b-vision-instruct)...");
       const base64ImageUrl = await getBase64ImageUrl(imageUrl);
       const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "nvidia/llama-3.2-11b-vision-instruct",
+          model: "meta/llama-3.2-11b-vision-instruct",
           messages: [
             {
               role: "user",
@@ -192,16 +192,16 @@ Rules:
       errors.push(`NVIDIA Vision fetch error: ${err.message}`);
     }
 
-    // --- Try 2: NVIDIA Vision Alternative (meta/llama-3.2-11b-vision-instruct) ---
+    // --- Try 2: NVIDIA Vision Alternative (meta/llama-3.2-90b-vision-instruct) ---
     if (!content) {
       try {
-        console.log("Attempting product generation via NVIDIA integrate API (meta/llama-3.2-11b-vision-instruct) alternative...");
+        console.log("Attempting product generation via NVIDIA integrate API (meta/llama-3.2-90b-vision-instruct) alternative...");
         const base64ImageUrl = await getBase64ImageUrl(imageUrl);
         const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "meta/llama-3.2-11b-vision-instruct",
+            model: "meta/llama-3.2-90b-vision-instruct",
             messages: [
               {
                 role: "user",
@@ -231,7 +231,14 @@ Rules:
     }
     let product;
     try {
-      product = JSON.parse(content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+      const firstCurly = content.indexOf('{');
+      const lastCurly = content.lastIndexOf('}');
+      if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
+        const jsonBlock = content.substring(firstCurly, lastCurly + 1);
+        product = JSON.parse(jsonBlock);
+      } else {
+        product = JSON.parse(content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+      }
     } catch {
       console.error("Failed to parse AI response:", content);
       throw new Error("Failed to parse AI response");
