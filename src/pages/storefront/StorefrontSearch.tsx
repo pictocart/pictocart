@@ -23,6 +23,16 @@ const StorefrontSearch = () => {
 
   // Filter States
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  // Sync category parameter from URL query string
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat) {
+      setSelectedCategories([cat]);
+    } else {
+      setSelectedCategories([]);
+    }
+  }, [searchParams]);
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(10000);
   const [minRating, setMinRating] = useState<number>(0);
@@ -142,9 +152,19 @@ const StorefrontSearch = () => {
   };
 
   const handleCategoryToggle = (cat: string) => {
-    setSelectedCategories((prev) => 
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
+    const nextCats = selectedCategories.includes(cat)
+      ? selectedCategories.filter((c) => c !== cat)
+      : [...selectedCategories, cat];
+    
+    setSelectedCategories(nextCats);
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextCats.length === 1) {
+      nextParams.set('category', nextCats[0]);
+    } else {
+      nextParams.delete('category');
+    }
+    setSearchParams(nextParams);
   };
 
   const handleAddToCart = (product: any) => {
@@ -163,6 +183,7 @@ const StorefrontSearch = () => {
     setMaxPrice(maxProductPrice);
     setMinRating(0);
     setSortBy('popularity');
+    setSearchParams({});
   };
 
   return (
