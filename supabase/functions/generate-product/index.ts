@@ -122,7 +122,7 @@ serve(async (req) => {
     if (!wallet || wallet.balance < required) return json({ error: "INSUFFICIENT_CREDITS", required, balance: wallet?.balance ?? 0 }, 402);
 
     // 3. Call AI
-    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY") || "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";
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY") || "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";
 
     const prompt = `You are an expert e-commerce product analyst for an Indian online store${storeName ? ` called "${storeName}"` : ""}.
 Analyze this product image and generate COMPREHENSIVE product details. Fill EVERY field — never leave one blank. Make educated, realistic guesses from the image when not certain.

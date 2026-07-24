@@ -1601,12 +1601,14 @@ const CustomThemeBuilderModal = ({ onClose, data, setData, themes }: BuilderModa
       const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer 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",
+          "Authorization": "Bearer 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",
           "Content-Type": "application/json"
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: "nvidia/nemotron-3-ultra-550b-a55b",
+          model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+          max_tokens: 16384,
+          reasoning_budget: 4096,
           messages: [
             {
               role: "system",
@@ -1659,8 +1661,7 @@ OUTPUT FORMAT:
             },
             { role: "user", content: userMsg }
           ],
-          temperature: 0.2,
-          max_tokens: 2048
+          temperature: 0.2
         })
       });
 

@@ -110,7 +110,7 @@ ${metadataDesc}
 Rules:
 - Respond ONLY with a valid JSON object. Do not include markdown fences, backticks, or any conversational text.`;
 
-  const apiKey = "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";
+  const apiKey = "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";
   
   try {
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
