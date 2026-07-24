@@ -32,6 +32,8 @@ export default function CustomerAuth() {
   const [showPw, setShowPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [btnHovered, setBtnHovered] = useState(false);
 
   const dest = () => {
     if (redirectParam === 'checkout') return `/store/${slug}/checkout`;
@@ -59,17 +61,26 @@ export default function CustomerAuth() {
     backgroundColor: `${pr}06`,
     border: `1.5px solid ${colors.secondary}`,
     borderRadius: 10, color: colors.text, outline: 'none',
-    transition: 'border-color 0.2s',
+    transition: 'all 0.2s ease-in-out',
+    ...extra,
+  });
+
+  const getInpStyle = (fieldName: string, extra?: React.CSSProperties) => inp({
+    borderColor: focusedField === fieldName ? pr : colors.secondary,
+    boxShadow: focusedField === fieldName ? `0 0 0 3.5px ${pr}22` : 'none',
+    backgroundColor: focusedField === fieldName ? (colors.card === '#ffffff' ? '#ffffff' : colors.card) : `${pr}06`,
     ...extra,
   });
 
   const btnPri = (disabled?: boolean): React.CSSProperties => ({
     width: '100%', padding: '14px', fontSize: '14px', fontWeight: 700,
-    background: disabled ? `${pr}66` : pr, color: '#fff', border: 'none',
+    background: disabled ? `${pr}66` : (btnHovered ? `linear-gradient(135deg, ${pr} 0%, ${pr}dd 100%)` : pr),
+    color: '#fff', border: 'none',
     borderRadius: 12, cursor: disabled ? 'not-allowed' : 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-    boxShadow: disabled ? 'none' : `0 6px 24px ${pr}44`,
-    letterSpacing: '0.015em', transition: 'all 0.2s',
+    boxShadow: disabled ? 'none' : (btnHovered ? `0 8px 28px ${pr}55` : `0 6px 20px ${pr}33`),
+    transform: btnHovered && !disabled ? 'translateY(-1px)' : 'none',
+    letterSpacing: '0.015em', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   });
 
   const lbl: React.CSSProperties = {
@@ -82,6 +93,9 @@ export default function CustomerAuth() {
   const doLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return toast.error('Please fill all fields');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return toast.error('Please enter a valid email address');
+    }
     setSubmitting(true);
     const { error } = await signInWithEmail(email, password);
     setSubmitting(false);
@@ -94,6 +108,9 @@ export default function CustomerAuth() {
     e.preventDefault();
     if (!fullName.trim()) return toast.error('Name is required');
     if (!email) return toast.error('Email is required');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return toast.error('Please enter a valid email address');
+    }
     if (password.length < 6) return toast.error('Password must be at least 6 characters');
     setSubmitting(true);
     const { error } = await sendSignupOtp(email, fullName, password);
@@ -241,14 +258,19 @@ export default function CustomerAuth() {
                   <div>
                     <span style={lbl}>Email</span>
                     <input type="email" placeholder="you@example.com" value={email}
-                      onChange={e => setEmail(e.target.value)} style={inp()} required autoFocus />
+                      onChange={e => setEmail(e.target.value)}
+                      onFocus={() => setFocusedField('login_email')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInpStyle('login_email')} required autoFocus />
                   </div>
                   <div>
                     <span style={lbl}>Password</span>
                     <div className="relative">
                       <input type={showPw ? 'text' : 'password'} placeholder="••••••••"
                         value={password} onChange={e => setPassword(e.target.value)}
-                        style={inp({ paddingRight: 44 })} required />
+                        onFocus={() => setFocusedField('login_password')}
+                        onBlur={() => setFocusedField(null)}
+                        style={getInpStyle('login_password', { paddingRight: 44 })} required />
                       <button type="button" onClick={() => setShowPw(!showPw)}
                         style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:colors.text, opacity:0.4 }}>
                         {showPw ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
@@ -263,7 +285,10 @@ export default function CustomerAuth() {
                       Forgot password?
                     </button>
                   </div>
-                  <button type="submit" disabled={submitting} style={btnPri(submitting)}>
+                  <button type="submit" disabled={submitting}
+                    onMouseEnter={() => setBtnHovered(true)}
+                    onMouseLeave={() => setBtnHovered(false)}
+                    style={btnPri(submitting)}>
                     {submitting && <Loader2 className="h-4 w-4 animate-spin"/>} Sign In
                   </button>
                 </form>
@@ -275,26 +300,37 @@ export default function CustomerAuth() {
                   <div>
                     <span style={lbl}>Full Name</span>
                     <input placeholder="Your full name" value={fullName}
-                      onChange={e => setFullName(e.target.value)} style={inp()} required autoFocus />
+                      onChange={e => setFullName(e.target.value)}
+                      onFocus={() => setFocusedField('signup_name')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInpStyle('signup_name')} required autoFocus />
                   </div>
                   <div>
                     <span style={lbl}>Email</span>
                     <input type="email" placeholder="you@example.com" value={email}
-                      onChange={e => setEmail(e.target.value)} style={inp()} required />
+                      onChange={e => setEmail(e.target.value)}
+                      onFocus={() => setFocusedField('signup_email')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInpStyle('signup_email')} required />
                   </div>
                   <div>
                     <span style={lbl}>Password</span>
                     <div className="relative">
                       <input type={showPw ? 'text' : 'password'} placeholder="Min 6 characters"
                         value={password} onChange={e => setPassword(e.target.value)}
-                        style={inp({ paddingRight: 44 })} required />
+                        onFocus={() => setFocusedField('signup_password')}
+                        onBlur={() => setFocusedField(null)}
+                        style={getInpStyle('signup_password', { paddingRight: 44 })} required />
                       <button type="button" onClick={() => setShowPw(!showPw)}
                         style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:colors.text, opacity:0.4 }}>
                         {showPw ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                       </button>
                     </div>
                   </div>
-                  <button type="submit" disabled={submitting} style={btnPri(submitting)}>
+                  <button type="submit" disabled={submitting}
+                    onMouseEnter={() => setBtnHovered(true)}
+                    onMouseLeave={() => setBtnHovered(false)}
+                    style={btnPri(submitting)}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin"/> : <Mail className="h-4 w-4"/>}
                     {submitting ? 'Sending code…' : 'Continue'}
                   </button>
@@ -318,9 +354,15 @@ export default function CustomerAuth() {
                   <div>
                     <span style={lbl}>Your Email</span>
                     <input type="email" placeholder="you@example.com" value={email}
-                      onChange={e => setEmail(e.target.value)} style={inp()} required autoFocus />
+                      onChange={e => setEmail(e.target.value)}
+                      onFocus={() => setFocusedField('forgot_email')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInpStyle('forgot_email')} required autoFocus />
                   </div>
-                  <button type="submit" disabled={submitting} style={btnPri(submitting)}>
+                  <button type="submit" disabled={submitting}
+                    onMouseEnter={() => setBtnHovered(true)}
+                    onMouseLeave={() => setBtnHovered(false)}
+                    style={btnPri(submitting)}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin"/> : <Mail className="h-4 w-4"/>}
                     {submitting ? 'Sending…' : 'Send Reset Code'}
                   </button>
@@ -347,14 +389,19 @@ export default function CustomerAuth() {
                     <div className="relative">
                       <input type={showNewPw ? 'text' : 'password'} placeholder="Min 6 characters"
                         value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                        style={inp({ paddingRight: 44 })} required autoFocus />
+                        onFocus={() => setFocusedField('forgot_new_pw')}
+                        onBlur={() => setFocusedField(null)}
+                        style={getInpStyle('forgot_new_pw', { paddingRight: 44 })} required autoFocus />
                       <button type="button" onClick={() => setShowNewPw(!showNewPw)}
                         style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:colors.text, opacity:0.4 }}>
                         {showNewPw ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                       </button>
                     </div>
                   </div>
-                  <button type="submit" disabled={submitting} style={btnPri(submitting)}>
+                  <button type="submit" disabled={submitting}
+                    onMouseEnter={() => setBtnHovered(true)}
+                    onMouseLeave={() => setBtnHovered(false)}
+                    style={btnPri(submitting)}>
                     {submitting && <Loader2 className="h-4 w-4 animate-spin"/>} Set New Password
                   </button>
                 </form>
