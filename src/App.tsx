@@ -39,7 +39,8 @@ const ScrollToTop = () => {
 
 const LandingPageWrapper = () => {
   const { user } = useAuth();
-  if (user) {
+  // Don't redirect storefront customer accounts to the merchant dashboard
+  if (user && user.user_metadata?.is_customer !== true) {
     return <Navigate to="/dashboard" replace />;
   }
   return <LandingPage />;

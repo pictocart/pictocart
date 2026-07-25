@@ -303,12 +303,19 @@ const StorefrontCheckout = () => {
     paymentMethod: 'cod',
   });
 
-  // Check if store has Razorpay configured (only `connected` flag is exposed publicly)
+  // Check if store has Razorpay configured and domain is verified (or test mode)
+  // domain_verified flag is synced into stores.settings by PaymentSettings on toggle
   useEffect(() => {
     const settings = store?.settings as any;
-    if (settings?.razorpay?.connected || settings?.razorpay?.key_id) {
-      setRazorpayAvailable(true);
+    const rzp = settings?.razorpay;
+    if (!rzp?.connected && !rzp?.key_id) {
+      setRazorpayAvailable(false);
+      return;
     }
+    // Test mode keys don't require domain verification
+    const isTestMode = rzp?.test_mode === true;
+    const isDomainVerified = rzp?.domain_verified === true;
+    setRazorpayAvailable(isTestMode || isDomainVerified);
   }, [store]);
 
   // Force payment method to match fulfillment mode (dine-in = pay-at-counter only)

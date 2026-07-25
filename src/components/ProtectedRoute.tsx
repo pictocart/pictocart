@@ -17,6 +17,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!user) return <Navigate to="/auth" replace />;
 
+  // Block storefront customer accounts from accessing the merchant dashboard.
+  // Customer accounts are tagged with is_customer=true in their user_metadata
+  // by the customer-auth edge function — they have no store and must not
+  // reach any seller-only page.
+  if (user.user_metadata?.is_customer === true) {
+    // Sign out the customer session from the main auth pool so a merchant
+    // can log in cleanly on the same browser.
+    import('@/integrations/supabase/client').then(({ supabase }) => supabase.auth.signOut());
+    return <Navigate to="/auth" replace />;
+  }
+
   return <>{children}</>;
 };
 
