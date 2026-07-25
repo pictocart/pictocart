@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
@@ -85,9 +85,18 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const baseDna = manifest?.dna ?? {};
   // Merge global palette overrides into dna so every Section/Header/Footer picks them up.
   const palette = { ...(baseDna.palette ?? {}), ...((overrides as any)?.palette ?? {}) };
-  const dna = { ...baseDna, palette };
-  const fonts = dna.fonts ?? {};
-  const radius = dna.radius ?? "8px";
+  
+  // Merge global fonts and layout overrides
+  const globalOv = (overrides as any)?.global || {};
+  const globalFonts = globalOv.fonts || {};
+  const fonts = {
+    heading: globalFonts.heading || baseDna.fonts?.heading || "Outfit",
+    body: globalFonts.body || baseDna.fonts?.body || "Inter",
+    heading_weight: baseDna.fonts?.heading_weight ?? 700
+  };
+
+  const dna = { ...baseDna, palette, fonts };
+  const radius = globalOv.radius != null ? `${globalOv.radius}px` : (dna.radius ?? "8px");
   const headerStyle = manifest?.header_style ?? dna.layout?.header_style ?? "classic";
   const brandName = overrides?.brand_name || dna.name;
   const headerOv = {
@@ -131,9 +140,27 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   let productSectionInjected = false;
 
   // Seller-defined categories override the theme's stock category tiles when present.
-  const sellerCategoryItems = sellerCategories && sellerCategories.length > 0
-    ? sellerCategories.map((c) => ({ id: c.id, name: c.name, image: c.image_url || undefined, description: c.description || undefined, subs: c.subs || [] }))
-    : null;
+  const sellerCategoryItems = useMemo(() => {
+    if (!sellerCategories || sellerCategories.length === 0) return null;
+    const parents = sellerCategories.filter((c: any) => !c.parent_id);
+    return parents.map((p: any) => {
+      const subs = sellerCategories
+        .filter((c: any) => c.parent_id === p.id)
+        .map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          image: c.image_url || undefined,
+          description: c.description || undefined,
+        }));
+      return {
+        id: p.id,
+        name: p.name,
+        image: p.image_url || undefined,
+        description: p.description || undefined,
+        subs,
+      };
+    });
+  }, [sellerCategories]);
 
   // Synthesize a built-in Collections page if the manifest doesn't define one.
   const collectionsItems = sellerCategoryItems ?? [];
@@ -189,6 +216,11 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         [data-section-index] .section-kicker {
           color: var(--kicker-color) !important;
         }
+        ${globalOv.bold ? `
+          [data-master-theme], [data-master-theme] *, [data-master-theme] h1, [data-master-theme] h2, [data-master-theme] h3, [data-master-theme] p, [data-master-theme] span, [data-master-theme] button, [data-master-theme] a {
+            font-weight: 700 !important;
+          }
+        ` : ''}
       `}} />
       {/* Header is first child — sticky top-0 works against window scroll */}
       <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} />
@@ -253,7 +285,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           }
         }
         // collections: replace items with seller's real categories if they've defined any
-        if (sellerCategoryItems && s.type === "collections") {
+        if (sellerCategoryItems && (s.type === "collections" || s.type === "collections_grid")) {
           mergedProps.items = sellerCategoryItems;
         }
         const anchorMap: Record<string, string> = {
@@ -393,7 +425,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   }
   const BrandInner = (
     <span className="inline-flex items-center gap-2">
-      {logoUrl && <img src={logoUrl} alt={effectiveBrand} style={logoStyle} />}
+      {logoUrl && <img data-logo-element="true" src={logoUrl} alt={effectiveBrand} style={logoStyle} />}
       {showName && <span style={brandStyle}>{effectiveBrand}</span>}
       {!showName && !logoUrl && <span style={brandStyle}>{effectiveBrand}</span>}
     </span>
@@ -1911,7 +1943,7 @@ function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overl
   const headingFont = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 } as React.CSSProperties;
 
   return (
-    <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[70vh]"}`} style={{ background: dna.palette?.surface }}>
+    <section data-hero-section="true" className={`relative overflow-hidden ${heightClass(height) || "min-h-[70vh]"}`} style={{ background: dna.palette?.surface }}>
       {list.map((s: any, i: number) => {
         const active = i === idx;
         const style: React.CSSProperties = transition === "fade"
@@ -2081,7 +2113,12 @@ function Hero({ p, dna, storeSlug }: any) {
 
   const freePos = !!buttons.free_position && v !== "slider";
 
-  const Btns = freePos ? null : (
+  const Btns = freePos ? (
+    <div className="mt-8 flex gap-3 flex-wrap opacity-0 pointer-events-none select-none">
+      {p.cta && <HeroBtn kind="primary" label={p.cta} href="#" cfg={buttons.primary} />}
+      {p.cta_secondary && <HeroBtn kind="secondary" label={p.cta_secondary} href="#" cfg={buttons.secondary} />}
+    </div>
+  ) : (
     <div className="mt-8 flex gap-3 flex-wrap">
       {p.cta && <HeroBtn kind="primary" label={p.cta} href={p.cta_href || shopHref} cfg={buttons.primary} />}
       {p.cta_secondary && <HeroBtn kind="secondary" label={p.cta_secondary} href={p.cta_secondary_href || shopHref} cfg={buttons.secondary} />}
@@ -2095,12 +2132,26 @@ function Hero({ p, dna, storeSlug }: any) {
     </div>
   ) : null;
 
-  const wrap = (node: JSX.Element) => (
-    <>
-      <HeroBtnStyles />
-      {freePos ? (<div className="relative">{node}{FreeLayer}</div>) : node}
-    </>
-  );
+  const wrap = (node: JSX.Element) => {
+    if (freePos) {
+      const children = [
+        ...(React.Children.toArray(node.props.children)),
+        FreeLayer
+      ];
+      return (
+        <>
+          <HeroBtnStyles />
+          {React.cloneElement(node, {}, ...children)}
+        </>
+      );
+    }
+    return (
+      <>
+        <HeroBtnStyles />
+        {node}
+      </>
+    );
+  };
 
   // --- SLIDER ---------------------------------------------------------------
   if (v === "slider") {
@@ -2113,7 +2164,7 @@ function Hero({ p, dna, storeSlug }: any) {
   // --- VIDEO BACKGROUND -----------------------------------------------------
   if (v === "video") {
     return wrap(
-      <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[80vh]"}`} style={{ background: "#000" }}>
+      <section data-hero-section="true" className={`relative overflow-hidden ${heightClass(height) || "min-h-[80vh]"}`} style={{ background: "#000" }}>
         <HeroVideo video={p.video} />
         <Overlay overlay={overlay} />
         <div className={`relative h-full w-full flex ${alignClass(contentAlign)} px-6 py-24`} style={{ color: "#fff" }}>
@@ -2131,7 +2182,7 @@ function Hero({ p, dna, storeSlug }: any) {
   // --- HALF BANNER ----------------------------------------------------------
   if (v === "half_banner") {
     return wrap(
-      <section className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface, minHeight: "40vh" }}>
+      <section data-hero-section="true" className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface, minHeight: "40vh" }}>
         <div className="px-6 md:px-12 py-12 md:py-16 flex flex-col justify-center">
           <div style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
@@ -2148,7 +2199,7 @@ function Hero({ p, dna, storeSlug }: any) {
   // --- GRADIENT (no image) --------------------------------------------------
   if (v === "gradient") {
     return wrap(
-      <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[60vh]"}`} style={{ background: `linear-gradient(135deg, ${dna.palette?.primary} 0%, ${dna.palette?.accent} 100%)`, color: dna.palette?.primary_fg || "#fff" }}>
+      <section data-hero-section="true" className={`relative overflow-hidden ${heightClass(height) || "min-h-[60vh]"}`} style={{ background: `linear-gradient(135deg, ${dna.palette?.primary} 0%, ${dna.palette?.accent} 100%)`, color: dna.palette?.primary_fg || "#fff" }}>
         <div className={`relative h-full w-full flex ${alignClass(contentAlign)} px-6 py-24`}>
           <div className="max-w-3xl" style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3 opacity-90">{p.kicker}</div>}
@@ -2163,7 +2214,7 @@ function Hero({ p, dna, storeSlug }: any) {
 
   if (v === "split") {
     return wrap(
-      <section className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface }}>
+      <section data-hero-section="true" className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface }}>
         <div className="px-6 md:px-12 py-20 md:py-32 flex flex-col justify-center">
           <div style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
@@ -2178,7 +2229,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   if (v === "magazine" || v === "editorial_serif") {
     return wrap(
-      <section className="max-w-6xl mx-auto px-6 py-24 relative">
+      <section data-hero-section="true" className="max-w-6xl mx-auto px-6 py-24 relative">
         <div className="grid md:grid-cols-12 gap-8 items-end">
           <div className="md:col-span-7">
             {p.kicker && <div className="text-xs uppercase tracking-[0.4em] mb-6 border-b pb-2 inline-block" style={{ color: dna.palette?.accent, borderColor: dna.palette?.border }}>{p.kicker}</div>}
@@ -2196,7 +2247,7 @@ function Hero({ p, dna, storeSlug }: any) {
   if (v === "fullscreen_image" || v === "fixed") {
     const h = heightClass(height) || (v === "fixed" ? "min-h-[60vh]" : "min-h-[80vh]");
     return wrap(
-      <section className={`relative overflow-hidden ${h}`}>
+      <section data-hero-section="true" className={`relative overflow-hidden ${h}`}>
         {p.image && (
           <div className={`absolute inset-0 ${parallax ? "bg-fixed" : ""}`}>
             <img
@@ -2220,7 +2271,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   if (v === "minimal_left") {
     return wrap(
-      <section className="max-w-6xl mx-auto px-6 py-32 relative">
+      <section data-hero-section="true" className="max-w-6xl mx-auto px-6 py-32 relative">
         <div style={contentBgStyle}>
           {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-6" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
           <h1 className="text-5xl md:text-7xl max-w-2xl" style={headingFont}>{p.title}</h1>
@@ -2232,7 +2283,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   if (v === "asymmetric") {
     return wrap(
-      <section className="relative overflow-hidden" style={{ background: dna.palette?.surface }}>
+      <section data-hero-section="true" className="relative overflow-hidden" style={{ background: dna.palette?.surface }}>
         <div className="absolute -right-20 -top-10 w-2/3 h-full">{p.image && <img src={p.image} className="w-full h-full object-cover" style={{ clipPath: "polygon(20% 0, 100% 0, 100% 100%, 0% 100%)", objectPosition: p.focal || "50% 50%" }} />}</div>
         <div className="relative max-w-6xl mx-auto px-6 py-32 md:py-40">
           <div style={contentBgStyle}>
@@ -2247,7 +2298,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   // centered (default)
   return wrap(
-    <section className={`relative overflow-hidden ${heightClass(height)}`} style={{ background: dna.palette?.surface }}>
+    <section data-hero-section="true" className={`relative overflow-hidden ${heightClass(height)}`} style={{ background: dna.palette?.surface }}>
       {p.image && <img src={p.image} alt="" className={`absolute inset-0 w-full h-full object-cover opacity-60 ${kenBurns ? "animate-[ken-burns_18s_ease-out_infinite]" : ""}`} style={{ objectPosition: p.focal || "50% 50%" }} />}
       <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${dna.palette?.bg}00, ${dna.palette?.bg}cc)` }} />
       <div className="relative max-w-6xl mx-auto px-6 py-32 md:py-40">
@@ -2341,10 +2392,20 @@ function CategoryBlock({ p, dna, storeSlug }: any) {
       </section>
     );
   }
+  const cols = p.product_cols ?? p.category_cols ?? 4;
+  const colsMap: Record<number, string> = {
+    2: "md:grid-cols-2",
+    3: "md:grid-cols-3",
+    4: "md:grid-cols-4",
+    5: "md:grid-cols-5",
+    6: "md:grid-cols-6",
+  };
+  const gridColsClass = colsMap[cols] || "md:grid-cols-4";
+
   return (
     <section className="max-w-6xl mx-auto px-6 py-20">
       {Title}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${gridColsClass} gap-4`}>
         {items.map((c: any, i: number) => (
           <Link to={hrefFor(c.name)} key={i} className="group block aspect-[3/4] relative overflow-hidden" style={{ borderRadius: "var(--r)" }}>
             {c.image ? <img src={c.image} className="w-full h-full object-cover transition-transform group-hover:scale-105" /> : <div className="w-full h-full" style={{ background: dna.palette?.surface }} />}
@@ -2378,9 +2439,9 @@ function CollectionsBlock({ p, dna, storeSlug }: any) {
       <div className="grid md:grid-cols-2 gap-8">
         {items.map((c: any, i: number) => (
           <article key={i} className="group flex flex-col" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", overflow: "hidden", border: `1px solid ${dna.palette?.border}` }}>
-            <Link to={collHref(c)} className="block aspect-[16/10] overflow-hidden" style={{ background: dna.palette?.bg }}>
+            <Link to={collHref(c)} className="relative block aspect-[16/10] overflow-hidden bg-muted/10" style={{ background: dna.palette?.bg }}>
               {c.image
-                ? <img src={c.image} alt={c.name} className="w-full h-full object-cover transition-transform group-hover:scale-[1.03]" />
+                ? <img src={c.image} alt={c.name} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-[1.03]" />
                 : <div className="w-full h-full" />}
             </Link>
             <div className="p-5 flex-1 flex flex-col">
@@ -2606,19 +2667,43 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
       {Chips}
       {Empty}
       <div 
-        className={cardWidth 
-          ? "flex flex-wrap gap-6 justify-center" 
-          : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
+        className={p.scroll_horizontal
+          ? "flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin"
+          : cardWidth 
+            ? "flex flex-wrap gap-6 justify-center" 
+            : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
         }
       >
         {items.map((pr: any, i: number) => (
-          <div key={i} className="group" style={cardWidth ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } : {}}>
+          <div 
+            key={i} 
+            className={`group ${p.scroll_horizontal ? "snap-start shrink-0" : ""}`} 
+            style={p.scroll_horizontal
+              ? { width: cardWidth ? `${cardWidth}px` : "260px" }
+              : cardWidth 
+                ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } 
+                : {}
+            }
+          >
             <Link to={linkFor(pr)} className="block">
               <div className="aspect-square mb-3 overflow-hidden relative" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
                 {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
                 {pr.badge && <span className="absolute top-2 left-2 text-[10px] px-2 py-1 uppercase tracking-wider z-10" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{pr.badge}</span>}
               </div>
-              <div className="text-sm font-medium">{pr.name}</div>
+              <div 
+                className="text-sm font-medium" 
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  height: "2.5rem",
+                  lineHeight: "1.25rem"
+                }}
+              >
+                {pr.name}
+              </div>
               <div className="mt-1 text-sm flex gap-2">
                 <span>₹{pr.price}</span>
                 {pr.compare_at > pr.price && <span className="line-through" style={{ color: dna.palette?.muted }}>₹{pr.compare_at}</span>}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useStore } from "@/hooks/useStore";
 import { useThemeManifest } from '@/hooks/useThemeManifest';
@@ -21,13 +21,15 @@ import {
   Loader2, RotateCcw, Save, Upload, Trash2, Image as ImageIcon,
   Smartphone, Monitor, ExternalLink, Plus, ArrowUp, ArrowDown, Search, ShoppingBag,
   PanelTop, PanelBottom, Palette, Megaphone, Maximize2, Minimize2, Menu,
+  Eye, EyeOff,
 } from "lucide-react";
 import PromoTickerEditor, { DEFAULT_PROMO_TICKER } from "@/components/store-design/PromoTickerEditor";
 import type { PromoTickerConfig } from "@/components/storefront/PromoTicker";
 import PagesTab from "@/components/store-design/PagesTab";
 import HomeSourcePicker from "@/components/store-design/HomeSourcePicker";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Sparkles, FileText as FileTextIcon, LayoutGrid } from "lucide-react";
+import Cropper, { Area } from "react-easy-crop";
 
 const PAGES = [
   { id: "home", label: "Home" },
@@ -78,7 +80,7 @@ type Selection =
   | { kind: "header" }
   | { kind: "footer" }
   | { kind: "ticker" }
-  | { kind: "palette" };
+  | { kind: "global" };
 
 const PALETTE_PRESETS: Array<{ name: string; colors: Record<string, string> }> = [
   { name: "Default theme", colors: {} },
@@ -138,6 +140,43 @@ export default function CustomiserV2() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [autoSave, setAutoSave] = useState<boolean>(() => {
+    return localStorage.getItem("customizer_autosave") === "true";
+  });
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const isFirstMount = useRef(true);
+
+  // Autosave effect
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    if (!autoSave || !store) return;
+
+    setSaveStatus("saving");
+    const handler = setTimeout(async () => {
+      try {
+        const newConfig = { ...settings, theme_overrides: overrides, promo_ticker: promoTicker };
+        const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
+        const { error } = await supabase.from("stores").update({ resolved_storefront_manifest: resolved_storefront_manifest as any }).eq("id", store.id);
+        if (error) {
+          console.error("Autosave failed:", error);
+          setSaveStatus("idle");
+        } else {
+          setStore({ ...store, resolved_storefront_manifest });
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        }
+      } catch (err) {
+        console.error("Autosave error:", err);
+        setSaveStatus("idle");
+      }
+    }, 1500); // 1.5 seconds debounce
+
+    return () => clearTimeout(handler);
+  }, [overrides, promoTicker, autoSave, store]);
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [targetSectionIndex, setTargetSectionIndex] = useState<number | null>(null);
 
@@ -223,12 +262,14 @@ export default function CustomiserV2() {
 
   const overridesRef = useRef(overrides);
   const pageRef = useRef(page);
+  const categoriesRef = useRef(categories);
   useEffect(() => { overridesRef.current = overrides; }, [overrides]);
   useEffect(() => { pageRef.current = page; }, [page]);
+  useEffect(() => { categoriesRef.current = categories; }, [categories]);
 
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage(
-      { type: "customiser:update", overrides, page, refreshCategories: true }, "*",
+      { type: "customiser:update", overrides, page, categories }, "*",
     );
   }, [overrides, page, categories]);
 
@@ -236,7 +277,7 @@ export default function CustomiserV2() {
     const onReady = (ev: MessageEvent) => {
       if (ev.data?.type === "customiser:ready") {
         iframeRef.current?.contentWindow?.postMessage(
-          { type: "customiser:update", overrides: overridesRef.current, page: pageRef.current }, "*",
+          { type: "customiser:update", overrides: overridesRef.current, page: pageRef.current, categories: categoriesRef.current }, "*",
         );
       }
     };
@@ -311,12 +352,137 @@ export default function CustomiserV2() {
     toast.success(`Reset all changes on ${page}`);
   };
 
+  // Global Crop States
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropTarget, setCropTarget] = useState<any>("image");
+  const [cropIdx, setCropIdx] = useState<number>(-1);
+  const [cropFileName, setCropFileName] = useState<string>("image.png");
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropIsAi, setCropIsAi] = useState(false);
+
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [cropAspect, setCropAspect] = useState<number>(1.5);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
+  const [cropUploading, setCropUploading] = useState(false);
+
+  const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
+    setCroppedArea(croppedAreaPixels);
+  }, []);
+
+  const handleCloseCropper = () => {
+    setCropOpen(false);
+    setCropSrc(null);
+  };
+
+  const startCropForTarget = (
+    src: string,
+    fileName: string,
+    idx: number,
+    target: any,
+    isAiImage: boolean = false
+  ) => {
+    let targetAspect: number | undefined = undefined;
+    try {
+      const iframe = iframeRef.current;
+      const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+      
+      if (target === "logo_url") {
+        const shape = overrides?.logo_shape || overrides?.header?.logo_shape || "rectangle";
+        if (shape === "circle") {
+          targetAspect = 1;
+        } else {
+          const logoEl = doc?.querySelector('img[data-logo-element="true"], img[src*="logo"], header img');
+          if (logoEl) {
+            const rect = logoEl.getBoundingClientRect();
+            if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+          }
+          if (!targetAspect) targetAspect = 2.5;
+        }
+      } else if (sections[idx]?.type === "hero") {
+        const heroEl = doc?.querySelector('[data-hero-section="true"]');
+        if (heroEl) {
+          const rect = heroEl.getBoundingClientRect();
+          if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+        }
+        if (!targetAspect) {
+          const defaults = sections[idx]?.props ?? {};
+          const sectionOv = sectionOverrides[idx] ?? {};
+          const merged = { ...defaults, ...sectionOv };
+          const s = merged.style ?? "centered";
+          const h = merged.height ?? "auto";
+          if (s === "magazine" || s === "editorial_serif") targetAspect = 21 / 9;
+          else if (s === "split" || s === "half_banner" || s === "dual_image") targetAspect = 1.2;
+          else {
+            switch (h) {
+              case "short":  targetAspect = 2.2; break;
+              case "medium": targetAspect = 1.6; break;
+              case "tall":   targetAspect = 1.33; break;
+              case "full":   targetAspect = 1.2; break;
+              case "auto":
+              default:       targetAspect = 1.6; break;
+            }
+          }
+        }
+      } else if (typeof target === "object" && "categoryId" in target) {
+        const categoryGridEl = doc?.querySelector(`[data-section-index="${idx}"]`);
+        if (categoryGridEl) {
+          const firstCardEl = categoryGridEl.querySelector("a, img");
+          if (firstCardEl) {
+            const rect = firstCardEl.getBoundingClientRect();
+            if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+          }
+        }
+        if (!targetAspect) targetAspect = 0.75;
+      } else {
+        const sectionEl = doc?.querySelector(`[data-section-index="${idx}"]`);
+        if (sectionEl) {
+          const img = sectionEl.querySelector("img");
+          if (img) {
+            const rect = img.parentElement?.getBoundingClientRect() || img.getBoundingClientRect();
+            if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+          }
+        }
+        if (!targetAspect) targetAspect = 1.5;
+      }
+    } catch (e) {
+      console.warn("Failed to query preview iframe for aspect ratio:", e);
+    }
+    
+    setCropSrc(src);
+    setCropFileName(fileName);
+    setCropIdx(idx);
+    setCropTarget(target);
+    setCropAspect(targetAspect || 1.5);
+    setCropIsAi(isAiImage);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedArea(null);
+    setCropOpen(true);
+  };
+
   const uploadImage = async (
     idx: number,
-    file: File,
-    target: "image" | "logo_url" | { slideIndex: number; key?: string } | { videoKey: "poster" | "src" } = "image",
+    file: File | string,
+    target: "image" | "logo_url" | { slideIndex: number; key?: string } | { videoKey: "poster" | "src" } | { categoryId: string } = "image",
+    isCropped = false,
   ) => {
     if (!store?.id) return;
+
+    if (typeof file === "string") {
+      startCropForTarget(file, "ai-generated.png", idx, target, true);
+      return;
+    }
+
+    if (!isCropped) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        startCropForTarget(reader.result as string, file.name, idx, target, false);
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw new Error("Please sign in again before uploading");
@@ -328,8 +494,9 @@ export default function CustomiserV2() {
       const url = data.publicUrl;
       if (target === "logo_url") {
         updateHeader("logo_url", url);
+      } else if (typeof target === "object" && "categoryId" in target) {
+        await updateCategory.mutateAsync({ id: target.categoryId, image_url: url });
       } else if (typeof target === "object" && "slideIndex" in target) {
-        // Update a single slide's image inside the slides array
         const cur = (overrides?.pages?.[page]?.sections?.[idx]?.slides
           ?? sections[idx]?.props?.slides ?? []) as any[];
         const next = [...cur];
@@ -344,6 +511,58 @@ export default function CustomiserV2() {
       toast.success("Image updated");
     } catch (e: any) {
       toast.error(e?.message || "Upload failed");
+    }
+  };
+
+  const handleSaveCrop = async () => {
+    if (!cropSrc || !croppedArea) return;
+    setCropUploading(true);
+    try {
+      const blob = await getCroppedImg(cropSrc, croppedArea);
+      const croppedFile = new File([blob], cropFileName, { type: "image/png" });
+      await uploadImage(cropIdx, croppedFile, cropTarget, true);
+      setCropOpen(false);
+      setCropSrc(null);
+    } catch (e: any) {
+      toast.error("Cropping failed. Applying original image instead.");
+      await handleApplyOriginal();
+    } finally {
+      setCropUploading(false);
+    }
+  };
+
+  const handleApplyOriginal = async () => {
+    if (!cropSrc) return;
+    setCropUploading(true);
+    try {
+      const res = await fetch(cropSrc);
+      const blob = await res.blob();
+      const file = new File([blob], cropFileName, { type: blob.type || "image/png" });
+      await uploadImage(cropIdx, file, cropTarget, true);
+      setCropOpen(false);
+      setCropSrc(null);
+    } catch (err: any) {
+      console.warn("CORS fetch failed, using direct URL:", err);
+      if (cropTarget === "logo_url") {
+        updateHeader("logo_url", cropSrc);
+      } else if (typeof cropTarget === "object" && "categoryId" in cropTarget) {
+        await updateCategory.mutateAsync({ id: cropTarget.categoryId, image_url: cropSrc });
+      } else if (typeof cropTarget === "object" && "slideIndex" in cropTarget) {
+        const cur = (overrides?.pages?.[page]?.sections?.[cropIdx]?.slides
+          ?? sections[cropIdx]?.props?.slides ?? []) as any[];
+        const next = [...cur];
+        next[cropTarget.slideIndex] = { ...(next[cropTarget.slideIndex] || {}), [cropTarget.key || "image"]: cropSrc };
+        updateField(cropIdx, "slides", next);
+      } else if (typeof cropTarget === "object" && "videoKey" in cropTarget) {
+        const cur = overrides?.pages?.[page]?.sections?.[cropIdx]?.video ?? sections[cropIdx]?.props?.video ?? {};
+        updateField(cropIdx, "video", { ...cur, [cropTarget.videoKey]: cropSrc, provider: "upload" });
+      } else {
+        updateField(cropIdx, "image", cropSrc);
+      }
+      setCropOpen(false);
+      setCropSrc(null);
+    } finally {
+      setCropUploading(false);
     }
   };
 
@@ -383,6 +602,13 @@ export default function CustomiserV2() {
     setOverrides((prev: any) => {
       const next = structuredClone(prev || {});
       next.palette = { ...(next.palette || {}), [key]: value };
+      return next;
+    });
+  };
+  const updateGlobal = (key: string, value: any) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      next.global = { ...(next.global || {}), [key]: value };
       return next;
     });
   };
@@ -438,32 +664,26 @@ export default function CustomiserV2() {
   };
 
   const uploadLogo = async (file: File) => {
-    if (!store?.id) return;
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) throw new Error("Please sign in again before uploading");
-      const ext = file.name.split(".").pop();
-      const path = `${userData.user.id}/stores/${store.id}/logo/header-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("store-assets").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from("store-assets").getPublicUrl(path);
-      updateHeader("logo_url", data.publicUrl);
-      toast.success("Logo uploaded");
-    } catch (e: any) { toast.error(e?.message || "Logo upload failed"); }
+    uploadImage(0, file, "logo_url");
   };
 
   const save = async () => {
     if (!store) return;
     setSaving(true);
+    setSaveStatus("saving");
     // Rendering-config keys go ONLY into resolved_storefront_manifest.config;
     // `stores.settings` is left untouched (business data stays single-source there).
     const newConfig = { ...settings, theme_overrides: overrides, promo_ticker: promoTicker };
     const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
     const { error } = await supabase.from("stores").update({ resolved_storefront_manifest: resolved_storefront_manifest as any }).eq("id", store.id);
-    if (error) toast.error("Failed to save");
-    else {
+    if (error) {
+      toast.error("Failed to save");
+      setSaveStatus("idle");
+    } else {
       setStore({ ...store, resolved_storefront_manifest });
       toast.success("Saved — live on your store");
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
     }
     setSaving(false);
   };
@@ -508,7 +728,32 @@ export default function CustomiserV2() {
             {isFullscreen ? <Minimize2 className="h-3.5 w-3.5 text-indigo-600" /> : <Maximize2 className="h-3.5 w-3.5 text-indigo-600" />}
             <span className="hidden sm:inline">{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
           </Button>
-          <Button size="sm" variant="outline" className="bg-background" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset page</Button>
+          {/* Autosave Switch */}
+          <div className="flex items-center gap-2 border px-2.5 h-8 rounded-md bg-background shrink-0 select-none">
+            <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+              <span className={`h-1.5 w-1.5 rounded-full ${autoSave ? (saveStatus === "saving" ? "bg-amber-500 animate-pulse" : "bg-emerald-500") : "bg-muted-foreground"}`} />
+              Autosave
+            </span>
+            <Switch 
+              checked={autoSave} 
+              onCheckedChange={(val) => {
+                setAutoSave(val);
+                localStorage.setItem("customizer_autosave", String(val));
+                if (val) {
+                  toast.success("Autosave enabled!");
+                } else {
+                  toast.info("Autosave disabled.");
+                }
+              }}
+              className="scale-75 origin-right"
+            />
+            {autoSave && (
+              <span className="text-[9px] font-mono text-muted-foreground min-w-[42px] text-right">
+                {saveStatus === "saving" ? "saving..." : saveStatus === "saved" ? "saved" : "ready"}
+              </span>
+            )}
+          </div>
+          <Button size="sm" variant="outline" className="bg-background" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset to Factory Default</Button>
           <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}</Button>
         </div>
       </div>
@@ -540,6 +785,15 @@ export default function CustomiserV2() {
             >
               <span className="flex items-center gap-1.5"><PanelBottom className="h-3.5 w-3.5 text-indigo-600" /> Footer Layout</span>
               {Object.keys(footerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+            </button>
+
+            {/* Synthetic Global Design row */}
+            <button
+              onClick={() => selectAndScroll({ kind: "global" })}
+              className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "global" ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-muted text-muted-foreground"}`}
+            >
+              <span className="flex items-center gap-1.5"><Palette className="h-3.5 w-3.5 text-indigo-600" /> Global Design</span>
+              {((overrides as any)?.global || Object.keys(paletteOv).length > 0) && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
             </button>
           </div>
           <Separator />
@@ -590,13 +844,7 @@ export default function CustomiserV2() {
           <ScrollArea className="flex-1">
             <div className="px-2 pb-3 space-y-0.5">
               {/* Theme palette row */}
-              <button
-                onClick={() => selectAndScroll({ kind: "palette" })}
-                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${selected?.kind === "palette" ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
-              >
-                <span className="flex items-center gap-1.5"><Palette className="h-3 w-3" /> Theme colors</span>
-                {Object.keys(paletteOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
-              </button>
+
 
               {sections.length === 0 && <div className="px-2 py-3 text-[11px] text-muted-foreground">No sections on this page.</div>}
               {sections.map((s, i) => {
@@ -606,13 +854,21 @@ export default function CustomiserV2() {
                 const isHidden = !!ov.hidden;
                 return (
                   <div key={i} className="flex items-center gap-1.5 px-1 py-0.5 group w-full">
-                    <input
-                      type="checkbox"
-                      checked={!isHidden}
-                      onChange={() => handleToggleVisibility(i, isHidden)}
-                      className="h-3 w-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleVisibility(i, isHidden);
+                      }}
+                      className="p-1 hover:bg-accent hover:text-accent-foreground text-muted-foreground rounded transition-colors shrink-0"
                       title={isHidden ? "Show Section" : "Hide Section"}
-                    />
+                    >
+                      {isHidden ? (
+                        <EyeOff className="h-3.5 w-3.5 text-muted-foreground/60" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5 text-indigo-600" />
+                      )}
+                    </button>
                     <button
                       onClick={() => selectAndScroll({ kind: "section", index: i })}
                       className={`flex-1 text-left text-xs px-2 py-1.5 rounded-md flex items-center justify-between transition-all ${isSel ? "bg-accent text-accent-foreground font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"} ${isHidden ? "opacity-45 line-through" : ""}`}
@@ -733,12 +989,15 @@ export default function CustomiserV2() {
               </div>
             )}
 
-            {selected?.kind === "palette" && (
-              <PaletteInspector
+            {selected?.kind === "global" && (
+              <GlobalDesignInspector
+                globalOv={overrides?.global || {}}
+                onUpdateGlobal={updateGlobal}
                 paletteOv={paletteOv}
                 onChangeColor={updatePalette}
                 onApplyPreset={applyPalettePreset}
-                onReset={resetPalette}
+                onResetColors={resetPalette}
+                manifest={manifest}
               />
             )}
 
@@ -757,11 +1016,85 @@ export default function CustomiserV2() {
                 updateCategory={updateCategory}
                 deleteCategory={deleteCategory}
                 products={products}
+                manifest={manifest}
+                paletteOv={paletteOv}
+                iframeRef={iframeRef}
               />
             )}
           </ScrollArea>
         </aside>
       </div>
+
+      <Dialog open={cropOpen} onOpenChange={(o) => !o && handleCloseCropper()}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>
+              {cropIsAi ? "AI Generated Image Preview & Crop" : "Crop & Adjust Image"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="relative h-80 w-full bg-muted rounded-lg overflow-hidden border">
+            {cropSrc && (
+              <Cropper
+                image={cropSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={cropAspect}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                cropShape={cropTarget === "logo_url" && (overrides?.logo_shape || overrides?.header?.logo_shape) === "circle" ? "round" : "rect"}
+                showGrid={true}
+                restrictPosition={false}
+                objectFit="contain"
+              />
+            )}
+          </div>
+          <div className="space-y-4 pt-2">
+            <div className="text-[11px] text-muted-foreground bg-muted/40 p-2 rounded border border-dashed text-center">
+              Aspect ratio is locked to match the target element's actual container size.
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-xs font-medium">
+                <Label>Zoom Image</Label>
+                <span className="text-[10px] text-muted-foreground">Drag the image to adjust position</span>
+              </div>
+              <Slider
+                min={0.5}
+                max={3}
+                step={0.05}
+                value={[zoom]}
+                onValueChange={([v]) => setZoom(v)}
+                className="mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex items-center gap-2 justify-between border-t pt-4">
+            {cropIsAi && (
+              <Button
+                variant="outline"
+                type="button"
+                onClick={handleApplyOriginal}
+                disabled={cropUploading}
+                className="mr-auto border-violet-200 text-violet-700 hover:bg-violet-50"
+              >
+                Apply Original
+              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" type="button" onClick={handleCloseCropper} disabled={cropUploading}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveCrop} disabled={cropUploading} className="bg-violet-600 hover:bg-violet-700 text-white">
+                {cropUploading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                ) : (
+                  'Apply & Crop'
+                )}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-sm bg-background border rounded-lg shadow-lg">
@@ -819,8 +1152,8 @@ export default function CustomiserV2() {
 function InspectorHeader({ selected, headerOv, footerOv, sections, sectionOverrides, onResetHeader, onResetFooter, onResetSection }: any) {
   let title = "No section selected";
   let resetBtn: React.ReactNode = null;
-  if (selected?.kind === "palette") {
-    title = "Theme colors";
+  if (selected?.kind === "global") {
+    title = "Global Design";
   } else if (selected?.kind === "header") {
     title = "Header";
     if (Object.keys(headerOv).length > 0) {
@@ -1088,7 +1421,7 @@ function FooterInspector({ footerOv, onChange }: { footerOv: any; onChange: (k: 
   );
 }
 
-function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, categories = [], updateCategory, deleteCategory, products = [] }: any) {
+function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, categories = [], updateCategory, deleteCategory, products = [], manifest, paletteOv, iframeRef }: any) {
   const handleUploadCatImage = async (catId: string, file: File) => {
     const loadingToast = toast.loading("Uploading category image...");
     try {
@@ -1108,6 +1441,14 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
   };
 
   const defaults = section?.props ?? {};
+  const activePalette = {
+    ...(manifest?.dna?.palette ?? {}),
+    ...(paletteOv ?? {}),
+  };
+  let defaultTextColor = activePalette.fg || "#000000";
+  if (section?.type === "newsletter") {
+    defaultTextColor = activePalette.primary_fg || "#ffffff";
+  }
   const merged = { ...defaults, ...sectionOv };
 
   const typeSpecificKeys: Record<string, string[]> = {
@@ -1195,6 +1536,8 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         onColorChange={onColorChange}
         onResetColors={onResetColors}
         previewUrl={previewUrl}
+        manifest={manifest}
+        iframeRef={iframeRef}
       />
     );
   }
@@ -1208,27 +1551,39 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
           </Label>
           
           <div className="space-y-3">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
-                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_cols ?? 4} cols</span>
+            {!merged.scroll_horizontal && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
+                  <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_cols ?? 4} cols</span>
+                </div>
+                <Select 
+                  value={String(merged.product_cols ?? 4)} 
+                  onValueChange={(val) => onUpdate(idx, "product_cols", Number(val))}
+                >
+                  <SelectTrigger className="h-8 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2 Columns</SelectItem>
+                    <SelectItem value="3">3 Columns</SelectItem>
+                    <SelectItem value="4">4 Columns</SelectItem>
+                    <SelectItem value="5">5 Columns</SelectItem>
+                    <SelectItem value="6">6 Columns</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Select 
-                value={String(merged.product_cols ?? 4)} 
-                onValueChange={(val) => onUpdate(idx, "product_cols", Number(val))}
-              >
-                <SelectTrigger className="h-8 text-xs bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2">2 Columns</SelectItem>
-                  <SelectItem value="3">3 Columns</SelectItem>
-                  <SelectItem value="4">4 Columns</SelectItem>
-                  <SelectItem value="5">5 Columns</SelectItem>
-                  <SelectItem value="6">6 Columns</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            )}
+
+            {section?.type !== "product_detail" && (
+              <div className="flex items-center justify-between pt-1.5 border-t">
+                <Label className="text-[11px] text-muted-foreground font-medium">Horizontal Scroll / Swipe</Label>
+                <Switch 
+                  checked={!!merged.scroll_horizontal} 
+                  onCheckedChange={(val) => onUpdate(idx, "scroll_horizontal", val)} 
+                />
+              </div>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -1244,6 +1599,35 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                 className="my-2"
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {section?.type === "category_grid" && (
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/40 animate-fade-in">
+          <Label className="text-xs font-semibold flex items-center gap-1.5">
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" /> Category Grid Styling
+          </Label>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
+              <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_cols ?? 4} cols</span>
+            </div>
+            <Select 
+              value={String(merged.product_cols ?? 4)} 
+              onValueChange={(val) => onUpdate(idx, "product_cols", Number(val))}
+            >
+              <SelectTrigger className="h-8 text-xs bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2">2 Columns</SelectItem>
+                <SelectItem value="3">3 Columns</SelectItem>
+                <SelectItem value="4">4 Columns</SelectItem>
+                <SelectItem value="5">5 Columns</SelectItem>
+                <SelectItem value="6">6 Columns</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}
@@ -1283,7 +1667,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
           <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline" className="w-full h-8 text-xs bg-background text-foreground hover:bg-muted/40">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add / Remove Products
+                <Plus className="h-3.5 w-3.5 mr-1" /> Manage list
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md bg-background border rounded-lg shadow-lg">
@@ -1415,15 +1799,15 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
               <span className="text-[9px] text-muted-foreground font-medium">Text color:</span>
               <input 
                 type="color" 
-                value={merged[`${k}_color`] || "#000000"} 
+                value={merged[`${k}_color`] || defaultTextColor} 
                 onChange={(e) => onUpdate(idx, `${k}_color`, e.target.value)} 
                 className="w-4.5 h-4.5 rounded cursor-pointer border p-0 bg-transparent shrink-0" 
               />
               <Input 
                 value={merged[`${k}_color`] || ""} 
                 onChange={(e) => onUpdate(idx, `${k}_color`, e.target.value)} 
-                placeholder="Default" 
-                className="h-5 text-[9px] w-20 px-1 font-mono" 
+                placeholder={`Default (${defaultTextColor})`} 
+                className="h-5 text-[9px] w-28 px-1 font-mono" 
               />
               {merged[`${k}_color`] && (
                 <button 
@@ -1503,18 +1887,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
               return (
                 <div key={cat.id} className="p-3 border rounded-lg bg-card space-y-2">
                   <div>
-                    <Label className="text-[10px] text-muted-foreground">Category name</Label>
-                    <Input 
-                      defaultValue={cat.name} 
-                      onBlur={(e) => {
-                        const nextVal = e.target.value.trim();
-                        if (nextVal && nextVal !== cat.name) {
-                          updateCategory.mutate({ id: cat.id, name: nextVal });
-                        }
-                      }} 
-                      className="h-8 text-xs mt-1" 
-                      placeholder="Category name" 
-                    />
+                    <div className="text-xs font-semibold text-foreground">{cat.name}</div>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[10px] text-muted-foreground">Category Image</Label>
@@ -1526,26 +1899,26 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                           <ImageIcon className="h-4 w-4 text-muted-foreground" />
                         )}
                       </div>
-                      <Input 
-                        value={cat.image_url || ""} 
-                        readOnly 
-                        className="h-8 text-[10px] bg-muted/30 flex-1 truncate font-mono" 
-                        placeholder="No image uploaded" 
-                      />
-                      <Button size="sm" variant="outline" asChild className="h-8 px-2.5 shrink-0 bg-background">
-                        <label className="cursor-pointer">
-                          <Upload className="h-3.5 w-3.5 mr-1" /> Update
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            onChange={(e) => { 
-                              const f = e.target.files?.[0]; 
-                              if (f) handleUploadCatImage(cat.id, f); 
-                            }} 
-                          />
-                        </label>
-                      </Button>
+                      <div className="flex flex-1 gap-1.5 min-w-0">
+                        <Button size="sm" variant="outline" asChild className="h-8 px-2 bg-background flex-1">
+                          <label className="cursor-pointer justify-center w-full flex items-center gap-1">
+                            <Upload className="h-3.5 w-3.5" /> Upload
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => { 
+                                const f = e.target.files?.[0]; 
+                                if (f) onUploadImage(idx, f, { categoryId: cat.id }); 
+                              }} 
+                            />
+                          </label>
+                        </Button>
+                        <CategoryAiImageButton 
+                          catName={cat.name} 
+                          onAiImageGenerated={(url) => onUploadImage(idx, url, { categoryId: cat.id })} 
+                        />
+                      </div>
                       {cat.image_url && (
                         <Button 
                           size="sm" 
@@ -1559,21 +1932,38 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                       )}
                     </div>
                   </div>
-                  {/* Delete Category Button */}
-                  <div className="flex items-center justify-between pt-1.5 border-t">
-                    <span className="text-[10px] text-muted-foreground">Manage category</span>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={async () => {
-                        if (confirm(`Are you sure you want to permanently delete the category "${cat.name}"?`)) {
-                          await deleteCategory.mutateAsync(cat.id);
+                  {/* Hide Category Toggle */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs font-medium">Hide category from home screen</span>
+                    <Switch
+                      checked={sectionOv?.selected_category_ids ? !sectionOv.selected_category_ids.includes(cat.id) : false}
+                      onCheckedChange={(checked) => {
+                        const selectedCatIds = sectionOv?.selected_category_ids;
+                        let nextIds;
+                        if (!selectedCatIds) {
+                          if (checked) {
+                            nextIds = categories.filter((c: any) => c.id !== cat.id).map((c: any) => c.id);
+                          } else {
+                            return;
+                          }
+                        } else {
+                          if (checked) {
+                            nextIds = selectedCatIds.filter((id: string) => id !== cat.id);
+                          } else {
+                            nextIds = [...selectedCatIds];
+                            if (!nextIds.includes(cat.id)) {
+                              nextIds.push(cat.id);
+                            }
+                          }
                         }
-                      }} 
-                      className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive px-2 shrink-0 font-semibold"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Category
-                    </Button>
+                        
+                        if (nextIds && nextIds.length === categories.length) {
+                          onUpdate(idx, "selected_category_ids", null);
+                        } else {
+                          onUpdate(idx, "selected_category_ids", nextIds);
+                        }
+                      }}
+                    />
                   </div>
                 </div>
               );
@@ -1595,45 +1985,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         <p className="text-xs text-muted-foreground">This section has no editable fields exposed by the theme.</p>
       )}
 
-      <div className="pt-3 border-t space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs flex items-center gap-1.5"><Palette className="h-3 w-3" /> Section colors</Label>
-          {sectionOv?.colors && (
-            <button onClick={() => onResetColors(idx)} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"><RotateCcw className="h-3 w-3" /> reset</button>
-          )}
-        </div>
-        <p className="text-[10px] text-muted-foreground">Override colors just for this section. Leave blank to use the theme default.</p>
-        <div className="grid grid-cols-2 gap-2">
-          {COLOR_KEYS.map(({ key, label }) => {
-            const val = sectionOv?.colors?.[key] ?? "";
-            return (
-              <div key={key} className="space-y-1">
-                <Label className="text-[10px]">{label}</Label>
-                <div className="flex gap-1 items-center">
-                  <input
-                    type="color"
-                    value={val || "#000000"}
-                    onChange={(e) => onColorChange(idx, key, e.target.value)}
-                    className="h-7 w-7 rounded border cursor-pointer shrink-0"
-                  />
-                  <Input
-                    value={val}
-                    onChange={(e) => onColorChange(idx, key, e.target.value)}
-                    placeholder="theme"
-                    className="h-7 text-[11px] font-mono"
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
-      <div className="pt-2 border-t">
-        <a href={previewUrl} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 hover:underline">
-          <ExternalLink className="h-3 w-3" /> Open preview in new tab
-        </a>
-      </div>
     </div>
   );
 }
@@ -1666,7 +2018,105 @@ function ItemsEditor({ label, items, renderRow, blank, onChange }: { label: stri
   );
 }
 
-function PaletteInspector({ paletteOv, onChangeColor, onApplyPreset, onReset }: { paletteOv: Record<string, string>; onChangeColor: (k: string, v: string) => void; onApplyPreset: (p: Record<string, string>) => void; onReset: () => void }) {
+function GlobalDesignInspector({ 
+  globalOv, 
+  onUpdateGlobal, 
+  paletteOv, 
+  onChangeColor, 
+  onApplyPreset, 
+  onResetColors,
+  manifest
+}: any) {
+  const fonts = globalOv?.fonts || {};
+  const radius = globalOv?.radius ?? 8;
+  const isBold = !!globalOv?.bold;
+
+  const ALL_FONTS = [
+    { value: "Outfit", label: "Outfit" },
+    { value: "Playfair Display", label: "Playfair Display (Serif)" },
+    { value: "Cormorant Garamond", label: "Cormorant Garamond" },
+    { value: "Inter", label: "Inter" },
+    { value: "Gbarab", label: "Gbarab (Handwritten)" },
+    { value: "system-ui", label: "System Default" },
+  ];
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* 1. Global Typography */}
+      <div className="space-y-3">
+        <div className="px-4 pt-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Global Typography</h3>
+        </div>
+        <div className="p-4 border rounded-lg bg-card space-y-4">
+          <div>
+            <Label className="text-xs">Heading Font Family</Label>
+            <select
+              value={fonts.heading || "Outfit"}
+              onChange={(e) => onUpdateGlobal("fonts", { ...fonts, heading: e.target.value })}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              {ALL_FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Body Font Family</Label>
+            <select
+              value={fonts.body || "Inter"}
+              onChange={(e) => onUpdateGlobal("fonts", { ...fonts, body: e.target.value })}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              {ALL_FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center justify-between pt-1">
+            <Label className="text-xs">Make all text Bold</Label>
+            <Switch
+              checked={isBold}
+              onCheckedChange={(checked) => onUpdateGlobal("bold", checked)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Global Layout & Borders */}
+      <div className="space-y-3">
+        <div className="px-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Global Layout</h3>
+        </div>
+        <div className="p-4 border rounded-lg bg-card space-y-2">
+          <div className="flex justify-between items-center">
+            <Label className="text-xs">Corner Radius</Label>
+            <span className="text-xs font-mono font-semibold">{radius}px</span>
+          </div>
+          <Slider 
+            value={[radius]} 
+            min={0} 
+            max={32} 
+            step={1} 
+            onValueChange={([v]) => onUpdateGlobal("radius", v)} 
+            className="mt-2" 
+          />
+        </div>
+      </div>
+
+      {/* 3. Global Colors (Palette) */}
+      <div className="space-y-3">
+        <div className="px-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Global Colors</h3>
+        </div>
+        <PaletteInspector
+          paletteOv={paletteOv}
+          onChangeColor={onChangeColor}
+          onApplyPreset={onApplyPreset}
+          onReset={onResetColors}
+          manifest={manifest}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PaletteInspector({ paletteOv, onChangeColor, onApplyPreset, onReset, manifest }: { paletteOv: Record<string, string>; onChangeColor: (k: string, v: string) => void; onApplyPreset: (p: Record<string, string>) => void; onReset: () => void; manifest: any }) {
   return (
     <div className="p-4 space-y-5">
       <div>
@@ -1709,20 +2159,21 @@ function PaletteInspector({ paletteOv, onChangeColor, onApplyPreset, onReset }: 
         <div className="grid grid-cols-2 gap-2">
           {COLOR_KEYS.map(({ key, label }) => {
             const val = paletteOv[key] ?? "";
+            const defaultVal = manifest?.dna?.palette?.[key] || "#000000";
             return (
               <div key={key} className="space-y-1">
                 <Label className="text-[10px]">{label}</Label>
                 <div className="flex gap-1 items-center">
                   <input
                     type="color"
-                    value={val || "#000000"}
+                    value={val || defaultVal}
                     onChange={(e) => onChangeColor(key, e.target.value)}
                     className="h-7 w-7 rounded border cursor-pointer shrink-0"
                   />
                   <Input
                     value={val}
                     onChange={(e) => onChangeColor(key, e.target.value)}
-                    placeholder="theme"
+                    placeholder={`theme (${defaultVal})`}
                     className="h-7 text-[11px] font-mono"
                   />
                 </div>
@@ -1772,16 +2223,55 @@ const ALIGN_GRID = [
   "bottom-left", "bottom-center", "bottom-right",
 ];
 
-function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl }: any) {
+function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, manifest, iframeRef }: any) {
   const defaults = section?.props ?? {};
   const merged = { ...defaults, ...sectionOv };
   const style = merged.style ?? "centered";
   const slides: any[] = merged.slides ?? [];
+
+
   const slider = merged.slider ?? { autoplay: true, interval: 5000, transition: "fade", arrows: true, dots: true };
   const overlay = merged.overlay ?? { color: "#000000", opacity: 0.45, gradient: "none" };
   const effects = merged.effects ?? {};
   const video = merged.video ?? {};
   const height = merged.height ?? "auto";
+  const getIframeHeroAspectRatio = (): number | undefined => {
+    try {
+      const iframe = iframeRef?.current;
+      if (!iframe) return undefined;
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) return undefined;
+      
+      const heroSection = iframeDoc.querySelector('[data-hero-section="true"]');
+      if (heroSection) {
+        const rect = heroSection.getBoundingClientRect();
+        if (rect.width && rect.height) {
+          return rect.width / rect.height;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to measure iframe hero aspect ratio:", e);
+    }
+    return undefined;
+  };
+
+  const getHeroAspectRatio = (s: string, h: string): number => {
+    const measured = getIframeHeroAspectRatio();
+    if (measured && measured > 0.1 && measured < 10) {
+      return measured;
+    }
+    if (s === "magazine" || s === "editorial_serif") return 21 / 9;
+    if (s === "split" || s === "half_banner" || s === "dual_image") return 1.2;
+    switch (h) {
+      case "short":  return 2.2;
+      case "medium": return 1.6;
+      case "tall":   return 1.33;
+      case "full":   return 1.2;
+      case "auto":
+      default:       return 1.6;
+    }
+  };
+  const aspect = getHeroAspectRatio(style, height);
   const contentAlign = merged.content_align ?? "center-center";
 
   const setSlider = (k: string, v: any) => onUpdate(idx, "slider", { ...slider, [k]: v });
@@ -1808,19 +2298,17 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
       <div>
         <Label className="text-xs">Choose Style</Label>
         <p className="text-[10px] text-muted-foreground mt-0.5">Switch the entire hero layout — the form below updates to match.</p>
-        <Select value={style} onValueChange={(v) => onUpdate(idx, "style", v)}>
-          <SelectTrigger className="h-9 text-sm mt-1.5"><SelectValue /></SelectTrigger>
-          <SelectContent className="max-h-80">
-            {HERO_STYLES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                <div className="flex flex-col">
-                  <span className="text-sm">{s.label}</span>
-                  <span className="text-[10px] text-muted-foreground">{s.hint}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <select
+          value={style}
+          onChange={(e) => onUpdate(idx, "style", e.target.value)}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1.5 focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer font-medium"
+        >
+          {HERO_STYLES.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label} — {s.hint}
+            </option>
+          ))}
+        </select>
       </div>
 
       {style === "slider" && (
@@ -1962,7 +2450,7 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(idx, f); }} />
                 </label>
               </Button>
-              <HeroAiImageButton idx={idx} merged={merged} onUpdate={onUpdate} />
+              <HeroAiImageButton idx={idx} merged={merged} onUpdate={onUpdate} onAiImageGenerated={(url) => onUploadImage(idx, url, "image")} />
               {merged.image && <Button size="sm" variant="outline" onClick={() => onUpdate(idx, "image", "")}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remove</Button>}
             </div>
           </div>
@@ -2052,6 +2540,7 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
         primaryLabel={merged.cta || (merged.slides?.[0]?.cta)}
         secondaryLabel={merged.cta_secondary || (merged.slides?.[0]?.cta_secondary)}
         onChange={(next: any) => onUpdate(idx, "buttons", next)}
+        manifest={manifest}
       />
 
       {["slider", "video", "fullscreen_image", "fixed"].includes(style) && (
@@ -2088,40 +2577,8 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
           <span className="text-xs">Ken Burns zoom</span>
           <Switch checked={!!effects.ken_burns} onCheckedChange={(v) => setEffects("ken_burns", v)} />
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-xs">Parallax (fixed bg)</span>
-          <Switch checked={!!effects.parallax} onCheckedChange={(v) => setEffects("parallax", v)} />
-        </div>
       </div>
 
-      <div className="pt-3 border-t space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs flex items-center gap-1.5"><Palette className="h-3 w-3" /> Section colors</Label>
-          {sectionOv?.colors && (
-            <button onClick={() => onResetColors(idx)} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"><RotateCcw className="h-3 w-3" /> reset</button>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {COLOR_KEYS.map(({ key, label }) => {
-            const val = sectionOv?.colors?.[key] ?? "";
-            return (
-              <div key={key} className="space-y-1">
-                <Label className="text-[10px]">{label}</Label>
-                <div className="flex gap-1 items-center">
-                  <input type="color" value={val || "#000000"} onChange={(e) => onColorChange(idx, key, e.target.value)} className="h-7 w-7 rounded border cursor-pointer shrink-0" />
-                  <Input value={val} onChange={(e) => onColorChange(idx, key, e.target.value)} placeholder="theme" className="h-7 text-[11px] font-mono" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="pt-2 border-t">
-        <a href={previewUrl} target="_blank" rel="noreferrer" className="text-xs text-primary inline-flex items-center gap-1 hover:underline">
-          <ExternalLink className="h-3 w-3" /> Open preview in new tab
-        </a>
-      </div>
     </div>
   );
 }
@@ -2147,66 +2604,98 @@ const BTN_HOVER_OPTS = [
   { value: "invert", label: "Invert" },
 ];
 
-function ColorRow({ label, value, onChange, placeholder }: any) {
+function ColorRow({ label, value, onChange, placeholder, defaultColor }: any) {
+  const displayColor = value || defaultColor || "#000000";
   return (
     <div className="flex items-center gap-1.5">
       <Label className="text-[10px] w-16 shrink-0">{label}</Label>
-      <input type="color" value={value || "#000000"} onChange={(e) => onChange(e.target.value)} className="h-6 w-7 rounded border cursor-pointer shrink-0" />
+      <input type="color" value={displayColor} onChange={(e) => onChange(e.target.value)} className="h-6 w-7 rounded border cursor-pointer shrink-0" />
       <Input value={value || ""} placeholder={placeholder || "theme"} onChange={(e) => onChange(e.target.value)} className="h-6 text-[11px] font-mono" />
       {value && <button onClick={() => onChange("")} className="text-[10px] text-muted-foreground hover:text-foreground"><RotateCcw className="h-3 w-3" /></button>}
     </div>
   );
 }
 
-function ButtonStyleEditor({ kind, cfg, label, onChange }: { kind: "primary" | "secondary"; cfg: any; label?: string; onChange: (next: any) => void }) {
+function ButtonStyleEditor({ kind, cfg, label, onChange, manifest }: { kind: "primary" | "secondary"; cfg: any; label?: string; onChange: (next: any) => void; manifest?: any }) {
   const set = (k: string, v: any) => onChange({ ...cfg, [k]: v });
   const isPrimary = kind === "primary";
+  const activePalette = manifest?.dna?.palette || {};
+  const defaultBg = isPrimary ? (activePalette.primary || "#3b82f6") : "#000000";
+  const defaultColor = isPrimary ? (activePalette.primary_fg || "#ffffff") : "#ffffff";
+  const defaultBorder = isPrimary ? (activePalette.primary || "#3b82f6") : "#ffffff";
+
   return (
     <div className="border rounded-md p-2.5 space-y-2 bg-muted/30">
       <div className="text-[11px] font-semibold uppercase tracking-wide">{isPrimary ? "Primary button" : "Secondary button"}{label ? ` ("${label}")` : ""}</div>
-      <ColorRow label="BG" value={cfg.bg} onChange={(v: string) => set("bg", v)} placeholder={isPrimary ? "primary" : "transparent"} />
-      <ColorRow label="Text" value={cfg.color} onChange={(v: string) => set("color", v)} placeholder={isPrimary ? "on-primary" : "#fff"} />
-      <ColorRow label="Border" value={cfg.border_color} onChange={(v: string) => set("border_color", v)} placeholder="auto" />
+      <ColorRow label="BG" value={cfg.bg} onChange={(v: string) => set("bg", v)} placeholder={isPrimary ? "primary" : "transparent"} defaultColor={defaultBg} />
+      <ColorRow label="Text" value={cfg.color} onChange={(v: string) => set("color", v)} placeholder={isPrimary ? "on-primary" : "#fff"} defaultColor={defaultColor} />
+      <ColorRow label="Border" value={cfg.border_color} onChange={(v: string) => set("border_color", v)} placeholder="auto" defaultColor={defaultBorder} />
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-[10px]">Border width</Label>
+          <div className="flex justify-between items-center">
+            <Label className="text-[10px]">Border width</Label>
+            <span className="text-[10px] font-mono">{cfg.border_width ?? (isPrimary ? 0 : 1)}px</span>
+          </div>
           <Slider value={[Number(cfg.border_width ?? (isPrimary ? 0 : 1))]} min={0} max={6} step={1} onValueChange={([v]) => set("border_width", v)} className="mt-1.5" />
         </div>
         <div>
-          <Label className="text-[10px]">Radius</Label>
+          <div className="flex justify-between items-center">
+            <Label className="text-[10px]">Radius</Label>
+            <span className="text-[10px] font-mono">{cfg.radius ?? 8}px</span>
+          </div>
           <Slider value={[Number(cfg.radius ?? 8)]} min={0} max={60} step={1} onValueChange={([v]) => set("radius", v)} className="mt-1.5" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label className="text-[10px]">Size</Label>
-          <Select value={cfg.size || "md"} onValueChange={(v) => set("size", v)}>
-            <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>{BTN_SIZE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-          </Select>
+          <select
+            value={cfg.size || "md"}
+            onChange={(e) => set("size", e.target.value)}
+            className="w-full rounded border border-input bg-background px-2 h-7 text-xs mt-1 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer font-medium"
+          >
+            {BTN_SIZE_OPTS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
         <div>
           <Label className="text-[10px]">Shadow</Label>
-          <Select value={cfg.shadow || (isPrimary ? "soft" : "none")} onValueChange={(v) => set("shadow", v)}>
-            <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>{BTN_SHADOW_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-          </Select>
+          <select
+            value={cfg.shadow || (isPrimary ? "soft" : "none")}
+            onChange={(e) => set("shadow", e.target.value)}
+            className="w-full rounded border border-input bg-background px-2 h-7 text-xs mt-1 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer font-medium"
+          >
+            {BTN_SHADOW_OPTS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label className="text-[10px]">Animation</Label>
-          <Select value={cfg.animation || "none"} onValueChange={(v) => set("animation", v)}>
-            <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>{BTN_ANIM_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-          </Select>
+          <select
+            value={cfg.animation || "none"}
+            onChange={(e) => set("animation", e.target.value)}
+            className="w-full rounded border border-input bg-background px-2 h-7 text-xs mt-1 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer font-medium"
+          >
+            {BTN_ANIM_OPTS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
         <div>
           <Label className="text-[10px]">Hover</Label>
-          <Select value={cfg.hover || "lift"} onValueChange={(v) => set("hover", v)}>
-            <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>{BTN_HOVER_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-          </Select>
+          <select
+            value={cfg.hover || "lift"}
+            onChange={(e) => set("hover", e.target.value)}
+            className="w-full rounded border border-input bg-background px-2 h-7 text-xs mt-1 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer font-medium"
+          >
+            {BTN_HOVER_OPTS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
       </div>
       <div className="flex items-center justify-between pt-1">
@@ -2217,7 +2706,7 @@ function ButtonStyleEditor({ kind, cfg, label, onChange }: { kind: "primary" | "
   );
 }
 
-function ButtonPositionCanvas({ buttons, onMove }: { buttons: any; onMove: (kind: "primary" | "secondary", pos: { x: number; y: number }) => void }) {
+function ButtonPositionCanvas({ buttons, hasPrimary, hasSecondary, onMove }: { buttons: any; hasPrimary: boolean; hasSecondary: boolean; onMove: (kind: "primary" | "secondary", pos: { x: number; y: number }) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<null | "primary" | "secondary">(null);
 
@@ -2241,21 +2730,25 @@ function ButtonPositionCanvas({ buttons, onMove }: { buttons: any; onMove: (kind
   return (
     <div ref={ref} className="relative h-32 rounded-md border-2 border-dashed bg-gradient-to-br from-muted/40 to-muted/10 select-none touch-none overflow-hidden">
       <div className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground pointer-events-none">Drag pills to position over hero</div>
-      <div
-        onPointerDown={(e) => { e.preventDefault(); setDragging("primary"); }}
-        className="absolute px-2 py-1 text-[10px] bg-primary text-primary-foreground rounded cursor-grab active:cursor-grabbing shadow font-medium"
-        style={{ left: `${p.x ?? 35}%`, top: `${p.y ?? 78}%`, transform: "translate(-50%, -50%)" }}
-      >Primary</div>
-      <div
-        onPointerDown={(e) => { e.preventDefault(); setDragging("secondary"); }}
-        className="absolute px-2 py-1 text-[10px] border border-foreground/60 rounded cursor-grab active:cursor-grabbing font-medium bg-background/70"
-        style={{ left: `${s.x ?? 65}%`, top: `${s.y ?? 78}%`, transform: "translate(-50%, -50%)" }}
-      >Secondary</div>
+      {hasPrimary && (
+        <div
+          onPointerDown={(e) => { e.preventDefault(); setDragging("primary"); }}
+          className="absolute px-2 py-1 text-[10px] bg-primary text-primary-foreground rounded cursor-grab active:cursor-grabbing shadow font-medium"
+          style={{ left: `${p.x ?? 35}%`, top: `${p.y ?? 78}%`, transform: "translate(-50%, -50%)" }}
+        >Primary</div>
+      )}
+      {hasSecondary && (
+        <div
+          onPointerDown={(e) => { e.preventDefault(); setDragging("secondary"); }}
+          className="absolute px-2 py-1 text-[10px] border border-foreground/60 rounded cursor-grab active:cursor-grabbing font-medium bg-background/70"
+          style={{ left: `${s.x ?? 65}%`, top: `${s.y ?? 78}%`, transform: "translate(-50%, -50%)" }}
+        >Secondary</div>
+      )}
     </div>
   );
 }
 
-function HeroButtonsPanel({ buttons, hasPrimary, hasSecondary, primaryLabel, secondaryLabel, onChange }: { buttons: any; hasPrimary: boolean; hasSecondary: boolean; primaryLabel?: string; secondaryLabel?: string; onChange: (next: any) => void }) {
+function HeroButtonsPanel({ buttons, hasPrimary, hasSecondary, primaryLabel, secondaryLabel, onChange, manifest }: { buttons: any; hasPrimary: boolean; hasSecondary: boolean; primaryLabel?: string; secondaryLabel?: string; onChange: (next: any) => void; manifest?: any }) {
   const primary = buttons.primary || {};
   const secondary = buttons.secondary || {};
   const freePos = !!buttons.free_position;
@@ -2280,15 +2773,17 @@ function HeroButtonsPanel({ buttons, hasPrimary, hasSecondary, primaryLabel, sec
       {freePos && (
         <ButtonPositionCanvas
           buttons={buttons}
+          hasPrimary={hasPrimary}
+          hasSecondary={hasSecondary}
           onMove={(kind, pos) => onChange({ ...buttons, [kind]: { ...(buttons[kind] || {}), ...pos } })}
         />
       )}
 
       {hasPrimary && (
-        <ButtonStyleEditor kind="primary" cfg={primary} label={primaryLabel} onChange={(next) => onChange({ ...buttons, primary: next })} />
+        <ButtonStyleEditor kind="primary" cfg={primary} label={primaryLabel} onChange={(next) => onChange({ ...buttons, primary: next })} manifest={manifest} />
       )}
       {hasSecondary && (
-        <ButtonStyleEditor kind="secondary" cfg={secondary} label={secondaryLabel} onChange={(next) => onChange({ ...buttons, secondary: next })} />
+        <ButtonStyleEditor kind="secondary" cfg={secondary} label={secondaryLabel} onChange={(next) => onChange({ ...buttons, secondary: next })} manifest={manifest} />
       )}
       {!hasPrimary && !hasSecondary && (
         <p className="text-[11px] text-muted-foreground">Add a CTA label above to style buttons.</p>
@@ -2298,59 +2793,212 @@ function HeroButtonsPanel({ buttons, hasPrimary, hasSecondary, primaryLabel, sec
 }
 
 // ---------- Hero AI Image Generation ----------
-function HeroAiImageButton({ idx, merged, onUpdate }: { idx: number; merged: any; onUpdate: (idx: number, key: string, value: any) => void }) {
+function HeroAiImageButton({ 
+  idx, 
+  merged, 
+  onUpdate,
+  onAiImageGenerated
+}: { 
+  idx: number; 
+  merged: any; 
+  onUpdate: (idx: number, key: string, value: any) => void;
+  onAiImageGenerated?: (url: string) => void;
+}) {
   const { store } = useStore();
-  const [open, setOpen] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
   const [prompt, setPrompt] = useState<string>(merged.title ? `${merged.title} hero banner` : "");
   const [busy, setBusy] = useState(false);
 
   const run = async () => {
-    if (!store?.id) { toast.error("Store still loading"); return; }
     if (!prompt.trim()) { toast.error("Describe the hero image"); return; }
     setBusy(true);
+    
+    // Try to run Edge function first:
     try {
-      const { data, error } = await supabase.functions.invoke("generate-product-image", {
-        body: { store_id: store.id, prompt: `Wide cinematic e-commerce hero banner: ${prompt.trim()}`, productName: merged.title || "", category: (store as any)?.category || "", storeName: store.name },
-      });
-      if (error) throw error;
-      if ((data as any)?.error === "INSUFFICIENT_CREDITS") {
-        toast.error("Out of AI credits. Top up to keep generating.");
-        return;
+      if (store?.id) {
+        const { data, error } = await supabase.functions.invoke("generate-product-image", {
+          body: { store_id: store.id, prompt: `Wide cinematic e-commerce hero banner: ${prompt.trim()}`, productName: merged.title || "", category: (store as any)?.category || "", storeName: store.name },
+        });
+        if (!error && data?.imageUrl) {
+          if (onAiImageGenerated) {
+            onAiImageGenerated(data.imageUrl);
+          } else {
+            onUpdate(idx, "image", data.imageUrl);
+          }
+          toast.success(`Hero image generated · 10 credits used`);
+          setShowPrompt(false);
+          setBusy(false);
+          return;
+        }
+        if (data?.error === "INSUFFICIENT_CREDITS") {
+          console.warn("Insufficient credits. Falling back to free generation.");
+        }
       }
-      const url = (data as any)?.imageUrl;
-      if (!url) throw new Error("No image returned");
-      onUpdate(idx, "image", url);
-      toast.success(`Hero image generated · ${10} credits used`);
-      setOpen(false);
-    } catch (e: any) {
-      toast.error(e?.message || "Generation failed");
+    } catch (e) {
+      console.warn("Edge function failed, falling back to free generation:", e);
+    }
+
+    // Client-side fallback to Pollinations.ai (flux model):
+    try {
+      const cleanPrompt = encodeURIComponent(`Wide cinematic e-commerce hero banner of ${prompt.trim()}. Photorealistic, hyper-detailed, no text, no watermark.`);
+      const fallbackUrl = `https://image.pollinations.ai/p/${cleanPrompt}?width=1200&height=600&nologo=true&private=true&model=flux&seed=${Math.floor(Math.random() * 100000)}`;
+      if (onAiImageGenerated) {
+        onAiImageGenerated(fallbackUrl);
+      } else {
+        onUpdate(idx, "image", fallbackUrl);
+      }
+      toast.success("Hero image generated successfully (free fallback)!");
+      setShowPrompt(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Generation failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
+  return (
+    <div className="w-full space-y-2.5 mt-1">
+      <Button 
+        size="sm" 
+        variant="outline" 
+        onClick={() => setShowPrompt(!showPrompt)} 
+        className="w-full bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 hover:from-violet-500/20 hover:to-fuchsia-500/20"
+      >
+        <Sparkles className="mr-1 h-3.5 w-3.5 text-violet-600" /> 
+        {showPrompt ? "Cancel AI Generation" : "Generate with AI"}
+      </Button>
+      
+      {showPrompt && (
+        <div className="p-3 border rounded-lg bg-violet-500/5 border-violet-500/20 space-y-2.5">
+          <div className="text-xs font-semibold flex items-center gap-1.5 text-violet-700">
+            <Sparkles className="h-3.5 w-3.5" /> Describe your hero image
+          </div>
+          <Textarea 
+            rows={3} 
+            value={prompt} 
+            onChange={(e) => setPrompt(e.target.value)} 
+            placeholder="e.g. Golden hour shot of fresh croissants on rustic wood table, bakery vibe" 
+            className="text-xs bg-background" 
+          />
+          <p className="text-[9px] text-muted-foreground leading-tight">
+            Generates a high-quality wide banner image for your storefront. Replaces current image.
+          </p>
+          <Button onClick={run} disabled={busy} className="w-full h-8 text-xs bg-violet-600 hover:bg-violet-700 text-white font-medium">
+            {busy ? (
+              <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Generating...</>
+            ) : (
+              <><Sparkles className="mr-1.5 h-3.5 w-3.5" /> Generate Image</>
+            )}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Category AI Image Generation ----------
+function CategoryAiImageButton({ 
+  catName,
+  onAiImageGenerated
+}: { 
+  catName: string;
+  onAiImageGenerated: (url: string) => void;
+}) {
+  const { store } = useStore();
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [prompt, setPrompt] = useState<string>(catName ? `${catName} collection cover` : "");
+  const [busy, setBusy] = useState(false);
+
+  const run = async () => {
+    if (!prompt.trim()) { toast.error("Describe the category image"); return; }
+    setBusy(true);
+    
+    try {
+      if (store?.id) {
+        const { data, error } = await supabase.functions.invoke("generate-product-image", {
+          body: { store_id: store.id, prompt: `Clean e-commerce product collection category showcase image of ${prompt.trim()}`, productName: catName || "", category: catName || "", storeName: store.name },
+        });
+        if (!error && data?.imageUrl) {
+          onAiImageGenerated(data.imageUrl);
+          toast.success(`Category image generated · 10 credits used`);
+          setShowPrompt(false);
+          setBusy(false);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Edge function failed, falling back to free generation:", e);
+    }
+
+    try {
+      const cleanPrompt = encodeURIComponent(`Clean e-commerce product collection category showcase image of ${prompt.trim()}. Photorealistic, square crop, hyper-detailed, no text, no watermark.`);
+      const fallbackUrl = `https://image.pollinations.ai/p/${cleanPrompt}?width=800&height=800&nologo=true&private=true&model=flux&seed=${Math.floor(Math.random() * 100000)}`;
+      onAiImageGenerated(fallbackUrl);
+      toast.success("Category image generated successfully (free fallback)!");
+      setShowPrompt(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Generation failed");
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 hover:from-violet-500/20 hover:to-fuchsia-500/20">
-        <Sparkles className="mr-1 h-3.5 w-3.5 text-violet-600" /> Generate with AI
+    <div>
+      <Button 
+        size="sm" 
+        variant="outline" 
+        type="button"
+        onClick={() => setShowPrompt(true)} 
+        className="h-8 text-xs shrink-0 flex items-center gap-1 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 hover:from-violet-500/20 hover:to-fuchsia-500/20 px-2.5"
+      >
+        <Sparkles className="h-3.5 w-3.5 text-violet-600" /> AI Gen
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-600" /> Generate hero image</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">Describe the hero image</Label>
-              <Textarea rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="e.g. Golden hour shot of fresh croissants on rustic wood table, warm steam, bakery vibe" className="text-sm mt-1" />
+
+      {showPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background border rounded-lg p-4 w-full max-w-sm space-y-3 shadow-xl text-left">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1"><Sparkles className="h-4 w-4 text-violet-600" /> AI Category Image Prompt</h4>
+            <Textarea 
+              value={prompt} 
+              onChange={(e) => setPrompt(e.target.value)} 
+              placeholder="e.g. Elegant Silk Dresses on hangers..." 
+              className="text-xs bg-background h-20"
+            />
+            <div className="flex justify-end gap-1.5 pt-1">
+              <Button size="sm" variant="ghost" onClick={() => setShowPrompt(false)} disabled={busy} className="h-8 text-xs">Cancel</Button>
+              <Button size="sm" onClick={run} disabled={busy} className="h-8 text-xs flex items-center gap-1">
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Generate
+              </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">Uses 10 AI credits per image. Replaces the current hero image when ready.</p>
-            <Button onClick={run} disabled={busy} className="w-full">
-              {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating…</> : <><Sparkles className="mr-2 h-4 w-4" /> Generate (10 credits)</>}
-            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        </div>
+      )}
+    </div>
   );
+}
+
+async function getCroppedImg(imageSrc: string, crop: Area): Promise<Blob> {
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = reject;
+    image.src = imageSrc;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = crop.width;
+  canvas.height = crop.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas is empty'));
+    }, 'image/png');
+  });
 }

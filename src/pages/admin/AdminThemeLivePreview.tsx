@@ -302,6 +302,20 @@ export default function AdminThemeLivePreview(){
         received = true;
         if (ev.data.overrides) setOverrides(ev.data.overrides);
         if (ev.data.page) setPage(ev.data.page);
+        if (ev.data.categories) setSellerCategories(ev.data.categories);
+      }
+      if (ev.data?.type === "customiser:scroll") {
+        const anchor = ev.data.anchor;
+        if (anchor === "header") {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else if (anchor === "footer") {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+        } else if (anchor.startsWith("s-")) {
+          const el = document.querySelector(`[data-section-anchor="${anchor}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
       }
     };
     window.addEventListener("message", onMessage);
