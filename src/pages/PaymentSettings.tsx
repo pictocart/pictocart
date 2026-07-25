@@ -86,28 +86,14 @@ const PaymentSettings = () => {
       return;
     }
     setSaving(true);
-    // Check if a row already exists for this store
-    const { data: existing } = await supabase
+    const { error } = await supabase
       .from('store_secrets' as any)
-      .select('store_id')
-      .eq('store_id', store.id)
-      .maybeSingle();
-
-    const payload = {
-      razorpay_key_id: form.key_id,
-      razorpay_key_secret: form.key_secret,
-      razorpay_test_mode: form.test_mode,
-    };
-
-    const { error } = existing
-      ? await supabase
-          .from('store_secrets' as any)
-          .update(payload)
-          .eq('store_id', store.id)
-      : await supabase
-          .from('store_secrets' as any)
-          .insert({ store_id: store.id, ...payload });
-
+      .upsert({
+        store_id: store.id,
+        razorpay_key_id: form.key_id,
+        razorpay_key_secret: form.key_secret,
+        razorpay_test_mode: form.test_mode,
+      }, { onConflict: 'store_id' });
     if (error) {
       toast.error('Failed to save payment settings');
     } else {

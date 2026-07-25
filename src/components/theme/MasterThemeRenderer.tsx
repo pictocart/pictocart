@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, useEffect } from "react";
+﻿import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
@@ -76,7 +76,7 @@ interface Props {
   products?: Array<{ id: string; title: string; price: number; compare_at_price?: number | null; images?: string[] | null; category?: string | null }>;
   /** Seller-defined categories (with optional image / description / subs) to splice into category_grid and collections_grid sections. */
   sellerCategories?: Array<{ id?: string; name: string; image_url?: string | null; description?: string | null; subs?: Array<{ id?: string; name: string; image_url?: string | null }> }>;
-  /** Active product for the product detail page ΓÇö injected into product_detail sections. */
+  /** Active product for the product detail page — injected into product_detail sections. */
   product?: any;
   store?: any;
 }
@@ -85,33 +85,18 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const baseDna = manifest?.dna ?? {};
   // Merge global palette overrides into dna so every Section/Header/Footer picks them up.
   const palette = { ...(baseDna.palette ?? {}), ...((overrides as any)?.palette ?? {}) };
-
+  
   // Merge global fonts and layout overrides
   const globalOv = (overrides as any)?.global || {};
   const globalFonts = globalOv.fonts || {};
-  const mergedFonts = {
+  const fonts = {
     heading: globalFonts.heading || baseDna.fonts?.heading || "Outfit",
     body: globalFonts.body || baseDna.fonts?.body || "Inter",
-    heading_weight: baseDna.fonts?.heading_weight ?? 700,
+    heading_weight: baseDna.fonts?.heading_weight ?? 700
   };
 
-  const dna = { ...baseDna, palette, fonts: mergedFonts };
-  const fonts = dna.fonts ?? {};
+  const dna = { ...baseDna, palette, fonts };
   const radius = globalOv.radius != null ? `${globalOv.radius}px` : (dna.radius ?? "8px");
-
-  // Global button overrides
-  const globalBtn = globalOv.button || {};
-  const btnBg          = globalBtn.bg          || null;
-  const btnFg          = globalBtn.fg          || null;
-  const btnBorderColor = globalBtn.borderColor || null;
-  const btnBorderWidth = globalBtn.borderWidth != null ? `${globalBtn.borderWidth}px` : null;
-  const btnRadius      = globalBtn.radius      != null ? `${globalBtn.radius}px` : radius;
-  const btnFontSize    = globalBtn.fontSize    != null ? `${globalBtn.fontSize}px` : null;
-  const btnPaddingX    = globalBtn.paddingX    != null ? `${globalBtn.paddingX}px` : null;
-  const btnPaddingY    = globalBtn.paddingY    != null ? `${globalBtn.paddingY}px` : null;
-  const btnFontWeight  = globalBtn.fontWeight  != null ? String(globalBtn.fontWeight) : null;
-  const btnAnimation   = globalBtn.animation   || "none";
-
   const headerStyle = manifest?.header_style ?? dna.layout?.header_style ?? "classic";
   const brandName = overrides?.brand_name || dna.name;
   const headerOv = {
@@ -136,16 +121,6 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
     ["--bd" as any]: palette.border,
     ["--r" as any]: radius,
     ["--hf" as any]: `${fonts.heading}, serif`,
-    // Global button CSS vars
-    ...(btnBg          && { ["--btn-bg"           as any]: btnBg }),
-    ...(btnFg          && { ["--btn-fg"           as any]: btnFg }),
-    ...(btnBorderColor && { ["--btn-border-color" as any]: btnBorderColor }),
-    ...(btnBorderWidth && { ["--btn-border-width" as any]: btnBorderWidth }),
-    ["--btn-radius"    as any]: btnRadius,
-    ...(btnFontSize    && { ["--btn-font-size"    as any]: btnFontSize }),
-    ...(btnPaddingX    && { ["--btn-px"           as any]: btnPaddingX }),
-    ...(btnPaddingY    && { ["--btn-py"           as any]: btnPaddingY }),
-    ...(btnFontWeight  && { ["--btn-font-weight"  as any]: btnFontWeight }),
   };
 
   // (built-in collections synthesized below as renderedSections)
@@ -165,9 +140,27 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   let productSectionInjected = false;
 
   // Seller-defined categories override the theme's stock category tiles when present.
-  const sellerCategoryItems = sellerCategories && sellerCategories.length > 0
-    ? sellerCategories.map((c) => ({ id: c.id, name: c.name, image: c.image_url || undefined, description: c.description || undefined, subs: c.subs || [] }))
-    : null;
+  const sellerCategoryItems = useMemo(() => {
+    if (!sellerCategories || sellerCategories.length === 0) return null;
+    const parents = sellerCategories.filter((c: any) => !c.parent_id);
+    return parents.map((p: any) => {
+      const subs = sellerCategories
+        .filter((c: any) => c.parent_id === p.id)
+        .map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          image: c.image_url || undefined,
+          description: c.description || undefined,
+        }));
+      return {
+        id: p.id,
+        name: p.name,
+        image: p.image_url || undefined,
+        description: p.description || undefined,
+        subs,
+      };
+    });
+  }, [sellerCategories]);
 
   // Synthesize a built-in Collections page if the manifest doesn't define one.
   const collectionsItems = sellerCategoryItems ?? [];
@@ -228,84 +221,8 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             font-weight: 700 !important;
           }
         ` : ''}
-
-        /* ---- Global button styles ---- */
-        [data-master-theme] a.btn,
-        [data-master-theme] button.btn,
-        [data-master-theme] .s-cta,
-        [data-master-theme] .section-cta,
-        [data-master-theme] a[class*="px-"][class*="py-"],
-        [data-master-theme] button[class*="px-"][class*="py-"],
-        [data-master-theme] a[style*="var(--p)"],
-        [data-master-theme] button[style*="var(--p)"],
-        [data-master-theme] a[style*="background: var(--p"],
-        [data-master-theme] button[style*="background: var(--p"] {
-          background:    var(--btn-bg,           var(--p)) !important;
-          color:         var(--btn-fg,           var(--pf)) !important;
-          border-radius: var(--btn-radius,       var(--r)) !important;
-          font-size:     var(--btn-font-size,    inherit) !important;
-          font-weight:   var(--btn-font-weight,  inherit) !important;
-          padding:       var(--btn-py, 0.5em) var(--btn-px, 1.25em) !important;
-          border:        var(--btn-border-width, 0px) solid var(--btn-border-color, transparent) !important;
-          transition:    all 0.2s ease !important;
-        }
-
-        ${btnAnimation === "scale" ? `
-          [data-master-theme] a.btn:hover,
-          [data-master-theme] button.btn:hover,
-          [data-master-theme] .s-cta:hover,
-          [data-master-theme] .section-cta:hover,
-          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] a[style*="var(--p)"]:hover,
-          [data-master-theme] button[style*="var(--p)"]:hover {
-            transform: scale(1.05) !important;
-          }
-        ` : btnAnimation === "lift" ? `
-          [data-master-theme] a.btn:hover,
-          [data-master-theme] button.btn:hover,
-          [data-master-theme] .s-cta:hover,
-          [data-master-theme] .section-cta:hover,
-          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] a[style*="var(--p)"]:hover,
-          [data-master-theme] button[style*="var(--p)"]:hover {
-            transform: translateY(-3px) !important;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.18) !important;
-          }
-        ` : btnAnimation === "fill" ? `
-          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] a[style*="var(--p)"]:hover,
-          [data-master-theme] button[style*="var(--p)"]:hover {
-            filter: brightness(1.12) !important;
-          }
-        ` : btnAnimation === "pulse" ? `
-          @keyframes btn-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 var(--btn-bg, var(--p)); }
-            50%       { box-shadow: 0 0 0 8px transparent; }
-          }
-          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] a[style*="var(--p)"]:hover,
-          [data-master-theme] button[style*="var(--p)"]:hover {
-            animation: btn-pulse 0.8s ease infinite !important;
-          }
-        ` : btnAnimation === "bounce" ? `
-          @keyframes btn-bounce {
-            0%, 100% { transform: translateY(0); }
-            40%       { transform: translateY(-5px); }
-            60%       { transform: translateY(-3px); }
-          }
-          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
-          [data-master-theme] a[style*="var(--p)"]:hover,
-          [data-master-theme] button[style*="var(--p)"]:hover {
-            animation: btn-bounce 0.5s ease !important;
-          }
-        ` : ''}
       `}} />
-      {/* Header is first child ΓÇö sticky top-0 works against window scroll */}
+      {/* Header is first child — sticky top-0 works against window scroll */}
       <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} />
       {renderedSections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
@@ -368,7 +285,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           }
         }
         // collections: replace items with seller's real categories if they've defined any
-        if (sellerCategoryItems && s.type === "collections") {
+        if (sellerCategoryItems && (s.type === "collections" || s.type === "collections_grid")) {
           mergedProps.items = sellerCategoryItems;
         }
         const anchorMap: Record<string, string> = {
@@ -508,7 +425,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   }
   const BrandInner = (
     <span className="inline-flex items-center gap-2">
-      {logoUrl && <img src={logoUrl} alt={effectiveBrand} style={logoStyle} />}
+      {logoUrl && <img data-logo-element="true" src={logoUrl} alt={effectiveBrand} style={logoStyle} />}
       {showName && <span style={brandStyle}>{effectiveBrand}</span>}
       {!showName && !logoUrl && <span style={brandStyle}>{effectiveBrand}</span>}
     </span>
@@ -520,7 +437,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       : <div>{BrandInner}</div>;
   const CartBtn = storeSlug ? (
     <Link to={`/store/${storeSlug}/cart`} className="text-sm px-4 py-2 inline-flex items-center gap-2" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>
-      <ShoppingBag className="h-4 w-4" /> Cart ┬╖ {totalItems}
+      <ShoppingBag className="h-4 w-4" /> Cart · {totalItems}
     </Link>
   ) : (
     <button
@@ -528,7 +445,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       className="text-sm px-4 py-2 inline-flex items-center gap-2"
       style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}
     >
-      <ShoppingBag className="h-4 w-4" /> Cart ┬╖ 0
+      <ShoppingBag className="h-4 w-4" /> Cart · 0
     </button>
   );
   const AccountBtn = storeSlug ? (
@@ -846,21 +763,21 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
               {p.subtitle && <p className="text-xs" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
               <div className="space-y-4 text-xs leading-relaxed">
                 <div className="flex gap-3 items-start">
-                  <span className="text-sm">≡ƒôì</span>
+                  <span className="text-sm">📍</span>
                   <div>
                     <p className="font-semibold" style={{ color: dna.palette?.fg }}>Address</p>
                     <p style={{ color: dna.palette?.muted }}>{address}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="text-sm">ΓÅ░</span>
+                  <span className="text-sm">⏰</span>
                   <div>
                     <p className="font-semibold" style={{ color: dna.palette?.fg }}>Store Hours</p>
                     <p style={{ color: dna.palette?.muted }}>{hours}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="text-sm">≡ƒô₧</span>
+                  <span className="text-sm">📞</span>
                   <div>
                     <p className="font-semibold" style={{ color: dna.palette?.fg }}>Phone</p>
                     <p style={{ color: dna.palette?.muted }}>{phone}</p>
@@ -915,7 +832,7 @@ function ProviderTeamBlock({ p, dna, storeSlug }: any) {
               {m.image && <img src={m.image} alt={m.name} className="w-full aspect-[4/5] object-cover" />}
               <div className="p-5">
                 <div className="text-lg font-medium" style={{ fontFamily: "var(--hf)" }}>{m.name}</div>
-                <div className="text-xs uppercase tracking-wider mt-1" style={{ color: dna.palette?.accent }}>{m.role}{m.qualifications ? ` ┬╖ ${m.qualifications}` : ""}</div>
+                <div className="text-xs uppercase tracking-wider mt-1" style={{ color: dna.palette?.accent }}>{m.role}{m.qualifications ? ` · ${m.qualifications}` : ""}</div>
                 {m.experience && <div className="text-xs mt-2" style={{ color: dna.palette?.muted }}>{m.experience}</div>}
                 {m.bio && <p className="text-sm mt-3 leading-relaxed" style={{ color: dna.palette?.muted }}>{m.bio}</p>}
                 {m.specialties && Array.isArray(m.specialties) && (
@@ -960,7 +877,7 @@ function ServiceMenuBlock({ p, dna, storeSlug }: any) {
                       {s.description && <p className="text-sm mt-1" style={{ color: dna.palette?.muted }}>{s.description}</p>}
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-base font-semibold">Γé╣{s.price}</div>
+                      <div className="text-base font-semibold">₹{s.price}</div>
                       {storeSlug && <Link to={`/store/${storeSlug}/book?service=${encodeURIComponent(s.name)}`} className="inline-block mt-1 text-xs px-3 py-1.5" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Book</Link>}
                     </div>
                   </li>
@@ -979,7 +896,7 @@ function BookingWidgetBlock({ p, dna, storeSlug }: any) {
     <section className="py-16" style={{ background: dna.palette?.bg }}>
       <div className="max-w-3xl mx-auto px-6 p-8 text-center border" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
         <h2 className="text-3xl mb-3" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title ?? "Book your appointment"}</h2>
-        <p className="mb-6" style={{ color: dna.palette?.muted }}>{p.subtitle ?? "Choose a service, pick a provider and a slot ΓÇö confirmation is instant."}</p>
+        <p className="mb-6" style={{ color: dna.palette?.muted }}>{p.subtitle ?? "Choose a service, pick a provider and a slot — confirmation is instant."}</p>
         <div className="grid sm:grid-cols-3 gap-3 mb-6 text-left text-sm">
           {(p.steps ?? ["Pick a service", "Pick a provider & slot", "Confirm details"]).map((st: string, i: number) => (
             <div key={i} className="p-3 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
@@ -1011,7 +928,7 @@ function ClinicHoursBlock({ p, dna }: any) {
           {hours.map((h: any, i: number) => (
             <li key={i} className="py-2 flex items-center justify-between text-sm">
               <span className="font-medium">{h.day}</span>
-              <span style={{ color: dna.palette?.muted }}>{h.closed ? "Closed" : `${h.open} ΓÇö ${h.close}`}</span>
+              <span style={{ color: dna.palette?.muted }}>{h.closed ? "Closed" : `${h.open} — ${h.close}`}</span>
             </li>
           ))}
         </ul>
@@ -1032,11 +949,11 @@ function ServicePackagesBlock({ p, dna, storeSlug }: any) {
             <div key={i} className="p-6 border flex flex-col" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
               {pk.badge && <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: dna.palette?.accent }}>{pk.badge}</div>}
               <div className="text-xl font-medium mb-1" style={{ fontFamily: "var(--hf)" }}>{pk.name}</div>
-              <div className="text-2xl font-semibold mb-1">Γé╣{pk.price}</div>
-              <div className="text-xs mb-4" style={{ color: dna.palette?.muted }}>{pk.total_visits ? `${pk.total_visits} visits ┬╖ ` : ""}{pk.validity_days ? `Valid ${pk.validity_days} days` : ""}</div>
+              <div className="text-2xl font-semibold mb-1">₹{pk.price}</div>
+              <div className="text-xs mb-4" style={{ color: dna.palette?.muted }}>{pk.total_visits ? `${pk.total_visits} visits · ` : ""}{pk.validity_days ? `Valid ${pk.validity_days} days` : ""}</div>
               <ul className="text-sm space-y-1 mb-5 flex-1">
                 {(pk.includes ?? []).map((it: string, j: number) => (
-                  <li key={j} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>Γ£ô</span><span style={{ color: dna.palette?.muted }}>{it}</span></li>
+                  <li key={j} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>✓</span><span style={{ color: dna.palette?.muted }}>{it}</span></li>
                 ))}
               </ul>
               {storeSlug && <Link to={`/store/${storeSlug}/book?package=${encodeURIComponent(pk.name)}`} className="text-center px-4 py-2 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Buy package</Link>}
@@ -1078,13 +995,13 @@ function ServiceDetailBlock({ p, dna, storeSlug }: any) {
         <div className="text-xs uppercase tracking-wider mb-2" style={{ color: dna.palette?.accent }}>{s.category ?? "Service"}</div>
         <h1 className="text-4xl mb-3" style={{ fontFamily: "var(--hf)" }}>{s.name}</h1>
         <div className="flex items-baseline gap-4 mb-4">
-          <div className="text-2xl font-semibold">Γé╣{s.price}</div>
+          <div className="text-2xl font-semibold">₹{s.price}</div>
           {s.duration_min && <div className="text-sm" style={{ color: dna.palette?.muted }}>{s.duration_min} minutes</div>}
         </div>
         <p className="mb-6 text-sm leading-relaxed" style={{ color: dna.palette?.muted }}>{s.description ?? "Detailed service information renders here."}</p>
         {Array.isArray(s.includes) && s.includes.length > 0 && (
           <ul className="text-sm space-y-1 mb-6">
-            {s.includes.map((it: string, i: number) => (<li key={i} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>Γ£ô</span>{it}</li>))}
+            {s.includes.map((it: string, i: number) => (<li key={i} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>✓</span>{it}</li>))}
           </ul>
         )}
         {storeSlug
@@ -1102,9 +1019,9 @@ function AppointmentsPanelBlock({ p, dna, storeSlug }: any) {
       <p className="mb-6 text-sm" style={{ color: dna.palette?.muted }}>{p.subtitle ?? "Upcoming, past visits and prescriptions all in one place."}</p>
       <div className="grid md:grid-cols-3 gap-4 mb-8">
         {(p.metrics ?? [
-          { label: "Upcoming", value: "ΓÇö" },
-          { label: "Visits this year", value: "ΓÇö" },
-          { label: "Active packages", value: "ΓÇö" },
+          { label: "Upcoming", value: "—" },
+          { label: "Visits this year", value: "—" },
+          { label: "Active packages", value: "—" },
         ]).map((m: any, i: number) => (
           <div key={i} className="p-4 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.surface }}>
             <div className="text-xs uppercase tracking-wider mb-1" style={{ color: dna.palette?.muted }}>{m.label}</div>
@@ -1190,7 +1107,7 @@ function LineItems({ dna, storeSlug }: any) {
                 <h3 className="text-sm font-semibold truncate">{item.title}</h3>
                 {item.variant && <p className="text-xs opacity-50">{item.variant}</p>}
                 <p className="text-sm font-bold mt-1" style={{ color: "var(--p)" }}>
-                  Γé╣{item.price.toLocaleString('en-IN')}
+                  ₹{item.price.toLocaleString('en-IN')}
                 </p>
               </div>
 
@@ -1249,7 +1166,7 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
     const result = await validateCoupon(storeId, couponCode.trim(), totalPrice, cartLines);
     if (result.valid && result.coupon) {
       setAppliedCoupon({ id: result.coupon.id, code: result.coupon.code, discount: result.discount! });
-      toast.success(`Coupon applied! You save Γé╣${Math.round(result.discount!).toLocaleString('en-IN')}`);
+      toast.success(`Coupon applied! You save ₹${Math.round(result.discount!).toLocaleString('en-IN')}`);
     } else {
       toast.error(result.error || 'Invalid coupon');
     }
@@ -1291,7 +1208,7 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
         </div>
         {appliedCoupon && (
           <p className="text-xs text-green-600 font-semibold mt-1.5 flex items-center gap-1">
-            <Tag className="h-3.5 w-3.5" /> Coupon "{appliedCoupon.code}" applied! Saving Γé╣{Math.round(discount).toLocaleString('en-IN')}
+            <Tag className="h-3.5 w-3.5" /> Coupon "{appliedCoupon.code}" applied! Saving ₹{Math.round(discount).toLocaleString('en-IN')}
           </p>
         )}
       </div>
@@ -1301,12 +1218,12 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm opacity-70">
             <span>Subtotal</span>
-            <span>Γé╣{totalPrice.toLocaleString("en-IN")}</span>
+            <span>₹{totalPrice.toLocaleString("en-IN")}</span>
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-sm text-green-600 font-medium">
               <span>Discount</span>
-              <span>-Γé╣{Math.round(discount).toLocaleString("en-IN")}</span>
+              <span>-₹{Math.round(discount).toLocaleString("en-IN")}</span>
             </div>
           )}
           <div className="flex justify-between text-sm opacity-70 pb-2 border-b" style={{ borderColor: dna.palette?.border }}>
@@ -1315,7 +1232,7 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
           </div>
           <div className="flex justify-between text-base font-bold pt-2">
             <span>Total</span>
-            <span style={{ color: "var(--p)" }}>Γé╣{Math.round(finalPrice).toLocaleString("en-IN")}</span>
+            <span style={{ color: "var(--p)" }}>₹{Math.round(finalPrice).toLocaleString("en-IN")}</span>
           </div>
         </div>
         <Link 
@@ -1349,7 +1266,7 @@ function JournalStrip({ p, dna, storeSlug }: any) {
     <section className="max-w-6xl mx-auto px-6 py-16">
       <div className="flex items-end justify-between mb-8">
         <h2 className="text-3xl" style={{ fontFamily: "var(--hf)" }}>{p.title || "Journal"}</h2>
-        {storeSlug && <Link to={`/store/${storeSlug}/journal`} className="text-sm" style={{ color: dna.palette?.accent }}>Read all ΓåÆ</Link>}
+        {storeSlug && <Link to={`/store/${storeSlug}/journal`} className="text-sm" style={{ color: dna.palette?.accent }}>Read all →</Link>}
       </div>
       <div className="grid md:grid-cols-3 gap-6">
         {Array.from({ length: p.limit || 3 }).map((_, i) => (
@@ -1412,6 +1329,11 @@ function ContactForm({ p, dna, storeSlug }: any) {
   const [sent, setSent] = useState(false);
   const [termsContent, setTermsContent] = useState("");
 
+  // Previous messages history for logged-in users
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   useEffect(() => {
     if (user) {
       setName(user.user_metadata?.full_name || "");
@@ -1419,6 +1341,58 @@ function ContactForm({ p, dna, storeSlug }: any) {
       setContactPhone(user.phone || user.user_metadata?.phone || "");
     }
   }, [user]);
+
+  const fetchHistory = useCallback(async () => {
+    if (!user?.id || !storeSlug) return;
+    setHistoryLoading(true);
+    try {
+      const { data: store } = await supabase
+        .from("stores").select("id").eq("slug", storeSlug).maybeSingle();
+      if (!store?.id) return;
+
+      const userEmail = (user.email || user.user_metadata?.customer_email || "").toLowerCase();
+
+      // Fetch by customer_user_id OR by email (covers messages sent before login was linked)
+      const [byId, byEmail] = await Promise.all([
+        (supabase as any)
+          .from("contact_messages")
+          .select("id, subject, message, status, created_at")
+          .eq("customer_user_id", user.id)
+          .eq("store_id", store.id),
+        userEmail
+          ? (supabase as any)
+              .from("contact_messages")
+              .select("id, subject, message, status, created_at, customer_user_id")
+              .eq("email", userEmail)
+              .eq("store_id", store.id)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      // Merge + deduplicate by id, newest first
+      const merged = [...(byId.data || []), ...(byEmail.data || [])];
+      const seen = new Set<string>();
+      const unique = merged.filter((m: any) => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
+      unique.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setHistory(unique);
+
+      // Backfill customer_user_id on old messages that matched by email but have no user id
+      const toBackfill = (byEmail.data || []).filter((m: any) => !m.customer_user_id).map((m: any) => m.id);
+      if (toBackfill.length > 0) {
+        await (supabase as any)
+          .from("contact_messages")
+          .update({ customer_user_id: user.id })
+          .in("id", toBackfill);
+      }
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [user?.id, storeSlug]);
+
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
   useEffect(() => {
     const fetchStoreTerms = async () => {
@@ -1460,17 +1434,25 @@ function ContactForm({ p, dna, storeSlug }: any) {
         subject: subject.trim() || "(No subject)",
         message: message.trim(),
         status: "unread",
+        customer_user_id: user?.id ?? null,
       });
       if (error) throw error;
       setSent(true);
       setName(""); setSenderEmail(""); setContactPhone(""); setSubject(""); setMessage("");
       toast.success("Message sent! We'll get back to you soon.");
+      fetchHistory();
     } catch (err: any) {
       console.error("contact_form submit", err);
       toast.error("Failed to send message. Please try again.");
     } finally {
       setSending(false);
     }
+  };
+
+  const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+    unread:  { label: "Sent",    cls: "bg-blue-100 text-blue-700" },
+    read:    { label: "Seen",    cls: "bg-gray-100 text-gray-600" },
+    replied: { label: "Replied", cls: "bg-green-100 text-green-700" },
   };
 
   return (
@@ -1603,9 +1585,69 @@ function ContactForm({ p, dna, storeSlug }: any) {
               style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {sending ? "SendingΓÇª" : "Send Message"}
+              {sending ? "Sending…" : "Send Message"}
             </button>
           </form>
+          )}
+
+          {/* ── Previous Messages History (logged-in users only) ── */}
+          {user && (
+            <div className="pt-5 border-t" style={{ borderColor: dna.palette?.border }}>
+              <h4 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: dna.palette?.muted }}>
+                Your Previous Messages
+              </h4>
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin" style={{ color: dna.palette?.muted }} />
+                </div>
+              ) : history.length === 0 ? (
+                <p className="text-xs py-4 text-center opacity-50" style={{ color: dna.palette?.muted }}>
+                  No previous messages yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {history.map((msg) => {
+                    const badge = STATUS_BADGE[msg.status] ?? STATUS_BADGE.unread;
+                    const isOpen = expandedId === msg.id;
+                    return (
+                      <div key={msg.id} className="border rounded-xl overflow-hidden" style={{ borderColor: dna.palette?.border, background: dna.palette?.bg }}>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(isOpen ? null : msg.id)}
+                          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:opacity-80 transition"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold truncate" style={{ color: dna.palette?.fg }}>
+                              {msg.subject || "(No subject)"}
+                            </p>
+                            <p className="text-[10px] mt-0.5" style={{ color: dna.palette?.muted }}>
+                              {new Date(msg.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}{" "}
+                              {new Date(msg.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                          <span className={`shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full ${badge.cls}`}>
+                            {badge.label}
+                          </span>
+                          <X className="h-3.5 w-3.5 shrink-0 transition-transform" style={{ color: dna.palette?.muted, transform: isOpen ? "rotate(0deg)" : "rotate(45deg)" }} />
+                        </button>
+                        {isOpen && (
+                          <div className="px-4 pb-4 pt-2 border-t space-y-3" style={{ borderColor: dna.palette?.border }}>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: dna.palette?.fg }}>
+                              {msg.message}
+                            </p>
+                            {msg.status === "replied" && (
+                              <p className="text-xs font-semibold px-3 py-2 rounded-lg" style={{ background: "var(--p)" + "18", color: "var(--p)" }}>
+                                ✓ Store has replied — check your email inbox for their response.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -1688,7 +1730,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
     setTimeout(() => setAdded(false), 2000);
   };
 
-  // No product data yet ΓÇö show loading skeleton
+  // No product data yet — show loading skeleton
   if (!pr.id && !name) {
     return (
       <section className="max-w-6xl mx-auto px-6 py-16">
@@ -1739,10 +1781,10 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
 
           {/* Price */}
           <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-black" style={{ color: dna.palette?.primary }}>Γé╣{price.toLocaleString("en-IN")}</span>
+            <span className="text-3xl font-black" style={{ color: dna.palette?.primary }}>₹{price.toLocaleString("en-IN")}</span>
             {compareAt > price && (
               <>
-                <span className="text-lg line-through" style={{ color: dna.palette?.muted }}>Γé╣{compareAt.toLocaleString("en-IN")}</span>
+                <span className="text-lg line-through" style={{ color: dna.palette?.muted }}>₹{compareAt.toLocaleString("en-IN")}</span>
                 <span className="text-sm font-bold px-2 py-0.5 rounded-full" style={{ background: "#dcfce7", color: "#16a34a" }}>{discount}% off</span>
               </>
             )}
@@ -1763,14 +1805,14 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
           {/* Qty + Add to Cart */}
           <div className="flex items-center gap-3 mt-2">
             <div className="flex items-center border rounded-xl overflow-hidden" style={{ borderColor: dna.palette?.border }}>
-              <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-4 py-3 text-lg hover:opacity-60 transition" style={{ color: dna.palette?.fg }}>ΓêÆ</button>
+              <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-4 py-3 text-lg hover:opacity-60 transition" style={{ color: dna.palette?.fg }}>−</button>
               <span className="px-4 py-3 text-sm font-bold min-w-[40px] text-center" style={{ color: dna.palette?.fg }}>{qty}</span>
               <button onClick={() => setQty(q => q + 1)} className="px-4 py-3 text-lg hover:opacity-60 transition" style={{ color: dna.palette?.fg }}>+</button>
             </div>
             <button onClick={handleAdd} disabled={pr.inventory_count === 0}
               className="flex-1 py-3 px-6 font-bold text-sm rounded-xl transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
               style={{ background: dna.palette?.primary, color: dna.palette?.primary_fg, borderRadius: "var(--r)" }}>
-              {added ? "Γ£ô Added!" : pr.inventory_count === 0 ? "Out of Stock" : "Add to Cart"}
+              {added ? "✓ Added!" : pr.inventory_count === 0 ? "Out of Stock" : "Add to Cart"}
             </button>
           </div>
 
@@ -1784,7 +1826,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
 
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-3 mt-2 pt-4 border-t" style={{ borderColor: dna.palette?.border }}>
-            {[["≡ƒöÆ","Secure","Payment"],["Γå⌐","7 Day","Returns"],["≡ƒÜÜ","Free","Shipping"]].map(([icon,t,s],i) => (
+            {[["🔒","Secure","Payment"],["↩","7 Day","Returns"],["🚚","Free","Shipping"]].map(([icon,t,s],i) => (
               <div key={i} className="text-center p-2 rounded-lg" style={{ background: dna.palette?.surface }}>
                 <div className="text-lg mb-1">{icon}</div>
                 <div className="text-[10px] font-bold" style={{ color: dna.palette?.fg }}>{t}</div>
@@ -1799,7 +1841,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
 }
 
 // =============================================================================
-// HERO ΓÇö Shopify/WordPress-grade flexibility
+// HERO — Shopify/WordPress-grade flexibility
 // Styles: slider | fixed | half_banner | split | fullscreen_image | video |
 //         magazine | editorial_serif | minimal_left | asymmetric | gradient | centered
 // =============================================================================
@@ -1901,7 +1943,7 @@ function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overl
   const headingFont = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 } as React.CSSProperties;
 
   return (
-    <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[70vh]"}`} style={{ background: dna.palette?.surface }}>
+    <section data-hero-section="true" className={`relative overflow-hidden ${heightClass(height) || "min-h-[70vh]"}`} style={{ background: dna.palette?.surface }}>
       {list.map((s: any, i: number) => {
         const active = i === idx;
         const style: React.CSSProperties = transition === "fade"
@@ -1945,8 +1987,8 @@ function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overl
       })}
       {arrows && list.length > 1 && (
         <>
-          <button aria-label="Previous slide" onClick={() => setIdx((i) => (i - 1 + list.length) % list.length)} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">ΓÇ╣</button>
-          <button aria-label="Next slide"     onClick={() => setIdx((i) => (i + 1) % list.length)}                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">ΓÇ║</button>
+          <button aria-label="Previous slide" onClick={() => setIdx((i) => (i - 1 + list.length) % list.length)} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">‹</button>
+          <button aria-label="Next slide"     onClick={() => setIdx((i) => (i + 1) % list.length)}                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">›</button>
         </>
       )}
       {dots && list.length > 1 && (
@@ -2045,7 +2087,7 @@ function HeroBtn({ kind, label, href, cfg, freePos }: { kind: "primary" | "secon
 
 function Hero({ p, dna, storeSlug }: any) {
   const v = p.style ?? "centered";
-  // ΓöÇΓöÇ 3D theme styles ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ── 3D theme styles ───────────────────────────────────────────────────────
   if (v === "holographic_3d") return <HeroHolographic3D p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "liquid_metal")   return <HeroLiquidMetal   p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "neon_botanical") return <HeroNeonBotanical p={p} dna={dna} storeSlug={storeSlug} />;
@@ -2071,7 +2113,12 @@ function Hero({ p, dna, storeSlug }: any) {
 
   const freePos = !!buttons.free_position && v !== "slider";
 
-  const Btns = freePos ? null : (
+  const Btns = freePos ? (
+    <div className="mt-8 flex gap-3 flex-wrap opacity-0 pointer-events-none select-none">
+      {p.cta && <HeroBtn kind="primary" label={p.cta} href="#" cfg={buttons.primary} />}
+      {p.cta_secondary && <HeroBtn kind="secondary" label={p.cta_secondary} href="#" cfg={buttons.secondary} />}
+    </div>
+  ) : (
     <div className="mt-8 flex gap-3 flex-wrap">
       {p.cta && <HeroBtn kind="primary" label={p.cta} href={p.cta_href || shopHref} cfg={buttons.primary} />}
       {p.cta_secondary && <HeroBtn kind="secondary" label={p.cta_secondary} href={p.cta_secondary_href || shopHref} cfg={buttons.secondary} />}
@@ -2085,12 +2132,26 @@ function Hero({ p, dna, storeSlug }: any) {
     </div>
   ) : null;
 
-  const wrap = (node: JSX.Element) => (
-    <>
-      <HeroBtnStyles />
-      {freePos ? (<div className="relative">{node}{FreeLayer}</div>) : node}
-    </>
-  );
+  const wrap = (node: JSX.Element) => {
+    if (freePos) {
+      const children = [
+        ...(React.Children.toArray(node.props.children)),
+        FreeLayer
+      ];
+      return (
+        <>
+          <HeroBtnStyles />
+          {React.cloneElement(node, {}, ...children)}
+        </>
+      );
+    }
+    return (
+      <>
+        <HeroBtnStyles />
+        {node}
+      </>
+    );
+  };
 
   // --- SLIDER ---------------------------------------------------------------
   if (v === "slider") {
@@ -2103,7 +2164,7 @@ function Hero({ p, dna, storeSlug }: any) {
   // --- VIDEO BACKGROUND -----------------------------------------------------
   if (v === "video") {
     return wrap(
-      <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[80vh]"}`} style={{ background: "#000" }}>
+      <section data-hero-section="true" className={`relative overflow-hidden ${heightClass(height) || "min-h-[80vh]"}`} style={{ background: "#000" }}>
         <HeroVideo video={p.video} />
         <Overlay overlay={overlay} />
         <div className={`relative h-full w-full flex ${alignClass(contentAlign)} px-6 py-24`} style={{ color: "#fff" }}>
@@ -2121,7 +2182,7 @@ function Hero({ p, dna, storeSlug }: any) {
   // --- HALF BANNER ----------------------------------------------------------
   if (v === "half_banner") {
     return wrap(
-      <section className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface, minHeight: "40vh" }}>
+      <section data-hero-section="true" className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface, minHeight: "40vh" }}>
         <div className="px-6 md:px-12 py-12 md:py-16 flex flex-col justify-center">
           <div style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
@@ -2138,7 +2199,7 @@ function Hero({ p, dna, storeSlug }: any) {
   // --- GRADIENT (no image) --------------------------------------------------
   if (v === "gradient") {
     return wrap(
-      <section className={`relative overflow-hidden ${heightClass(height) || "min-h-[60vh]"}`} style={{ background: `linear-gradient(135deg, ${dna.palette?.primary} 0%, ${dna.palette?.accent} 100%)`, color: dna.palette?.primary_fg || "#fff" }}>
+      <section data-hero-section="true" className={`relative overflow-hidden ${heightClass(height) || "min-h-[60vh]"}`} style={{ background: `linear-gradient(135deg, ${dna.palette?.primary} 0%, ${dna.palette?.accent} 100%)`, color: dna.palette?.primary_fg || "#fff" }}>
         <div className={`relative h-full w-full flex ${alignClass(contentAlign)} px-6 py-24`}>
           <div className="max-w-3xl" style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-3 opacity-90">{p.kicker}</div>}
@@ -2153,7 +2214,7 @@ function Hero({ p, dna, storeSlug }: any) {
 
   if (v === "split") {
     return wrap(
-      <section className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface }}>
+      <section data-hero-section="true" className="grid md:grid-cols-2 relative" style={{ background: dna.palette?.surface }}>
         <div className="px-6 md:px-12 py-20 md:py-32 flex flex-col justify-center">
           <div style={contentBgStyle}>
             {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
@@ -2168,7 +2229,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   if (v === "magazine" || v === "editorial_serif") {
     return wrap(
-      <section className="max-w-6xl mx-auto px-6 py-24 relative">
+      <section data-hero-section="true" className="max-w-6xl mx-auto px-6 py-24 relative">
         <div className="grid md:grid-cols-12 gap-8 items-end">
           <div className="md:col-span-7">
             {p.kicker && <div className="text-xs uppercase tracking-[0.4em] mb-6 border-b pb-2 inline-block" style={{ color: dna.palette?.accent, borderColor: dna.palette?.border }}>{p.kicker}</div>}
@@ -2186,7 +2247,7 @@ function Hero({ p, dna, storeSlug }: any) {
   if (v === "fullscreen_image" || v === "fixed") {
     const h = heightClass(height) || (v === "fixed" ? "min-h-[60vh]" : "min-h-[80vh]");
     return wrap(
-      <section className={`relative overflow-hidden ${h}`}>
+      <section data-hero-section="true" className={`relative overflow-hidden ${h}`}>
         {p.image && (
           <div className={`absolute inset-0 ${parallax ? "bg-fixed" : ""}`}>
             <img
@@ -2210,7 +2271,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   if (v === "minimal_left") {
     return wrap(
-      <section className="max-w-6xl mx-auto px-6 py-32 relative">
+      <section data-hero-section="true" className="max-w-6xl mx-auto px-6 py-32 relative">
         <div style={contentBgStyle}>
           {p.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-6" style={{ color: dna.palette?.accent }}>{p.kicker}</div>}
           <h1 className="text-5xl md:text-7xl max-w-2xl" style={headingFont}>{p.title}</h1>
@@ -2222,7 +2283,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   if (v === "asymmetric") {
     return wrap(
-      <section className="relative overflow-hidden" style={{ background: dna.palette?.surface }}>
+      <section data-hero-section="true" className="relative overflow-hidden" style={{ background: dna.palette?.surface }}>
         <div className="absolute -right-20 -top-10 w-2/3 h-full">{p.image && <img src={p.image} className="w-full h-full object-cover" style={{ clipPath: "polygon(20% 0, 100% 0, 100% 100%, 0% 100%)", objectPosition: p.focal || "50% 50%" }} />}</div>
         <div className="relative max-w-6xl mx-auto px-6 py-32 md:py-40">
           <div style={contentBgStyle}>
@@ -2237,7 +2298,7 @@ function Hero({ p, dna, storeSlug }: any) {
   }
   // centered (default)
   return wrap(
-    <section className={`relative overflow-hidden ${heightClass(height)}`} style={{ background: dna.palette?.surface }}>
+    <section data-hero-section="true" className={`relative overflow-hidden ${heightClass(height)}`} style={{ background: dna.palette?.surface }}>
       {p.image && <img src={p.image} alt="" className={`absolute inset-0 w-full h-full object-cover opacity-60 ${kenBurns ? "animate-[ken-burns_18s_ease-out_infinite]" : ""}`} style={{ objectPosition: p.focal || "50% 50%" }} />}
       <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${dna.palette?.bg}00, ${dna.palette?.bg}cc)` }} />
       <div className="relative max-w-6xl mx-auto px-6 py-32 md:py-40">
@@ -2331,10 +2392,20 @@ function CategoryBlock({ p, dna, storeSlug }: any) {
       </section>
     );
   }
+  const cols = p.product_cols ?? p.category_cols ?? 4;
+  const colsMap: Record<number, string> = {
+    2: "md:grid-cols-2",
+    3: "md:grid-cols-3",
+    4: "md:grid-cols-4",
+    5: "md:grid-cols-5",
+    6: "md:grid-cols-6",
+  };
+  const gridColsClass = colsMap[cols] || "md:grid-cols-4";
+
   return (
     <section className="max-w-6xl mx-auto px-6 py-20">
       {Title}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${gridColsClass} gap-4`}>
         {items.map((c: any, i: number) => (
           <Link to={hrefFor(c.name)} key={i} className="group block aspect-[3/4] relative overflow-hidden" style={{ borderRadius: "var(--r)" }}>
             {c.image ? <img src={c.image} className="w-full h-full object-cover transition-transform group-hover:scale-105" /> : <div className="w-full h-full" style={{ background: dna.palette?.surface }} />}
@@ -2368,9 +2439,9 @@ function CollectionsBlock({ p, dna, storeSlug }: any) {
       <div className="grid md:grid-cols-2 gap-8">
         {items.map((c: any, i: number) => (
           <article key={i} className="group flex flex-col" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", overflow: "hidden", border: `1px solid ${dna.palette?.border}` }}>
-            <Link to={collHref(c)} className="block aspect-[16/10] overflow-hidden" style={{ background: dna.palette?.bg }}>
+            <Link to={collHref(c)} className="relative block aspect-[16/10] overflow-hidden bg-muted/10" style={{ background: dna.palette?.bg }}>
               {c.image
-                ? <img src={c.image} alt={c.name} className="w-full h-full object-cover transition-transform group-hover:scale-[1.03]" />
+                ? <img src={c.image} alt={c.name} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-[1.03]" />
                 : <div className="w-full h-full" />}
             </Link>
             <div className="p-5 flex-1 flex flex-col">
@@ -2399,7 +2470,7 @@ function CollectionsBlock({ p, dna, storeSlug }: any) {
                 className="mt-4 inline-flex items-center text-sm self-start"
                 style={{ color: dna.palette?.accent }}
               >
-                Shop {c.name} ΓåÆ
+                Shop {c.name} →
               </Link>
             </div>
           </article>
@@ -2413,7 +2484,7 @@ function CollectionsBlock({ p, dna, storeSlug }: any) {
 // fall back to product list filtered by category if no subs.
 function CollectionDetailBlock({ p, dna, storeSlug }: any) {
   const items: any[] = p.items ?? [];
-  // Path is /collections/:categoryId ΓÇö pull from window since useParams is hard to reach here.
+  // Path is /collections/:categoryId — pull from window since useParams is hard to reach here.
   const segments = typeof window !== "undefined" ? window.location.pathname.split("/") : [];
   const categoryId = segments[segments.indexOf("collections") + 1] || "";
   const cat = items.find((c: any) => c.id === categoryId) || null;
@@ -2421,7 +2492,7 @@ function CollectionDetailBlock({ p, dna, storeSlug }: any) {
     return (
       <section className="max-w-3xl mx-auto px-6 py-20 text-center">
         <h1 className="text-3xl mb-3" style={{ fontFamily: "var(--hf)" }}>Collection not found</h1>
-        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-sm" style={{ color: dna.palette?.accent }}>ΓåÉ Back to all collections</Link>}
+        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-sm" style={{ color: dna.palette?.accent }}>← Back to all collections</Link>}
       </section>
     );
   }
@@ -2429,7 +2500,7 @@ function CollectionDetailBlock({ p, dna, storeSlug }: any) {
   return (
     <>
       <section className="max-w-6xl mx-auto px-6 pt-12 pb-6">
-        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>ΓåÉ All collections</Link>}
+        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>← All collections</Link>}
         <div className="mt-4 grid md:grid-cols-[1.2fr_1fr] gap-8 items-center">
           <div>
             <h1 className="text-5xl mb-4" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{cat.name}</h1>
@@ -2473,7 +2544,7 @@ function CollectionDetailBlock({ p, dna, storeSlug }: any) {
 
 function ProductBlock({ p, dna, storeSlug, page }: any) {
   const v = p.style ?? "grid_clean";
-  // ΓöÇΓöÇ 3D theme product styles ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ── 3D theme product styles ───────────────────────────────────────────────
   if (v === "glass_3d")        return <ProductsGlass3D    p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "chrome_3d")       return <ProductsChrome     p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "botanical_cards") return <ProductsBotanical  p={p} dna={dna} storeSlug={storeSlug} />;
@@ -2569,8 +2640,8 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
                 {pr.badge && <div className="text-xs mt-1" style={{ color: dna.palette?.accent }}>{pr.badge}</div>}
               </div>
               <div className="text-right">
-                <div className="text-lg">Γé╣{pr.price}</div>
-                {pr.compare_at > pr.price && <div className="text-xs line-through" style={{ color: dna.palette?.muted }}>Γé╣{pr.compare_at}</div>}
+                <div className="text-lg">₹{pr.price}</div>
+                {pr.compare_at > pr.price && <div className="text-xs line-through" style={{ color: dna.palette?.muted }}>₹{pr.compare_at}</div>}
               </div>
             </Link>
           ))}
@@ -2596,22 +2667,46 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
       {Chips}
       {Empty}
       <div 
-        className={cardWidth 
-          ? "flex flex-wrap gap-6 justify-center" 
-          : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
+        className={p.scroll_horizontal
+          ? "flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin"
+          : cardWidth 
+            ? "flex flex-wrap gap-6 justify-center" 
+            : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
         }
       >
         {items.map((pr: any, i: number) => (
-          <div key={i} className="group" style={cardWidth ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } : {}}>
+          <div 
+            key={i} 
+            className={`group ${p.scroll_horizontal ? "snap-start shrink-0" : ""}`} 
+            style={p.scroll_horizontal
+              ? { width: cardWidth ? `${cardWidth}px` : "260px" }
+              : cardWidth 
+                ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } 
+                : {}
+            }
+          >
             <Link to={linkFor(pr)} className="block">
               <div className="aspect-square mb-3 overflow-hidden relative" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
                 {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
                 {pr.badge && <span className="absolute top-2 left-2 text-[10px] px-2 py-1 uppercase tracking-wider z-10" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{pr.badge}</span>}
               </div>
-              <div className="text-sm font-medium">{pr.name}</div>
+              <div 
+                className="text-sm font-medium" 
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  height: "2.5rem",
+                  lineHeight: "1.25rem"
+                }}
+              >
+                {pr.name}
+              </div>
               <div className="mt-1 text-sm flex gap-2">
-                <span>Γé╣{pr.price}</span>
-                {pr.compare_at > pr.price && <span className="line-through" style={{ color: dna.palette?.muted }}>Γé╣{pr.compare_at}</span>}
+                <span>₹{pr.price}</span>
+                {pr.compare_at > pr.price && <span className="line-through" style={{ color: dna.palette?.muted }}>₹{pr.compare_at}</span>}
               </div>
             </Link>
             {storeSlug && pr.id && (
@@ -2642,7 +2737,7 @@ function Footer({ footer, dna, brandName, storeSlug, onNavigate, footerOv }: any
   };
 
   // Build merged columns: footerOv.columns overrides; else manifest footer.columns (legacy
-  // shape: links as string[] ΓÇö convert to {label, href}); else sensible defaults.
+  // shape: links as string[] — convert to {label, href}); else sensible defaults.
   const defaultColumns: FooterOv["columns"] = [
     { title: "Shop", links: [
       { label: "All products", href: "", page: "shop" },
@@ -2718,7 +2813,7 @@ function Footer({ footer, dna, brandName, storeSlug, onNavigate, footerOv }: any
       {showPoweredBy && (
         <div className="border-t" style={{ borderColor: dna.palette?.border }}>
           <div className="max-w-6xl mx-auto px-6 py-4 text-[11px] flex flex-wrap justify-between gap-2" style={{ color: dna.palette?.muted }}>
-            <span>┬⌐ {new Date().getFullYear()} {brandName}. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} {brandName}. All rights reserved.</span>
             <span>Powered by <a href="https://pictocart.in" target="_blank" rel="noreferrer" className="hover:underline">Pic to Cart</a></span>
           </div>
         </div>
@@ -2743,7 +2838,7 @@ function guessPage(label: string): string {
 }
 
 /**
- * Testimonials block ΓÇö uses props.items if provided (manifest/overrides),
+ * Testimonials block — uses props.items if provided (manifest/overrides),
  * otherwise auto-loads merchant-managed testimonials from store_testimonials.
  */
 function TestimonialsBlock({ p, dna, storeSlug }: any) {
@@ -2798,7 +2893,7 @@ function TestimonialsBlock({ p, dna, storeSlug }: any) {
 }
 
 /**
- * Google Reviews block ΓÇö only renders if store has an active paid connection.
+ * Google Reviews block — only renders if store has an active paid connection.
  */
 function GoogleReviewsBlock({ p, dna, storeSlug }: any) {
   const [data, setData] = useState<{ conn: any; reviews: any[] } | null>(null);
@@ -2868,9 +2963,9 @@ function GoogleReviewsBlock({ p, dna, storeSlug }: any) {
   );
 }
 
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-// 3D STAR FIELD ΓÇö shared animated starfield background for themes 15/16/17
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════
+// 3D STAR FIELD — shared animated starfield background for themes 15/16/17
+// ═══════════════════════════════════════════════════════════════════════════
 function StarField3D({ color1 = "#6366f1", color2 = "#a855f7", count = 120 }: { color1?: string; color2?: string; count?: number }) {
   const stars = Array.from({ length: count }, (_, i) => ({
     id: i, x: Math.random() * 100, y: Math.random() * 100,
@@ -2920,9 +3015,9 @@ function StarField3D({ color1 = "#6366f1", color2 = "#a855f7", count = 120 }: { 
   );
 }
 
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-// THEME-16  LIQUID METAL ΓÇö chrome/silver, morphing 3D, magnetic feel
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════
+// THEME-16  LIQUID METAL — chrome/silver, morphing 3D, magnetic feel
+// ═══════════════════════════════════════════════════════════════════════════
 function HeroLiquidMetal({ p, dna, storeSlug }: any) {
   const ctaHref = p.cta_href || (storeSlug ? `/store/${storeSlug}/shop` : "#products");
   const P = "#94a3b8", A = "#e2e8f0";
@@ -2975,12 +3070,12 @@ function HeroLiquidMetal({ p, dna, storeSlug }: any) {
             </a>
             <a href={storeSlug ? `/store/${storeSlug}/collections` : "#"} className="px-10 py-4 font-bold text-sm rounded-xl transition-all hover:scale-105"
               style={{ border: `1px solid ${P}50`, color: P, backdropFilter: "blur(10px)", background: `${P}08` }}>
-              Lookbook ΓåÆ
+              Lookbook →
             </a>
           </div>
           {/* Stats row */}
           <div className="flex gap-8 mt-12 pt-8 border-t" style={{ borderColor: "#1e293b" }}>
-            {[["10K+","Happy Clients"],["500+","Products"],["4.9Γÿà","Rating"]].map(([n,l],i) => (
+            {[["10K+","Happy Clients"],["500+","Products"],["4.9★","Rating"]].map(([n,l],i) => (
               <div key={i}>
                 <div className="text-2xl font-black lm-shimmer-text">{n}</div>
                 <div className="text-[11px] mt-1" style={{ color: "#475569" }}>{l}</div>
@@ -3004,7 +3099,7 @@ function HeroLiquidMetal({ p, dna, storeSlug }: any) {
             }}>
               {i === 2 && (
                 <div className="absolute inset-0 rounded-3xl overflow-hidden p-8 flex flex-col justify-end">
-                  <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: P }}>Γùê New Season</div>
+                  <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: P }}>◈ New Season</div>
                   <div className="text-3xl font-black text-white mb-1">Chrome Series</div>
                   <div className="text-sm" style={{ color: "#64748b" }}>Premium Collection 2025</div>
                 </div>
@@ -3020,7 +3115,7 @@ function HeroLiquidMetal({ p, dna, storeSlug }: any) {
       <div className="absolute bottom-0 left-0 right-0 overflow-hidden py-3" style={{ borderTop: "1px solid #1e293b", background: "#050810ee" }}>
         <div style={{ display: "inline-block", whiteSpace: "nowrap", animation: "lm-ticker 20s linear infinite" }}>
           {Array(8).fill(null).map((_,i) => (
-            <span key={i} className="mx-10 text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: "#334155" }}>Γùê Premium Quality &nbsp;Γùê Fast Delivery &nbsp;Γùê 100% Secure &nbsp;Γùê Easy Returns</span>
+            <span key={i} className="mx-10 text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: "#334155" }}>◈ Premium Quality &nbsp;◈ Fast Delivery &nbsp;◈ 100% Secure &nbsp;◈ Easy Returns</span>
           ))}
         </div>
       </div>
@@ -3084,8 +3179,8 @@ function ProductsChrome({ p, dna, storeSlug }: any) {
                 <div className="p-4">
                   <div className="text-sm font-bold truncate mb-1" style={{ color: A }}>{pr.name}</div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-base font-black" style={{ color: P }}>Γé╣{pr.price}</span>
-                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#334155" }}>Γé╣{pr.compare_at}</span>}
+                    <span className="text-base font-black" style={{ color: P }}>₹{pr.price}</span>
+                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#334155" }}>₹{pr.compare_at}</span>}
                   </div>
                 </div>
               </Link>
@@ -3153,16 +3248,16 @@ function PromoChromeWave({ p, dna, storeSlug }: any) {
         <p className="text-lg mb-12 max-w-lg mx-auto leading-loose" style={{ color:"#475569" }}>{p.subtitle || "Precision-forged pieces for the modern connoisseur."}</p>
         <a href={ctaHref} className="inline-flex items-center gap-3 px-12 py-5 font-black text-sm rounded-2xl transition-all hover:scale-105 hover:-translate-y-1"
           style={{ background:`linear-gradient(135deg,${P},#475569)`, color:"#050810", boxShadow:`0 0 50px ${P}50, inset 0 1px 0 rgba(255,255,255,0.2)` }}>
-          {p.cta || "Shop Now"} <span style={{ fontSize:18 }}>ΓåÆ</span>
+          {p.cta || "Shop Now"} <span style={{ fontSize:18 }}>→</span>
         </a>
       </div>
     </section>
   );
 }
 
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-// THEME-17  NEON BOTANICAL ΓÇö bioluminescent, organic, otherworldly glow
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════
+// THEME-17  NEON BOTANICAL — bioluminescent, organic, otherworldly glow
+// ═══════════════════════════════════════════════════════════════════════════
 function HeroNeonBotanical({ p, dna, storeSlug }: any) {
   const ctaHref = p.cta_href || (storeSlug ? `/store/${storeSlug}/shop` : "#products");
   const N = "#10b981", G = "#34d399";
@@ -3218,7 +3313,7 @@ function HeroNeonBotanical({ p, dna, storeSlug }: any) {
           <div className="flex gap-4 flex-wrap">
             <a href={ctaHref} className="nb-drip group relative px-10 py-4 font-black text-sm rounded-2xl overflow-hidden"
               style={{ background:`linear-gradient(135deg,${N},${G})`, color:"#010d08", boxShadow:`0 0 50px ${N}60, inset 0 1px 0 rgba(255,255,255,0.2)` }}>
-              ≡ƒî┐ {p.cta || "Explore Now"}
+              🌿 {p.cta || "Explore Now"}
             </a>
             <a href={storeSlug ? `/store/${storeSlug}/collections` : "#"} className="px-10 py-4 font-bold text-sm rounded-2xl transition-all hover:scale-105"
               style={{ border:`1px solid ${N}40`, color:N, background:`${N}08`, backdropFilter:"blur(10px)" }}>
@@ -3227,7 +3322,7 @@ function HeroNeonBotanical({ p, dna, storeSlug }: any) {
           </div>
           {/* Live pulse counter */}
           <div className="flex gap-6 mt-12 pt-8 border-t" style={{ borderColor:`${N}20` }}>
-            {[["2.4K","Active Now","≡ƒæü"],["98%","Satisfaction","Γ¡É"],["1hr","Avg Delivery","ΓÜí"]].map(([n,l,e],i) => (
+            {[["2.4K","Active Now","👁"],["98%","Satisfaction","⭐"],["1hr","Avg Delivery","⚡"]].map(([n,l,e],i) => (
               <div key={i} className="text-center">
                 <div className="text-xl font-black" style={{ color:N }}>{e} {n}</div>
                 <div className="text-[11px] mt-1" style={{ color:"#065f46" }}>{l}</div>
@@ -3243,7 +3338,7 @@ function HeroNeonBotanical({ p, dna, storeSlug }: any) {
           ))}
           <div className="nb-breathe relative z-10 rounded-full flex items-center justify-center" style={{ width:200, height:200, background:`radial-gradient(circle,${N}30,${N}08)`, border:`1.5px solid ${N}50`, backdropFilter:"blur(20px)", boxShadow:`0 0 80px ${N}40` }}>
             <div className="text-center">
-              <div style={{ fontSize:60 }}>≡ƒî┐</div>
+              <div style={{ fontSize:60 }}>🌿</div>
               <div className="text-xs font-black mt-2" style={{ color:N }}>PURE ORGANIC</div>
             </div>
           </div>
@@ -3257,9 +3352,9 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
   const { themeId } = useParams<{ themeId: string }>();
   const N = "#10b981", G = "#34d399";
   const items: any[] = (p.items && p.items.length > 0) ? p.items : [
-    { id:"b1", name:"Forest Serum",   price:999,  compare_at:1499, image:"https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&auto=format&fit=crop&q=60", badge:"Γ£¿" },
+    { id:"b1", name:"Forest Serum",   price:999,  compare_at:1499, image:"https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&auto=format&fit=crop&q=60", badge:"✨" },
     { id:"b2", name:"Moss Candle Set",price:599,  compare_at:799,  image:"https://images.unsplash.com/photo-1596433809252-260c2745df6b?w=600&auto=format&fit=crop&q=60", badge:"" },
-    { id:"b3", name:"Jade Stone Kit", price:1299, compare_at:1799, image:"https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=60", badge:"≡ƒî┐" },
+    { id:"b3", name:"Jade Stone Kit", price:1299, compare_at:1799, image:"https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=60", badge:"🌿" },
     { id:"b4", name:"Botanical Mist",  price:799,  compare_at:999,  image:"https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&auto=format&fit=crop&q=60", badge:"" },
   ];
   const linkFor = (pr: any) => storeSlug && pr.id ? `/store/${storeSlug}/product/${pr.id}${themeId ? `/${themeId}` : ""}` : "#";
@@ -3288,7 +3383,7 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {p.title && (
           <div className="flex items-center gap-6 mb-14">
-            <div className="text-3xl">≡ƒî┐</div>
+            <div className="text-3xl">🌿</div>
             <h2 className="text-4xl font-black" style={{ fontFamily:"var(--hf)", color:N, textShadow:`0 0 30px ${N}60` }}>{p.title}</h2>
             <div className="h-px flex-1" style={{ background:`linear-gradient(90deg,${N}50,transparent)` }} />
           </div>
@@ -3313,8 +3408,8 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
                 <div className="p-4">
                   <div className="text-sm font-bold truncate mb-1" style={{ color:"#d1fae5" }}>{pr.name}</div>
                   <div className="flex items-baseline gap-2">
-                    <span className="font-black text-base" style={{ color:N, textShadow:`0 0 10px ${N}60` }}>Γé╣{pr.price}</span>
-                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#065f46" }}>Γé╣{pr.compare_at}</span>}
+                    <span className="font-black text-base" style={{ color:N, textShadow:`0 0 10px ${N}60` }}>₹{pr.price}</span>
+                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#065f46" }}>₹{pr.compare_at}</span>}
                   </div>
                 </div>
               </Link>
@@ -3381,16 +3476,16 @@ function PromoBotanical({ p, dna, storeSlug }: any) {
         <p className="text-lg mb-12 max-w-lg mx-auto leading-loose" style={{ color:"#6ee7b7" }}>{p.subtitle || "New energy. New season. Discover what's blooming now."}</p>
         <a href={ctaHref} className="nb-drip inline-flex items-center gap-3 px-12 py-5 font-black text-sm rounded-2xl transition-all hover:scale-105 hover:-translate-y-1"
           style={{ background:`linear-gradient(135deg,${N},${G})`, color:"#010d08", boxShadow:`0 0 60px ${N}60` }}>
-          ≡ƒî▒ {p.cta || "Explore Now"}
+          🌱 {p.cta || "Explore Now"}
         </a>
       </div>
     </section>
   );
 }
 
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════
 // SPARKLE BACKGROUND + CURSOR TRAIL + SCROLL REVEAL  (theme-15)
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════
 function SparkleBackground({ count = 60, primaryColor = "#a855f7", accentColor = "#6366f1" }: { count?: number; primaryColor?: string; accentColor?: string }) {
   const particles = Array.from({ length: count }, (_, i) => ({
     id: i, size: Math.random() * 4 + 1, x: Math.random() * 100, y: Math.random() * 100,
@@ -3457,7 +3552,7 @@ function ScrollAnimationProvider({ primaryColor = "#6366f1" }: { primaryColor?: 
       document.head.appendChild(s);
     }
     const bar = Object.assign(document.createElement("div"), { id:"t15-bar" });
-    const btn = Object.assign(document.createElement("button"), { id:"t15-top", innerHTML:"Γåæ", title:"Back to top" });
+    const btn = Object.assign(document.createElement("button"), { id:"t15-top", innerHTML:"↑", title:"Back to top" });
     btn.onclick = () => window.scrollTo({ top:0, behavior:"smooth" });
     document.body.append(bar, btn);
     const markAndObserve = () => {
@@ -3478,9 +3573,9 @@ function ScrollAnimationProvider({ primaryColor = "#6366f1" }: { primaryColor?: 
   return null;
 }
 
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-// THEME-15  COSMIC 3D ΓÇö deep space, sparkles, holographic
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════
+// THEME-15  COSMIC 3D — deep space, sparkles, holographic
+// ═══════════════════════════════════════════════════════════════════════════
 function HeroHolographic3D({ p, dna, storeSlug }: any) {
   const ctaHref = p.cta_href || (storeSlug ? `/store/${storeSlug}/shop` : "#products");
   const primary = dna.palette?.primary ?? "#6366f1";
@@ -3505,7 +3600,7 @@ function HeroHolographic3D({ p, dna, storeSlug }: any) {
       ))}
       <div className="relative z-10 max-w-5xl mx-auto px-6 text-center" style={{ perspective:"1000px" }}>
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 text-xs font-bold uppercase tracking-widest" style={{ background:`${primary}20`,border:`1px solid ${primary}50`,color:primary }}>
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background:primary }} /> New Collection ΓÇö Theme 15
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background:primary }} /> New Collection — Theme 15
         </div>
         <h1 className="holo-title text-5xl md:text-8xl font-black leading-tight mb-6" style={{ fontFamily:"var(--hf)" }}>{p.title || "Welcome to Theme 15"}</h1>
         <p className="text-lg md:text-xl max-w-2xl mx-auto mb-10 text-white/70">{p.sub || "Experience the future of shopping with immersive 3D design"}</p>
@@ -3514,7 +3609,7 @@ function HeroHolographic3D({ p, dna, storeSlug }: any) {
           <a href={storeSlug?`/store/${storeSlug}/shop`:"#"} className="px-8 py-4 font-bold text-sm rounded-xl" style={{ border:`1px solid ${accent}60`,color:accent,background:`${accent}10` }}>Shop All</a>
         </div>
         <div className="hidden md:flex gap-6 justify-center mt-16">
-          {[{label:"Best Seller",badge:"≡ƒöÑ",delay:0},{label:"New Arrival",badge:"Γ£¿",delay:1},{label:"Top Pick",badge:"ΓÜí",delay:2}].map((card,i)=>(
+          {[{label:"Best Seller",badge:"🔥",delay:0},{label:"New Arrival",badge:"✨",delay:1},{label:"Top Pick",badge:"⚡",delay:2}].map((card,i)=>(
             <div key={i} className="holo-card px-6 py-3 rounded-2xl text-sm font-semibold" style={{ background:`linear-gradient(135deg,${primary}20,${accent}15)`,border:`1px solid ${primary}40`,color:"#fff",animationDelay:`${card.delay*.8}s`,backdropFilter:"blur(12px)" }}>{card.badge} {card.label}</div>
           ))}
         </div>
@@ -3532,7 +3627,7 @@ function ProductsGlass3D({ p, dna, storeSlug }: any) {
     { id:"d1",name:"Crystal Sneakers",price:2999,compare_at:4999,image:"https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop&q=60",badge:"Hot" },
     { id:"d2",name:"Neon Jacket",     price:4999,compare_at:7999,image:"https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&auto=format&fit=crop&q=60",badge:"New" },
     { id:"d3",name:"Prism Tee",       price:1299,compare_at:1999,image:"https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=60",badge:"Sale" },
-    { id:"d4",name:"Holo Denim",      price:2499,compare_at:3999,image:"https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop&q=60",badge:"≡ƒöÑ" },
+    { id:"d4",name:"Holo Denim",      price:2499,compare_at:3999,image:"https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop&q=60",badge:"🔥" },
   ];
   const linkFor = (pr: any) => storeSlug && pr.id ? `/store/${storeSlug}/product/${pr.id}${themeId?`/${themeId}`:""}` : "#";
   const productCols = p.product_cols ?? 4;
@@ -3572,8 +3667,8 @@ function ProductsGlass3D({ p, dna, storeSlug }: any) {
                   <div className="p-4 flex-1 flex flex-col justify-between">
                     <div className="text-sm font-bold text-white mb-2">{pr.name}</div>
                     <div className="flex items-center gap-2">
-                      <span className="text-base font-black" style={{ color:primary }}>Γé╣{pr.price}</span>
-                      {pr.compare_at>pr.price && <span className="text-xs line-through text-white/40">Γé╣{pr.compare_at}</span>}
+                      <span className="text-base font-black" style={{ color:primary }}>₹{pr.price}</span>
+                      {pr.compare_at>pr.price && <span className="text-xs line-through text-white/40">₹{pr.compare_at}</span>}
                     </div>
                   </div>
                 </div>
@@ -3618,10 +3713,10 @@ function PromoAuroraWave({ p, dna, storeSlug }: any) {
       <div className="aurora-2 absolute inset-0 pointer-events-none" style={{ background:`radial-gradient(ellipse 70% 50% at 80% 40%,${accent}30,transparent 60%)` }} />
       <SparkleBackground count={50} primaryColor={primary} accentColor={accent} />
       <div className="relative z-10 max-w-4xl mx-auto px-6">
-        {p.promo_code && <div className="code-flash inline-flex items-center gap-2 px-5 py-2 rounded-full mb-6 text-sm font-black tracking-widest" style={{ background:`${primary}20`,border:`1px solid ${primary}60`,color:primary }}>≡ƒÄü USE CODE: <span className="text-white">{p.promo_code}</span></div>}
+        {p.promo_code && <div className="code-flash inline-flex items-center gap-2 px-5 py-2 rounded-full mb-6 text-sm font-black tracking-widest" style={{ background:`${primary}20`,border:`1px solid ${primary}60`,color:primary }}>🎁 USE CODE: <span className="text-white">{p.promo_code}</span></div>}
         <h2 className="text-4xl md:text-6xl font-black mb-6 text-white leading-tight" style={{ fontFamily:"var(--hf)",textShadow:`0 0 40px ${primary}80` }}>{p.title || "Cosmic Sale"}</h2>
         <p className="text-lg text-white/60 max-w-xl mx-auto mb-10">{p.subtitle || "Limited-time offer across the entire store."}</p>
-        <a href={ctaHref} className="inline-flex items-center gap-2 px-10 py-4 text-base font-black rounded-2xl text-white transition-all hover:scale-105" style={{ background:`linear-gradient(135deg,${primary},${accent})`,boxShadow:`0 8px 40px ${primary}50` }}>ΓÜí {p.cta || "Claim Discount"}</a>
+        <a href={ctaHref} className="inline-flex items-center gap-2 px-10 py-4 text-base font-black rounded-2xl text-white transition-all hover:scale-105" style={{ background:`linear-gradient(135deg,${primary},${accent})`,boxShadow:`0 8px 40px ${primary}50` }}>⚡ {p.cta || "Claim Discount"}</a>
       </div>
     </section>
   );
@@ -3647,7 +3742,7 @@ function CategoryFloatingOrbs({ p, dna, storeSlug }: any) {
                 <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background:`radial-gradient(circle at 30% 20%,rgba(255,255,255,.2),transparent 60%)` }} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
                   <span className="text-base font-black text-white text-center leading-tight" style={{ textShadow:`0 0 20px ${c}` }}>{cat.name||cat}</span>
-                  <span className="mt-2 text-xs font-bold px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300" style={{ background:c,color:"#fff" }}>Shop ΓåÆ</span>
+                  <span className="mt-2 text-xs font-bold px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300" style={{ background:c,color:"#fff" }}>Shop →</span>
                 </div>
               </div>
             </a>
@@ -3658,10 +3753,10 @@ function CategoryFloatingOrbs({ p, dna, storeSlug }: any) {
   );
 }
 
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-// THEME 3D PAGE BACKGROUND ΓÇö fixed starfield for ALL pages
+// ═══════════════════════════════════════════════════════════════════════════
+// THEME 3D PAGE BACKGROUND — fixed starfield for ALL pages
 // Injected by StorefrontLayout for theme-15/16/17
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════════════════
 export function Theme3DPageBackground({ themeId, palette }: { themeId: string; palette: any }) {
   const is16 = themeId.includes('style-16');
   const is17 = themeId.includes('style-17');
@@ -3691,7 +3786,7 @@ export function Theme3DPageBackground({ themeId, palette }: { themeId: string; p
   );
 }
 
-// ΓöÇΓöÇΓöÇ Named exports ΓÇö delegate to the existing Header/Footer above ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Named exports — delegate to the existing Header/Footer above ────────────
 export { Header, Footer };
 
 function escapeHtml(s: string) {
