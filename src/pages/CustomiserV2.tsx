@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useStore } from "@/hooks/useStore";
 import { useThemeManifest } from '@/hooks/useThemeManifest';
@@ -175,7 +175,7 @@ export default function CustomiserV2() {
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
 
-  // Resizable side panels — persist widths per user across sessions.
+  // Resizable side panels ΓÇö persist widths per user across sessions.
   const [leftWidth, setLeftWidth] = useState<number>(() => {
     const v = Number(localStorage.getItem("customiser_left_w"));
     return v >= 160 && v <= 480 ? v : 176;
@@ -400,6 +400,15 @@ export default function CustomiserV2() {
     toast.success("Palette reset to theme default");
   };
 
+  // ---------- Global design overrides (fonts, radius, bold, button) ----------
+  const updateGlobal = (key: string, value: any) => {
+    setOverrides((prev: any) => {
+      const next = structuredClone(prev || {});
+      next.global = { ...(next.global || {}), [key]: value };
+      return next;
+    });
+  };
+
   // ---------- Per-section color override ----------
   const updateSectionColor = (idx: number, key: string, value: string) => {
     setOverrides((prev: any) => {
@@ -463,7 +472,7 @@ export default function CustomiserV2() {
     if (error) toast.error("Failed to save");
     else {
       setStore({ ...store, resolved_storefront_manifest });
-      toast.success("Saved — live on your store");
+      toast.success("Saved ΓÇö live on your store");
     }
     setSaving(false);
   };
@@ -509,7 +518,7 @@ export default function CustomiserV2() {
             <span className="hidden sm:inline">{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
           </Button>
           <Button size="sm" variant="outline" className="bg-background" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset page</Button>
-          <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}</Button>
+          <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-3.5 w-3.5" /> {saving ? "SavingΓÇª" : "Save"}</Button>
         </div>
       </div>
 
@@ -540,6 +549,15 @@ export default function CustomiserV2() {
             >
               <span className="flex items-center gap-1.5"><PanelBottom className="h-3.5 w-3.5 text-indigo-600" /> Footer Layout</span>
               {Object.keys(footerOv).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+            </button>
+
+            {/* Global Design row */}
+            <button
+              onClick={() => selectAndScroll({ kind: "global" } as any)}
+              className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${(selected as any)?.kind === "global" ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-muted text-muted-foreground"}`}
+            >
+              <span className="flex items-center gap-1.5"><Palette className="h-3.5 w-3.5 text-indigo-600" /> Global Design</span>
+              {Object.keys((overrides as any)?.global || {}).length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
             </button>
           </div>
           <Separator />
@@ -636,7 +654,7 @@ export default function CustomiserV2() {
           </ScrollArea>
         </aside>
 
-        {/* Drag handle — left panel */}
+        {/* Drag handle ΓÇö left panel */}
         {!isFullscreen && !leftCollapsed && (
           <div
             role="separator"
@@ -683,7 +701,7 @@ export default function CustomiserV2() {
           );
         })()}
 
-        {/* Drag handle — right panel */}
+        {/* Drag handle ΓÇö right panel */}
         {!isFullscreen && (
           <div
             role="separator"
@@ -707,7 +725,7 @@ export default function CustomiserV2() {
           <ScrollArea className="flex-1">
             {!selected && (
               <div className="p-4 text-xs text-muted-foreground">
-                Pick a section on the left to edit its text and images. Header and Footer are editable too — they apply across every page.
+                Pick a section on the left to edit its text and images. Header and Footer are editable too ΓÇö they apply across every page.
               </div>
             )}
 
@@ -739,6 +757,17 @@ export default function CustomiserV2() {
                 onChangeColor={updatePalette}
                 onApplyPreset={applyPalettePreset}
                 onReset={resetPalette}
+              />
+            )}
+
+            {(selected as any)?.kind === "global" && (
+              <GlobalDesignInspector
+                globalOv={(overrides as any)?.global || {}}
+                onUpdateGlobal={updateGlobal}
+                paletteOv={paletteOv}
+                onChangeColor={updatePalette}
+                onApplyPreset={applyPalettePreset}
+                onResetColors={resetPalette}
               />
             )}
 
@@ -1272,7 +1301,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                   {pr.images?.[0] ? <img src={pr.images[0]} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-3 w-3 text-muted-foreground" />}
                 </div>
                 <span className="truncate flex-1 font-medium">{pr.title}</span>
-                <span className="text-[9px] text-muted-foreground font-mono">₹{pr.price}</span>
+                <span className="text-[9px] text-muted-foreground font-mono">Γé╣{pr.price}</span>
               </div>
             ))}
             {displayProducts.length === 0 && (
@@ -1345,7 +1374,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                             <p className="text-[10px] text-muted-foreground capitalize">{pr.category || "No category"}</p>
                           </div>
                         </div>
-                        <span className="font-mono text-[10px] font-bold text-muted-foreground ml-3">₹{pr.price}</span>
+                        <span className="font-mono text-[10px] font-bold text-muted-foreground ml-3">Γé╣{pr.price}</span>
                       </label>
                     );
                   })}
@@ -1468,7 +1497,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
           items={items}
           renderRow={(it, update) => (
             <div className="flex-1 space-y-1">
-              <Textarea rows={2} value={it.quote ?? ""}    onChange={(e) => update({ ...it, quote:    e.target.value })} className="text-xs" placeholder="“Quote…”" />
+              <Textarea rows={2} value={it.quote ?? ""}    onChange={(e) => update({ ...it, quote:    e.target.value })} className="text-xs" placeholder="ΓÇ£QuoteΓÇªΓÇ¥" />
               <div className="flex gap-1.5">
                 <Input value={it.author ?? ""}   onChange={(e) => update({ ...it, author:   e.target.value })} className="h-7 text-xs flex-1" placeholder="Author" />
                 <Input value={it.location ?? ""} onChange={(e) => update({ ...it, location: e.target.value })} className="h-7 text-xs flex-1" placeholder="Location" />
@@ -1666,6 +1695,201 @@ function ItemsEditor({ label, items, renderRow, blank, onChange }: { label: stri
   );
 }
 
+// ---- Global Design Inspector ----
+function GlobalDesignInspector({ globalOv, onUpdateGlobal, paletteOv, onChangeColor, onApplyPreset, onResetColors }: any) {
+  const fonts = globalOv?.fonts || {};
+  const radius = globalOv?.radius ?? 8;
+  const isBold = !!globalOv?.bold;
+  const btn = globalOv?.button || {};
+  const btnBg          = btn.bg          ?? "";
+  const btnFg          = btn.fg          ?? "";
+  const btnBorderColor = btn.borderColor ?? "";
+  const btnBorderWidth = btn.borderWidth ?? 0;
+  const btnRadius      = btn.radius      ?? radius;
+  const btnFontSize    = btn.fontSize    ?? 14;
+  const btnPaddingX    = btn.paddingX    ?? 20;
+  const btnPaddingY    = btn.paddingY    ?? 10;
+  const btnFontWeight  = btn.fontWeight  ?? 600;
+  const btnAnimation   = btn.animation   ?? "none";
+
+  const updateBtn = (key: string, value: any) => onUpdateGlobal("button", { ...btn, [key]: value });
+  const resetBtn = () => onUpdateGlobal("button", {});
+  const hasBtnOverrides = Object.keys(btn).length > 0;
+
+  const ALL_FONTS = [
+    { value: "Outfit", label: "Outfit" },
+    { value: "Playfair Display", label: "Playfair Display (Serif)" },
+    { value: "Cormorant Garamond", label: "Cormorant Garamond" },
+    { value: "Inter", label: "Inter" },
+    { value: "Gbarab", label: "Gbarab (Handwritten)" },
+    { value: "system-ui", label: "System Default" },
+  ];
+  const FONT_WEIGHTS = [
+    { value: 400, label: "Regular (400)" }, { value: 500, label: "Medium (500)" },
+    { value: 600, label: "Semi-bold (600)" }, { value: 700, label: "Bold (700)" }, { value: 800, label: "Extra-bold (800)" },
+  ];
+  const BTN_ANIMATIONS = [
+    { value: "none", label: "None" }, { value: "scale", label: "Scale up on hover" },
+    { value: "lift", label: "Lift (shadow)" }, { value: "fill", label: "Fill / brighten" },
+    { value: "pulse", label: "Pulse" }, { value: "bounce", label: "Bounce" },
+  ];
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* Typography */}
+      <div className="space-y-3">
+        <div className="px-4 pt-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Global Typography</h3>
+        </div>
+        <div className="p-4 border rounded-lg bg-card space-y-4">
+          <div>
+            <Label className="text-xs">Heading Font Family</Label>
+            <select value={fonts.heading || "Outfit"} onChange={(e) => onUpdateGlobal("fonts", { ...fonts, heading: e.target.value })}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring">
+              {ALL_FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Body Font Family</Label>
+            <select value={fonts.body || "Inter"} onChange={(e) => onUpdateGlobal("fonts", { ...fonts, body: e.target.value })}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring">
+              {ALL_FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center justify-between pt-1">
+            <Label className="text-xs">Make all text Bold</Label>
+            <Switch checked={isBold} onCheckedChange={(v) => onUpdateGlobal("bold", v)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Layout */}
+      <div className="space-y-3">
+        <div className="px-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Global Layout</h3>
+        </div>
+        <div className="p-4 border rounded-lg bg-card space-y-2">
+          <div className="flex justify-between items-center">
+            <Label className="text-xs">Corner Radius</Label>
+            <span className="text-xs font-mono font-semibold">{radius}px</span>
+          </div>
+          <Slider value={[radius]} min={0} max={32} step={1} onValueChange={([v]) => onUpdateGlobal("radius", v)} className="mt-2" />
+        </div>
+      </div>
+
+      {/* Global Buttons */}
+      <div className="space-y-3">
+        <div className="px-4 flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Global Buttons</h3>
+          {hasBtnOverrides && (
+            <button onClick={resetBtn} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5">
+              <RotateCcw className="h-3 w-3" /> reset
+            </button>
+          )}
+        </div>
+
+        {/* Live preview */}
+        <div className="px-4">
+          <div className="flex items-center justify-center py-3 border rounded-lg bg-muted/30" style={{ minHeight: 56 }}>
+            <span style={{
+              background: btnBg || "var(--p, #6366f1)", color: btnFg || "var(--pf, #ffffff)",
+              borderRadius: `${btnRadius}px`, fontSize: `${btnFontSize}px`, fontWeight: btnFontWeight,
+              padding: `${btnPaddingY}px ${btnPaddingX}px`,
+              border: btnBorderWidth > 0 ? `${btnBorderWidth}px solid ${btnBorderColor || "currentColor"}` : "none",
+              display: "inline-block", cursor: "default", lineHeight: 1.2,
+            }}>Shop Now</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground text-center mt-1">Live preview</p>
+        </div>
+
+        <div className="p-4 border rounded-lg bg-card space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-[10px]">Background Color</Label>
+              <div className="flex gap-1 items-center">
+                <input type="color" value={btnBg || "#6366f1"} onChange={(e) => updateBtn("bg", e.target.value)} className="h-7 w-7 rounded border cursor-pointer shrink-0" />
+                <Input value={btnBg} onChange={(e) => updateBtn("bg", e.target.value)} placeholder="theme primary" className="h-7 text-[11px] font-mono" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px]">Text Color</Label>
+              <div className="flex gap-1 items-center">
+                <input type="color" value={btnFg || "#ffffff"} onChange={(e) => updateBtn("fg", e.target.value)} className="h-7 w-7 rounded border cursor-pointer shrink-0" />
+                <Input value={btnFg} onChange={(e) => updateBtn("fg", e.target.value)} placeholder="theme primary_fg" className="h-7 text-[11px] font-mono" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px]">Border Color</Label>
+              <div className="flex gap-1 items-center">
+                <input type="color" value={btnBorderColor || "#6366f1"} onChange={(e) => updateBtn("borderColor", e.target.value)} className="h-7 w-7 rounded border cursor-pointer shrink-0" />
+                <Input value={btnBorderColor} onChange={(e) => updateBtn("borderColor", e.target.value)} placeholder="none" className="h-7 text-[11px] font-mono" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px]">Border Width</Label>
+              <div className="flex items-center gap-2">
+                <Slider value={[btnBorderWidth]} min={0} max={6} step={1} onValueChange={([v]) => updateBtn("borderWidth", v)} className="flex-1" />
+                <span className="text-xs font-mono w-8 text-right">{btnBorderWidth}px</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex justify-between items-center">
+              <Label className="text-xs">Corner Radius</Label>
+              <span className="text-xs font-mono font-semibold">{btnRadius}px</span>
+            </div>
+            <Slider value={[btnRadius]} min={0} max={50} step={1} onValueChange={([v]) => updateBtn("radius", v)} />
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex justify-between items-center">
+              <Label className="text-xs">Font Size</Label>
+              <span className="text-xs font-mono font-semibold">{btnFontSize}px</span>
+            </div>
+            <Slider value={[btnFontSize]} min={10} max={24} step={1} onValueChange={([v]) => updateBtn("fontSize", v)} />
+          </div>
+
+          <div>
+            <Label className="text-xs">Font Weight</Label>
+            <select value={btnFontWeight} onChange={(e) => updateBtn("fontWeight", Number(e.target.value))}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring">
+              {FONT_WEIGHTS.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <div className="flex justify-between"><Label className="text-xs">Padding X</Label><span className="text-xs font-mono">{btnPaddingX}px</span></div>
+              <Slider value={[btnPaddingX]} min={8} max={64} step={2} onValueChange={([v]) => updateBtn("paddingX", v)} />
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between"><Label className="text-xs">Padding Y</Label><span className="text-xs font-mono">{btnPaddingY}px</span></div>
+              <Slider value={[btnPaddingY]} min={4} max={32} step={1} onValueChange={([v]) => updateBtn("paddingY", v)} />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Hover Animation</Label>
+            <select value={btnAnimation} onChange={(e) => updateBtn("animation", e.target.value)}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring">
+              {BTN_ANIMATIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Palette */}
+      <div className="space-y-3">
+        <div className="px-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Global Colors</h3>
+        </div>
+        <PaletteInspector paletteOv={paletteOv} onChangeColor={onChangeColor} onApplyPreset={onApplyPreset} onReset={onResetColors} />
+      </div>
+    </div>
+  );
+}
+
 function PaletteInspector({ paletteOv, onChangeColor, onApplyPreset, onReset }: { paletteOv: Record<string, string>; onChangeColor: (k: string, v: string) => void; onApplyPreset: (p: Record<string, string>) => void; onReset: () => void }) {
   return (
     <div className="p-4 space-y-5">
@@ -1735,7 +1959,7 @@ function PaletteInspector({ paletteOv, onChangeColor, onApplyPreset, onReset }: 
   );
 }
 
-// ---------- Hero Inspector — Shopify/WordPress-grade controls ----------
+// ---------- Hero Inspector ΓÇö Shopify/WordPress-grade controls ----------
 const HERO_STYLES: Array<{ value: string; label: string; hint: string }> = [
   { value: "slider",           label: "Slider / Carousel",  hint: "Multiple slides with autoplay" },
   { value: "fixed",            label: "Fixed Banner",        hint: "Single full-bleed image" },
@@ -1807,7 +2031,7 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
     <div className="p-4 space-y-5">
       <div>
         <Label className="text-xs">Choose Style</Label>
-        <p className="text-[10px] text-muted-foreground mt-0.5">Switch the entire hero layout — the form below updates to match.</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">Switch the entire hero layout ΓÇö the form below updates to match.</p>
         <Select value={style} onValueChange={(v) => onUpdate(idx, "style", v)}>
           <SelectTrigger className="h-9 text-sm mt-1.5"><SelectValue /></SelectTrigger>
           <SelectContent className="max-h-80">
@@ -1928,7 +2152,7 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
         <div className="space-y-2 border-t pt-4">
           <Label className="text-xs">Video source</Label>
           <p className="text-[10px] text-muted-foreground">Paste a YouTube / Vimeo URL, or upload an MP4.</p>
-          <Input value={video.src ?? ""} placeholder="https://youtube.com/watch?v=… or https://vimeo.com/…" onChange={(e) => setVideo("src", e.target.value)} className="h-8 text-xs" />
+          <Input value={video.src ?? ""} placeholder="https://youtube.com/watch?v=ΓÇª or https://vimeo.com/ΓÇª" onChange={(e) => setVideo("src", e.target.value)} className="h-8 text-xs" />
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" asChild className="h-8 text-xs">
               <label className="cursor-pointer">
@@ -2038,7 +2262,7 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
                 className={`aspect-square rounded border text-[9px] ${contentAlign === a ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
                 title={a}
               >
-                ●
+                ΓùÅ
               </button>
             ))}
           </div>
@@ -2320,7 +2544,7 @@ function HeroAiImageButton({ idx, merged, onUpdate }: { idx: number; merged: any
       const url = (data as any)?.imageUrl;
       if (!url) throw new Error("No image returned");
       onUpdate(idx, "image", url);
-      toast.success(`Hero image generated · ${10} credits used`);
+      toast.success(`Hero image generated ┬╖ ${10} credits used`);
       setOpen(false);
     } catch (e: any) {
       toast.error(e?.message || "Generation failed");
@@ -2346,7 +2570,7 @@ function HeroAiImageButton({ idx, merged, onUpdate }: { idx: number; merged: any
             </div>
             <p className="text-[11px] text-muted-foreground">Uses 10 AI credits per image. Replaces the current hero image when ready.</p>
             <Button onClick={run} disabled={busy} className="w-full">
-              {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating…</> : <><Sparkles className="mr-2 h-4 w-4" /> Generate (10 credits)</>}
+              {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> GeneratingΓÇª</> : <><Sparkles className="mr-2 h-4 w-4" /> Generate (10 credits)</>}
             </Button>
           </div>
         </DialogContent>

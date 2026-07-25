@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+﻿import { useMemo, useState, useEffect } from "react";
 import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
@@ -76,7 +76,7 @@ interface Props {
   products?: Array<{ id: string; title: string; price: number; compare_at_price?: number | null; images?: string[] | null; category?: string | null }>;
   /** Seller-defined categories (with optional image / description / subs) to splice into category_grid and collections_grid sections. */
   sellerCategories?: Array<{ id?: string; name: string; image_url?: string | null; description?: string | null; subs?: Array<{ id?: string; name: string; image_url?: string | null }> }>;
-  /** Active product for the product detail page — injected into product_detail sections. */
+  /** Active product for the product detail page ΓÇö injected into product_detail sections. */
   product?: any;
   store?: any;
 }
@@ -85,9 +85,33 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const baseDna = manifest?.dna ?? {};
   // Merge global palette overrides into dna so every Section/Header/Footer picks them up.
   const palette = { ...(baseDna.palette ?? {}), ...((overrides as any)?.palette ?? {}) };
-  const dna = { ...baseDna, palette };
+
+  // Merge global fonts and layout overrides
+  const globalOv = (overrides as any)?.global || {};
+  const globalFonts = globalOv.fonts || {};
+  const mergedFonts = {
+    heading: globalFonts.heading || baseDna.fonts?.heading || "Outfit",
+    body: globalFonts.body || baseDna.fonts?.body || "Inter",
+    heading_weight: baseDna.fonts?.heading_weight ?? 700,
+  };
+
+  const dna = { ...baseDna, palette, fonts: mergedFonts };
   const fonts = dna.fonts ?? {};
-  const radius = dna.radius ?? "8px";
+  const radius = globalOv.radius != null ? `${globalOv.radius}px` : (dna.radius ?? "8px");
+
+  // Global button overrides
+  const globalBtn = globalOv.button || {};
+  const btnBg          = globalBtn.bg          || null;
+  const btnFg          = globalBtn.fg          || null;
+  const btnBorderColor = globalBtn.borderColor || null;
+  const btnBorderWidth = globalBtn.borderWidth != null ? `${globalBtn.borderWidth}px` : null;
+  const btnRadius      = globalBtn.radius      != null ? `${globalBtn.radius}px` : radius;
+  const btnFontSize    = globalBtn.fontSize    != null ? `${globalBtn.fontSize}px` : null;
+  const btnPaddingX    = globalBtn.paddingX    != null ? `${globalBtn.paddingX}px` : null;
+  const btnPaddingY    = globalBtn.paddingY    != null ? `${globalBtn.paddingY}px` : null;
+  const btnFontWeight  = globalBtn.fontWeight  != null ? String(globalBtn.fontWeight) : null;
+  const btnAnimation   = globalBtn.animation   || "none";
+
   const headerStyle = manifest?.header_style ?? dna.layout?.header_style ?? "classic";
   const brandName = overrides?.brand_name || dna.name;
   const headerOv = {
@@ -112,6 +136,16 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
     ["--bd" as any]: palette.border,
     ["--r" as any]: radius,
     ["--hf" as any]: `${fonts.heading}, serif`,
+    // Global button CSS vars
+    ...(btnBg          && { ["--btn-bg"           as any]: btnBg }),
+    ...(btnFg          && { ["--btn-fg"           as any]: btnFg }),
+    ...(btnBorderColor && { ["--btn-border-color" as any]: btnBorderColor }),
+    ...(btnBorderWidth && { ["--btn-border-width" as any]: btnBorderWidth }),
+    ["--btn-radius"    as any]: btnRadius,
+    ...(btnFontSize    && { ["--btn-font-size"    as any]: btnFontSize }),
+    ...(btnPaddingX    && { ["--btn-px"           as any]: btnPaddingX }),
+    ...(btnPaddingY    && { ["--btn-py"           as any]: btnPaddingY }),
+    ...(btnFontWeight  && { ["--btn-font-weight"  as any]: btnFontWeight }),
   };
 
   // (built-in collections synthesized below as renderedSections)
@@ -189,8 +223,89 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         [data-section-index] .section-kicker {
           color: var(--kicker-color) !important;
         }
+        ${globalOv.bold ? `
+          [data-master-theme], [data-master-theme] *, [data-master-theme] h1, [data-master-theme] h2, [data-master-theme] h3, [data-master-theme] p, [data-master-theme] span, [data-master-theme] button, [data-master-theme] a {
+            font-weight: 700 !important;
+          }
+        ` : ''}
+
+        /* ---- Global button styles ---- */
+        [data-master-theme] a.btn,
+        [data-master-theme] button.btn,
+        [data-master-theme] .s-cta,
+        [data-master-theme] .section-cta,
+        [data-master-theme] a[class*="px-"][class*="py-"],
+        [data-master-theme] button[class*="px-"][class*="py-"],
+        [data-master-theme] a[style*="var(--p)"],
+        [data-master-theme] button[style*="var(--p)"],
+        [data-master-theme] a[style*="background: var(--p"],
+        [data-master-theme] button[style*="background: var(--p"] {
+          background:    var(--btn-bg,           var(--p)) !important;
+          color:         var(--btn-fg,           var(--pf)) !important;
+          border-radius: var(--btn-radius,       var(--r)) !important;
+          font-size:     var(--btn-font-size,    inherit) !important;
+          font-weight:   var(--btn-font-weight,  inherit) !important;
+          padding:       var(--btn-py, 0.5em) var(--btn-px, 1.25em) !important;
+          border:        var(--btn-border-width, 0px) solid var(--btn-border-color, transparent) !important;
+          transition:    all 0.2s ease !important;
+        }
+
+        ${btnAnimation === "scale" ? `
+          [data-master-theme] a.btn:hover,
+          [data-master-theme] button.btn:hover,
+          [data-master-theme] .s-cta:hover,
+          [data-master-theme] .section-cta:hover,
+          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] a[style*="var(--p)"]:hover,
+          [data-master-theme] button[style*="var(--p)"]:hover {
+            transform: scale(1.05) !important;
+          }
+        ` : btnAnimation === "lift" ? `
+          [data-master-theme] a.btn:hover,
+          [data-master-theme] button.btn:hover,
+          [data-master-theme] .s-cta:hover,
+          [data-master-theme] .section-cta:hover,
+          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] a[style*="var(--p)"]:hover,
+          [data-master-theme] button[style*="var(--p)"]:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.18) !important;
+          }
+        ` : btnAnimation === "fill" ? `
+          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] a[style*="var(--p)"]:hover,
+          [data-master-theme] button[style*="var(--p)"]:hover {
+            filter: brightness(1.12) !important;
+          }
+        ` : btnAnimation === "pulse" ? `
+          @keyframes btn-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 var(--btn-bg, var(--p)); }
+            50%       { box-shadow: 0 0 0 8px transparent; }
+          }
+          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] a[style*="var(--p)"]:hover,
+          [data-master-theme] button[style*="var(--p)"]:hover {
+            animation: btn-pulse 0.8s ease infinite !important;
+          }
+        ` : btnAnimation === "bounce" ? `
+          @keyframes btn-bounce {
+            0%, 100% { transform: translateY(0); }
+            40%       { transform: translateY(-5px); }
+            60%       { transform: translateY(-3px); }
+          }
+          [data-master-theme] a[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] button[class*="px-"][class*="py-"]:hover,
+          [data-master-theme] a[style*="var(--p)"]:hover,
+          [data-master-theme] button[style*="var(--p)"]:hover {
+            animation: btn-bounce 0.5s ease !important;
+          }
+        ` : ''}
       `}} />
-      {/* Header is first child — sticky top-0 works against window scroll */}
+      {/* Header is first child ΓÇö sticky top-0 works against window scroll */}
       <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} />
       {renderedSections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
@@ -405,7 +520,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       : <div>{BrandInner}</div>;
   const CartBtn = storeSlug ? (
     <Link to={`/store/${storeSlug}/cart`} className="text-sm px-4 py-2 inline-flex items-center gap-2" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>
-      <ShoppingBag className="h-4 w-4" /> Cart · {totalItems}
+      <ShoppingBag className="h-4 w-4" /> Cart ┬╖ {totalItems}
     </Link>
   ) : (
     <button
@@ -413,7 +528,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       className="text-sm px-4 py-2 inline-flex items-center gap-2"
       style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}
     >
-      <ShoppingBag className="h-4 w-4" /> Cart · 0
+      <ShoppingBag className="h-4 w-4" /> Cart ┬╖ 0
     </button>
   );
   const AccountBtn = storeSlug ? (
@@ -731,21 +846,21 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
               {p.subtitle && <p className="text-xs" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
               <div className="space-y-4 text-xs leading-relaxed">
                 <div className="flex gap-3 items-start">
-                  <span className="text-sm">📍</span>
+                  <span className="text-sm">≡ƒôì</span>
                   <div>
                     <p className="font-semibold" style={{ color: dna.palette?.fg }}>Address</p>
                     <p style={{ color: dna.palette?.muted }}>{address}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="text-sm">⏰</span>
+                  <span className="text-sm">ΓÅ░</span>
                   <div>
                     <p className="font-semibold" style={{ color: dna.palette?.fg }}>Store Hours</p>
                     <p style={{ color: dna.palette?.muted }}>{hours}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="text-sm">📞</span>
+                  <span className="text-sm">≡ƒô₧</span>
                   <div>
                     <p className="font-semibold" style={{ color: dna.palette?.fg }}>Phone</p>
                     <p style={{ color: dna.palette?.muted }}>{phone}</p>
@@ -800,7 +915,7 @@ function ProviderTeamBlock({ p, dna, storeSlug }: any) {
               {m.image && <img src={m.image} alt={m.name} className="w-full aspect-[4/5] object-cover" />}
               <div className="p-5">
                 <div className="text-lg font-medium" style={{ fontFamily: "var(--hf)" }}>{m.name}</div>
-                <div className="text-xs uppercase tracking-wider mt-1" style={{ color: dna.palette?.accent }}>{m.role}{m.qualifications ? ` · ${m.qualifications}` : ""}</div>
+                <div className="text-xs uppercase tracking-wider mt-1" style={{ color: dna.palette?.accent }}>{m.role}{m.qualifications ? ` ┬╖ ${m.qualifications}` : ""}</div>
                 {m.experience && <div className="text-xs mt-2" style={{ color: dna.palette?.muted }}>{m.experience}</div>}
                 {m.bio && <p className="text-sm mt-3 leading-relaxed" style={{ color: dna.palette?.muted }}>{m.bio}</p>}
                 {m.specialties && Array.isArray(m.specialties) && (
@@ -845,7 +960,7 @@ function ServiceMenuBlock({ p, dna, storeSlug }: any) {
                       {s.description && <p className="text-sm mt-1" style={{ color: dna.palette?.muted }}>{s.description}</p>}
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-base font-semibold">₹{s.price}</div>
+                      <div className="text-base font-semibold">Γé╣{s.price}</div>
                       {storeSlug && <Link to={`/store/${storeSlug}/book?service=${encodeURIComponent(s.name)}`} className="inline-block mt-1 text-xs px-3 py-1.5" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Book</Link>}
                     </div>
                   </li>
@@ -864,7 +979,7 @@ function BookingWidgetBlock({ p, dna, storeSlug }: any) {
     <section className="py-16" style={{ background: dna.palette?.bg }}>
       <div className="max-w-3xl mx-auto px-6 p-8 text-center border" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
         <h2 className="text-3xl mb-3" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title ?? "Book your appointment"}</h2>
-        <p className="mb-6" style={{ color: dna.palette?.muted }}>{p.subtitle ?? "Choose a service, pick a provider and a slot — confirmation is instant."}</p>
+        <p className="mb-6" style={{ color: dna.palette?.muted }}>{p.subtitle ?? "Choose a service, pick a provider and a slot ΓÇö confirmation is instant."}</p>
         <div className="grid sm:grid-cols-3 gap-3 mb-6 text-left text-sm">
           {(p.steps ?? ["Pick a service", "Pick a provider & slot", "Confirm details"]).map((st: string, i: number) => (
             <div key={i} className="p-3 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
@@ -896,7 +1011,7 @@ function ClinicHoursBlock({ p, dna }: any) {
           {hours.map((h: any, i: number) => (
             <li key={i} className="py-2 flex items-center justify-between text-sm">
               <span className="font-medium">{h.day}</span>
-              <span style={{ color: dna.palette?.muted }}>{h.closed ? "Closed" : `${h.open} — ${h.close}`}</span>
+              <span style={{ color: dna.palette?.muted }}>{h.closed ? "Closed" : `${h.open} ΓÇö ${h.close}`}</span>
             </li>
           ))}
         </ul>
@@ -917,11 +1032,11 @@ function ServicePackagesBlock({ p, dna, storeSlug }: any) {
             <div key={i} className="p-6 border flex flex-col" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
               {pk.badge && <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: dna.palette?.accent }}>{pk.badge}</div>}
               <div className="text-xl font-medium mb-1" style={{ fontFamily: "var(--hf)" }}>{pk.name}</div>
-              <div className="text-2xl font-semibold mb-1">₹{pk.price}</div>
-              <div className="text-xs mb-4" style={{ color: dna.palette?.muted }}>{pk.total_visits ? `${pk.total_visits} visits · ` : ""}{pk.validity_days ? `Valid ${pk.validity_days} days` : ""}</div>
+              <div className="text-2xl font-semibold mb-1">Γé╣{pk.price}</div>
+              <div className="text-xs mb-4" style={{ color: dna.palette?.muted }}>{pk.total_visits ? `${pk.total_visits} visits ┬╖ ` : ""}{pk.validity_days ? `Valid ${pk.validity_days} days` : ""}</div>
               <ul className="text-sm space-y-1 mb-5 flex-1">
                 {(pk.includes ?? []).map((it: string, j: number) => (
-                  <li key={j} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>✓</span><span style={{ color: dna.palette?.muted }}>{it}</span></li>
+                  <li key={j} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>Γ£ô</span><span style={{ color: dna.palette?.muted }}>{it}</span></li>
                 ))}
               </ul>
               {storeSlug && <Link to={`/store/${storeSlug}/book?package=${encodeURIComponent(pk.name)}`} className="text-center px-4 py-2 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>Buy package</Link>}
@@ -963,13 +1078,13 @@ function ServiceDetailBlock({ p, dna, storeSlug }: any) {
         <div className="text-xs uppercase tracking-wider mb-2" style={{ color: dna.palette?.accent }}>{s.category ?? "Service"}</div>
         <h1 className="text-4xl mb-3" style={{ fontFamily: "var(--hf)" }}>{s.name}</h1>
         <div className="flex items-baseline gap-4 mb-4">
-          <div className="text-2xl font-semibold">₹{s.price}</div>
+          <div className="text-2xl font-semibold">Γé╣{s.price}</div>
           {s.duration_min && <div className="text-sm" style={{ color: dna.palette?.muted }}>{s.duration_min} minutes</div>}
         </div>
         <p className="mb-6 text-sm leading-relaxed" style={{ color: dna.palette?.muted }}>{s.description ?? "Detailed service information renders here."}</p>
         {Array.isArray(s.includes) && s.includes.length > 0 && (
           <ul className="text-sm space-y-1 mb-6">
-            {s.includes.map((it: string, i: number) => (<li key={i} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>✓</span>{it}</li>))}
+            {s.includes.map((it: string, i: number) => (<li key={i} className="flex gap-2"><span style={{ color: dna.palette?.accent }}>Γ£ô</span>{it}</li>))}
           </ul>
         )}
         {storeSlug
@@ -987,9 +1102,9 @@ function AppointmentsPanelBlock({ p, dna, storeSlug }: any) {
       <p className="mb-6 text-sm" style={{ color: dna.palette?.muted }}>{p.subtitle ?? "Upcoming, past visits and prescriptions all in one place."}</p>
       <div className="grid md:grid-cols-3 gap-4 mb-8">
         {(p.metrics ?? [
-          { label: "Upcoming", value: "—" },
-          { label: "Visits this year", value: "—" },
-          { label: "Active packages", value: "—" },
+          { label: "Upcoming", value: "ΓÇö" },
+          { label: "Visits this year", value: "ΓÇö" },
+          { label: "Active packages", value: "ΓÇö" },
         ]).map((m: any, i: number) => (
           <div key={i} className="p-4 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.surface }}>
             <div className="text-xs uppercase tracking-wider mb-1" style={{ color: dna.palette?.muted }}>{m.label}</div>
@@ -1075,7 +1190,7 @@ function LineItems({ dna, storeSlug }: any) {
                 <h3 className="text-sm font-semibold truncate">{item.title}</h3>
                 {item.variant && <p className="text-xs opacity-50">{item.variant}</p>}
                 <p className="text-sm font-bold mt-1" style={{ color: "var(--p)" }}>
-                  ₹{item.price.toLocaleString('en-IN')}
+                  Γé╣{item.price.toLocaleString('en-IN')}
                 </p>
               </div>
 
@@ -1134,7 +1249,7 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
     const result = await validateCoupon(storeId, couponCode.trim(), totalPrice, cartLines);
     if (result.valid && result.coupon) {
       setAppliedCoupon({ id: result.coupon.id, code: result.coupon.code, discount: result.discount! });
-      toast.success(`Coupon applied! You save ₹${Math.round(result.discount!).toLocaleString('en-IN')}`);
+      toast.success(`Coupon applied! You save Γé╣${Math.round(result.discount!).toLocaleString('en-IN')}`);
     } else {
       toast.error(result.error || 'Invalid coupon');
     }
@@ -1176,7 +1291,7 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
         </div>
         {appliedCoupon && (
           <p className="text-xs text-green-600 font-semibold mt-1.5 flex items-center gap-1">
-            <Tag className="h-3.5 w-3.5" /> Coupon "{appliedCoupon.code}" applied! Saving ₹{Math.round(discount).toLocaleString('en-IN')}
+            <Tag className="h-3.5 w-3.5" /> Coupon "{appliedCoupon.code}" applied! Saving Γé╣{Math.round(discount).toLocaleString('en-IN')}
           </p>
         )}
       </div>
@@ -1186,12 +1301,12 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm opacity-70">
             <span>Subtotal</span>
-            <span>₹{totalPrice.toLocaleString("en-IN")}</span>
+            <span>Γé╣{totalPrice.toLocaleString("en-IN")}</span>
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-sm text-green-600 font-medium">
               <span>Discount</span>
-              <span>-₹{Math.round(discount).toLocaleString("en-IN")}</span>
+              <span>-Γé╣{Math.round(discount).toLocaleString("en-IN")}</span>
             </div>
           )}
           <div className="flex justify-between text-sm opacity-70 pb-2 border-b" style={{ borderColor: dna.palette?.border }}>
@@ -1200,7 +1315,7 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
           </div>
           <div className="flex justify-between text-base font-bold pt-2">
             <span>Total</span>
-            <span style={{ color: "var(--p)" }}>₹{Math.round(finalPrice).toLocaleString("en-IN")}</span>
+            <span style={{ color: "var(--p)" }}>Γé╣{Math.round(finalPrice).toLocaleString("en-IN")}</span>
           </div>
         </div>
         <Link 
@@ -1234,7 +1349,7 @@ function JournalStrip({ p, dna, storeSlug }: any) {
     <section className="max-w-6xl mx-auto px-6 py-16">
       <div className="flex items-end justify-between mb-8">
         <h2 className="text-3xl" style={{ fontFamily: "var(--hf)" }}>{p.title || "Journal"}</h2>
-        {storeSlug && <Link to={`/store/${storeSlug}/journal`} className="text-sm" style={{ color: dna.palette?.accent }}>Read all →</Link>}
+        {storeSlug && <Link to={`/store/${storeSlug}/journal`} className="text-sm" style={{ color: dna.palette?.accent }}>Read all ΓåÆ</Link>}
       </div>
       <div className="grid md:grid-cols-3 gap-6">
         {Array.from({ length: p.limit || 3 }).map((_, i) => (
@@ -1488,7 +1603,7 @@ function ContactForm({ p, dna, storeSlug }: any) {
               style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {sending ? "Sending…" : "Send Message"}
+              {sending ? "SendingΓÇª" : "Send Message"}
             </button>
           </form>
           )}
@@ -1573,7 +1688,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
     setTimeout(() => setAdded(false), 2000);
   };
 
-  // No product data yet — show loading skeleton
+  // No product data yet ΓÇö show loading skeleton
   if (!pr.id && !name) {
     return (
       <section className="max-w-6xl mx-auto px-6 py-16">
@@ -1624,10 +1739,10 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
 
           {/* Price */}
           <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-black" style={{ color: dna.palette?.primary }}>₹{price.toLocaleString("en-IN")}</span>
+            <span className="text-3xl font-black" style={{ color: dna.palette?.primary }}>Γé╣{price.toLocaleString("en-IN")}</span>
             {compareAt > price && (
               <>
-                <span className="text-lg line-through" style={{ color: dna.palette?.muted }}>₹{compareAt.toLocaleString("en-IN")}</span>
+                <span className="text-lg line-through" style={{ color: dna.palette?.muted }}>Γé╣{compareAt.toLocaleString("en-IN")}</span>
                 <span className="text-sm font-bold px-2 py-0.5 rounded-full" style={{ background: "#dcfce7", color: "#16a34a" }}>{discount}% off</span>
               </>
             )}
@@ -1648,14 +1763,14 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
           {/* Qty + Add to Cart */}
           <div className="flex items-center gap-3 mt-2">
             <div className="flex items-center border rounded-xl overflow-hidden" style={{ borderColor: dna.palette?.border }}>
-              <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-4 py-3 text-lg hover:opacity-60 transition" style={{ color: dna.palette?.fg }}>−</button>
+              <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-4 py-3 text-lg hover:opacity-60 transition" style={{ color: dna.palette?.fg }}>ΓêÆ</button>
               <span className="px-4 py-3 text-sm font-bold min-w-[40px] text-center" style={{ color: dna.palette?.fg }}>{qty}</span>
               <button onClick={() => setQty(q => q + 1)} className="px-4 py-3 text-lg hover:opacity-60 transition" style={{ color: dna.palette?.fg }}>+</button>
             </div>
             <button onClick={handleAdd} disabled={pr.inventory_count === 0}
               className="flex-1 py-3 px-6 font-bold text-sm rounded-xl transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
               style={{ background: dna.palette?.primary, color: dna.palette?.primary_fg, borderRadius: "var(--r)" }}>
-              {added ? "✓ Added!" : pr.inventory_count === 0 ? "Out of Stock" : "Add to Cart"}
+              {added ? "Γ£ô Added!" : pr.inventory_count === 0 ? "Out of Stock" : "Add to Cart"}
             </button>
           </div>
 
@@ -1669,7 +1784,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
 
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-3 mt-2 pt-4 border-t" style={{ borderColor: dna.palette?.border }}>
-            {[["🔒","Secure","Payment"],["↩","7 Day","Returns"],["🚚","Free","Shipping"]].map(([icon,t,s],i) => (
+            {[["≡ƒöÆ","Secure","Payment"],["Γå⌐","7 Day","Returns"],["≡ƒÜÜ","Free","Shipping"]].map(([icon,t,s],i) => (
               <div key={i} className="text-center p-2 rounded-lg" style={{ background: dna.palette?.surface }}>
                 <div className="text-lg mb-1">{icon}</div>
                 <div className="text-[10px] font-bold" style={{ color: dna.palette?.fg }}>{t}</div>
@@ -1684,7 +1799,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
 }
 
 // =============================================================================
-// HERO — Shopify/WordPress-grade flexibility
+// HERO ΓÇö Shopify/WordPress-grade flexibility
 // Styles: slider | fixed | half_banner | split | fullscreen_image | video |
 //         magazine | editorial_serif | minimal_left | asymmetric | gradient | centered
 // =============================================================================
@@ -1830,8 +1945,8 @@ function HeroSlider({ slides, slider, dna, shopHref, height, contentAlign, overl
       })}
       {arrows && list.length > 1 && (
         <>
-          <button aria-label="Previous slide" onClick={() => setIdx((i) => (i - 1 + list.length) % list.length)} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">‹</button>
-          <button aria-label="Next slide"     onClick={() => setIdx((i) => (i + 1) % list.length)}                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">›</button>
+          <button aria-label="Previous slide" onClick={() => setIdx((i) => (i - 1 + list.length) % list.length)} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">ΓÇ╣</button>
+          <button aria-label="Next slide"     onClick={() => setIdx((i) => (i + 1) % list.length)}                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">ΓÇ║</button>
         </>
       )}
       {dots && list.length > 1 && (
@@ -1930,7 +2045,7 @@ function HeroBtn({ kind, label, href, cfg, freePos }: { kind: "primary" | "secon
 
 function Hero({ p, dna, storeSlug }: any) {
   const v = p.style ?? "centered";
-  // ── 3D theme styles ───────────────────────────────────────────────────────
+  // ΓöÇΓöÇ 3D theme styles ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   if (v === "holographic_3d") return <HeroHolographic3D p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "liquid_metal")   return <HeroLiquidMetal   p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "neon_botanical") return <HeroNeonBotanical p={p} dna={dna} storeSlug={storeSlug} />;
@@ -2284,7 +2399,7 @@ function CollectionsBlock({ p, dna, storeSlug }: any) {
                 className="mt-4 inline-flex items-center text-sm self-start"
                 style={{ color: dna.palette?.accent }}
               >
-                Shop {c.name} →
+                Shop {c.name} ΓåÆ
               </Link>
             </div>
           </article>
@@ -2298,7 +2413,7 @@ function CollectionsBlock({ p, dna, storeSlug }: any) {
 // fall back to product list filtered by category if no subs.
 function CollectionDetailBlock({ p, dna, storeSlug }: any) {
   const items: any[] = p.items ?? [];
-  // Path is /collections/:categoryId — pull from window since useParams is hard to reach here.
+  // Path is /collections/:categoryId ΓÇö pull from window since useParams is hard to reach here.
   const segments = typeof window !== "undefined" ? window.location.pathname.split("/") : [];
   const categoryId = segments[segments.indexOf("collections") + 1] || "";
   const cat = items.find((c: any) => c.id === categoryId) || null;
@@ -2306,7 +2421,7 @@ function CollectionDetailBlock({ p, dna, storeSlug }: any) {
     return (
       <section className="max-w-3xl mx-auto px-6 py-20 text-center">
         <h1 className="text-3xl mb-3" style={{ fontFamily: "var(--hf)" }}>Collection not found</h1>
-        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-sm" style={{ color: dna.palette?.accent }}>← Back to all collections</Link>}
+        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-sm" style={{ color: dna.palette?.accent }}>ΓåÉ Back to all collections</Link>}
       </section>
     );
   }
@@ -2314,7 +2429,7 @@ function CollectionDetailBlock({ p, dna, storeSlug }: any) {
   return (
     <>
       <section className="max-w-6xl mx-auto px-6 pt-12 pb-6">
-        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>← All collections</Link>}
+        {storeSlug && <Link to={`/store/${storeSlug}/collections`} className="text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>ΓåÉ All collections</Link>}
         <div className="mt-4 grid md:grid-cols-[1.2fr_1fr] gap-8 items-center">
           <div>
             <h1 className="text-5xl mb-4" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{cat.name}</h1>
@@ -2358,7 +2473,7 @@ function CollectionDetailBlock({ p, dna, storeSlug }: any) {
 
 function ProductBlock({ p, dna, storeSlug, page }: any) {
   const v = p.style ?? "grid_clean";
-  // ── 3D theme product styles ───────────────────────────────────────────────
+  // ΓöÇΓöÇ 3D theme product styles ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   if (v === "glass_3d")        return <ProductsGlass3D    p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "chrome_3d")       return <ProductsChrome     p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "botanical_cards") return <ProductsBotanical  p={p} dna={dna} storeSlug={storeSlug} />;
@@ -2454,8 +2569,8 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
                 {pr.badge && <div className="text-xs mt-1" style={{ color: dna.palette?.accent }}>{pr.badge}</div>}
               </div>
               <div className="text-right">
-                <div className="text-lg">₹{pr.price}</div>
-                {pr.compare_at > pr.price && <div className="text-xs line-through" style={{ color: dna.palette?.muted }}>₹{pr.compare_at}</div>}
+                <div className="text-lg">Γé╣{pr.price}</div>
+                {pr.compare_at > pr.price && <div className="text-xs line-through" style={{ color: dna.palette?.muted }}>Γé╣{pr.compare_at}</div>}
               </div>
             </Link>
           ))}
@@ -2495,8 +2610,8 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
               </div>
               <div className="text-sm font-medium">{pr.name}</div>
               <div className="mt-1 text-sm flex gap-2">
-                <span>₹{pr.price}</span>
-                {pr.compare_at > pr.price && <span className="line-through" style={{ color: dna.palette?.muted }}>₹{pr.compare_at}</span>}
+                <span>Γé╣{pr.price}</span>
+                {pr.compare_at > pr.price && <span className="line-through" style={{ color: dna.palette?.muted }}>Γé╣{pr.compare_at}</span>}
               </div>
             </Link>
             {storeSlug && pr.id && (
@@ -2527,7 +2642,7 @@ function Footer({ footer, dna, brandName, storeSlug, onNavigate, footerOv }: any
   };
 
   // Build merged columns: footerOv.columns overrides; else manifest footer.columns (legacy
-  // shape: links as string[] — convert to {label, href}); else sensible defaults.
+  // shape: links as string[] ΓÇö convert to {label, href}); else sensible defaults.
   const defaultColumns: FooterOv["columns"] = [
     { title: "Shop", links: [
       { label: "All products", href: "", page: "shop" },
@@ -2603,7 +2718,7 @@ function Footer({ footer, dna, brandName, storeSlug, onNavigate, footerOv }: any
       {showPoweredBy && (
         <div className="border-t" style={{ borderColor: dna.palette?.border }}>
           <div className="max-w-6xl mx-auto px-6 py-4 text-[11px] flex flex-wrap justify-between gap-2" style={{ color: dna.palette?.muted }}>
-            <span>© {new Date().getFullYear()} {brandName}. All rights reserved.</span>
+            <span>┬⌐ {new Date().getFullYear()} {brandName}. All rights reserved.</span>
             <span>Powered by <a href="https://pictocart.in" target="_blank" rel="noreferrer" className="hover:underline">Pic to Cart</a></span>
           </div>
         </div>
@@ -2628,7 +2743,7 @@ function guessPage(label: string): string {
 }
 
 /**
- * Testimonials block — uses props.items if provided (manifest/overrides),
+ * Testimonials block ΓÇö uses props.items if provided (manifest/overrides),
  * otherwise auto-loads merchant-managed testimonials from store_testimonials.
  */
 function TestimonialsBlock({ p, dna, storeSlug }: any) {
@@ -2683,7 +2798,7 @@ function TestimonialsBlock({ p, dna, storeSlug }: any) {
 }
 
 /**
- * Google Reviews block — only renders if store has an active paid connection.
+ * Google Reviews block ΓÇö only renders if store has an active paid connection.
  */
 function GoogleReviewsBlock({ p, dna, storeSlug }: any) {
   const [data, setData] = useState<{ conn: any; reviews: any[] } | null>(null);
@@ -2753,9 +2868,9 @@ function GoogleReviewsBlock({ p, dna, storeSlug }: any) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 3D STAR FIELD — shared animated starfield background for themes 15/16/17
-// ═══════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// 3D STAR FIELD ΓÇö shared animated starfield background for themes 15/16/17
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 function StarField3D({ color1 = "#6366f1", color2 = "#a855f7", count = 120 }: { color1?: string; color2?: string; count?: number }) {
   const stars = Array.from({ length: count }, (_, i) => ({
     id: i, x: Math.random() * 100, y: Math.random() * 100,
@@ -2805,9 +2920,9 @@ function StarField3D({ color1 = "#6366f1", color2 = "#a855f7", count = 120 }: { 
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// THEME-16  LIQUID METAL — chrome/silver, morphing 3D, magnetic feel
-// ═══════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// THEME-16  LIQUID METAL ΓÇö chrome/silver, morphing 3D, magnetic feel
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 function HeroLiquidMetal({ p, dna, storeSlug }: any) {
   const ctaHref = p.cta_href || (storeSlug ? `/store/${storeSlug}/shop` : "#products");
   const P = "#94a3b8", A = "#e2e8f0";
@@ -2860,12 +2975,12 @@ function HeroLiquidMetal({ p, dna, storeSlug }: any) {
             </a>
             <a href={storeSlug ? `/store/${storeSlug}/collections` : "#"} className="px-10 py-4 font-bold text-sm rounded-xl transition-all hover:scale-105"
               style={{ border: `1px solid ${P}50`, color: P, backdropFilter: "blur(10px)", background: `${P}08` }}>
-              Lookbook →
+              Lookbook ΓåÆ
             </a>
           </div>
           {/* Stats row */}
           <div className="flex gap-8 mt-12 pt-8 border-t" style={{ borderColor: "#1e293b" }}>
-            {[["10K+","Happy Clients"],["500+","Products"],["4.9★","Rating"]].map(([n,l],i) => (
+            {[["10K+","Happy Clients"],["500+","Products"],["4.9Γÿà","Rating"]].map(([n,l],i) => (
               <div key={i}>
                 <div className="text-2xl font-black lm-shimmer-text">{n}</div>
                 <div className="text-[11px] mt-1" style={{ color: "#475569" }}>{l}</div>
@@ -2889,7 +3004,7 @@ function HeroLiquidMetal({ p, dna, storeSlug }: any) {
             }}>
               {i === 2 && (
                 <div className="absolute inset-0 rounded-3xl overflow-hidden p-8 flex flex-col justify-end">
-                  <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: P }}>◈ New Season</div>
+                  <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: P }}>Γùê New Season</div>
                   <div className="text-3xl font-black text-white mb-1">Chrome Series</div>
                   <div className="text-sm" style={{ color: "#64748b" }}>Premium Collection 2025</div>
                 </div>
@@ -2905,7 +3020,7 @@ function HeroLiquidMetal({ p, dna, storeSlug }: any) {
       <div className="absolute bottom-0 left-0 right-0 overflow-hidden py-3" style={{ borderTop: "1px solid #1e293b", background: "#050810ee" }}>
         <div style={{ display: "inline-block", whiteSpace: "nowrap", animation: "lm-ticker 20s linear infinite" }}>
           {Array(8).fill(null).map((_,i) => (
-            <span key={i} className="mx-10 text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: "#334155" }}>◈ Premium Quality &nbsp;◈ Fast Delivery &nbsp;◈ 100% Secure &nbsp;◈ Easy Returns</span>
+            <span key={i} className="mx-10 text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: "#334155" }}>Γùê Premium Quality &nbsp;Γùê Fast Delivery &nbsp;Γùê 100% Secure &nbsp;Γùê Easy Returns</span>
           ))}
         </div>
       </div>
@@ -2969,8 +3084,8 @@ function ProductsChrome({ p, dna, storeSlug }: any) {
                 <div className="p-4">
                   <div className="text-sm font-bold truncate mb-1" style={{ color: A }}>{pr.name}</div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-base font-black" style={{ color: P }}>₹{pr.price}</span>
-                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#334155" }}>₹{pr.compare_at}</span>}
+                    <span className="text-base font-black" style={{ color: P }}>Γé╣{pr.price}</span>
+                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#334155" }}>Γé╣{pr.compare_at}</span>}
                   </div>
                 </div>
               </Link>
@@ -3038,16 +3153,16 @@ function PromoChromeWave({ p, dna, storeSlug }: any) {
         <p className="text-lg mb-12 max-w-lg mx-auto leading-loose" style={{ color:"#475569" }}>{p.subtitle || "Precision-forged pieces for the modern connoisseur."}</p>
         <a href={ctaHref} className="inline-flex items-center gap-3 px-12 py-5 font-black text-sm rounded-2xl transition-all hover:scale-105 hover:-translate-y-1"
           style={{ background:`linear-gradient(135deg,${P},#475569)`, color:"#050810", boxShadow:`0 0 50px ${P}50, inset 0 1px 0 rgba(255,255,255,0.2)` }}>
-          {p.cta || "Shop Now"} <span style={{ fontSize:18 }}>→</span>
+          {p.cta || "Shop Now"} <span style={{ fontSize:18 }}>ΓåÆ</span>
         </a>
       </div>
     </section>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// THEME-17  NEON BOTANICAL — bioluminescent, organic, otherworldly glow
-// ═══════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// THEME-17  NEON BOTANICAL ΓÇö bioluminescent, organic, otherworldly glow
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 function HeroNeonBotanical({ p, dna, storeSlug }: any) {
   const ctaHref = p.cta_href || (storeSlug ? `/store/${storeSlug}/shop` : "#products");
   const N = "#10b981", G = "#34d399";
@@ -3103,7 +3218,7 @@ function HeroNeonBotanical({ p, dna, storeSlug }: any) {
           <div className="flex gap-4 flex-wrap">
             <a href={ctaHref} className="nb-drip group relative px-10 py-4 font-black text-sm rounded-2xl overflow-hidden"
               style={{ background:`linear-gradient(135deg,${N},${G})`, color:"#010d08", boxShadow:`0 0 50px ${N}60, inset 0 1px 0 rgba(255,255,255,0.2)` }}>
-              🌿 {p.cta || "Explore Now"}
+              ≡ƒî┐ {p.cta || "Explore Now"}
             </a>
             <a href={storeSlug ? `/store/${storeSlug}/collections` : "#"} className="px-10 py-4 font-bold text-sm rounded-2xl transition-all hover:scale-105"
               style={{ border:`1px solid ${N}40`, color:N, background:`${N}08`, backdropFilter:"blur(10px)" }}>
@@ -3112,7 +3227,7 @@ function HeroNeonBotanical({ p, dna, storeSlug }: any) {
           </div>
           {/* Live pulse counter */}
           <div className="flex gap-6 mt-12 pt-8 border-t" style={{ borderColor:`${N}20` }}>
-            {[["2.4K","Active Now","👁"],["98%","Satisfaction","⭐"],["1hr","Avg Delivery","⚡"]].map(([n,l,e],i) => (
+            {[["2.4K","Active Now","≡ƒæü"],["98%","Satisfaction","Γ¡É"],["1hr","Avg Delivery","ΓÜí"]].map(([n,l,e],i) => (
               <div key={i} className="text-center">
                 <div className="text-xl font-black" style={{ color:N }}>{e} {n}</div>
                 <div className="text-[11px] mt-1" style={{ color:"#065f46" }}>{l}</div>
@@ -3128,7 +3243,7 @@ function HeroNeonBotanical({ p, dna, storeSlug }: any) {
           ))}
           <div className="nb-breathe relative z-10 rounded-full flex items-center justify-center" style={{ width:200, height:200, background:`radial-gradient(circle,${N}30,${N}08)`, border:`1.5px solid ${N}50`, backdropFilter:"blur(20px)", boxShadow:`0 0 80px ${N}40` }}>
             <div className="text-center">
-              <div style={{ fontSize:60 }}>🌿</div>
+              <div style={{ fontSize:60 }}>≡ƒî┐</div>
               <div className="text-xs font-black mt-2" style={{ color:N }}>PURE ORGANIC</div>
             </div>
           </div>
@@ -3142,9 +3257,9 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
   const { themeId } = useParams<{ themeId: string }>();
   const N = "#10b981", G = "#34d399";
   const items: any[] = (p.items && p.items.length > 0) ? p.items : [
-    { id:"b1", name:"Forest Serum",   price:999,  compare_at:1499, image:"https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&auto=format&fit=crop&q=60", badge:"✨" },
+    { id:"b1", name:"Forest Serum",   price:999,  compare_at:1499, image:"https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&auto=format&fit=crop&q=60", badge:"Γ£¿" },
     { id:"b2", name:"Moss Candle Set",price:599,  compare_at:799,  image:"https://images.unsplash.com/photo-1596433809252-260c2745df6b?w=600&auto=format&fit=crop&q=60", badge:"" },
-    { id:"b3", name:"Jade Stone Kit", price:1299, compare_at:1799, image:"https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=60", badge:"🌿" },
+    { id:"b3", name:"Jade Stone Kit", price:1299, compare_at:1799, image:"https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=60", badge:"≡ƒî┐" },
     { id:"b4", name:"Botanical Mist",  price:799,  compare_at:999,  image:"https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&auto=format&fit=crop&q=60", badge:"" },
   ];
   const linkFor = (pr: any) => storeSlug && pr.id ? `/store/${storeSlug}/product/${pr.id}${themeId ? `/${themeId}` : ""}` : "#";
@@ -3173,7 +3288,7 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {p.title && (
           <div className="flex items-center gap-6 mb-14">
-            <div className="text-3xl">🌿</div>
+            <div className="text-3xl">≡ƒî┐</div>
             <h2 className="text-4xl font-black" style={{ fontFamily:"var(--hf)", color:N, textShadow:`0 0 30px ${N}60` }}>{p.title}</h2>
             <div className="h-px flex-1" style={{ background:`linear-gradient(90deg,${N}50,transparent)` }} />
           </div>
@@ -3198,8 +3313,8 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
                 <div className="p-4">
                   <div className="text-sm font-bold truncate mb-1" style={{ color:"#d1fae5" }}>{pr.name}</div>
                   <div className="flex items-baseline gap-2">
-                    <span className="font-black text-base" style={{ color:N, textShadow:`0 0 10px ${N}60` }}>₹{pr.price}</span>
-                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#065f46" }}>₹{pr.compare_at}</span>}
+                    <span className="font-black text-base" style={{ color:N, textShadow:`0 0 10px ${N}60` }}>Γé╣{pr.price}</span>
+                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#065f46" }}>Γé╣{pr.compare_at}</span>}
                   </div>
                 </div>
               </Link>
@@ -3266,16 +3381,16 @@ function PromoBotanical({ p, dna, storeSlug }: any) {
         <p className="text-lg mb-12 max-w-lg mx-auto leading-loose" style={{ color:"#6ee7b7" }}>{p.subtitle || "New energy. New season. Discover what's blooming now."}</p>
         <a href={ctaHref} className="nb-drip inline-flex items-center gap-3 px-12 py-5 font-black text-sm rounded-2xl transition-all hover:scale-105 hover:-translate-y-1"
           style={{ background:`linear-gradient(135deg,${N},${G})`, color:"#010d08", boxShadow:`0 0 60px ${N}60` }}>
-          🌱 {p.cta || "Explore Now"}
+          ≡ƒî▒ {p.cta || "Explore Now"}
         </a>
       </div>
     </section>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 // SPARKLE BACKGROUND + CURSOR TRAIL + SCROLL REVEAL  (theme-15)
-// ═══════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 function SparkleBackground({ count = 60, primaryColor = "#a855f7", accentColor = "#6366f1" }: { count?: number; primaryColor?: string; accentColor?: string }) {
   const particles = Array.from({ length: count }, (_, i) => ({
     id: i, size: Math.random() * 4 + 1, x: Math.random() * 100, y: Math.random() * 100,
@@ -3342,7 +3457,7 @@ function ScrollAnimationProvider({ primaryColor = "#6366f1" }: { primaryColor?: 
       document.head.appendChild(s);
     }
     const bar = Object.assign(document.createElement("div"), { id:"t15-bar" });
-    const btn = Object.assign(document.createElement("button"), { id:"t15-top", innerHTML:"↑", title:"Back to top" });
+    const btn = Object.assign(document.createElement("button"), { id:"t15-top", innerHTML:"Γåæ", title:"Back to top" });
     btn.onclick = () => window.scrollTo({ top:0, behavior:"smooth" });
     document.body.append(bar, btn);
     const markAndObserve = () => {
@@ -3363,9 +3478,9 @@ function ScrollAnimationProvider({ primaryColor = "#6366f1" }: { primaryColor?: 
   return null;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// THEME-15  COSMIC 3D — deep space, sparkles, holographic
-// ═══════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// THEME-15  COSMIC 3D ΓÇö deep space, sparkles, holographic
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 function HeroHolographic3D({ p, dna, storeSlug }: any) {
   const ctaHref = p.cta_href || (storeSlug ? `/store/${storeSlug}/shop` : "#products");
   const primary = dna.palette?.primary ?? "#6366f1";
@@ -3390,7 +3505,7 @@ function HeroHolographic3D({ p, dna, storeSlug }: any) {
       ))}
       <div className="relative z-10 max-w-5xl mx-auto px-6 text-center" style={{ perspective:"1000px" }}>
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 text-xs font-bold uppercase tracking-widest" style={{ background:`${primary}20`,border:`1px solid ${primary}50`,color:primary }}>
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background:primary }} /> New Collection — Theme 15
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background:primary }} /> New Collection ΓÇö Theme 15
         </div>
         <h1 className="holo-title text-5xl md:text-8xl font-black leading-tight mb-6" style={{ fontFamily:"var(--hf)" }}>{p.title || "Welcome to Theme 15"}</h1>
         <p className="text-lg md:text-xl max-w-2xl mx-auto mb-10 text-white/70">{p.sub || "Experience the future of shopping with immersive 3D design"}</p>
@@ -3399,7 +3514,7 @@ function HeroHolographic3D({ p, dna, storeSlug }: any) {
           <a href={storeSlug?`/store/${storeSlug}/shop`:"#"} className="px-8 py-4 font-bold text-sm rounded-xl" style={{ border:`1px solid ${accent}60`,color:accent,background:`${accent}10` }}>Shop All</a>
         </div>
         <div className="hidden md:flex gap-6 justify-center mt-16">
-          {[{label:"Best Seller",badge:"🔥",delay:0},{label:"New Arrival",badge:"✨",delay:1},{label:"Top Pick",badge:"⚡",delay:2}].map((card,i)=>(
+          {[{label:"Best Seller",badge:"≡ƒöÑ",delay:0},{label:"New Arrival",badge:"Γ£¿",delay:1},{label:"Top Pick",badge:"ΓÜí",delay:2}].map((card,i)=>(
             <div key={i} className="holo-card px-6 py-3 rounded-2xl text-sm font-semibold" style={{ background:`linear-gradient(135deg,${primary}20,${accent}15)`,border:`1px solid ${primary}40`,color:"#fff",animationDelay:`${card.delay*.8}s`,backdropFilter:"blur(12px)" }}>{card.badge} {card.label}</div>
           ))}
         </div>
@@ -3417,7 +3532,7 @@ function ProductsGlass3D({ p, dna, storeSlug }: any) {
     { id:"d1",name:"Crystal Sneakers",price:2999,compare_at:4999,image:"https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop&q=60",badge:"Hot" },
     { id:"d2",name:"Neon Jacket",     price:4999,compare_at:7999,image:"https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&auto=format&fit=crop&q=60",badge:"New" },
     { id:"d3",name:"Prism Tee",       price:1299,compare_at:1999,image:"https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=60",badge:"Sale" },
-    { id:"d4",name:"Holo Denim",      price:2499,compare_at:3999,image:"https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop&q=60",badge:"🔥" },
+    { id:"d4",name:"Holo Denim",      price:2499,compare_at:3999,image:"https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop&q=60",badge:"≡ƒöÑ" },
   ];
   const linkFor = (pr: any) => storeSlug && pr.id ? `/store/${storeSlug}/product/${pr.id}${themeId?`/${themeId}`:""}` : "#";
   const productCols = p.product_cols ?? 4;
@@ -3457,8 +3572,8 @@ function ProductsGlass3D({ p, dna, storeSlug }: any) {
                   <div className="p-4 flex-1 flex flex-col justify-between">
                     <div className="text-sm font-bold text-white mb-2">{pr.name}</div>
                     <div className="flex items-center gap-2">
-                      <span className="text-base font-black" style={{ color:primary }}>₹{pr.price}</span>
-                      {pr.compare_at>pr.price && <span className="text-xs line-through text-white/40">₹{pr.compare_at}</span>}
+                      <span className="text-base font-black" style={{ color:primary }}>Γé╣{pr.price}</span>
+                      {pr.compare_at>pr.price && <span className="text-xs line-through text-white/40">Γé╣{pr.compare_at}</span>}
                     </div>
                   </div>
                 </div>
@@ -3503,10 +3618,10 @@ function PromoAuroraWave({ p, dna, storeSlug }: any) {
       <div className="aurora-2 absolute inset-0 pointer-events-none" style={{ background:`radial-gradient(ellipse 70% 50% at 80% 40%,${accent}30,transparent 60%)` }} />
       <SparkleBackground count={50} primaryColor={primary} accentColor={accent} />
       <div className="relative z-10 max-w-4xl mx-auto px-6">
-        {p.promo_code && <div className="code-flash inline-flex items-center gap-2 px-5 py-2 rounded-full mb-6 text-sm font-black tracking-widest" style={{ background:`${primary}20`,border:`1px solid ${primary}60`,color:primary }}>🎁 USE CODE: <span className="text-white">{p.promo_code}</span></div>}
+        {p.promo_code && <div className="code-flash inline-flex items-center gap-2 px-5 py-2 rounded-full mb-6 text-sm font-black tracking-widest" style={{ background:`${primary}20`,border:`1px solid ${primary}60`,color:primary }}>≡ƒÄü USE CODE: <span className="text-white">{p.promo_code}</span></div>}
         <h2 className="text-4xl md:text-6xl font-black mb-6 text-white leading-tight" style={{ fontFamily:"var(--hf)",textShadow:`0 0 40px ${primary}80` }}>{p.title || "Cosmic Sale"}</h2>
         <p className="text-lg text-white/60 max-w-xl mx-auto mb-10">{p.subtitle || "Limited-time offer across the entire store."}</p>
-        <a href={ctaHref} className="inline-flex items-center gap-2 px-10 py-4 text-base font-black rounded-2xl text-white transition-all hover:scale-105" style={{ background:`linear-gradient(135deg,${primary},${accent})`,boxShadow:`0 8px 40px ${primary}50` }}>⚡ {p.cta || "Claim Discount"}</a>
+        <a href={ctaHref} className="inline-flex items-center gap-2 px-10 py-4 text-base font-black rounded-2xl text-white transition-all hover:scale-105" style={{ background:`linear-gradient(135deg,${primary},${accent})`,boxShadow:`0 8px 40px ${primary}50` }}>ΓÜí {p.cta || "Claim Discount"}</a>
       </div>
     </section>
   );
@@ -3532,7 +3647,7 @@ function CategoryFloatingOrbs({ p, dna, storeSlug }: any) {
                 <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background:`radial-gradient(circle at 30% 20%,rgba(255,255,255,.2),transparent 60%)` }} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
                   <span className="text-base font-black text-white text-center leading-tight" style={{ textShadow:`0 0 20px ${c}` }}>{cat.name||cat}</span>
-                  <span className="mt-2 text-xs font-bold px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300" style={{ background:c,color:"#fff" }}>Shop →</span>
+                  <span className="mt-2 text-xs font-bold px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300" style={{ background:c,color:"#fff" }}>Shop ΓåÆ</span>
                 </div>
               </div>
             </a>
@@ -3543,10 +3658,10 @@ function CategoryFloatingOrbs({ p, dna, storeSlug }: any) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// THEME 3D PAGE BACKGROUND — fixed starfield for ALL pages
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// THEME 3D PAGE BACKGROUND ΓÇö fixed starfield for ALL pages
 // Injected by StorefrontLayout for theme-15/16/17
-// ═══════════════════════════════════════════════════════════════════════════
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 export function Theme3DPageBackground({ themeId, palette }: { themeId: string; palette: any }) {
   const is16 = themeId.includes('style-16');
   const is17 = themeId.includes('style-17');
@@ -3576,7 +3691,7 @@ export function Theme3DPageBackground({ themeId, palette }: { themeId: string; p
   );
 }
 
-// ─── Named exports — delegate to the existing Header/Footer above ────────────
+// ΓöÇΓöÇΓöÇ Named exports ΓÇö delegate to the existing Header/Footer above ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 export { Header, Footer };
 
 function escapeHtml(s: string) {
