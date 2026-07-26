@@ -158,9 +158,19 @@ function isValidAuth(authHeader: string, serviceKey: string): boolean {
   // 2. Starts with Deno's service key (handles truncated copy-paste keys)
   if (serviceKey && token.startsWith(serviceKey)) return true;
   
-  // 3. Match the hardcoded service role signature for this project ref
-  const projectRefSignature = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1cXpua3BhbGR0dnBmcGR0bGxw";
-  if (token.startsWith(projectRefSignature)) return true;
+  // 3. Decode JWT and check claims
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      // Decode JWT payload using standard atob
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (payload.iss === 'supabase' && payload.ref === 'wuqznkpaldtvpfpdtllp' && payload.role === 'service_role') {
+        return true;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to parse auth JWT', e);
+  }
   
   return false;
 }
@@ -178,6 +188,18 @@ async function handleWebhook(req: Request): Promise<Response> {
   
   if (!isValidAuth(authHeader, serviceKey)) {
     console.error('Unauthorized webhook call')
+    try {
+      const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      await supabase.from('email_send_log').insert({
+        message_id: crypto.randomUUID(),
+        template_name: 'auth-fail-debug',
+        recipient_email: 'unauthorized@webhook.call',
+        status: 'failed',
+        error_message: `Auth fail. authHeader prefix: ${authHeader.slice(0, 30)}... length: ${authHeader.length}`
+      })
+    } catch (e) {
+      console.error('Failed to log auth failure to db', e)
+    }
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
@@ -226,49 +248,26 @@ async function handleWebhook(req: Request): Promise<Response> {
     return new Response(JSON.stringify({ success: true, sent: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
-  await supabase.from('email_send_log').insert({ message_id: messageId, template_name: emailType, recipient_email: recipientEmail, status: 'pending' })
-
-  const { error: enqueueError } = await supabase.rpc('enqueue_email', {
-    queue_name: 'auth_emails',
-    payload: {
-      run_id, message_id: messageId, to: recipientEmail,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-      sender_domain: SENDER_DOMAIN,
-      subject: EMAIL_SUBJECTS[emailType] || 'Notification',
-      html, text, purpose: 'transactional', label: emailType,
-      queued_at: new Date().toISOString(),
-    },
+  // Send directly via Resend to guarantee immediate delivery
+  console.log('Sending auth email directly via Resend...')
+  const fallbackFrom = `${SITE_NAME} <noreply@${FROM_DOMAIN}>`
+  const sent = await sendViaResend(recipientEmail, fallbackFrom, EMAIL_SUBJECTS[emailType] || 'Notification', html, text)
+  
+  await supabase.from('email_send_log').insert({
+    message_id: messageId,
+    template_name: emailType,
+    recipient_email: recipientEmail,
+    status: sent ? 'sent' : 'failed',
+    error_message: sent ? null : 'Failed to send via direct Resend'
   })
-
-  if (enqueueError) {
-    console.error('Failed to enqueue auth email', { error: enqueueError, run_id, emailType })
-    console.log('Attempting direct Resend fallback send...')
-    const fallbackFrom = `${SITE_NAME} <noreply@${FROM_DOMAIN}>`
-    const sent = await sendViaResend(recipientEmail, fallbackFrom, EMAIL_SUBJECTS[emailType] || 'Notification', html, text)
-    if (sent) {
-      await supabase.from('email_send_log').insert({
-        message_id: messageId,
-        template_name: emailType,
-        recipient_email: recipientEmail,
-        status: 'sent',
-        error_message: 'Sent via direct fallback (enqueue failed: ' + (enqueueError.message || String(enqueueError)) + ')'
-      })
-      console.log('Auth email sent via direct fallback successfully')
-      return new Response(JSON.stringify({ success: true, sent: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-
-    await supabase.from('email_send_log').insert({
-      message_id: messageId,
-      template_name: emailType,
-      recipient_email: recipientEmail,
-      status: 'failed',
-      error_message: 'Failed to enqueue email and direct fallback failed'
-    })
-    return new Response(JSON.stringify({ error: 'Failed to enqueue email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  
+  if (sent) {
+    console.log('Auth email sent via direct Resend successfully')
+    return new Response(JSON.stringify({ success: true, sent: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  } else {
+    console.error('Failed to send auth email directly via Resend')
+    return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
-
-  console.log('Auth email enqueued', { emailType, recipientEmail, storeSlug, run_id })
-  return new Response(JSON.stringify({ success: true, queued: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 }
 
 Deno.serve(async (req) => {
