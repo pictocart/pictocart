@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Store, CheckCircle2, XCircle, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useStore } from '@/hooks/useStore';
 import type { OnboardingData } from '@/pages/Onboarding';
 
 interface Props {
@@ -14,6 +15,7 @@ const slugify = (str: string) =>
   str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const StepStoreName = ({ data, setData }: Props) => {
+  const { store } = useStore();
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [mounted, setMounted] = useState(false);
 
@@ -33,7 +35,7 @@ const StepStoreName = ({ data, setData }: Props) => {
       .select('id')
       .eq('slug', slug)
       .maybeSingle();
-    const available = !existing;
+    const available = !existing || (store && existing.id === store.id);
     
     if (available) {
       setSlugStatus('available');
@@ -63,7 +65,7 @@ const StepStoreName = ({ data, setData }: Props) => {
         setData(d => ({ ...d, slugAvailable: false }));
       }
     }
-  }, []);
+  }, [store]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {

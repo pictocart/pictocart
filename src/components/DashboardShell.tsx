@@ -21,7 +21,15 @@ const StoreGuard = ({ children }: { children: React.ReactNode }) => {
   // Definitively no store and not loading → redirect to onboarding
   if (!loading && !lastStoreRef.current) return <Navigate to="/onboarding" replace />;
 
-  // Either we have a store, or we're re-fetching (use last known) → render normally
+  // Definitively onboarding is incomplete → redirect to onboarding
+  if (lastStoreRef.current) {
+    const step = lastStoreRef.current.onboarding_step ?? 0;
+    if (step < 4) {
+      return <Navigate to="/onboarding" replace />;
+    }
+  }
+
+  // Either we have a completed store, or we're re-fetching (use last known) → render normally
   return <>{children}</>;
 };
 

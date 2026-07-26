@@ -218,6 +218,7 @@ const Onboarding = () => {
   };
 
   const goNext = async () => {
+    hasResumed.current = true;
     await saveStep(currentStep);
     if (currentStep < TOTAL_STEPS) {
       animateTransition('forward', () => setCurrentStep((s) => s + 1));
@@ -231,6 +232,7 @@ const Onboarding = () => {
   };
 
   const skip = async () => {
+    hasResumed.current = true;
     await saveStep(currentStep);
     if (currentStep < TOTAL_STEPS) {
       animateTransition('forward', () => setCurrentStep((s) => s + 1));
