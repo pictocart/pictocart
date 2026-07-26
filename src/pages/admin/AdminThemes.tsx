@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, ExternalLink, Trash2, Pencil, Layers, IndianRupee, ImageIcon, Sparkles, Rocket, TrendingDown, Calendar, Inbox, Tag } from 'lucide-react';
+import { Plus, ExternalLink, Trash2, Pencil, Layers, IndianRupee, ImageIcon, Sparkles, Rocket, TrendingDown, Calendar, Inbox, Tag, Eye, EyeOff, Search, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import ThemeCostGraph from '@/components/admin/ThemeCostGraph';
 import ThemePipeline from '@/components/admin/ThemePipeline';
@@ -38,6 +38,7 @@ interface ThemeMaster {
   created_at: string;
   price: number;
   compare_at_price: number | null;
+  created_by?: string | null;
   is_premium?: boolean;
 }
 
@@ -321,7 +322,14 @@ const MasterProjectsTab = () => {
               <CardContent className="p-3 flex-1 flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-semibold text-sm">{t.name}</h3>
+                    <h3 className="font-semibold text-sm flex items-center gap-1.5 flex-wrap">
+                      {t.name}
+                      {t.created_by && (
+                        <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-300 text-[9px] px-1 py-0 h-4 leading-none shrink-0">
+                          User Custom
+                        </Badge>
+                      )}
+                    </h3>
                     <p className="text-[11px] text-muted-foreground capitalize">{t.category} · {t.theme_id}</p>
                   </div>
                   <Badge variant="outline" className="text-[10px] shrink-0">v{t.current_version}</Badge>
@@ -549,6 +557,230 @@ const ImagePoolTab = () => {
   );
 };
 
+const VisibilityManagerTab = () => {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+
+  const { data: themes = [], isLoading } = useQuery({
+    queryKey: ['admin-theme-masters'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('theme_master_projects').select('*').order('name', { ascending: true });
+      if (error) throw error;
+      return data as ThemeMaster[];
+    },
+  });
+
+  const togglePublish = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase.from('theme_master_projects').update({ is_active }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-theme-masters'] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'An error occurred'),
+  });
+
+  const bulkUpdateVisibility = useMutation({
+    mutationFn: async (action: 'default' | 'show-all' | 'hide-all') => {
+      setLoadingAction(action);
+      const DEFAULT_THEME_IDS = [
+        'theme-talkofthetown',
+        'theme-styleup',
+        'theme-streetwear-neon',
+        'theme-70904877',
+        'theme-46fdab51',
+        'theme-bee17452',
+        'theme-c7561d7e',
+        'theme-a0e7b3e3'
+      ];
+
+      try {
+        if (action === 'show-all') {
+          const { error } = await supabase
+            .from('theme_master_projects')
+            .update({ is_active: true })
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+          if (error) throw error;
+        } else if (action === 'hide-all') {
+          const { error } = await supabase
+            .from('theme_master_projects')
+            .update({ is_active: false })
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+          if (error) throw error;
+        } else if (action === 'default') {
+          // Set all to inactive
+          const { error: hideErr } = await supabase
+            .from('theme_master_projects')
+            .update({ is_active: false })
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+          if (hideErr) throw hideErr;
+
+          // Set default 8 to active
+          const { error: showErr } = await supabase
+            .from('theme_master_projects')
+            .update({ is_active: true })
+            .in('theme_id', DEFAULT_THEME_IDS);
+          if (showErr) throw showErr;
+        }
+      } finally {
+        setLoadingAction(null);
+      }
+    },
+    onSuccess: (_, action) => {
+      toast.success(
+        action === 'default'
+          ? 'Restored default 8 themes visibility.'
+          : action === 'show-all'
+          ? 'All themes are now visible.'
+          : 'All themes are now hidden.'
+      );
+      qc.invalidateQueries({ queryKey: ['admin-theme-masters'] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Bulk update failed'),
+  });
+
+  const filteredThemes = themes.filter((t) => {
+    const s = search.toLowerCase();
+    return (
+      t.name.toLowerCase().includes(s) ||
+      t.theme_id.toLowerCase().includes(s) ||
+      (t.category || '').toLowerCase().includes(s)
+    );
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Quick Actions Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-primary" /> Quick Visibility Controls
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => bulkUpdateVisibility.mutate('default')}
+              disabled={bulkUpdateVisibility.isPending}
+              className="border-primary/30 text-primary hover:bg-primary/5 hover:text-primary"
+            >
+              {loadingAction === 'default' ? 'Restoring...' : 'Restore 8 Default Themes'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => bulkUpdateVisibility.mutate('show-all')}
+              disabled={bulkUpdateVisibility.isPending}
+              className="border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5 hover:text-emerald-600"
+            >
+              {loadingAction === 'show-all' ? 'Updating...' : 'Make All Visible'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => bulkUpdateVisibility.mutate('hide-all')}
+              disabled={bulkUpdateVisibility.isPending}
+              className="border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
+            >
+              {loadingAction === 'hide-all' ? 'Updating...' : 'Hide All Themes'}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Changes are applied immediately and will reflect on the merchant\'s theme selection page.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Main List */}
+      <Card>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+          <div>
+            <CardTitle className="text-base">Themes List ({filteredThemes.length})</CardTitle>
+            <p className="text-xs text-muted-foreground">Manage merchant visibility theme-by-theme.</p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, ID or category..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="py-10 text-center text-sm text-muted-foreground font-medium">Loading themes...</div>
+          ) : filteredThemes.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">No themes found matching your search.</div>
+          ) : (
+            <div className="overflow-x-auto border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Theme Name & ID</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead className="text-right">Merchant Visibility</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredThemes.map((t) => (
+                    <TableRow key={t.id} className={t.is_active ? '' : 'opacity-70 bg-muted/10'}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div>{t.name}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{t.theme_id}</div>
+                          </div>
+                          {t.created_by && (
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-300 text-[9px] h-4 shrink-0">
+                              User Customized
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="capitalize text-xs">{t.category || '—'}</TableCell>
+                      <TableCell className="text-xs">
+                        {t.price > 0 ? (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-300">
+                            Premium
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-300">
+                            Free
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs">{t.price > 0 ? `₹${t.price}` : 'Free'}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {t.is_active ? 'Visible' : 'Hidden'}
+                          </span>
+                          <Switch
+                            checked={t.is_active}
+                            onCheckedChange={(v) => togglePublish.mutate({ id: t.id, is_active: v })}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 const AdminThemes = () => {
   return (
     <div className="space-y-6">
@@ -562,6 +794,7 @@ const AdminThemes = () => {
       <Tabs defaultValue="masters">
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="masters"><Layers className="mr-1 h-4 w-4" /> Master Projects</TabsTrigger>
+          <TabsTrigger value="visibility"><Eye className="mr-1 h-4 w-4" /> Visibility Manager</TabsTrigger>
           <TabsTrigger value="categories"><Tag className="mr-1 h-4 w-4" /> Categories</TabsTrigger>
           <TabsTrigger value="generator"><Sparkles className="mr-1 h-4 w-4" /> Generator</TabsTrigger>
           <TabsTrigger value="deliveries"><Inbox className="mr-1 h-4 w-4" /> Deliveries</TabsTrigger>
@@ -571,6 +804,7 @@ const AdminThemes = () => {
           <TabsTrigger value="images"><ImageIcon className="mr-1 h-4 w-4" /> Image Pool</TabsTrigger>
         </TabsList>
         <TabsContent value="masters" className="mt-4"><MasterProjectsTab /></TabsContent>
+        <TabsContent value="visibility" className="mt-4"><VisibilityManagerTab /></TabsContent>
         <TabsContent value="categories" className="mt-4"><ThemeCategoriesTab /></TabsContent>
         <TabsContent value="generator" className="mt-4"><ThemeMasterPipeline /></TabsContent>
         <TabsContent value="deliveries" className="mt-4"><ThemeDeliveriesInbox /></TabsContent>

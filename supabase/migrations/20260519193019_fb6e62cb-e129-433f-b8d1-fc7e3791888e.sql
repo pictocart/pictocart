@@ -6,27 +6,21 @@
 ALTER TABLE public.products
   ADD COLUMN IF NOT EXISTS cost_price numeric(10,2) DEFAULT 0,
   ADD COLUMN IF NOT EXISTS reorder_level integer DEFAULT 0;
-
 ALTER TABLE public.customers
   ADD COLUMN IF NOT EXISTS balance numeric(12,2) NOT NULL DEFAULT 0;
-
 -- --------- Enums ----------
 DO $$ BEGIN
   CREATE TYPE public.payment_mode_t AS ENUM ('cash','upi','card','bank','credit','other');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 DO $$ BEGIN
   CREATE TYPE public.bill_payment_status AS ENUM ('paid','partial','unpaid');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 DO $$ BEGIN
   CREATE TYPE public.khata_entry_type AS ENUM ('credit','payment');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 DO $$ BEGIN
   CREATE TYPE public.inv_movement_type AS ENUM ('opening','purchase','sale','adjustment','return');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 -- --------- Suppliers ----------
 CREATE TABLE IF NOT EXISTS public.suppliers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,7 +36,6 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_suppliers_store ON public.suppliers(store_id, created_at DESC);
-
 -- --------- Purchase bills ----------
 CREATE TABLE IF NOT EXISTS public.purchase_bills (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -63,7 +56,6 @@ CREATE TABLE IF NOT EXISTS public.purchase_bills (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_purchase_bills_store ON public.purchase_bills(store_id, bill_date DESC);
-
 -- --------- Expense categories ----------
 CREATE TABLE IF NOT EXISTS public.expense_categories (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -73,7 +65,6 @@ CREATE TABLE IF NOT EXISTS public.expense_categories (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(store_id, name)
 );
-
 -- --------- Expenses ----------
 CREATE TABLE IF NOT EXISTS public.expenses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -91,7 +82,6 @@ CREATE TABLE IF NOT EXISTS public.expenses (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_expenses_store_date ON public.expenses(store_id, expense_date DESC);
-
 -- --------- Khata entries ----------
 CREATE TABLE IF NOT EXISTS public.khata_entries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -109,7 +99,6 @@ CREATE TABLE IF NOT EXISTS public.khata_entries (
 );
 CREATE INDEX IF NOT EXISTS idx_khata_store_date ON public.khata_entries(store_id, entry_date DESC);
 CREATE INDEX IF NOT EXISTS idx_khata_customer ON public.khata_entries(customer_id) WHERE customer_id IS NOT NULL;
-
 -- --------- Inventory movements ----------
 CREATE TABLE IF NOT EXISTS public.inventory_movements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -123,7 +112,6 @@ CREATE TABLE IF NOT EXISTS public.inventory_movements (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_inv_movements_store_product ON public.inventory_movements(store_id, product_id, created_at DESC);
-
 -- --------- Accounts settings (1 per store) ----------
 CREATE TABLE IF NOT EXISTS public.accounts_settings (
   store_id uuid PRIMARY KEY REFERENCES public.stores(id) ON DELETE CASCADE,
@@ -133,20 +121,16 @@ CREATE TABLE IF NOT EXISTS public.accounts_settings (
   gst_enabled boolean NOT NULL DEFAULT false,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 -- --------- updated_at triggers ----------
 DROP TRIGGER IF EXISTS trg_suppliers_updated ON public.suppliers;
 CREATE TRIGGER trg_suppliers_updated BEFORE UPDATE ON public.suppliers
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 DROP TRIGGER IF EXISTS trg_purchase_bills_updated ON public.purchase_bills;
 CREATE TRIGGER trg_purchase_bills_updated BEFORE UPDATE ON public.purchase_bills
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 DROP TRIGGER IF EXISTS trg_expenses_updated ON public.expenses;
 CREATE TRIGGER trg_expenses_updated BEFORE UPDATE ON public.expenses
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- --------- Customer balance trigger ----------
 CREATE OR REPLACE FUNCTION public.recompute_customer_balance()
 RETURNS trigger
@@ -168,12 +152,10 @@ BEGIN
   RETURN COALESCE(NEW, OLD);
 END;
 $fn$;
-
 DROP TRIGGER IF EXISTS trg_khata_balance ON public.khata_entries;
 CREATE TRIGGER trg_khata_balance
 AFTER INSERT OR UPDATE OR DELETE ON public.khata_entries
 FOR EACH ROW EXECUTE FUNCTION public.recompute_customer_balance();
-
 -- --------- Inventory on purchase trigger ----------
 CREATE OR REPLACE FUNCTION public.inventory_on_purchase()
 RETURNS trigger
@@ -200,12 +182,10 @@ BEGIN
   RETURN NEW;
 END;
 $fn$;
-
 DROP TRIGGER IF EXISTS trg_inv_on_purchase ON public.purchase_bills;
 CREATE TRIGGER trg_inv_on_purchase
 AFTER INSERT ON public.purchase_bills
 FOR EACH ROW EXECUTE FUNCTION public.inventory_on_purchase();
-
 -- --------- Extend sale trigger to log movements ----------
 CREATE OR REPLACE FUNCTION public.deduct_inventory_on_order()
 RETURNS trigger
@@ -232,7 +212,6 @@ BEGIN
   RETURN NEW;
 END;
 $fn$;
-
 -- --------- P&L RPC ----------
 CREATE OR REPLACE FUNCTION public.pnl_report(_store_id uuid, _from date, _to date)
 RETURNS TABLE (
@@ -287,7 +266,6 @@ BEGIN
   RETURN NEXT;
 END;
 $fn$;
-
 -- --------- RLS ----------
 ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchase_bills ENABLE ROW LEVEL SECURITY;
@@ -296,7 +274,6 @@ ALTER TABLE public.expense_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.khata_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inventory_movements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.accounts_settings ENABLE ROW LEVEL SECURITY;
-
 -- Helper macro via repeated policy blocks
 DO $$
 DECLARE t text;
@@ -312,7 +289,6 @@ BEGIN
              OR public.has_role(auth.uid(),'admin'))$p$, t);
   END LOOP;
 END $$;
-
 DROP POLICY IF EXISTS "owner_all_accounts_settings" ON public.accounts_settings;
 CREATE POLICY "owner_all_accounts_settings" ON public.accounts_settings
   FOR ALL TO authenticated
@@ -320,7 +296,6 @@ CREATE POLICY "owner_all_accounts_settings" ON public.accounts_settings
          OR public.has_role(auth.uid(),'admin'))
   WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = accounts_settings.store_id AND s.user_id = auth.uid())
          OR public.has_role(auth.uid(),'admin'));
-
 -- --------- Seed default expense categories for each existing store ----------
 INSERT INTO public.expense_categories (store_id, name, is_default)
 SELECT s.id, c.name, true

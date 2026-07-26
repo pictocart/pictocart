@@ -1,4 +1,3 @@
-
 -- ============ RETURNS / RMA ============
 CREATE TABLE IF NOT EXISTS public.returns (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -16,31 +15,23 @@ CREATE TABLE IF NOT EXISTS public.returns (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.returns ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Customers create own returns" ON public.returns
 FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = customer_user_id);
-
 CREATE POLICY "Customers view own returns" ON public.returns
 FOR SELECT USING (auth.uid() = customer_user_id);
-
 CREATE POLICY "Store owners manage returns" ON public.returns
 FOR ALL USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = returns.store_id AND s.user_id = auth.uid()))
 WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = returns.store_id AND s.user_id = auth.uid()));
-
 CREATE POLICY "Admins manage returns" ON public.returns
 FOR ALL USING (has_role(auth.uid(), 'admin'::app_role))
 WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-
 CREATE POLICY "Service role manages returns" ON public.returns
 FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 CREATE TRIGGER trg_returns_updated BEFORE UPDATE ON public.returns
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 CREATE INDEX IF NOT EXISTS idx_returns_store ON public.returns(store_id);
 CREATE INDEX IF NOT EXISTS idx_returns_order ON public.returns(order_id);
-
 -- ============ INVOICE COUNTERS ============
 CREATE TABLE IF NOT EXISTS public.invoice_counters (
   store_id uuid NOT NULL,
@@ -51,14 +42,11 @@ CREATE TABLE IF NOT EXISTS public.invoice_counters (
   PRIMARY KEY (store_id, fiscal_year)
 );
 ALTER TABLE public.invoice_counters ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Service role manages invoice counters" ON public.invoice_counters
 FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 CREATE POLICY "Store owners read counters" ON public.invoice_counters
 FOR SELECT TO authenticated
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = invoice_counters.store_id AND s.user_id = auth.uid()));
-
 CREATE OR REPLACE FUNCTION public.next_invoice_number(_store_id uuid, _prefix text DEFAULT 'INV')
 RETURNS text
 LANGUAGE plpgsql
@@ -86,12 +74,10 @@ BEGIN
   RETURN _prefix || '/' || fy || '/' || lpad(next_num::text, 4, '0');
 END;
 $$;
-
 -- Add invoice_number to orders if missing
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS invoice_number text;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS courier_provider text;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS courier_response jsonb DEFAULT '{}'::jsonb;
-
 -- ============ REVIEWS MODERATION ============
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='product_reviews') THEN

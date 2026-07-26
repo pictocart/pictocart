@@ -1,4 +1,3 @@
-
 UPDATE public.theme_master_projects SET preview_image = 'https://qxeyndsvkfsmkilkzmuc.supabase.co/storage/v1/object/public/store-assets/theme-previews/bazaar.jpg' WHERE theme_id = 'bazaar';
 UPDATE public.theme_master_projects SET preview_image = 'https://qxeyndsvkfsmkilkzmuc.supabase.co/storage/v1/object/public/store-assets/theme-previews/classic-serif.jpg' WHERE theme_id = 'classic-serif';
 UPDATE public.theme_master_projects SET preview_image = 'https://qxeyndsvkfsmkilkzmuc.supabase.co/storage/v1/object/public/store-assets/theme-previews/dark-luxe.jpg' WHERE theme_id = 'dark-luxe';

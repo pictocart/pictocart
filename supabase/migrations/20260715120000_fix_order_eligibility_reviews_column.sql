@@ -144,5 +144,4 @@ BEGIN
   );
 END;
 $$;
-
 GRANT EXECUTE ON FUNCTION public.get_order_eligibility(uuid) TO authenticated, anon;

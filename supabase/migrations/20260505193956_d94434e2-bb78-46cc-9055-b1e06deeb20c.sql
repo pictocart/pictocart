@@ -16,7 +16,6 @@ CREATE POLICY "Users insert own deletion req" ON public.account_deletion_request
 CREATE POLICY "Users view own deletion req" ON public.account_deletion_requests FOR SELECT TO authenticated USING (auth.uid() = user_id);
 CREATE POLICY "Admins manage deletion req" ON public.account_deletion_requests FOR ALL TO authenticated USING (has_role(auth.uid(), 'admin'::app_role)) WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
 CREATE POLICY "Service manages deletion req" ON public.account_deletion_requests FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- B6: Platform invoices (subscriptions, wallet recharges) — GST ready
 CREATE TABLE IF NOT EXISTS public.platform_invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -43,7 +42,6 @@ CREATE POLICY "Users view own invoices" ON public.platform_invoices FOR SELECT T
 CREATE POLICY "Admins manage invoices" ON public.platform_invoices FOR ALL TO authenticated USING (has_role(auth.uid(), 'admin'::app_role)) WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
 CREATE POLICY "Service manages invoices" ON public.platform_invoices FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE INDEX IF NOT EXISTS idx_platform_invoices_user ON public.platform_invoices (user_id, created_at DESC);
-
 -- B7: Razorpay payment disputes
 CREATE TABLE IF NOT EXISTS public.disputes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -66,6 +64,5 @@ CREATE POLICY "Admins manage disputes" ON public.disputes FOR ALL TO authenticat
 CREATE POLICY "Store owners view own disputes" ON public.disputes FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM stores s WHERE s.id = disputes.store_id AND s.user_id = auth.uid()));
 CREATE POLICY "Service manages disputes" ON public.disputes FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE INDEX IF NOT EXISTS idx_disputes_status ON public.disputes (status, created_at DESC);
-
 -- Sequence for invoice numbers
 CREATE SEQUENCE IF NOT EXISTS public.platform_invoice_seq START 1001;

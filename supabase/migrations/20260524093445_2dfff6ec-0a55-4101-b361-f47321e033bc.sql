@@ -1,4 +1,3 @@
-
 -- =====================================================================
 -- Service Industry Phase A: Appointments Engine + Family Plans
 -- =====================================================================
@@ -13,22 +12,18 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'pharmacist';
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 -- Enums
 DO $$ BEGIN
   CREATE TYPE public.appointment_mode AS ENUM ('in_store','home_visit','teleconsult');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 DO $$ BEGIN
   CREATE TYPE public.appointment_status AS ENUM (
     'pending','confirmed','en_route','in_progress','completed','cancelled','no_show'
   );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 DO $$ BEGIN
   CREATE TYPE public.family_plan_status AS ENUM ('active','expired','cancelled','waitlist');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 -- =====================================================================
 -- service_providers
 -- =====================================================================
@@ -57,32 +52,26 @@ CREATE TABLE IF NOT EXISTS public.service_providers (
 CREATE INDEX IF NOT EXISTS idx_service_providers_store ON public.service_providers(store_id);
 CREATE INDEX IF NOT EXISTS idx_service_providers_user ON public.service_providers(user_id);
 ALTER TABLE public.service_providers ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Owners manage providers"
 ON public.service_providers FOR ALL
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'))
 WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'));
-
 CREATE POLICY "Provider sees self"
 ON public.service_providers FOR SELECT
 USING (user_id = auth.uid());
-
 CREATE POLICY "Provider updates self"
 ON public.service_providers FOR UPDATE
 USING (user_id = auth.uid());
-
 CREATE POLICY "Public reads active providers of published store"
 ON public.service_providers FOR SELECT
 USING (is_active = true AND EXISTS (
   SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.is_published = true
 ));
-
 CREATE TRIGGER trg_service_providers_updated
 BEFORE UPDATE ON public.service_providers
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- =====================================================================
 -- services
 -- =====================================================================
@@ -109,24 +98,20 @@ CREATE TABLE IF NOT EXISTS public.services (
 );
 CREATE INDEX IF NOT EXISTS idx_services_store ON public.services(store_id);
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Owners manage services"
 ON public.services FOR ALL
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'))
 WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'));
-
 CREATE POLICY "Public reads active services of published store"
 ON public.services FOR SELECT
 USING (is_active = true AND EXISTS (
   SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.is_published = true
 ));
-
 CREATE TRIGGER trg_services_updated
 BEFORE UPDATE ON public.services
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- =====================================================================
 -- provider_schedules
 -- =====================================================================
@@ -147,29 +132,24 @@ CREATE TABLE IF NOT EXISTS public.provider_schedules (
 CREATE INDEX IF NOT EXISTS idx_provider_schedules_provider ON public.provider_schedules(provider_id);
 CREATE INDEX IF NOT EXISTS idx_provider_schedules_date ON public.provider_schedules(override_date);
 ALTER TABLE public.provider_schedules ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Owners manage schedules"
 ON public.provider_schedules FOR ALL
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'))
 WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'));
-
 CREATE POLICY "Provider manages own schedule"
 ON public.provider_schedules FOR ALL
 USING (EXISTS (SELECT 1 FROM public.service_providers p WHERE p.id = provider_id AND p.user_id = auth.uid()))
 WITH CHECK (EXISTS (SELECT 1 FROM public.service_providers p WHERE p.id = provider_id AND p.user_id = auth.uid()));
-
 CREATE POLICY "Public reads schedules of published store"
 ON public.provider_schedules FOR SELECT
 USING (EXISTS (
   SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.is_published = true
 ));
-
 CREATE TRIGGER trg_provider_schedules_updated
 BEFORE UPDATE ON public.provider_schedules
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- =====================================================================
 -- appointments
 -- =====================================================================
@@ -211,40 +191,32 @@ CREATE INDEX IF NOT EXISTS idx_appointments_provider_slot ON public.appointments
 CREATE INDEX IF NOT EXISTS idx_appointments_customer ON public.appointments(customer_user_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_status ON public.appointments(status);
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Owners manage appointments"
 ON public.appointments FOR ALL
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'))
 WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'));
-
 CREATE POLICY "Provider sees own appointments"
 ON public.appointments FOR SELECT
 USING (EXISTS (SELECT 1 FROM public.service_providers p WHERE p.id = provider_id AND p.user_id = auth.uid()));
-
 CREATE POLICY "Provider updates own appointments"
 ON public.appointments FOR UPDATE
 USING (EXISTS (SELECT 1 FROM public.service_providers p WHERE p.id = provider_id AND p.user_id = auth.uid()));
-
 CREATE POLICY "Customer reads own appointments"
 ON public.appointments FOR SELECT
 USING (customer_user_id = auth.uid());
-
 CREATE POLICY "Public can create appointment for published store"
 ON public.appointments FOR INSERT
 WITH CHECK (EXISTS (
   SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.is_published = true
 ));
-
 CREATE POLICY "Customer cancels own appointment"
 ON public.appointments FOR UPDATE
 USING (customer_user_id = auth.uid());
-
 CREATE TRIGGER trg_appointments_updated
 BEFORE UPDATE ON public.appointments
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- =====================================================================
 -- family_plans
 -- =====================================================================
@@ -268,24 +240,20 @@ CREATE TABLE IF NOT EXISTS public.family_plans (
 );
 CREATE INDEX IF NOT EXISTS idx_family_plans_store ON public.family_plans(store_id);
 ALTER TABLE public.family_plans ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Owners manage family plans"
 ON public.family_plans FOR ALL
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'))
 WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'));
-
 CREATE POLICY "Public reads active family plans of published store"
 ON public.family_plans FOR SELECT
 USING (is_active = true AND EXISTS (
   SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.is_published = true
 ));
-
 CREATE TRIGGER trg_family_plans_updated
 BEFORE UPDATE ON public.family_plans
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- =====================================================================
 -- family_groups
 -- =====================================================================
@@ -307,22 +275,18 @@ CREATE TABLE IF NOT EXISTS public.family_groups (
 CREATE INDEX IF NOT EXISTS idx_family_groups_store ON public.family_groups(store_id);
 CREATE INDEX IF NOT EXISTS idx_family_groups_head ON public.family_groups(head_user_id);
 ALTER TABLE public.family_groups ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Owners manage family groups"
 ON public.family_groups FOR ALL
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'))
 WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
        OR public.has_role(auth.uid(), 'admin'));
-
 CREATE POLICY "Head customer reads own family"
 ON public.family_groups FOR SELECT
 USING (head_user_id = auth.uid());
-
 CREATE TRIGGER trg_family_groups_updated
 BEFORE UPDATE ON public.family_groups
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- =====================================================================
 -- family_members
 -- =====================================================================
@@ -340,7 +304,6 @@ CREATE TABLE IF NOT EXISTS public.family_members (
 );
 CREATE INDEX IF NOT EXISTS idx_family_members_group ON public.family_members(group_id);
 ALTER TABLE public.family_members ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Owners manage family members"
 ON public.family_members FOR ALL
 USING (EXISTS (
@@ -353,7 +316,6 @@ WITH CHECK (EXISTS (
   JOIN public.stores s ON s.id = g.store_id
   WHERE g.id = group_id AND (s.user_id = auth.uid() OR public.has_role(auth.uid(), 'admin'))
 ));
-
 CREATE POLICY "Head customer reads members of own family"
 ON public.family_members FOR SELECT
 USING (EXISTS (

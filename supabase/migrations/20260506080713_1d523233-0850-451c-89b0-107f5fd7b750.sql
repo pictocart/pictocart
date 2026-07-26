@@ -2,9 +2,7 @@ ALTER TABLE public.customers
   ADD COLUMN IF NOT EXISTS name text,
   ADD COLUMN IF NOT EXISTS email text,
   ADD COLUMN IF NOT EXISTS phone text;
-
 CREATE INDEX IF NOT EXISTS idx_customers_store_email ON public.customers (store_id, lower(email));
-
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -59,20 +57,17 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 INSERT INTO public.user_roles (user_id, role)
 SELECT u.id, 'customer'::public.app_role
 FROM auth.users u
 WHERE COALESCE((u.raw_user_meta_data->>'is_customer')::boolean, false) = true
 ON CONFLICT DO NOTHING;
-
 DELETE FROM public.user_roles ur
 USING auth.users u
 WHERE ur.user_id = u.id
   AND ur.role = 'seller'
   AND COALESCE((u.raw_user_meta_data->>'is_customer')::boolean, false) = true
   AND NOT EXISTS (SELECT 1 FROM public.stores s WHERE s.user_id = u.id);
-
 DELETE FROM public.profiles p
 USING auth.users u
 WHERE p.user_id = u.id
@@ -82,7 +77,6 @@ WHERE p.user_id = u.id
     SELECT 1 FROM public.user_roles ur
     WHERE ur.user_id = u.id AND ur.role = 'admin'
   );
-
 INSERT INTO public.customers (user_id, store_id, name, email, phone)
 SELECT
   u.id,
@@ -98,7 +92,6 @@ ON CONFLICT (user_id, store_id) DO UPDATE SET
   email = COALESCE(public.customers.email, EXCLUDED.email),
   phone = COALESCE(public.customers.phone, EXCLUDED.phone),
   updated_at = now();
-
 INSERT INTO public.customers (user_id, store_id, name, email, phone)
 SELECT
   u.id,

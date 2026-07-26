@@ -1,6 +1,5 @@
 -- 1) COD rules: remove public SELECT; add safe storefront RPC
 DROP POLICY IF EXISTS "Anyone reads cod rules of published stores" ON public.cod_rules;
-
 CREATE OR REPLACE FUNCTION public.get_storefront_cod_rules(_store_id uuid)
 RETURNS TABLE (
   enabled boolean,
@@ -30,10 +29,8 @@ AS $$
     AND s.is_published = true
   LIMIT 1;
 $$;
-
 REVOKE EXECUTE ON FUNCTION public.get_storefront_cod_rules(uuid) FROM public;
 GRANT EXECUTE ON FUNCTION public.get_storefront_cod_rules(uuid) TO anon, authenticated;
-
 -- Server function for COD eligibility incl. phone-blocklist check (does not expose the list)
 CREATE OR REPLACE FUNCTION public.is_phone_cod_blocked(_store_id uuid, _phone text)
 RETURNS boolean
@@ -51,10 +48,8 @@ AS $$
 $$;
 REVOKE EXECUTE ON FUNCTION public.is_phone_cod_blocked(uuid, text) FROM public;
 GRANT EXECUTE ON FUNCTION public.is_phone_cod_blocked(uuid, text) TO anon, authenticated;
-
 -- 2) Orders: drop overly-permissive guest tracking policy and add safe RPC
 DROP POLICY IF EXISTS "Guests view order by tracking code" ON public.orders;
-
 CREATE OR REPLACE FUNCTION public.get_order_by_tracking(tracking_code text)
 RETURNS TABLE (
   id uuid,
@@ -81,10 +76,8 @@ AS $$
   WHERE o.guest_tracking_code = tracking_code
   LIMIT 1;
 $$;
-
 REVOKE EXECUTE ON FUNCTION public.get_order_by_tracking(text) FROM public;
 GRANT EXECUTE ON FUNCTION public.get_order_by_tracking(text) TO anon, authenticated;
-
 -- 3) Remove orders from realtime publication (PII broadcast risk)
 DO $$
 BEGIN
@@ -95,7 +88,6 @@ BEGIN
     EXECUTE 'ALTER PUBLICATION supabase_realtime DROP TABLE public.orders';
   END IF;
 END $$;
-
 -- 4) Lock down increment_coupon_usage — service-role only
 REVOKE EXECUTE ON FUNCTION public.increment_coupon_usage(uuid) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.increment_coupon_usage(uuid) FROM anon;

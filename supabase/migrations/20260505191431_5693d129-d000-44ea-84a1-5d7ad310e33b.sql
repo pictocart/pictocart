@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS public.provisioning_budget (
   id integer PRIMARY KEY DEFAULT 1,
   is_enabled boolean NOT NULL DEFAULT true,
@@ -13,12 +12,9 @@ CREATE TABLE IF NOT EXISTS public.provisioning_budget (
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT provisioning_budget_singleton CHECK (id = 1)
 );
-
 INSERT INTO public.provisioning_budget (id) VALUES (1)
   ON CONFLICT (id) DO NOTHING;
-
 ALTER TABLE public.provisioning_budget ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Admins manage provisioning budget" ON public.provisioning_budget;
 CREATE POLICY "Admins manage provisioning budget"
   ON public.provisioning_budget

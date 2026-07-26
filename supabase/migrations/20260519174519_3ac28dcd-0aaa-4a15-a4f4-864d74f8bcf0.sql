@@ -1,12 +1,9 @@
-
 ALTER TABLE public.plan_configs
   ADD COLUMN IF NOT EXISTS signup_bonus_credits integer NOT NULL DEFAULT 0;
-
 UPDATE public.plan_configs SET signup_bonus_credits = 100  WHERE plan = 'free';
 UPDATE public.plan_configs SET signup_bonus_credits = 399  WHERE plan = 'starter';
 UPDATE public.plan_configs SET signup_bonus_credits = 1499 WHERE plan = 'growth';
 UPDATE public.plan_configs SET signup_bonus_credits = 6000 WHERE plan = 'scale';
-
 -- Grant free signup bonus on every new store
 CREATE OR REPLACE FUNCTION public.handle_new_store_subscription()
 RETURNS trigger
@@ -36,7 +33,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 -- Helper to grant plan-upgrade bonus exactly once per plan code
 CREATE OR REPLACE FUNCTION public.grant_plan_signup_bonus(_store_id uuid, _plan text)
 RETURNS integer
@@ -72,5 +68,4 @@ BEGIN
   RETURN bonus;
 END;
 $$;
-
 GRANT EXECUTE ON FUNCTION public.grant_plan_signup_bonus(uuid, text) TO service_role;

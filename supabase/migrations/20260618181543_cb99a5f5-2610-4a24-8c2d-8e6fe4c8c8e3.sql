@@ -1,18 +1,14 @@
-
 -- Bank fields on partners
 ALTER TABLE public.partners
   ADD COLUMN IF NOT EXISTS bank_account_number text,
   ADD COLUMN IF NOT EXISTS bank_ifsc text,
   ADD COLUMN IF NOT EXISTS bank_account_holder text;
-
 -- Payouts metadata
 ALTER TABLE public.partner_payouts
   ADD COLUMN IF NOT EXISTS period_month date,
   ADD COLUMN IF NOT EXISTS commission_count integer NOT NULL DEFAULT 0;
-
 CREATE INDEX IF NOT EXISTS idx_partner_payouts_period ON public.partner_payouts(period_month);
 CREATE INDEX IF NOT EXISTS idx_partner_commissions_partner_status ON public.partner_commissions(partner_id, status);
-
 -- =========================================================
 -- Admin: pending payouts summary
 -- =========================================================
@@ -59,7 +55,6 @@ AS $$
   HAVING COALESCE(SUM(pc.commission_amount), 0) > 0
   ORDER BY COALESCE(SUM(pc.commission_amount), 0) DESC;
 $$;
-
 -- =========================================================
 -- Admin: generate payout batch for a month
 -- =========================================================
@@ -112,7 +107,6 @@ BEGIN
   RETURN NEXT;
 END;
 $$;
-
 -- =========================================================
 -- Admin: mark payout paid
 -- =========================================================
@@ -138,7 +132,6 @@ BEGIN
    WHERE payout_id = _payout_id;
 END;
 $$;
-
 -- =========================================================
 -- Partner: own stats
 -- =========================================================
@@ -173,7 +166,6 @@ BEGIN
               WHERE partner_id = _partner_id AND status = 'paid'), 0);
 END;
 $$;
-
 -- =========================================================
 -- Leaderboard (admin sees all; head sees downline)
 -- =========================================================

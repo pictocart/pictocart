@@ -1,4 +1,3 @@
-
 ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS moderation_status text NOT NULL DEFAULT 'approved';
 ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS moderated_at timestamptz;
 ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS moderated_by uuid;

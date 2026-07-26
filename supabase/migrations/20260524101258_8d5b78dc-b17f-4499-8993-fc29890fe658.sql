@@ -1,4 +1,3 @@
-
 INSERT INTO public.theme_category_briefs
 (vertical, subcategory, display_name, prompt_addendum, palette_hints, vocabulary, hero_archetypes, section_priority, image_style, sort_order)
 VALUES

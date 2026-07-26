@@ -244,10 +244,26 @@ const serviceTool = {
   },
 };
 
+function getUserIdFromAuthHeader(authHeader: string | null): string | null {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.slice("Bearer ".length).trim();
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    // Deno has standard atob
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.sub || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const t0 = Date.now();
   try {
+    const authHeader = req.headers.get("Authorization");
+    const userId = getUserIdFromAuthHeader(authHeader);
     const body = await req.json().catch(() => ({}));
     const themeId: string = body.theme_id ?? `theme-${Date.now()}`;
     const brief = body.brief ?? {};
@@ -457,6 +473,7 @@ Realistic Indian names, qualifications, addresses. Never include any Markdown fo
         category, preview_image: heroUrl, lovable_project_url: lovableUrl || null,
         client_patch_prompt: `Service theme ${dna.name} (${dna.vibe}). Sub: ${sub ?? "general"}.`,
         is_active: true,
+        created_by: userId,
       }, { onConflict: "theme_id" });
 
       await supabase.from("master_theme_deliveries").update({ layout_slug: layoutSlug }).eq("master_id", themeId);
@@ -720,6 +737,7 @@ Be bold. Be original. Make it beautiful. Fill EVERY field completely.`;
       lovable_project_url: lovableUrl || null,
       client_patch_prompt: `Apply theme ${dna.name} (${dna.vibe}) using layout "${layoutSlug}". Palette: ${JSON.stringify(dna.palette)}. Fonts: ${JSON.stringify(dna.fonts)}. Layout: ${JSON.stringify(layout)}.`,
       is_active: true,
+      created_by: userId,
     }, { onConflict: "theme_id" });
 
     await supabase.from("master_theme_deliveries").update({ layout_slug: layoutSlug }).eq("master_id", themeId);

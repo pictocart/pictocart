@@ -1,15 +1,13 @@
-
 -- 1) platform_credit_settings: lock SELECT to admins only; expose safe subset via RPC
 DROP POLICY IF EXISTS "Anon read settings" ON public.platform_credit_settings;
 DROP POLICY IF EXISTS "Authenticated read settings" ON public.platform_credit_settings;
-
 CREATE POLICY "Admins read settings"
   ON public.platform_credit_settings FOR SELECT
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'::app_role));
-
 REVOKE SELECT ON public.platform_credit_settings FROM anon, authenticated;
-GRANT SELECT ON public.platform_credit_settings TO authenticated; -- still gated by RLS (admin only)
+GRANT SELECT ON public.platform_credit_settings TO authenticated;
+-- still gated by RLS (admin only)
 
 CREATE OR REPLACE FUNCTION public.get_public_credit_settings()
 RETURNS TABLE(
@@ -29,12 +27,9 @@ AS $$
   FROM public.platform_credit_settings
   WHERE id = 1;
 $$;
-
 GRANT EXECUTE ON FUNCTION public.get_public_credit_settings() TO anon, authenticated;
-
 -- 2) store_google_reviews_cache: restrict to reviews of published stores
 DROP POLICY IF EXISTS "Anyone can view cached Google reviews" ON public.store_google_reviews_cache;
-
 CREATE POLICY "Public can view cached reviews of published stores"
   ON public.store_google_reviews_cache FOR SELECT
   TO anon, authenticated
@@ -42,7 +37,6 @@ CREATE POLICY "Public can view cached reviews of published stores"
     SELECT 1 FROM public.stores s
     WHERE s.id = store_google_reviews_cache.store_id AND s.is_published = true
   ));
-
 -- 3) sourcing_products: hide supplier_email_full and supplier_phone_full from public reads
 REVOKE SELECT ON public.sourcing_products FROM anon, authenticated;
 GRANT SELECT (
@@ -54,6 +48,5 @@ GRANT SELECT (
 ) ON public.sourcing_products TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.sourcing_products TO authenticated;
 GRANT ALL ON public.sourcing_products TO service_role;
-
 -- 4) reviews: remove from realtime publication (no client subscribes to it)
 ALTER PUBLICATION supabase_realtime DROP TABLE public.reviews;

@@ -13,12 +13,20 @@ const ThemeDetail = () => {
     queryKey: ['marketplace-theme', slug],
     enabled: !!slug,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      let query = supabase
         .from('theme_master_projects')
         .select('*')
         .eq('theme_id', slug!)
-        .eq('is_active', true)
-        .maybeSingle();
+        .eq('is_active', true);
+
+      if (user?.id) {
+        query = query.or(`created_by.is.null,created_by.eq.${user.id}`);
+      } else {
+        query = query.is('created_by', null);
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;
     },

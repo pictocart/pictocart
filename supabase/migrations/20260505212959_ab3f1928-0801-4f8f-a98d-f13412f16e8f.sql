@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS public.theme_master_versions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   theme_id text NOT NULL,
@@ -12,7 +11,6 @@ ALTER TABLE public.theme_master_versions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins manage master versions" ON public.theme_master_versions FOR ALL TO authenticated
   USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
 CREATE POLICY "Service role manages master versions" ON public.theme_master_versions FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 CREATE TABLE IF NOT EXISTS public.theme_master_metrics (
   theme_id text PRIMARY KEY,
   total_cost_inr numeric(10,4) NOT NULL DEFAULT 0,
@@ -25,7 +23,6 @@ CREATE TABLE IF NOT EXISTS public.theme_master_metrics (
 ALTER TABLE public.theme_master_metrics ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins read master metrics" ON public.theme_master_metrics FOR SELECT TO authenticated USING (has_role(auth.uid(),'admin'));
 CREATE POLICY "Service role manages master metrics" ON public.theme_master_metrics FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 ALTER TABLE public.theme_release_calendar
   ADD COLUMN IF NOT EXISTS slot_date date,
   ADD COLUMN IF NOT EXISTS theme_brief jsonb DEFAULT '{}'::jsonb;

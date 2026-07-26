@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS public.plan_configs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   plan subscription_plan NOT NULL UNIQUE,
@@ -25,26 +24,20 @@ CREATE TABLE IF NOT EXISTS public.plan_configs (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 ALTER TABLE public.plan_configs ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Authenticated reads active plans"
   ON public.plan_configs FOR SELECT TO authenticated
   USING (is_active = true);
-
 CREATE POLICY "Anon reads active plans"
   ON public.plan_configs FOR SELECT TO anon
   USING (is_active = true);
-
 CREATE POLICY "Admins manage plan configs"
   ON public.plan_configs FOR ALL TO authenticated
   USING (has_role(auth.uid(), 'admin'::app_role))
   WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-
 CREATE TRIGGER trg_plan_configs_updated
   BEFORE UPDATE ON public.plan_configs
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 INSERT INTO public.plan_configs (plan, display_name, price_inr, commission_percent, trial_days, product_limit, theme_limit, custom_domain, razorpay_payments, shipping, blog, coupons, analytics, seo, email_branding, premium_themes, multi_domain, early_access, sort_order)
 VALUES
   ('free'::subscription_plan,    'Free',    0,    3.0, 0,  10,         1,          false, false, false, false, false, false, false, false, false, false, false, 1),

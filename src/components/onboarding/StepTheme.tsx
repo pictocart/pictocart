@@ -212,10 +212,19 @@ const StepTheme = ({ data, setData }: Props) => {
   const { data: themes = [], isLoading } = useQuery({
     queryKey: ['onboarding-theme-masters'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      let query = supabase
         .from('theme_master_projects')
         .select('id, theme_id, name, description, category, preview_image, is_default, created_at, is_premium, price')
-        .eq('is_active', true)
+        .eq('is_active', true);
+
+      if (user?.id) {
+        query = query.or(`created_by.is.null,created_by.eq.${user.id}`);
+      } else {
+        query = query.is('created_by', null);
+      }
+
+      const { data, error } = await query
         .order('is_default', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -1817,6 +1826,7 @@ OUTPUT FORMAT:
         }
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
       const customThemeName = themeName.trim() || `Theme #${themes.length + 1} (Custom Remix)`;
       
       const { data: newProj, error: errProj } = await supabase
@@ -1828,7 +1838,8 @@ OUTPUT FORMAT:
           category: data.category || 'general',
           preview_image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&auto=format&fit=crop&q=60',
           is_active: true,
-          is_default: false
+          is_default: false,
+          created_by: user?.id || null
         })
         .select()
         .single();

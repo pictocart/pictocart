@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS public.client_error_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid,
@@ -13,7 +12,6 @@ CREATE TABLE IF NOT EXISTS public.client_error_logs (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_client_error_logs_created ON public.client_error_logs (created_at DESC);
-
 ALTER TABLE public.client_error_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can log errors" ON public.client_error_logs;
 CREATE POLICY "Anyone can log errors" ON public.client_error_logs
@@ -24,7 +22,6 @@ CREATE POLICY "Admins read errors" ON public.client_error_logs
 DROP POLICY IF EXISTS "Admins delete errors" ON public.client_error_logs;
 CREATE POLICY "Admins delete errors" ON public.client_error_logs
   FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'));
-
 CREATE TABLE IF NOT EXISTS public.help_articles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text NOT NULL UNIQUE,
@@ -38,7 +35,6 @@ CREATE TABLE IF NOT EXISTS public.help_articles (
 );
 CREATE TRIGGER help_articles_updated_at BEFORE UPDATE ON public.help_articles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 ALTER TABLE public.help_articles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public reads published help" ON public.help_articles;
 CREATE POLICY "Public reads published help" ON public.help_articles
@@ -48,7 +44,6 @@ CREATE POLICY "Admins manage help" ON public.help_articles
   FOR ALL TO authenticated
   USING (public.has_role(auth.uid(), 'admin'))
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
-
 INSERT INTO public.help_articles (slug, title, category, sort, body_md) VALUES
   ('getting-started', 'Getting started in 5 minutes', 'basics', 1,
    E'# Welcome\n\n1. Add your first product from **Catalog → Products**.\n2. Set up payments at **Settings → Payments**.\n3. Connect your domain at **Settings → Domain**.\n4. Share your store link!'),

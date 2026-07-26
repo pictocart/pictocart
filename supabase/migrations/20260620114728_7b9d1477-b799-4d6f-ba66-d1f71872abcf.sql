@@ -1,5 +1,4 @@
 DROP POLICY IF EXISTS "Public can view active offer" ON public.store_site_offers;
-
 CREATE POLICY "Public can view active offer"
 ON public.store_site_offers
 FOR SELECT

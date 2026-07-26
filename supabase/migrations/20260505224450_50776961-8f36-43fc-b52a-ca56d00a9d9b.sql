@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE FUNCTION public.generate_referral_code()
 RETURNS TEXT
 LANGUAGE plpgsql

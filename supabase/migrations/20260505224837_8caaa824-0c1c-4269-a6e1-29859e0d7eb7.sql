@@ -1,4 +1,3 @@
-
 CREATE POLICY "Referred user can record own attribution"
   ON public.partner_referrals
   FOR INSERT

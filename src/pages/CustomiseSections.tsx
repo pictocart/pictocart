@@ -145,7 +145,7 @@ export default function CustomiseSections() {
   const [modalCategory, setModalCategory] = useState('');
   const [modalTempSelectedIds, setModalTempSelectedIds] = useState<string[]>([]);
 
-  const activeThemeId = getStoreThemeId(store) || 'theme-style-19';
+  const activeThemeId = getStoreThemeId(store) || 'theme-styleup';
   const { data: manifest, isLoading: manifestLoading } = useThemeManifest(activeThemeId);
 
   const settings = getStorefrontConfig(store) as any;

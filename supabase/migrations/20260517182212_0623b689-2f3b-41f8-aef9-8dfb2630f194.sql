@@ -1,4 +1,3 @@
-
 CREATE TABLE public.store_testimonials (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   store_id UUID NOT NULL REFERENCES public.stores(id) ON DELETE CASCADE,
@@ -12,23 +11,17 @@ CREATE TABLE public.store_testimonials (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
 ALTER TABLE public.store_testimonials ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Anyone can view testimonials"
   ON public.store_testimonials FOR SELECT USING (true);
-
 CREATE POLICY "Store owners manage their testimonials"
   ON public.store_testimonials FOR ALL
   USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid()))
   WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid()));
-
 CREATE TRIGGER trg_store_testimonials_updated
   BEFORE UPDATE ON public.store_testimonials
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 CREATE INDEX idx_store_testimonials_store ON public.store_testimonials(store_id, display_order);
-
 CREATE TABLE public.store_google_reviews_connections (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   store_id UUID NOT NULL UNIQUE REFERENCES public.stores(id) ON DELETE CASCADE,
@@ -48,33 +41,25 @@ CREATE TABLE public.store_google_reviews_connections (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
 ALTER TABLE public.store_google_reviews_connections ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Anyone can view active Google review connections"
   ON public.store_google_reviews_connections FOR SELECT
   USING (is_active = true AND is_paid = true);
-
 CREATE POLICY "Store owners view own connection"
   ON public.store_google_reviews_connections FOR SELECT
   USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid()));
-
 CREATE POLICY "Store owners insert own connection"
   ON public.store_google_reviews_connections FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid()));
-
 CREATE POLICY "Store owners update own connection"
   ON public.store_google_reviews_connections FOR UPDATE
   USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid()));
-
 CREATE POLICY "Store owners delete own connection"
   ON public.store_google_reviews_connections FOR DELETE
   USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid()));
-
 CREATE TRIGGER trg_grc_updated
   BEFORE UPDATE ON public.store_google_reviews_connections
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 CREATE TABLE public.store_google_reviews_cache (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   connection_id UUID NOT NULL REFERENCES public.store_google_reviews_connections(id) ON DELETE CASCADE,
@@ -89,10 +74,7 @@ CREATE TABLE public.store_google_reviews_cache (
   language TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
 ALTER TABLE public.store_google_reviews_cache ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Anyone can view cached Google reviews"
   ON public.store_google_reviews_cache FOR SELECT USING (true);
-
 CREATE INDEX idx_grc_cache_store ON public.store_google_reviews_cache(store_id, time_unix DESC);

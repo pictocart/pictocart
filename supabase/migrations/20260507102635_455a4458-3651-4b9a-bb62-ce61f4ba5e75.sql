@@ -1,13 +1,10 @@
-
 -- Add Razorpay tracking columns to orders
 ALTER TABLE public.orders
   ADD COLUMN IF NOT EXISTS razorpay_order_id text,
   ADD COLUMN IF NOT EXISTS razorpay_payment_id text,
   ADD COLUMN IF NOT EXISTS amount_refunded numeric(10,2) NOT NULL DEFAULT 0;
-
 CREATE INDEX IF NOT EXISTS idx_orders_rzp_order_id ON public.orders(razorpay_order_id) WHERE razorpay_order_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_orders_rzp_payment_id ON public.orders(razorpay_payment_id) WHERE razorpay_payment_id IS NOT NULL;
-
 -- Idempotency log for Razorpay webhook events
 CREATE TABLE IF NOT EXISTS public.payment_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -23,22 +20,17 @@ CREATE TABLE IF NOT EXISTS public.payment_events (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (provider, event_id)
 );
-
 CREATE INDEX IF NOT EXISTS idx_payment_events_order ON public.payment_events(order_id);
 CREATE INDEX IF NOT EXISTS idx_payment_events_store ON public.payment_events(store_id);
-
 ALTER TABLE public.payment_events ENABLE ROW LEVEL SECURITY;
-
 -- Only store owners can view payment events for their store
 CREATE POLICY "Store owners view payment events"
   ON public.payment_events FOR SELECT
   USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = payment_events.store_id AND s.user_id = auth.uid()));
-
 -- Admins can view all
 CREATE POLICY "Admins view all payment events"
   ON public.payment_events FOR SELECT
   USING (public.has_role(auth.uid(), 'admin'));
-
 -- Refund records
 CREATE TABLE IF NOT EXISTS public.refunds (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -56,24 +48,18 @@ CREATE TABLE IF NOT EXISTS public.refunds (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE INDEX IF NOT EXISTS idx_refunds_order ON public.refunds(order_id);
 CREATE INDEX IF NOT EXISTS idx_refunds_store ON public.refunds(store_id);
-
 ALTER TABLE public.refunds ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Store owners view refunds"
   ON public.refunds FOR SELECT
   USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = refunds.store_id AND s.user_id = auth.uid()));
-
 CREATE POLICY "Customers view their refunds"
   ON public.refunds FOR SELECT
   USING (EXISTS (SELECT 1 FROM public.orders o WHERE o.id = refunds.order_id AND o.customer_user_id = auth.uid()));
-
 CREATE POLICY "Admins view all refunds"
   ON public.refunds FOR SELECT
   USING (public.has_role(auth.uid(), 'admin'));
-
 CREATE TRIGGER update_refunds_updated_at
   BEFORE UPDATE ON public.refunds
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

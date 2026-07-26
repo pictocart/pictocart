@@ -1,4 +1,3 @@
-
 -- 1. theme_master_projects
 CREATE TABLE public.theme_master_projects (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -20,7 +19,6 @@ CREATE POLICY "Authenticated read active theme masters" ON public.theme_master_p
   FOR SELECT TO authenticated USING (is_active = true);
 CREATE TRIGGER trg_tmp_updated BEFORE UPDATE ON public.theme_master_projects
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- 2. provision_requests
 CREATE TABLE public.provision_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -51,7 +49,6 @@ CREATE POLICY "Service role manages provision requests" ON public.provision_requ
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE TRIGGER trg_prov_updated BEFORE UPDATE ON public.provision_requests
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- 3. store_content
 CREATE TABLE public.store_content (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

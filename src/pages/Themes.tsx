@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/hooks/useStore';
@@ -21,6 +22,7 @@ interface ThemeMaster {
   is_active: boolean;
   is_premium?: boolean;
   price?: number;
+  created_by?: string | null;
 }
 
 const swatchFor = (theme_id: string) => {
@@ -35,14 +37,33 @@ const Themes = () => {
   const { store, setStore } = useStore();
   const activeThemeId = getStoreThemeId(store);
 
+  const [confirmSwitch, setConfirmSwitch] = useState<{
+    targetTheme: ThemeMaster;
+    currentThemeId: string;
+    currentThemeName: string;
+  } | null>(null);
+
+  const [confirmRestore, setConfirmRestore] = useState<{
+    targetTheme: ThemeMaster;
+    snapshot: any;
+  } | null>(null);
+
   const { data: themes = [], isLoading } = useQuery({
     queryKey: ['theme-masters'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      let query = supabase
         .from('theme_master_projects')
         .select('id, theme_id, name, description, category, preview_image, is_default, is_active, is_premium, price')
-        .eq('is_active', true)
-        .order('is_default', { ascending: false });
+        .eq('is_active', true);
+
+      if (user?.id) {
+        query = query.or(`created_by.is.null,created_by.eq.${user.id}`);
+      } else {
+        query = query.is('created_by', null);
+      }
+
+      const { data, error } = await query.order('is_default', { ascending: false });
       if (error) throw error;
       return (data || []) as ThemeMaster[];
     },
@@ -64,7 +85,7 @@ const Themes = () => {
 
   const purchasedIds = new Set(purchases);
 
-  const installTheme = async (theme: ThemeMaster) => {
+  const executeInstallTheme = async (theme: ThemeMaster) => {
     if (!store) return;
     try {
       if (theme.theme_id.startsWith('theme-') || theme.theme_id.startsWith('layout1-')) {
@@ -94,6 +115,100 @@ const Themes = () => {
       toast.success(`"${theme.name}" is now your active theme.`);
     } catch (e: any) {
       toast.error(e.message || 'Could not switch theme');
+    }
+  };
+
+  const handleThemeSelection = async (theme: ThemeMaster) => {
+    if (!store) return;
+    if (activeThemeId && activeThemeId !== theme.theme_id) {
+      const activeThemeName = activeTheme?.name || activeThemeId;
+      setConfirmSwitch({
+        targetTheme: theme,
+        currentThemeId: activeThemeId,
+        currentThemeName: activeThemeName
+      });
+    } else {
+      await checkAndRestoreTheme(theme);
+    }
+  };
+
+  const checkAndRestoreTheme = async (theme: ThemeMaster) => {
+    if (!store) return;
+    try {
+      const { data: snapshot, error } = await supabase
+        .from('store_theme_snapshots' as any)
+        .select('*')
+        .eq('store_id', store.id)
+        .eq('theme_id', theme.theme_id)
+        .maybeSingle();
+      
+      if (snapshot) {
+        setConfirmRestore({
+          targetTheme: theme,
+          snapshot
+        });
+      } else {
+        await executeInstallTheme(theme);
+      }
+    } catch (e) {
+      console.error(e);
+      await executeInstallTheme(theme);
+    }
+  };
+
+  const saveSnapshotAndSwitch = async (save: boolean) => {
+    if (!confirmSwitch || !store) return;
+    const { targetTheme, currentThemeId } = confirmSwitch;
+    setConfirmSwitch(null);
+    
+    if (save) {
+      try {
+        const { error } = await supabase
+          .from('store_theme_snapshots' as any)
+          .upsert({
+            store_id: store.id,
+            theme_id: currentThemeId,
+            theme: store.theme,
+            theme_tokens: store.theme_tokens,
+            resolved_storefront_manifest: store.resolved_storefront_manifest,
+            settings: store.settings
+          }, { onConflict: 'store_id,theme_id' });
+        if (error) throw error;
+        toast.success(`Current changes for "${confirmSwitch.currentThemeName}" saved.`);
+      } catch (e: any) {
+        toast.error(`Failed to save changes: ${e.message}`);
+      }
+    }
+    
+    await checkAndRestoreTheme(targetTheme);
+  };
+
+  const restoreSnapshot = async (theme: ThemeMaster, snapshot: any) => {
+    if (!store) return;
+    try {
+      const { error } = await supabase
+        .from('stores')
+        .update({
+          theme: snapshot.theme,
+          theme_id: theme.theme_id,
+          theme_tokens: snapshot.theme_tokens,
+          resolved_storefront_manifest: snapshot.resolved_storefront_manifest,
+          settings: snapshot.settings
+        })
+        .eq('id', store.id);
+      if (error) throw error;
+      setStore({
+        ...store,
+        theme: snapshot.theme,
+        theme_id: theme.theme_id,
+        theme_tokens: snapshot.theme_tokens,
+        resolved_storefront_manifest: snapshot.resolved_storefront_manifest,
+        settings: snapshot.settings
+      });
+      toast.success(`Restored your previous changes for "${theme.name}"`);
+      setConfirmRestore(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to restore snapshot');
     }
   };
 
@@ -295,7 +410,7 @@ const Themes = () => {
                           size="sm"
                           className="flex-1"
                           disabled={isActive}
-                          onClick={() => installTheme(theme)}
+                          onClick={() => handleThemeSelection(theme)}
                         >
                           {isActive ? 'Active' : 'Install'}
                         </Button>
@@ -308,6 +423,63 @@ const Themes = () => {
           </div>
         )}
       </div>
+
+      {/* Save snapshot switch confirmation dialog */}
+      {confirmSwitch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card rounded-2xl shadow-2xl border border-border w-full max-w-md p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-center">
+              <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <Sparkles className="h-6 w-6 animate-pulse" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-base font-bold">Save your customizations?</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Do you want to save your current layout, sections, and color changes for <span className="font-semibold text-foreground">"{confirmSwitch.currentThemeName}"</span> before switching to <span className="font-semibold text-foreground">"{confirmSwitch.targetTheme.name}"</span>?
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1 text-xs" onClick={() => saveSnapshotAndSwitch(false)}>
+                No, Discard Changes
+              </Button>
+              <Button className="flex-1 text-xs" onClick={() => saveSnapshotAndSwitch(true)}>
+                Yes, Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore snapshot confirmation dialog */}
+      {confirmRestore && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card rounded-2xl shadow-2xl border border-border w-full max-w-md p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-center">
+              <div className="h-12 w-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                <Check className="h-6 w-6" strokeWidth={3} />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-base font-bold">Previous changes found</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                We found previously saved customizations for <span className="font-semibold text-foreground">"{confirmRestore.targetTheme.name}"</span>. How would you like to apply this theme?
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button className="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => restoreSnapshot(confirmRestore.targetTheme, confirmRestore.snapshot)}>
+                Restore My Saved Changes
+              </Button>
+              <Button variant="outline" className="w-full text-xs border-primary/30 text-primary hover:bg-primary/5 hover:text-primary" onClick={() => { setConfirmRestore(null); executeInstallTheme(confirmRestore.targetTheme); }}>
+                Apply Fresh Default Layout
+              </Button>
+              <Button variant="ghost" className="w-full text-xs text-muted-foreground mt-1" onClick={() => setConfirmRestore(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

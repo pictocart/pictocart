@@ -4,7 +4,6 @@ ON public.stores
 FOR SELECT
 TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
-
 -- Allow admins to delete roles
 CREATE POLICY "Admins can delete roles"
 ON public.user_roles

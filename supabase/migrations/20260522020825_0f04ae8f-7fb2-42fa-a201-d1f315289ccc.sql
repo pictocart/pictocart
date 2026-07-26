@@ -24,6 +24,5 @@ BEGIN
   UPDATE public.coupons SET used_count = used_count + 1 WHERE id = _coupon_id;
 END;
 $$;
-
 REVOKE EXECUTE ON FUNCTION public.apply_coupon_to_recent_order(uuid, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.apply_coupon_to_recent_order(uuid, uuid) TO anon, authenticated, service_role;

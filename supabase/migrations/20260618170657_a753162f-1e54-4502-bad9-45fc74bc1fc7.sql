@@ -1,15 +1,11 @@
-
 ALTER TABLE public.plan_configs
   ADD COLUMN IF NOT EXISTS annual_price_inr numeric NOT NULL DEFAULT 0;
-
 UPDATE public.plan_configs SET annual_price_inr = 5500  WHERE plan = 'starter';
 UPDATE public.plan_configs SET annual_price_inr = 16500 WHERE plan = 'growth';
 UPDATE public.plan_configs SET annual_price_inr = 55000 WHERE plan = 'scale';
-
 ALTER TABLE public.subscriptions
   ADD COLUMN IF NOT EXISTS billing_cycle text NOT NULL DEFAULT 'monthly',
   ADD COLUMN IF NOT EXISTS last_renewal_reminder_at timestamptz;
-
 CREATE OR REPLACE FUNCTION public.transfer_store_to_client(
   _store_id uuid,
   _client_user_id uuid,

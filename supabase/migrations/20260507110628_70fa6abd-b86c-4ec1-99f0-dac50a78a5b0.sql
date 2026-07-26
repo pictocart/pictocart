@@ -1,4 +1,3 @@
-
 ALTER TABLE public.store_secrets ADD COLUMN IF NOT EXISTS shiprocket_email text;
 ALTER TABLE public.store_secrets ADD COLUMN IF NOT EXISTS shiprocket_password text;
 ALTER TABLE public.store_secrets ADD COLUMN IF NOT EXISTS shiprocket_token text;

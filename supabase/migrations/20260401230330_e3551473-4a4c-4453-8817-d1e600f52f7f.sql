@@ -1,7 +1,5 @@
-
 -- Create app roles enum
 CREATE TYPE public.app_role AS ENUM ('admin', 'seller');
-
 -- Create profiles table
 CREATE TABLE public.profiles (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -16,7 +14,6 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
-
 -- Create user_roles table (separate for security)
 CREATE TABLE public.user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -25,7 +22,6 @@ CREATE TABLE public.user_roles (
   UNIQUE (user_id, role)
 );
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-
 CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
 RETURNS BOOLEAN
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
@@ -34,10 +30,8 @@ AS $$
     SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role
   )
 $$;
-
 CREATE POLICY "Users can view own roles" ON public.user_roles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admins can manage roles" ON public.user_roles FOR ALL USING (public.has_role(auth.uid(), 'admin'));
-
 -- Create stores table
 CREATE TABLE public.stores (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -58,7 +52,6 @@ CREATE TABLE public.stores (
 ALTER TABLE public.stores ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Owners can manage own store" ON public.stores FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Published stores are public" ON public.stores FOR SELECT USING (is_published = true);
-
 -- Create products table
 CREATE TABLE public.products (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -88,11 +81,9 @@ CREATE POLICY "Store owners can manage products" ON public.products FOR ALL USIN
 CREATE POLICY "Active products in published stores are public" ON public.products FOR SELECT USING (
   is_active = true AND EXISTS (SELECT 1 FROM public.stores WHERE stores.id = products.store_id AND stores.is_published = true)
 );
-
 -- Create orders table
 CREATE TYPE public.order_status AS ENUM ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned');
 CREATE TYPE public.payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded', 'cod');
-
 CREATE TABLE public.orders (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   store_id UUID NOT NULL REFERENCES public.stores(id) ON DELETE CASCADE,
@@ -122,18 +113,15 @@ CREATE POLICY "Store owners can update orders" ON public.orders FOR UPDATE USING
   EXISTS (SELECT 1 FROM public.stores WHERE stores.id = orders.store_id AND stores.user_id = auth.uid())
 );
 CREATE POLICY "Authenticated users can create orders" ON public.orders FOR INSERT WITH CHECK (true);
-
 -- Timestamp trigger function
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$ LANGUAGE plpgsql SET search_path = public;
-
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TRIGGER update_stores_updated_at BEFORE UPDATE ON public.stores FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -144,18 +132,15 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
 -- Storage bucket for product images
 INSERT INTO storage.buckets (id, name, public) VALUES ('product-images', 'product-images', true);
 CREATE POLICY "Anyone can view product images" ON storage.objects FOR SELECT USING (bucket_id = 'product-images');
 CREATE POLICY "Authenticated users can upload product images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
 CREATE POLICY "Users can update own product images" ON storage.objects FOR UPDATE USING (bucket_id = 'product-images' AND auth.uid()::text = (storage.foldername(name))[1]);
 CREATE POLICY "Users can delete own product images" ON storage.objects FOR DELETE USING (bucket_id = 'product-images' AND auth.uid()::text = (storage.foldername(name))[1]);
-
 -- Storage bucket for store assets (logos, banners)
 INSERT INTO storage.buckets (id, name, public) VALUES ('store-assets', 'store-assets', true);
 CREATE POLICY "Anyone can view store assets" ON storage.objects FOR SELECT USING (bucket_id = 'store-assets');

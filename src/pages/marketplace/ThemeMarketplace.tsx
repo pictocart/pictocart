@@ -39,10 +39,19 @@ const ThemeMarketplace = () => {
   const { data: themes = [], isLoading } = useQuery({
     queryKey: ['marketplace-themes'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      let query = supabase
         .from('theme_master_projects')
         .select('id, theme_id, name, description, category, preview_image, is_default, is_premium, price, created_at')
         .eq('is_active', true);
+
+      if (user?.id) {
+        query = query.or(`created_by.is.null,created_by.eq.${user.id}`);
+      } else {
+        query = query.is('created_by', null);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data || []) as ThemeMaster[];
     },

@@ -1,7 +1,5 @@
-
 -- Replace help center with fresh articles aligned with current platform flows
 DELETE FROM public.help_articles;
-
 INSERT INTO public.help_articles (slug, title, category, sort, is_published, body_md) VALUES
 ('getting-started', 'Getting started in 5 minutes', 'basics', 1, true,
 '## Launch your store in 5 minutes

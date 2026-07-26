@@ -28,4 +28,4 @@
 -- be dropped.
 
 -- alter table public.stores
---   drop column if exists theme;
+--   drop column if exists theme;;

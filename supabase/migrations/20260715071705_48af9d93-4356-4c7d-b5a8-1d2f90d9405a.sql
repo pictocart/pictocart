@@ -1,11 +1,9 @@
-
 -- 1) Product return/exchange policy fields
 ALTER TABLE public.products
   ADD COLUMN IF NOT EXISTS is_returnable BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS is_exchangeable BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS return_window_days INTEGER NOT NULL DEFAULT 7,
   ADD COLUMN IF NOT EXISTS exchange_window_days INTEGER NOT NULL DEFAULT 7;
-
 -- 2) Eligibility RPC
 CREATE OR REPLACE FUNCTION public.get_order_eligibility(_order_id uuid)
 RETURNS jsonb
@@ -151,9 +149,7 @@ BEGIN
   );
 END;
 $$;
-
 GRANT EXECUTE ON FUNCTION public.get_order_eligibility(uuid) TO authenticated, anon;
-
 -- 3) Support tickets
 CREATE TABLE IF NOT EXISTS public.support_tickets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -171,30 +167,24 @@ CREATE TABLE IF NOT EXISTS public.support_tickets (
 GRANT SELECT, INSERT, UPDATE ON public.support_tickets TO authenticated;
 GRANT ALL ON public.support_tickets TO service_role;
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Customer manages own tickets"
   ON public.support_tickets FOR SELECT TO authenticated
   USING (customer_user_id = auth.uid()
          OR EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
          OR public.has_role(auth.uid(),'admin'));
-
 CREATE POLICY "Customer creates own ticket"
   ON public.support_tickets FOR INSERT TO authenticated
   WITH CHECK (customer_user_id = auth.uid());
-
 CREATE POLICY "Store or customer updates ticket"
   ON public.support_tickets FOR UPDATE TO authenticated
   USING (customer_user_id = auth.uid()
          OR EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_id AND s.user_id = auth.uid())
          OR public.has_role(auth.uid(),'admin'));
-
 CREATE TRIGGER support_tickets_updated
   BEFORE UPDATE ON public.support_tickets
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 CREATE INDEX IF NOT EXISTS idx_support_tickets_store ON public.support_tickets(store_id, status);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_customer ON public.support_tickets(customer_user_id, created_at DESC);
-
 -- 4) Ticket messages
 CREATE TABLE IF NOT EXISTS public.support_ticket_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -208,7 +198,6 @@ CREATE TABLE IF NOT EXISTS public.support_ticket_messages (
 GRANT SELECT, INSERT ON public.support_ticket_messages TO authenticated;
 GRANT ALL ON public.support_ticket_messages TO service_role;
 ALTER TABLE public.support_ticket_messages ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Ticket parties read messages"
   ON public.support_ticket_messages FOR SELECT TO authenticated
   USING (EXISTS (
@@ -218,7 +207,6 @@ CREATE POLICY "Ticket parties read messages"
            OR EXISTS (SELECT 1 FROM public.stores s WHERE s.id = t.store_id AND s.user_id = auth.uid())
            OR public.has_role(auth.uid(),'admin'))
   ));
-
 CREATE POLICY "Ticket parties send messages"
   ON public.support_ticket_messages FOR INSERT TO authenticated
   WITH CHECK (EXISTS (
@@ -228,9 +216,7 @@ CREATE POLICY "Ticket parties send messages"
            OR EXISTS (SELECT 1 FROM public.stores s WHERE s.id = t.store_id AND s.user_id = auth.uid())
            OR public.has_role(auth.uid(),'admin'))
   ));
-
 CREATE INDEX IF NOT EXISTS idx_support_ticket_messages_ticket ON public.support_ticket_messages(ticket_id, created_at);
-
 -- Auto-bump last_message_at
 CREATE OR REPLACE FUNCTION public.bump_ticket_last_message()
 RETURNS TRIGGER LANGUAGE plpgsql
@@ -241,7 +227,6 @@ BEGIN
     WHERE id = NEW.ticket_id;
   RETURN NEW;
 END; $$;
-
 CREATE TRIGGER trg_bump_ticket_last_message
   AFTER INSERT ON public.support_ticket_messages
   FOR EACH ROW EXECUTE FUNCTION public.bump_ticket_last_message();

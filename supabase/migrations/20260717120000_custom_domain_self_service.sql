@@ -8,11 +8,9 @@ ALTER TABLE public.stores
     CHECK (domain_status IN ('none', 'pending_dns', 'verifying', 'active', 'failed')),
   ADD COLUMN IF NOT EXISTS domain_verification_token text,
   ADD COLUMN IF NOT EXISTS domain_added_to_vercel_at timestamptz;
-
 -- Index for fast lookup by custom_domain (already has unique index, this is a belt-and-suspenders check)
 CREATE INDEX IF NOT EXISTS stores_domain_status_idx ON public.stores (domain_status)
   WHERE domain_status NOT IN ('none', 'active');
-
 -- Allow the store owner to update their own domain columns
 DROP POLICY IF EXISTS "Store owner can update domain fields" ON public.stores;
 CREATE POLICY "Store owner can update domain fields"
@@ -21,11 +19,6 @@ FOR UPDATE
 TO authenticated
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
-
-
-
-
-
 User A types: meri-dukan.com
                     │
                     ▼
@@ -71,4 +64,4 @@ User C types: electronics.shop
                     │
                     ▼
          /store/electro-hub khulta hai ✅
-         ELECTRONICS WALE KI DUKAN
+         ELECTRONICS WALE KI DUKAN;

@@ -1,8 +1,6 @@
-
 -- ============ ENUMS ============
 CREATE TYPE public.credit_txn_type AS ENUM ('debit', 'credit', 'bonus', 'refund', 'grant');
 CREATE TYPE public.credit_promo_type AS ENUM ('code', 'sitewide', 'first_recharge', 'loyalty', 'referral');
-
 -- ============ TABLES ============
 
 -- Per-store wallet
@@ -22,7 +20,6 @@ CREATE TABLE public.ai_credit_wallets (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 -- Ledger
 CREATE TABLE public.ai_credit_transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -43,7 +40,6 @@ CREATE TABLE public.ai_credit_transactions (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_credit_txns_store_created ON public.ai_credit_transactions(store_id, created_at DESC);
-
 -- Admin-editable price book per AI action
 CREATE TABLE public.ai_action_costs (
   action_key text PRIMARY KEY,
@@ -56,7 +52,6 @@ CREATE TABLE public.ai_action_costs (
   is_active boolean NOT NULL DEFAULT true,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 -- Razorpay top-up packs
 CREATE TABLE public.ai_credit_packs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -73,7 +68,6 @@ CREATE TABLE public.ai_credit_packs (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 -- Promotions
 CREATE TABLE public.credit_promos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -93,7 +87,6 @@ CREATE TABLE public.credit_promos (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE public.credit_promo_redemptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   promo_id uuid NOT NULL,
@@ -102,7 +95,6 @@ CREATE TABLE public.credit_promo_redemptions (
   redeemed_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_promo_red_store ON public.credit_promo_redemptions(store_id);
-
 -- Milestone grants
 CREATE TABLE public.credit_milestones (
   key text PRIMARY KEY,
@@ -111,7 +103,6 @@ CREATE TABLE public.credit_milestones (
   is_active boolean NOT NULL DEFAULT true,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE public.credit_milestone_grants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id uuid NOT NULL,
@@ -119,7 +110,6 @@ CREATE TABLE public.credit_milestone_grants (
   granted_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(store_id, milestone_key)
 );
-
 -- Smart cache
 CREATE TABLE public.ai_response_cache (
   key text PRIMARY KEY,
@@ -130,7 +120,6 @@ CREATE TABLE public.ai_response_cache (
   expires_at timestamptz
 );
 CREATE INDEX idx_ai_cache_action ON public.ai_response_cache(action_key);
-
 -- Global settings (single row)
 CREATE TABLE public.platform_credit_settings (
   id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
@@ -146,7 +135,6 @@ CREATE TABLE public.platform_credit_settings (
   updated_at timestamptz NOT NULL DEFAULT now(),
   updated_by uuid
 );
-
 -- ============ RLS ============
 ALTER TABLE public.ai_credit_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_credit_transactions ENABLE ROW LEVEL SECURITY;
@@ -158,7 +146,6 @@ ALTER TABLE public.credit_milestones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.credit_milestone_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_response_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_credit_settings ENABLE ROW LEVEL SECURITY;
-
 -- Wallets
 CREATE POLICY "Owners view own wallet" ON public.ai_credit_wallets FOR SELECT
   USING (EXISTS (SELECT 1 FROM stores s WHERE s.id = ai_credit_wallets.store_id AND s.user_id = auth.uid()));
@@ -168,7 +155,6 @@ CREATE POLICY "Owners update own wallet prefs" ON public.ai_credit_wallets FOR U
   USING (EXISTS (SELECT 1 FROM stores s WHERE s.id = ai_credit_wallets.store_id AND s.user_id = auth.uid()));
 CREATE POLICY "Service role manages wallets" ON public.ai_credit_wallets FOR ALL
   TO service_role USING (true) WITH CHECK (true);
-
 -- Transactions
 CREATE POLICY "Owners view own txns" ON public.ai_credit_transactions FOR SELECT
   USING (EXISTS (SELECT 1 FROM stores s WHERE s.id = ai_credit_transactions.store_id AND s.user_id = auth.uid()));
@@ -176,56 +162,47 @@ CREATE POLICY "Admins view all txns" ON public.ai_credit_transactions FOR SELECT
   USING (has_role(auth.uid(), 'admin'));
 CREATE POLICY "Service role manages txns" ON public.ai_credit_transactions FOR ALL
   TO service_role USING (true) WITH CHECK (true);
-
 -- Action costs (read for everyone authed; write admin only)
 CREATE POLICY "Authenticated read action costs" ON public.ai_action_costs FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Anon read action costs" ON public.ai_action_costs FOR SELECT TO anon USING (true);
 CREATE POLICY "Admins manage action costs" ON public.ai_action_costs FOR ALL TO authenticated
   USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
 CREATE POLICY "Service role manages action costs" ON public.ai_action_costs FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- Packs
 CREATE POLICY "Anyone reads active packs" ON public.ai_credit_packs FOR SELECT USING (is_active = true);
 CREATE POLICY "Admins manage packs" ON public.ai_credit_packs FOR ALL TO authenticated
   USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
 CREATE POLICY "Service role manages packs" ON public.ai_credit_packs FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- Promos
 CREATE POLICY "Authenticated read active promos" ON public.credit_promos FOR SELECT TO authenticated
   USING (is_active = true);
 CREATE POLICY "Admins manage promos" ON public.credit_promos FOR ALL TO authenticated
   USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
 CREATE POLICY "Service role manages promos" ON public.credit_promos FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- Promo redemptions
 CREATE POLICY "Owners view own redemptions" ON public.credit_promo_redemptions FOR SELECT
   USING (EXISTS (SELECT 1 FROM stores s WHERE s.id = credit_promo_redemptions.store_id AND s.user_id = auth.uid()));
 CREATE POLICY "Admins view all redemptions" ON public.credit_promo_redemptions FOR SELECT
   USING (has_role(auth.uid(), 'admin'));
 CREATE POLICY "Service role manages redemptions" ON public.credit_promo_redemptions FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- Milestones
 CREATE POLICY "Authenticated read milestones" ON public.credit_milestones FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Admins manage milestones" ON public.credit_milestones FOR ALL TO authenticated
   USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
 CREATE POLICY "Service role manages milestones" ON public.credit_milestones FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 CREATE POLICY "Owners view own milestone grants" ON public.credit_milestone_grants FOR SELECT
   USING (EXISTS (SELECT 1 FROM stores s WHERE s.id = credit_milestone_grants.store_id AND s.user_id = auth.uid()));
 CREATE POLICY "Service role manages milestone grants" ON public.credit_milestone_grants FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- AI cache: service-only (sensitive)
 CREATE POLICY "Service role manages cache" ON public.ai_response_cache FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "Admins read cache" ON public.ai_response_cache FOR SELECT TO authenticated
   USING (has_role(auth.uid(), 'admin'));
-
 -- Settings
 CREATE POLICY "Authenticated read settings" ON public.platform_credit_settings FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Anon read settings" ON public.platform_credit_settings FOR SELECT TO anon USING (true);
 CREATE POLICY "Admins update settings" ON public.platform_credit_settings FOR UPDATE TO authenticated
   USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
 CREATE POLICY "Service role manages settings" ON public.platform_credit_settings FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- ============ TRIGGERS for updated_at ============
 CREATE TRIGGER trg_wallets_updated BEFORE UPDATE ON public.ai_credit_wallets
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -237,7 +214,6 @@ CREATE TRIGGER trg_promos_updated BEFORE UPDATE ON public.credit_promos
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TRIGGER trg_settings_updated BEFORE UPDATE ON public.platform_credit_settings
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- ============ HELPER RPCs ============
 
 -- Atomically debit credits for an AI action; returns new balance or -1 if insufficient
@@ -295,7 +271,6 @@ BEGIN
   RETURN new_balance;
 END;
 $$;
-
 -- Credit a wallet (used by recharge verification, grants, bonuses)
 CREATE OR REPLACE FUNCTION public.credit_wallet(
   _store_id uuid,
@@ -342,16 +317,13 @@ BEGIN
   RETURN new_balance;
 END;
 $$;
-
 -- ============ SEED DATA ============
 INSERT INTO public.platform_credit_settings(id) VALUES (1);
-
 INSERT INTO public.ai_credit_packs(name, price_inr, credits, bonus_pct, badge, is_popular, sort_order) VALUES
   ('Starter', 99, 1000, 0, NULL, false, 1),
   ('Growth', 499, 5500, 10, 'Most Popular', true, 2),
   ('Pro', 1499, 18000, 20, 'Best Value', false, 3),
   ('Scale', 4999, 65000, 30, NULL, false, 4);
-
 INSERT INTO public.ai_action_costs(action_key, label, credits, cache_hit_credits, manual_cost_inr, manual_minutes, model) VALUES
   ('generate-product', 'Product description from image', 8, 1, 150, 15, 'google/gemini-2.5-flash'),
   ('generate-blog', 'Full blog post (AI-written)', 60, 5, 1200, 120, 'google/gemini-2.5-pro'),
@@ -361,7 +333,6 @@ INSERT INTO public.ai_action_costs(action_key, label, credits, cache_hit_credits
   ('generate-section-content', 'Storefront section content', 5, 1, 100, 10, 'google/gemini-2.5-flash'),
   ('generate-email-templates', 'Branded email template set', 30, 3, 600, 60, 'google/gemini-2.5-flash'),
   ('store-engagement', 'Store engagement report', 15, 2, 0, 0, 'google/gemini-2.5-flash');
-
 INSERT INTO public.credit_milestones(key, label, credits) VALUES
   ('first_publish', 'Publish your first store', 500),
   ('first_5_products', 'Add your first 5 products', 200),

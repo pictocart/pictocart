@@ -1,4 +1,3 @@
-
 -- Subscription lifecycle: grace period, blocking, upgrade/downgrade scheduling, GST pricing
 
 ALTER TABLE public.subscriptions
@@ -9,16 +8,13 @@ ALTER TABLE public.subscriptions
   ADD COLUMN IF NOT EXISTS blocked_notified_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS pending_plan public.subscription_plan,
   ADD COLUMN IF NOT EXISTS pending_plan_effective_at TIMESTAMPTZ;
-
 CREATE INDEX IF NOT EXISTS idx_subscriptions_period_end
   ON public.subscriptions (status, current_period_end);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_grace
   ON public.subscriptions (is_blocked, grace_period_end);
-
 -- GST percent column on plan_configs (default 18%)
 ALTER TABLE public.plan_configs
   ADD COLUMN IF NOT EXISTS gst_percent NUMERIC NOT NULL DEFAULT 18;
-
 -- RPC: is the store currently blocked (paid plan, grace ended)
 CREATE OR REPLACE FUNCTION public.is_store_access_blocked(_store_id uuid)
 RETURNS boolean
@@ -31,7 +27,6 @@ AS $$
     FROM public.subscriptions WHERE store_id = _store_id
   ), false);
 $$;
-
 -- RPC: schedule a plan change. Upgrade is applied immediately by the edge function
 -- (which creates a new Razorpay subscription); downgrade is stored as pending and
 -- applied by the webhook at the end of the current billing period.
@@ -76,7 +71,6 @@ BEGIN
   END IF;
 END;
 $$;
-
 CREATE OR REPLACE FUNCTION public.cancel_pending_plan_change(_store_id uuid)
 RETURNS void
 LANGUAGE plpgsql

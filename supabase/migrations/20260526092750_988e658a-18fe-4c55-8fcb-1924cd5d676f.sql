@@ -1,7 +1,5 @@
-
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
-
 DO $$
 DECLARE
   cats text[] := ARRAY['beauty','home','fashion','kitchen','festive','tech','toys','wellness'];

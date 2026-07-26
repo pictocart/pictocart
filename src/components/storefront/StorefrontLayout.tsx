@@ -239,6 +239,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
   const is3DTheme = isThemeManifestTheme && (
     themeId.includes('theme-style-15') ||
     themeId.includes('theme-style-16') ||
+    themeId.includes('theme-talkofthetown') ||
     themeId.includes('theme-style-17')
   );
 

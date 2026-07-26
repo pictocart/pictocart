@@ -58,8 +58,6 @@ ON CONFLICT (theme_id) DO UPDATE SET
   category = EXCLUDED.category,
   is_active = EXCLUDED.is_active,
   preview_image = EXCLUDED.preview_image;
-
-
 -- 2. Seed corresponding files_manifest into theme_master_versions (Version 1)
 
 -- 2a. Seed Tailblocks Minimalist Manifest
@@ -204,8 +202,6 @@ VALUES (
   }'
 )
 ON CONFLICT (theme_id, version) DO NOTHING;
-
-
 -- 2b. Seed DaisyUI Bubbly Manifest
 INSERT INTO public.theme_master_versions (theme_id, version, files_manifest)
 VALUES (
@@ -348,8 +344,6 @@ VALUES (
   }'
 )
 ON CONFLICT (theme_id, version) DO NOTHING;
-
-
 -- 2c. Seed Flowbite Corporate Manifest
 INSERT INTO public.theme_master_versions (theme_id, version, files_manifest)
 VALUES (

@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
@@ -3758,7 +3758,7 @@ function CategoryFloatingOrbs({ p, dna, storeSlug }: any) {
 // Injected by StorefrontLayout for theme-15/16/17
 // ═══════════════════════════════════════════════════════════════════════════
 export function Theme3DPageBackground({ themeId, palette }: { themeId: string; palette: any }) {
-  const is16 = themeId.includes('style-16');
+  const is16 = themeId.includes('style-16') || themeId.includes('talkofthetown');
   const is17 = themeId.includes('style-17');
   const color1 = is17 ? '#10b981' : is16 ? '#94a3b8' : '#6366f1';
   const color2 = is17 ? '#34d399' : is16 ? '#475569' : '#a855f7';

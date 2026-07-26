@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE FUNCTION public.deduct_inventory_on_order()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -21,7 +20,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 CREATE TRIGGER trg_deduct_inventory
 AFTER INSERT ON public.orders
 FOR EACH ROW

@@ -13,7 +13,6 @@ AS $$
   WHERE d.checked_at >= _since
   GROUP BY d.store_id;
 $$;
-
 REVOKE ALL ON FUNCTION public.get_domain_health_summary(timestamp with time zone) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_domain_health_summary(timestamp with time zone) FROM anon;
 GRANT EXECUTE ON FUNCTION public.get_domain_health_summary(timestamp with time zone) TO authenticated;

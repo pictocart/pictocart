@@ -24,10 +24,8 @@ BEGIN
    WHERE id = _handover_id;
 END;
 $$;
-
 REVOKE ALL ON FUNCTION public.transfer_store_to_client(uuid, uuid, uuid) FROM public;
 GRANT EXECUTE ON FUNCTION public.transfer_store_to_client(uuid, uuid, uuid) TO service_role;
-
 -- Allow partner to insert a stub store owned by themselves during build mode
 DROP POLICY IF EXISTS "partner inserts own build store" ON public.stores;
 CREATE POLICY "partner inserts own build store" ON public.stores

@@ -2,7 +2,6 @@ alter table public.stores
   add column if not exists theme_id text,
   add column if not exists theme_tokens jsonb,
   add column if not exists resolved_storefront_manifest jsonb;
-
 update public.stores
 set
   theme_id = coalesce(theme_id, theme->>'theme_id', theme->>'name'),

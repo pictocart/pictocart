@@ -1,4 +1,3 @@
-
 -- Wipe all test data except admin antarikshdwivedi@gmail.com
 DO $$
 DECLARE

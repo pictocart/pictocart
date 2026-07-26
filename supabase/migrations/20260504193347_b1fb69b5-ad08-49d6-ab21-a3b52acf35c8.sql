@@ -1,4 +1,3 @@
-
 -- 1. Inbound theme deliveries from the Master Bazaar agent
 CREATE TABLE public.master_theme_deliveries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,7 +21,6 @@ CREATE POLICY "Admins manage deliveries" ON public.master_theme_deliveries
   FOR ALL TO authenticated USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
 CREATE POLICY "Service role manages deliveries" ON public.master_theme_deliveries
   FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- 2. Token-cost history (drives the declining-cost line graph)
 CREATE TABLE public.theme_generation_metrics (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -40,7 +38,6 @@ CREATE POLICY "Admins read metrics" ON public.theme_generation_metrics
 CREATE POLICY "Service role manages metrics" ON public.theme_generation_metrics
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE INDEX idx_theme_metrics_generated_at ON public.theme_generation_metrics(generated_at);
-
 -- 3. Monthly release calendar
 CREATE TABLE public.theme_release_calendar (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -59,7 +56,6 @@ CREATE POLICY "Admins manage calendar" ON public.theme_release_calendar
   FOR ALL TO authenticated USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
 CREATE POLICY "Service role manages calendar" ON public.theme_release_calendar
   FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 -- 4. Admin <-> agent chat
 CREATE TABLE public.agent_admin_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -77,11 +73,9 @@ CREATE POLICY "Admins manage agent messages" ON public.agent_admin_messages
 CREATE POLICY "Service role manages agent messages" ON public.agent_admin_messages
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE INDEX idx_agent_messages_created_at ON public.agent_admin_messages(created_at);
-
 -- 5. Extend theme_master_projects for richer Customise editor
 ALTER TABLE public.theme_master_projects
   ADD COLUMN IF NOT EXISTS features jsonb DEFAULT '{}'::jsonb,
   ADD COLUMN IF NOT EXISTS customisable_slots jsonb DEFAULT '[]'::jsonb;
-
 -- 6. Realtime for live agent chat
 ALTER PUBLICATION supabase_realtime ADD TABLE public.agent_admin_messages;

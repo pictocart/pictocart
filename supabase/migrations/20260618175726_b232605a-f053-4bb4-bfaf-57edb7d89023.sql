@@ -1,9 +1,7 @@
-
 -- ============ ENUM tier ============
 DO $$ BEGIN
   CREATE TYPE public.partner_tier AS ENUM ('partner','state_head','regional_head');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 -- ============ EXTEND partners ============
 ALTER TABLE public.partners
   ADD COLUMN IF NOT EXISTS tier public.partner_tier NOT NULL DEFAULT 'partner',
@@ -11,10 +9,8 @@ ALTER TABLE public.partners
   ADD COLUMN IF NOT EXISTS region_name text,
   ADD COLUMN IF NOT EXISTS state_name text,
   ADD COLUMN IF NOT EXISTS override_commission_pct numeric(5,2) NOT NULL DEFAULT 0;
-
 CREATE INDEX IF NOT EXISTS idx_partners_parent ON public.partners(parent_partner_id) WHERE parent_partner_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_partners_tier ON public.partners(tier);
-
 -- ============ EXTEND partner_commissions ============
 ALTER TABLE public.partner_commissions
   ADD COLUMN IF NOT EXISTS commission_type text NOT NULL DEFAULT 'direct'
@@ -23,9 +19,7 @@ ALTER TABLE public.partner_commissions
   ADD COLUMN IF NOT EXISTS source_kind text,
   ADD COLUMN IF NOT EXISTS source_ref text,
   ADD COLUMN IF NOT EXISTS commission_rate numeric(5,2);
-
 CREATE INDEX IF NOT EXISTS idx_partner_commissions_source ON public.partner_commissions(source_partner_id);
-
 -- ============ Cycle / depth guard ============
 CREATE OR REPLACE FUNCTION public.guard_partner_parent_cycle()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
@@ -46,12 +40,10 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 DROP TRIGGER IF EXISTS trg_guard_partner_parent_cycle ON public.partners;
 CREATE TRIGGER trg_guard_partner_parent_cycle
   BEFORE INSERT OR UPDATE OF parent_partner_id ON public.partners
   FOR EACH ROW EXECUTE FUNCTION public.guard_partner_parent_cycle();
-
 -- ============ Downline helper ============
 CREATE OR REPLACE FUNCTION public.is_partner_in_downline(_head_user_id uuid, _partner_id uuid)
 RETURNS boolean
@@ -68,13 +60,11 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     WHERE h.user_id = _head_user_id
   );
 $$;
-
 -- ============ Downline read policies ============
 DROP POLICY IF EXISTS "Head reads downline partners" ON public.partners;
 CREATE POLICY "Head reads downline partners" ON public.partners
   FOR SELECT TO authenticated
   USING (public.is_partner_in_downline(auth.uid(), id));
-
 DROP POLICY IF EXISTS "Head reads downline commissions" ON public.partner_commissions;
 CREATE POLICY "Head reads downline commissions" ON public.partner_commissions
   FOR SELECT TO authenticated
@@ -82,12 +72,10 @@ CREATE POLICY "Head reads downline commissions" ON public.partner_commissions
     source_partner_id IS NOT NULL
     AND public.is_partner_in_downline(auth.uid(), source_partner_id)
   );
-
 DROP POLICY IF EXISTS "Head reads downline licenses" ON public.partner_licenses;
 CREATE POLICY "Head reads downline licenses" ON public.partner_licenses
   FOR SELECT TO authenticated
   USING (public.is_partner_in_downline(auth.uid(), partner_id));
-
 -- ============ RPC: accrue hierarchy commissions ============
 CREATE OR REPLACE FUNCTION public.accrue_hierarchy_commissions(
   _partner_id uuid,
@@ -147,7 +135,6 @@ BEGIN
   END IF;
 END;
 $$;
-
 -- ============ Hook license batch trigger ============
 CREATE OR REPLACE FUNCTION public.generate_licenses_for_batch()
 RETURNS trigger
@@ -169,7 +156,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 -- ============ RPC: promote partner ============
 CREATE OR REPLACE FUNCTION public.admin_promote_partner(
   _partner_id uuid,
@@ -192,7 +178,6 @@ BEGIN
    WHERE id = _partner_id;
 END;
 $$;
-
 -- ============ RPC: assign parent ============
 CREATE OR REPLACE FUNCTION public.admin_assign_partner_parent(
   _partner_id uuid,
@@ -207,7 +192,6 @@ BEGIN
   UPDATE public.partners SET parent_partner_id = _parent_id WHERE id = _partner_id;
 END;
 $$;
-
 -- ============ RPC: head dashboard summary ============
 CREATE OR REPLACE FUNCTION public.head_downline_summary(_head_partner_id uuid)
 RETURNS TABLE(

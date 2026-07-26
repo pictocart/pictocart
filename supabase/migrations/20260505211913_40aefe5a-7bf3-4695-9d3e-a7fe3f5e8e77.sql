@@ -16,7 +16,6 @@ CREATE POLICY "Admins manage theme settings" ON public.theme_settings FOR ALL TO
   USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
 CREATE POLICY "Service role manages theme settings" ON public.theme_settings FOR ALL TO service_role USING (true) WITH CHECK (true);
 INSERT INTO public.theme_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
-
 CREATE TABLE IF NOT EXISTS public.research_jobs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   status text NOT NULL DEFAULT 'queued',
@@ -33,7 +32,6 @@ CREATE INDEX IF NOT EXISTS idx_research_jobs_started ON public.research_jobs (st
 ALTER TABLE public.research_jobs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins read research jobs" ON public.research_jobs FOR SELECT TO authenticated USING (has_role(auth.uid(),'admin'));
 CREATE POLICY "Service role manages research jobs" ON public.research_jobs FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 CREATE TABLE IF NOT EXISTS public.theme_research_corpus (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   source_url text NOT NULL,
@@ -56,7 +54,6 @@ CREATE POLICY "Admins manage research corpus" ON public.theme_research_corpus
   FOR ALL TO authenticated USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
 CREATE POLICY "Service role manages research corpus" ON public.theme_research_corpus
   FOR ALL TO service_role USING (true) WITH CHECK (true);
-
 CREATE TABLE IF NOT EXISTS public.ai_call_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   function_name text NOT NULL,

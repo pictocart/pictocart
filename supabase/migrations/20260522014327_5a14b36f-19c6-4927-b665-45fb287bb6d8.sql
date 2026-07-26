@@ -1,13 +1,10 @@
-
 -- Status enums
 DO $$ BEGIN
   CREATE TYPE public.commission_status AS ENUM ('accrued','invoiced','waived');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
-
 DO $$ BEGIN
   CREATE TYPE public.commission_invoice_status AS ENUM ('pending','paid','overdue','waived');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
-
 -- Per-order commission accrual
 CREATE TABLE IF NOT EXISTS public.order_commissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -24,18 +21,14 @@ CREATE TABLE IF NOT EXISTS public.order_commissions (
 );
 CREATE INDEX IF NOT EXISTS idx_order_commissions_store_status ON public.order_commissions(store_id, status);
 CREATE INDEX IF NOT EXISTS idx_order_commissions_invoice ON public.order_commissions(invoice_id);
-
 ALTER TABLE public.order_commissions ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Merchants view own commissions"
 ON public.order_commissions FOR SELECT TO authenticated
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = order_commissions.store_id AND s.user_id = auth.uid()));
-
 CREATE POLICY "Admins manage all commissions"
 ON public.order_commissions FOR ALL TO authenticated
 USING (public.has_role(auth.uid(), 'admin'))
 WITH CHECK (public.has_role(auth.uid(), 'admin'));
-
 -- Monthly invoices
 CREATE TABLE IF NOT EXISTS public.commission_invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,35 +51,28 @@ CREATE TABLE IF NOT EXISTS public.commission_invoices (
   UNIQUE(store_id, period_start, period_end)
 );
 CREATE INDEX IF NOT EXISTS idx_commission_invoices_store_status ON public.commission_invoices(store_id, status);
-
 ALTER TABLE public.commission_invoices ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Merchants view own commission invoices"
 ON public.commission_invoices FOR SELECT TO authenticated
 USING (EXISTS (SELECT 1 FROM public.stores s WHERE s.id = commission_invoices.store_id AND s.user_id = auth.uid()));
-
 CREATE POLICY "Admins manage all commission invoices"
 ON public.commission_invoices FOR ALL TO authenticated
 USING (public.has_role(auth.uid(), 'admin'))
 WITH CHECK (public.has_role(auth.uid(), 'admin'));
-
 -- Link FK after both tables exist
 ALTER TABLE public.order_commissions
   DROP CONSTRAINT IF EXISTS order_commissions_invoice_fk,
   ADD CONSTRAINT order_commissions_invoice_fk
     FOREIGN KEY (invoice_id) REFERENCES public.commission_invoices(id) ON DELETE SET NULL;
-
 -- Updated-at triggers
 DROP TRIGGER IF EXISTS trg_order_commissions_updated ON public.order_commissions;
 CREATE TRIGGER trg_order_commissions_updated
 BEFORE UPDATE ON public.order_commissions
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 DROP TRIGGER IF EXISTS trg_commission_invoices_updated ON public.commission_invoices;
 CREATE TRIGGER trg_commission_invoices_updated
 BEFORE UPDATE ON public.commission_invoices
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- Auto-accrue commission when an order is paid; waive on cancel/refund
 CREATE OR REPLACE FUNCTION public.accrue_order_commission()
 RETURNS trigger
@@ -143,11 +129,9 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 DROP TRIGGER IF EXISTS trg_orders_accrue_commission ON public.orders;
 CREATE TRIGGER trg_orders_accrue_commission
 AFTER INSERT OR UPDATE OF payment_status, status ON public.orders
 FOR EACH ROW EXECUTE FUNCTION public.accrue_order_commission();
-
 -- Auto-pay opt-in flag stored on stores.settings (no schema change needed),
--- but we also add a column on commission_invoices to record the chosen method per invoice (already added above).
+-- but we also add a column on commission_invoices to record the chosen method per invoice (already added above).;
