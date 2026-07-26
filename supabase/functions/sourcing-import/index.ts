@@ -8,19 +8,19 @@ const corsHeaders = {
 };
 
 async function aiRewrite(title: string, description: string | null): Promise<{ title: string; description: string }> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = Deno.env.get("NVIDIA_API_KEY");
   if (!apiKey) return { title, description: description ?? "" };
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
         messages: [
-          { role: "system", content: "You rewrite wholesale product copy into compelling, India-friendly D2C storefront copy. Output STRICT JSON: {\"title\": string (<60 chars), \"description\": string (60-120 words, benefits-led, no emojis)}" },
+          { role: "system", content: "You rewrite wholesale product copy into compelling, India-friendly D2C storefront copy. Output STRICT JSON with no markdown fences: {\"title\": string (<60 chars), \"description\": string (60-120 words, benefits-led, no emojis)}" },
           { role: "user", content: `Title: ${title}\n\nOriginal description: ${description ?? "(none)"}` },
         ],
-        response_format: { type: "json_object" },
+        temperature: 0.5,
       }),
     });
     if (!res.ok) return { title, description: description ?? "" };

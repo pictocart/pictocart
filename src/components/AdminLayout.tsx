@@ -24,6 +24,7 @@ import {
   Receipt,
   Layers,
   Boxes,
+  Bot,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,7 @@ const adminNavItems = [
   { label: 'Credits Economy', icon: Sparkles, path: '/admin/credits-economy' },
   { label: 'Launch QA', icon: CheckSquare, path: '/admin/launch' },
   { label: 'Health', icon: Activity, path: '/admin/health' },
+  { label: 'AI Health', icon: Bot, path: '/admin/ai-health' },
   { label: 'Disputes', icon: ShieldAlert, path: '/admin/disputes' },
   { label: 'Partners', icon: Handshake, path: '/admin/partners' },
   { label: 'Partner Payouts', icon: IndianRupee, path: '/admin/partner-payouts' },

@@ -29,8 +29,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing store_id or prompt" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: store } = await admin.from("stores").select("id, user_id").eq("id", store_id).maybeSingle();
@@ -50,44 +48,18 @@ serve(async (req) => {
 
     let imageUrl = "";
 
-    if (LOVABLE_API_KEY) {
-      const fullPrompt = `Professional studio photograph of ${userPrompt}. ${productName ? `Product: "${productName}".` : ""} ${category ? `Category: ${category}.` : ""} Square 1:1 aspect, soft natural lighting, shallow depth-of-field, appetizing, premium plating/styling, photorealistic, hyper-detailed, no text, no watermark, white or rustic neutral background. Suitable as a hero product photo for an Indian e-commerce store${storeName ? ` "${storeName}"` : ""}.`;
+    // Use Pollinations.ai (free, unlimited, open-source image generation with Flux model)
+    const cleanPrompt = encodeURIComponent(`Professional studio photograph of ${userPrompt}. ${productName ? `Product: "${productName}".` : ""} ${category ? `Category: ${category}.` : ""} Square 1:1 aspect, soft natural lighting, shallow depth-of-field, appetizing, premium plating/styling, photorealistic, hyper-detailed, no text, no watermark, white or rustic neutral background. Suitable as a hero product photo for an Indian e-commerce store${storeName ? ` "${storeName}"` : ""}.`);
+    const pollinationsUrl = `https://image.pollinations.ai/p/${cleanPrompt}?width=1024&height=1024&nologo=true&private=true&model=flux`;
 
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
-          messages: [{ role: "user", content: fullPrompt }],
-          modalities: ["image", "text"],
-        }),
-      });
-
-      if (!r.ok) {
-        const t = await r.text();
-        if (r.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (r.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted on the platform side." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        throw new Error(`AI gateway error ${r.status}: ${t}`);
-      }
-      const data = await r.json();
-      imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url || data.choices?.[0]?.message?.content;
-    } else {
-      // Fallback to Pollinations.ai (unlimited free open-source image generation)
-      const cleanPrompt = encodeURIComponent(`Professional studio photograph of ${userPrompt}. Square 1:1 aspect, soft natural lighting, shallow depth-of-field, appetizing, premium plating/styling, photorealistic, hyper-detailed, no text, no watermark, white or rustic neutral background.`);
-      const url = `https://image.pollinations.ai/p/${cleanPrompt}?width=1024&height=1024&nologo=true&private=true&model=flux`;
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Pollinations API error: ${response.statusText}`);
-      }
-      const buffer = await response.arrayBuffer();
-      const bin = new Uint8Array(buffer);
-      const path = `${userData.user.id}/ai-product/${crypto.randomUUID()}.png`;
-      const { error: upErr } = await admin.storage.from("product-images").upload(path, bin, { contentType: "image/png", upsert: false });
-      if (upErr) throw upErr;
-
-      imageUrl = admin.storage.from("product-images").getPublicUrl(path).data.publicUrl;
-    }
+    const response = await fetch(pollinationsUrl);
+    if (!response.ok) throw new Error(`Pollinations API error: ${response.statusText}`);
+    const buffer = await response.arrayBuffer();
+    const bin = new Uint8Array(buffer);
+    const path = `${userData.user.id}/ai-product/${crypto.randomUUID()}.png`;
+    const { error: upErr } = await admin.storage.from("product-images").upload(path, bin, { contentType: "image/png", upsert: false });
+    if (upErr) throw upErr;
+    imageUrl = admin.storage.from("product-images").getPublicUrl(path).data.publicUrl;
 
     if (!imageUrl) {
       return new Response(JSON.stringify({ error: "No image generated or found" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });

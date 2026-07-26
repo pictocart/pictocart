@@ -33,18 +33,18 @@ Deno.serve(async (req) => {
     const { data: corpus } = await supabase.from("theme_research_corpus").select("category, hero_style, palette, copy_motifs, insights").order("scraped_at", { ascending: false }).limit(40);
 
     let themes: any[] = [];
-    const key = Deno.env.get("LOVABLE_API_KEY");
+    const key = Deno.env.get("NVIDIA_API_KEY");
     if (key) {
-      const prompt = `Plan exactly ${count} distinctive e-commerce themes (no duplicates of: ${(corpus ?? []).map((c: any) => c?.insights?.summary).filter(Boolean).slice(0, 6).join(" | ") || "none yet"}). Mix categories. Return ONLY JSON: { "themes": [{ "name": string, "category": string, "palette_hint": string, "vibe": string }] }.`;
+      const prompt = `Plan exactly ${count} distinctive e-commerce themes (no duplicates of: ${(corpus ?? []).map((c: any) => c?.insights?.summary).filter(Boolean).slice(0, 6).join(" | ") || "none yet"}). Mix categories. Return ONLY valid JSON, no markdown fences: { "themes": [{ "name": string, "category": string, "palette_hint": string, "vibe": string }] }.`;
       try {
-        const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
           method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "user", content: prompt }] }),
+          body: JSON.stringify({ model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning", messages: [{ role: "user", content: prompt }], temperature: 0.7 }),
         });
         if (r.ok) {
           const data = await r.json();
           const content = data.choices?.[0]?.message?.content ?? "";
-          await supabase.from("ai_call_log").insert({ function_name: "plan-monthly-calendar", model: "google/gemini-2.5-flash", prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: costInr("google/gemini-2.5-flash", data.usage?.prompt_tokens ?? 0, data.usage?.completion_tokens ?? 0) });
+          await supabase.from("ai_call_log").insert({ function_name: "plan-monthly-calendar", model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning", prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: 0 });
           const m = content.match(/\{[\s\S]*\}/);
           if (m) themes = (JSON.parse(m[0]).themes ?? []).slice(0, count);
         }

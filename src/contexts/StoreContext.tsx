@@ -34,6 +34,7 @@ const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
   // Track which user id we've fetched the store for. Without this, right after
@@ -41,8 +42,10 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   // previous (signed-out) state and incorrectly redirect to /onboarding.
   const [fetchedForUserId, setFetchedForUserId] = useState<string | null>(null);
 
+  // Use userId (string | null) as dependency — NOT the full user object which
+  // gets a new reference on every auth token refresh, causing unnecessary refetches.
   const fetchStore = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setStore(null);
       setFetchedForUserId(null);
       setLoading(false);
@@ -52,7 +55,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     const { data, error } = await supabase
       .from('stores')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .limit(1);
 
@@ -63,18 +66,18 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     }
     const row = ((data as Store[] | null)?.[0]) ?? null;
     setStore(row ? (deriveLegacyThemeFields(row) as Store) : null);
-    setFetchedForUserId(user.id);
+    setFetchedForUserId(userId);
     setLoading(false);
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     if (authLoading) {
       setLoading(true);
       return;
     }
-    // User changed (login/logout) — reset synchronously so consumers don't
-    // render the previous user's empty state while the new fetch runs.
-    if (user?.id !== fetchedForUserId) {
+    // Only reset store when user actually changes (login/logout/switch).
+    // Token refreshes keep the same userId so we skip the reset → no blink.
+    if (userId !== fetchedForUserId) {
       setStore(null);
       setLoading(true);
     }
@@ -84,7 +87,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
   // Treat as loading until we've actually fetched for the current user.
   const effectiveLoading =
-    loading || authLoading || (!!user && fetchedForUserId !== user.id);
+    loading || authLoading || (!!userId && fetchedForUserId !== userId);
 
   return (
     <StoreContext.Provider value={{ store, loading: effectiveLoading, setStore, refetchStore: fetchStore }}>

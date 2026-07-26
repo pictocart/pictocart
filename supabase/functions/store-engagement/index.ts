@@ -8,8 +8,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('Missing API key');
+    const NVIDIA_API_KEY = Deno.env.get('NVIDIA_API_KEY');
+    if (!NVIDIA_API_KEY) throw new Error('NVIDIA_API_KEY not configured');
 
     const prompt = `You are an e-commerce store consultant. Analyze this store and provide an engagement report.
 
@@ -33,13 +33,13 @@ Respond as JSON with:
 
 Be specific and actionable. Reference actual numbers from the data.`;
 
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
         messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
+        temperature: 0.5,
       }),
     });
 

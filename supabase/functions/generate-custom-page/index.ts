@@ -63,8 +63,8 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
     const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return json({ error: "AI gateway not configured" }, 500);
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (!NVIDIA_API_KEY) return json({ error: "AI gateway not configured" }, 500);
 
     const userClient = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: authHeader } } });
     const { data: userData, error: uErr } = await userClient.auth.getUser();
@@ -134,20 +134,20 @@ Style hint: ${page.style_hint || "match_theme"}
 Uploaded images available (use only these URLs, distribute across sections):
 ${uploadedImages.length ? uploadedImages.map((u, i) => `${i + 1}. ${u}`).join("\n") : "(none — design a text-rich layout)"}`;
 
-    // Call Lovable AI gateway
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call NVIDIA AI
+    const aiRes = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Lovable-API-Key": LOVABLE_API_KEY,
+        "Authorization": `Bearer ${NVIDIA_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: SYSTEM_PROMPT + "\n\nReturn ONLY valid JSON, no markdown fences." },
           { role: "user", content: userPrompt },
         ],
-        response_format: { type: "json_object" },
+        temperature: 0.5,
       }),
     });
     if (!aiRes.ok) {
@@ -191,7 +191,7 @@ ${uploadedImages.length ? uploadedImages.map((u, i) => `${i + 1}. ${u}`).join("\
         },
         theme_snapshot: themeSnapshot,
         credits_spent: (page.credits_spent || 0) + (regenerate ? 8 : 25),
-        ai_model: "google/gemini-2.5-pro",
+        ai_model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
         version: (page.version || 1) + 1,
         history: trimmedHistory,
       })

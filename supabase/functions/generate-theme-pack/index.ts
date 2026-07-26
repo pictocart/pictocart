@@ -197,8 +197,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
@@ -273,58 +273,28 @@ Preferred section order (use unless a better one fits): ${(briefRow.section_prio
     const designDnaPrompt = `You are a world-class e-commerce brand designer. Generate ONLY the brand identity for a "${briefRow?.display_name ?? category}" store theme.
 ${briefBlock}${styleHints ? `\nAdditional design brief from operator: ${styleHints}` : ""}
 
-Return ONLY the design DNA — no section content, no testimonials, no badge text.`;
+Return ONLY valid JSON, no markdown fences, with this exact shape:
+{
+  "name": "Theme Name",
+  "description": "2-3 sentence marketing copy",
+  "colors": { "primary": "#hex", "secondary": "#hex", "accent": "#hex", "background": "#hex", "text": "#hex", "card": "#hex" },
+  "fonts": { "heading": "Google Font name", "body": "Google Font name" },
+  "borderRadius": 8,
+  "gradientBackground": "optional CSS gradient",
+  "section_order": ["announcement_bar","hero","featured_products","category_grid","trust_badges","testimonials","newsletter"],
+  "image_prompts": [
+    { "section": "hero", "prompt": "vivid image description" },
+    { "section": "image_with_text", "prompt": "vivid image description" }
+  ]
+}`;
 
-    const dnaRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const dnaRes = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
         messages: [{ role: "user", content: designDnaPrompt }],
-        tools: [{
-          type: "function",
-          function: {
-            name: "create_design_dna",
-            description: "Create brand identity for an e-commerce theme — colors, fonts, name only",
-            parameters: {
-              type: "object",
-              properties: {
-                name: { type: "string", description: "Theme name like 'Luxe Fashion' or 'Organic Bites'" },
-                description: { type: "string", description: "Marketing copy (2-3 sentences)" },
-                colors: {
-                  type: "object",
-                  properties: {
-                    primary: { type: "string" }, secondary: { type: "string" }, accent: { type: "string" },
-                    background: { type: "string" }, text: { type: "string" }, card: { type: "string" },
-                  },
-                  required: ["primary", "secondary", "accent", "background", "text", "card"],
-                },
-                fonts: {
-                  type: "object",
-                  properties: {
-                    heading: { type: "string", description: "Distinctive Google Font for headings" },
-                    body: { type: "string", description: "Clean Google Font for body" },
-                  },
-                  required: ["heading", "body"],
-                },
-                borderRadius: { type: "number" },
-                gradientBackground: { type: "string", description: "Optional CSS gradient for hero" },
-                section_order: {
-                  type: "array",
-                  items: { type: "string", enum: ["hero", "featured_products", "category_grid", "text_block", "newsletter", "banner_carousel", "testimonials", "countdown_timer", "trust_badges", "brand_marquee", "image_with_text", "video_hero", "instagram_feed", "collection_showcase", "announcement_bar"] },
-                  description: "Ordered list of 8-12 section types for the home page. First should be announcement_bar, second should be hero.",
-                },
-                image_prompts: {
-                  type: "array",
-                  items: { type: "object", properties: { section: { type: "string" }, prompt: { type: "string" } }, required: ["section", "prompt"] },
-                  description: "4-6 image prompts for hero and key sections. Use section types like 'hero', 'image_with_text', etc.",
-                },
-              },
-              required: ["name", "description", "colors", "fonts", "borderRadius", "section_order", "image_prompts"],
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "create_design_dna" } },
+        temperature: 0.7,
       }),
     });
 
@@ -332,15 +302,14 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
       const errText = await dnaRes.text();
       console.error("AI DNA error:", dnaRes.status, errText);
       if (dnaRes.status === 429) return new Response(JSON.stringify({ error: "Rate limited, please try again later." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (dnaRes.status === 402) return new Response(JSON.stringify({ error: "Credits exhausted. Add funds in Settings > Workspace > Usage." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       throw new Error("AI generation failed");
     }
 
     const dnaData = await dnaRes.json();
-    const toolCall = dnaData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("AI did not return structured data");
-
-    const designDna = JSON.parse(toolCall.function.arguments);
+    const rawDna = dnaData.choices?.[0]?.message?.content ?? "{}";
+    let designDna: any;
+    try { designDna = JSON.parse(rawDna); } catch { const m = rawDna.match(/\{[\s\S]*\}/); designDna = m ? JSON.parse(m[0]) : null; }
+    if (!designDna?.colors) throw new Error("AI did not return valid design data");
     const dnaTokens = dnaData.usage?.total_tokens || 1000;
 
     // ── TIER 2: Deterministic Assembly from blueprints ──
@@ -413,36 +382,26 @@ Return ONLY the design DNA — no section content, no testimonials, no badge tex
     let imageTokens = 0;
     const generateImage = async (imgReq: { section: string; prompt: string }) => {
       try {
-        const imgRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-3.1-flash-image-preview",
-            messages: [{ role: "user", content: imgReq.prompt + ". High quality, professional e-commerce photography style, 16:9 aspect ratio." }],
-            modalities: ["image", "text"],
-          }),
-        });
+        // Use Pollinations.ai (Flux model) — free, unlimited, open-source
+        const cleanPrompt = encodeURIComponent(imgReq.prompt + ". High quality, professional e-commerce photography style, 16:9 aspect ratio, no text, no watermark.");
+        const pollinationsUrl = `https://image.pollinations.ai/p/${cleanPrompt}?width=1280&height=720&nologo=true&private=true&model=flux`;
+        const imgRes = await fetch(pollinationsUrl);
 
         if (imgRes.ok) {
-          const imgData = await imgRes.json();
-          const base64 = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-          if (base64) {
-            const raw = base64.includes(",") ? base64.split(",")[1] : base64;
-            const imageBytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
-            const path = `themes/${crypto.randomUUID()}.png`;
-            const { error: uploadErr } = await adminClient.storage.from("product-images").upload(path, imageBytes, { contentType: "image/png" });
-            if (!uploadErr) {
-              const { data: { publicUrl } } = adminClient.storage.from("product-images").getPublicUrl(path);
-              generatedImages[imgReq.section] = publicUrl;
-
-              await adminClient.from("theme_image_pool").insert({
-                category,
-                section_type: imgReq.section,
-                image_url: publicUrl,
-              });
-            }
+          const buffer = await imgRes.arrayBuffer();
+          const imageBytes = new Uint8Array(buffer);
+          const path = `themes/${crypto.randomUUID()}.png`;
+          const { error: uploadErr } = await adminClient.storage.from("product-images").upload(path, imageBytes, { contentType: "image/png" });
+          if (!uploadErr) {
+            const { data: { publicUrl } } = adminClient.storage.from("product-images").getPublicUrl(path);
+            generatedImages[imgReq.section] = publicUrl;
+            await adminClient.from("theme_image_pool").insert({
+              category,
+              section_type: imgReq.section,
+              image_url: publicUrl,
+            });
           }
-          imageTokens += imgData.usage?.total_tokens || 1000;
+          imageTokens += 0; // Pollinations is free
         }
       } catch (e) {
         console.error("Image gen error:", e);

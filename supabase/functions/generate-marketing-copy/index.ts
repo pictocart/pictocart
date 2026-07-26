@@ -35,8 +35,8 @@ serve(async (req) => {
 
     if (!store_id) return json({ error: "store_id is required" }, 400);
 
-    const key = Deno.env.get("GROQ_API_KEY");
-    if (!key) throw new Error("GROQ_API_KEY is not configured");
+    const key = Deno.env.get("NVIDIA_API_KEY");
+    if (!key) throw new Error("NVIDIA_API_KEY is not configured");
 
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -80,34 +80,40 @@ Submit the results by calling the submit_copy tool.`;
       },
     };
 
-    const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const groqRes = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
         messages: [
-          { role: "system", content: sysPrompt },
+          { role: "system", content: sysPrompt + "\n\nReturn ONLY valid JSON, no markdown fences: {\"whatsapp\": \"...\", \"sms\": \"...\"}" },
           { role: "user", content: userPrompt },
         ],
-        tools: [copyTool],
-        tool_choice: { type: "function", function: { name: "submit_copy" } },
+        temperature: 0.7,
       }),
     });
 
     if (!groqRes.ok) {
-      throw new Error(`Groq API error: ${groqRes.status} - ${await groqRes.text()}`);
+      throw new Error(`NVIDIA API error: ${groqRes.status} - ${await groqRes.text()}`);
     }
 
     const data = await groqRes.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      throw new Error("AI did not trigger the submit_copy tool");
+    const raw = data.choices?.[0]?.message?.content ?? "{}";
+    let whatsapp: string, sms: string;
+    try {
+      const parsed = JSON.parse(raw);
+      whatsapp = parsed.whatsapp;
+      sms = parsed.sms;
+    } catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      const parsed = m ? JSON.parse(m[0]) : {};
+      whatsapp = parsed.whatsapp;
+      sms = parsed.sms;
     }
-
-    const { whatsapp, sms } = JSON.parse(toolCall.function.arguments);
+    if (!whatsapp || !sms) throw new Error("AI did not return valid copy");
     return json({ success: true, whatsapp, sms });
   } catch (error: any) {
     console.error("generate-marketing-copy error:", error);

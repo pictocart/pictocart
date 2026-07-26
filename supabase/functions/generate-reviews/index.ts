@@ -27,7 +27,7 @@ async function callGroq(messages: any[], tools?: any[]) {
     body.tool_choice = { type: "function", function: { name: "submit_reviews" } };
   }
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,

@@ -18,10 +18,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const NVIDIA_API_KEY = Deno.env.get('NVIDIA_API_KEY');
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
-    if (!LOVABLE_API_KEY && !GROQ_API_KEY) {
-      throw new Error('Missing LOVABLE_API_KEY and GROQ_API_KEY');
+    if (!NVIDIA_API_KEY && !GROQ_API_KEY) {
+      throw new Error('Missing NVIDIA_API_KEY and GROQ_API_KEY');
     }
 
     const supabase = createClient(
@@ -77,51 +77,31 @@ CATALOG (JSON, up to 60 most recent active products):
 ${JSON.stringify(catalog)}`;
 
     let reply = '';
-    if (LOVABLE_API_KEY) {
-      const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    if (NVIDIA_API_KEY) {
+      const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
+          model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
           messages: [{ role: 'system', content: systemPrompt }, ...messages],
+          temperature: 0.5,
         }),
       });
-
       if (!res.ok) {
         const txt = await res.text();
-        if (res.status === 429) {
-          return new Response(JSON.stringify({ error: 'Too many requests. Please try again in a moment.' }), {
-            status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        if (res.status === 402) {
-          return new Response(JSON.stringify({ error: 'AI credits exhausted. Please add credits.' }), {
-            status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        throw new Error(`AI gateway error: ${res.status} ${txt}`);
+        if (res.status === 429) return new Response(JSON.stringify({ error: 'Too many requests. Please try again in a moment.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        throw new Error(`NVIDIA API error: ${res.status} ${txt}`);
       }
-
       const data = await res.json();
       reply = data?.choices?.[0]?.message?.content || 'Sorry, I could not generate a reply.';
     } else {
-      // Fallback to Groq using Llama 3
+      // Fallback to Groq
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'system', content: systemPrompt }, ...messages],
-        }),
+        headers: { Authorization: `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: systemPrompt }, ...messages] }),
       });
-
-      if (!res.ok) {
-        throw new Error(`Groq API error: ${res.status} - ${await res.text()}`);
-      }
-
+      if (!res.ok) throw new Error(`Groq API error: ${res.status} - ${await res.text()}`);
       const data = await res.json();
       reply = data?.choices?.[0]?.message?.content || 'Sorry, I could not generate a reply.';
     }

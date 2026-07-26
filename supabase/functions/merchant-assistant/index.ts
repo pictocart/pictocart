@@ -26,10 +26,10 @@ Deno.serve(async (req) => {
     }
 
     const SARVAM_API_KEY = Deno.env.get('SARVAM_API_KEY');
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const NVIDIA_API_KEY = Deno.env.get('NVIDIA_API_KEY');
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
-    if (!SARVAM_API_KEY && !LOVABLE_API_KEY && !GROQ_API_KEY) {
-      throw new Error('Missing SARVAM_API_KEY / LOVABLE_API_KEY / GROQ_API_KEY');
+    if (!SARVAM_API_KEY && !NVIDIA_API_KEY && !GROQ_API_KEY) {
+      throw new Error('Missing SARVAM_API_KEY / NVIDIA_API_KEY / GROQ_API_KEY');
     }
 
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -43,7 +43,84 @@ Deno.serve(async (req) => {
     if (uerr || !userData?.user?.id) return json({ error: 'Unauthorized' }, 401);
     const userId = userData.user.id;
 
-    const body = (await req.json()) as ReqBody;
+    const rawBody = await req.json();
+
+    // ── Admin model test: quick ping any model directly ──────────────────────
+    if ((rawBody as any)._admin_model_test) {
+      const { model_id, api_base, prompt, inline_api_key } = rawBody as any;
+      if (!model_id || !api_base) return json({ error: 'model_id and api_base required' }, 400);
+
+      // Verify caller is admin
+      const adminClient = createClient(SUPABASE_URL, SERVICE_KEY);
+      const { data: isAdmin } = await adminClient.rpc('has_role', { _user_id: userId, _role: 'admin' });
+      if (!isAdmin) return json({ error: 'Admin only' }, 403);
+
+      const t0 = Date.now();
+      const testPrompt = prompt || 'Reply with exactly one word: pong';
+
+      if (api_base.includes('pollinations.ai')) {
+        const url = `${api_base}/test?width=64&height=64&nologo=true&model=${model_id}&seed=1`;
+        const r = await fetch(url);
+        return json({ ok: r.ok, status: r.status, latency_ms: Date.now() - t0 });
+      }
+
+      // Key resolution priority:
+      // 1. Inline key passed from UI (admin testing a new key before saving)
+      // 2. Key stored in platform_llm_models.api_key for this model
+      // 3. secret_key_name env var fallback
+      // 4. Generic NVIDIA_API_KEY / GROQ_API_KEY env var
+      let apiKey: string | null = inline_api_key || null;
+
+      if (!apiKey) {
+        const { data: modelRow } = await adminClient
+          .from('platform_llm_models')
+          .select('api_key, secret_key_name')
+          .eq('model_id', model_id)
+          .maybeSingle();
+
+        apiKey = modelRow?.api_key
+          || (modelRow?.secret_key_name ? Deno.env.get(modelRow.secret_key_name) : null)
+          || null;
+      }
+
+      // Generic env fallback based on api_base
+      if (!apiKey) {
+        if (api_base.includes('groq.com')) apiKey = Deno.env.get('GROQ_API_KEY') || null;
+        else if (api_base.includes('together.xyz')) apiKey = Deno.env.get('TOGETHER_API_KEY') || null;
+        else if (api_base.includes('huggingface.co')) apiKey = Deno.env.get('HUGGINGFACE_API_KEY') || null;
+        else apiKey = Deno.env.get('NVIDIA_API_KEY') || null;
+      }
+
+      // Ollama local — no key needed
+      const isLocal = api_base.includes('localhost') || api_base.includes('127.0.0.1');
+      if (!apiKey && !isLocal) {
+        return json({ error: 'No API key found for this model. Add a key in AI Health → Models → Edit.' }, 400);
+      }
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+      const r = await fetch(api_base, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: model_id,
+          messages: [{ role: 'user', content: testPrompt }],
+          temperature: 0.1,
+          max_tokens: 16,
+        }),
+      });
+      const elapsed = Date.now() - t0;
+      if (!r.ok) {
+        const errText = await r.text();
+        return json({ ok: false, status: r.status, error: errText.slice(0, 200), latency_ms: elapsed });
+      }
+      const data = await r.json();
+      const reply = data.choices?.[0]?.message?.content?.trim() || '';
+      return json({ ok: true, reply, latency_ms: elapsed, model: model_id });
+    }
+
+    const body = rawBody as ReqBody;
     if (!body?.message || body.message.length > 4000) {
       return json({ error: 'message is required (<=4000 chars)' }, 400);
     }
@@ -114,16 +191,12 @@ Deno.serve(async (req) => {
       if (!res.ok) throw new Error(`Sarvam AI error: ${res.status} ${await res.text()}`);
       const data = await res.json();
       reply = data?.choices?.[0]?.message?.content?.trim() || '(no reply)';
-    } else if (LOVABLE_API_KEY) {
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      };
-      const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    } else if (NVIDIA_API_KEY) {
+      const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${NVIDIA_API_KEY}` },
         body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
+          model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
           temperature: 0.5,
           messages: [{ role: 'system', content: systemPrompt }, ...messages],
         }),
@@ -131,19 +204,15 @@ Deno.serve(async (req) => {
       if (!res.ok) {
         const txt = await res.text();
         if (res.status === 429) return json({ error: 'Rate limited. Try again in a moment.' }, 429);
-        if (res.status === 402) return json({ error: 'AI credits exhausted. Please add credits.' }, 402);
-        throw new Error(`AI gateway error: ${res.status} ${txt}`);
+        throw new Error(`NVIDIA API error: ${res.status} ${txt}`);
       }
       const data = await res.json();
       reply = data?.choices?.[0]?.message?.content?.trim() || '(no reply)';
     } else {
-      // Fallback to Groq using Llama 3
+      // Fallback to Groq
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
           temperature: 0.5,

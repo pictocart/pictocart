@@ -7,7 +7,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend';
+const GATEWAY_URL = 'https://api.resend.com';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -91,12 +91,9 @@ function applyCustomTemplate(template: { subject: string; html: string }, data: 
 // ── Send email via Resend connector gateway ──
 
 async function sendEmail(to: string, subject: string, html: string, fromName: string, fromAddress?: string) {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-  if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
 
-  // Use verified custom domain or fallback to platform default
   const fromField = fromAddress
     ? `${fromName} <${fromAddress}>`
     : `${fromName} <onboarding@resend.dev>`;
@@ -105,15 +102,9 @@ async function sendEmail(to: string, subject: string, html: string, fromName: st
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'X-Connection-Api-Key': RESEND_API_KEY,
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
     },
-    body: JSON.stringify({
-      from: fromField,
-      to: [to],
-      subject,
-      html,
-    }),
+    body: JSON.stringify({ from: fromField, to: [to], subject, html }),
   });
 
   if (!res.ok) {

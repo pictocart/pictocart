@@ -18,28 +18,25 @@ Deno.serve(async (req) => {
 
     const manifest = latest.files_manifest as any;
     const dna = manifest?.dna ?? {};
-    const key = Deno.env.get("LOVABLE_API_KEY");
-    if (!key) throw new Error("LOVABLE_API_KEY missing");
+    const key = Deno.env.get("NVIDIA_API_KEY");
+    if (!key) throw new Error("NVIDIA_API_KEY missing");
 
-    const prompt = `You are refining an existing e-commerce theme based on user feedback. Apply the feedback faithfully but keep the overall structure and image URLs intact. Return ONLY a JSON object matching the SAME shape as the input dna, with all fields filled.
+    const prompt = `You are refining an existing e-commerce theme based on user feedback. Apply the feedback faithfully but keep the overall structure and image URLs intact. Return ONLY valid JSON, no markdown fences, matching the SAME shape as the input dna, with all fields filled.
 
 CURRENT DNA:
 ${JSON.stringify(dna)}
 
 USER FEEDBACK:
-${feedback}
+${feedback}`;
 
-Return JSON only, no prose, no markdown fences.`;
-
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" } }),
+      body: JSON.stringify({ model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning", messages: [{ role: "user", content: prompt }], temperature: 0.5 }),
     });
     if (!r.ok) throw new Error(`AI ${r.status}: ${await r.text()}`);
     const data = await r.json();
     const content = data.choices?.[0]?.message?.content ?? "{}";
-    const cost = costInr("google/gemini-2.5-flash", data.usage?.prompt_tokens ?? 0, data.usage?.completion_tokens ?? 0);
-    await supabase.from("ai_call_log").insert({ function_name: "refine-theme", model: "google/gemini-2.5-flash", prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: cost });
+    await supabase.from("ai_call_log").insert({ function_name: "refine-theme", model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning", prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: 0 });
 
     let newDna: any;
     try { newDna = JSON.parse(content); } catch { const m = content.match(/\{[\s\S]*\}/); newDna = m ? JSON.parse(m[0]) : null; }

@@ -1,10 +1,16 @@
+import { useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isPasswordRecovery } = useAuth();
 
-  if (loading) {
+  // Keep last known user so auth token refreshes don't flash a spinner
+  const lastUserRef = useRef(user);
+  if (user) lastUserRef.current = user;
+
+  // Only show spinner on the very first load (no user seen yet at all)
+  if (loading && !lastUserRef.current) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -15,15 +21,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // During password recovery, don't redirect — let ResetPassword page handle it
   if (isPasswordRecovery) return <>{children}</>;
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!loading && !lastUserRef.current) return <Navigate to="/auth" replace />;
 
   // Block storefront customer accounts from accessing the merchant dashboard.
-  // Customer accounts are tagged with is_customer=true in their user_metadata
-  // by the customer-auth edge function — they have no store and must not
-  // reach any seller-only page.
-  if (user.user_metadata?.is_customer === true) {
-    // Sign out the customer session from the main auth pool so a merchant
-    // can log in cleanly on the same browser.
+  if (lastUserRef.current?.user_metadata?.is_customer === true) {
     import('@/integrations/supabase/client').then(({ supabase }) => supabase.auth.signOut());
     return <Navigate to="/auth" replace />;
   }

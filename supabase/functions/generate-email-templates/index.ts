@@ -7,8 +7,8 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!;
-const AI_GATEWAY = 'https://ai.gateway.lovable.dev/v1/chat/completions';
+const NVIDIA_API_KEY = Deno.env.get('NVIDIA_API_KEY')!;
+const AI_GATEWAY = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -107,11 +107,11 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
     const aiRes = await fetch(AI_GATEWAY, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${NVIDIA_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
         messages: [
           { role: 'system', content: 'You are a professional email template designer. Return only valid JSON, no markdown fences.' },
           { role: 'user', content: prompt },

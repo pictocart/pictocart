@@ -21,8 +21,8 @@ Deno.serve(async (req) => {
     }
 
     const { topic, store_name, category } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('Missing API key');
+    const NVIDIA_API_KEY = Deno.env.get('NVIDIA_API_KEY');
+    if (!NVIDIA_API_KEY) throw new Error('NVIDIA_API_KEY not configured');
 
     const prompt = `You are a senior SEO content writer for an online store called "${store_name || 'My Store'}" (category: ${category || 'general'}).
 
@@ -43,16 +43,16 @@ Also produce SEO metadata:
 - "tags": array of 4–6 lowercase keyword tags
 - "image_prompt": one vivid sentence describing the ideal hero image for this post (no text in image, photorealistic editorial style)
 
-Return ONLY valid JSON in this shape:
+Return ONLY valid JSON, no markdown fences, in this shape:
 { "body": "...", "seo_title": "...", "seo_description": "...", "tags": ["..."], "image_prompt": "..." }`;
 
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
         messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
+        temperature: 0.5,
       }),
     });
 

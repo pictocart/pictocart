@@ -131,6 +131,7 @@ const AdminCreditsEconomy = lazy(() => import("@/pages/admin/AdminCreditsEconomy
 const AdminThemeComponentLibrary = lazy(() => import("@/pages/admin/AdminThemeComponentLibrary"));
 
 const AdminHealth = lazy(() => import("@/pages/admin/AdminHealth"));
+const AdminAIHealth = lazy(() => import("@/pages/admin/AdminAIHealth"));
 const AdminDisputes = lazy(() => import("@/pages/admin/AdminDisputes"));
 const AdminCommissions = lazy(() => import("@/pages/admin/AdminCommissions"));
 const AdminPartners = lazy(() => import("@/pages/admin/AdminPartners"));
@@ -359,6 +360,7 @@ const AppRoutes = () => {
             <Route path="/admin/launch" element={<AdminLaunchChecklist />} />
             <Route path="/admin/credits-economy" element={<AdminCreditsEconomy />} />
             <Route path="/admin/health" element={<AdminHealth />} />
+            <Route path="/admin/ai-health" element={<AdminAIHealth />} />
             <Route path="/admin/disputes" element={<AdminDisputes />} />
             <Route path="/admin/commissions" element={<AdminCommissions />} />
             <Route path="/admin/partners" element={<AdminPartners />} />

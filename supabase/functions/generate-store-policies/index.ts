@@ -44,8 +44,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("Missing LOVABLE_API_KEY");
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
     const prompt = `You are a senior e-commerce legal copywriter for Indian online stores.
 Write six compliant, customer-friendly, Markdown-formatted policy/info pages for the following store.
@@ -88,13 +88,13 @@ Page guidance:
 - about: warm 2–3 paragraph brand story for "${b.store_name}", values, what makes them different, invite to shop
 - contact: how to reach us, response time, support email ${b.email}${b.phone ? `, phone ${b.phone}` : ""}${b.address ? `, address ${b.address}` : ""}, social media note`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
         messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
+        temperature: 0.5,
       }),
     });
 

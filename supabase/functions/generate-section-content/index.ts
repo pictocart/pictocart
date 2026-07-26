@@ -21,8 +21,8 @@ serve(async (req) => {
     }
 
     const { mode, sectionType, storeName, category, currentTitle, currentSubtitle, store_id } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -48,37 +48,30 @@ serve(async (req) => {
     if (mode === "image") {
       const prompt = `Create a stunning, professional, high-quality marketing banner image for an Indian e-commerce store called "${storeName || "a store"}" in the "${category || "general"}" category. Section: ${sectionType}. ${currentTitle ? `Theme: ${currentTitle}.` : ""} ${currentSubtitle ? `Vibe: ${currentSubtitle}.` : ""} Wide aspect, vibrant, premium, no text overlay. Professional photography style.`;
 
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
-          messages: [{ role: "user", content: prompt }],
-          modalities: ["image", "text"],
-        }),
-      });
-
-      if (!r.ok) {
-        const t = await r.text();
-        if (r.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (r.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Add credits in Workspace settings." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        throw new Error(`AI gateway error ${r.status}: ${t}`);
-      }
-      const data = await r.json();
-      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url || data.choices?.[0]?.message?.content;
+      const cleanPrompt = encodeURIComponent(prompt);
+      const pollinationsUrl = `https://image.pollinations.ai/p/${cleanPrompt}?width=1536&height=640&nologo=true&private=true&model=flux`;
+      const imgRes = await fetch(pollinationsUrl);
+      if (!imgRes.ok) throw new Error(`Pollinations error: ${imgRes.statusText}`);
+      const buf = await imgRes.arrayBuffer();
+      const bin = new Uint8Array(buf);
+      const admin2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const imgPath = `${userData.user.id}/sections/${crypto.randomUUID()}.png`;
+      const { error: upErr } = await admin2.storage.from("product-images").upload(imgPath, bin, { contentType: "image/png", upsert: false });
+      if (upErr) throw upErr;
+      const imageUrl = admin2.storage.from("product-images").getPublicUrl(imgPath).data.publicUrl;
       return new Response(JSON.stringify({ imageUrl, _meta: { cache_hit: false, credits_charged: 5, credits_saved: 0, minutes_saved: 0, inr_saved: 0, new_balance: balance } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // mode === 'text'
     const prompt = `You're writing copy for a section on an Indian e-commerce homepage. Store: "${storeName || "a store"}", category: ${category || "general"}, section type: ${sectionType}. Generate a catchy, conversion-focused TITLE (max 6 words) and a complementary SUBTITLE (max 12 words). Tone: ${category === "fashion" ? "aspirational, elegant" : category === "food" ? "warm, fresh, appetizing" : "modern, trustworthy"}. Return strictly JSON: {"title":"...","subtitle":"..."}.`;
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
         messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
+        temperature: 0.5,
       }),
     });
 

@@ -16,8 +16,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
@@ -42,44 +42,27 @@ serve(async (req) => {
 
     if (fetchErr || !original) throw new Error("Theme not found");
 
-    // Lightweight AI call — only new name, colors, fonts (~300 tokens)
-    const remixPrompt = `You are a brand designer. Create a FRESH color palette and font pairing for a "${original.category}" e-commerce store. Make it distinctly different from: ${JSON.stringify(original.theme_config?.colors)}. Return only the design identity.`;
+    // Lightweight AI call — new name, colors, fonts as plain JSON
+    const remixPrompt = `You are a brand designer. Create a FRESH color palette and font pairing for a "${original.category}" e-commerce store. Make it distinctly different from: ${JSON.stringify(original.theme_config?.colors)}.
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+Return ONLY valid JSON, no markdown fences:
+{
+  "name": "string — new theme name",
+  "description": "string — 1-2 sentence marketing copy",
+  "colors": {
+    "primary": "#hex", "secondary": "#hex", "accent": "#hex",
+    "background": "#hex", "text": "#hex", "card": "#hex"
+  },
+  "fonts": { "heading": "font name", "body": "font name" }
+}`;
+
+    const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
         messages: [{ role: "user", content: remixPrompt }],
-        tools: [{
-          type: "function",
-          function: {
-            name: "remix_identity",
-            description: "New name, colors, fonts for a remixed theme",
-            parameters: {
-              type: "object",
-              properties: {
-                name: { type: "string", description: "New theme name" },
-                description: { type: "string", description: "1-2 sentence marketing copy" },
-                colors: {
-                  type: "object",
-                  properties: {
-                    primary: { type: "string" }, secondary: { type: "string" }, accent: { type: "string" },
-                    background: { type: "string" }, text: { type: "string" }, card: { type: "string" },
-                  },
-                  required: ["primary", "secondary", "accent", "background", "text", "card"],
-                },
-                fonts: {
-                  type: "object",
-                  properties: { heading: { type: "string" }, body: { type: "string" } },
-                  required: ["heading", "body"],
-                },
-              },
-              required: ["name", "description", "colors", "fonts"],
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "remix_identity" } },
+        temperature: 0.8,
       }),
     });
 
@@ -89,12 +72,13 @@ serve(async (req) => {
     }
 
     const data = await res.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("AI did not return data");
+    const raw = data.choices?.[0]?.message?.content ?? "{}";
+    let remix: any;
+    try { remix = JSON.parse(raw); } catch { const m = raw.match(/\{[\s\S]*\}/); remix = m ? JSON.parse(m[0]) : null; }
+    if (!remix?.colors) throw new Error("AI did not return valid remix data");
 
-    const remix = JSON.parse(toolCall.function.arguments);
     const tokens = data.usage?.total_tokens || 300;
-    const cost = Math.round((tokens / 1000) * 0.02 * 100) / 100; // Flash Lite is very cheap
+    const cost = Math.round((tokens / 1000) * 0.02 * 100) / 100;
 
     // Clone pages, keep images, apply new theme_config
     const newThemeConfig = {
