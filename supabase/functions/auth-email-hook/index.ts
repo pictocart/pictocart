@@ -251,7 +251,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     await supabase.from('email_send_log').insert({ message_id: messageId, template_name: emailType, recipient_email: recipientEmail, status: sent ? 'sent' : 'failed', error_message: sent ? null : 'Failed to send via store domain' })
     if (!sent) return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     console.log('Auth email sent via store domain', { emailType, recipientEmail, storeSlug, run_id })
-    return new Response(JSON.stringify({ success: true, sent: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({}), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   // Send directly via Resend to guarantee immediate delivery
@@ -269,7 +269,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   
   if (sent) {
     console.log('Auth email sent via direct Resend successfully')
-    return new Response(JSON.stringify({ success: true, sent: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({}), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } else {
     console.error('Failed to send auth email directly via Resend')
     return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
