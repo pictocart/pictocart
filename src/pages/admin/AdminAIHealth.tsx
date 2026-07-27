@@ -26,26 +26,26 @@ const AI_FUNCTIONS: {
   models: string[];
   hasLog: boolean;
 }[] = [
-  { name: 'generate-product',          label: 'Generate Product',          description: 'Vision AI reads product photo → generates title, description, SEO, metadata',       api: ['NVIDIA'],       models: ['meta/llama-3.2-11b-vision-instruct', 'meta/llama-3.2-90b-vision-instruct', 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'], hasLog: false },
+  { name: 'generate-product',          label: 'Generate Product',          description: 'Vision AI reads product photo → generates title, description, SEO, metadata',       api: ['NVIDIA'],       models: ['meta/llama-3.2-11b-vision-instruct', 'meta/llama-3.2-90b-vision-instruct', 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'], hasLog: false },
   { name: 'generate-product-image',    label: 'Generate Product Image',    description: 'Text-to-image for product photos via Pollinations Flux',                             api: ['Pollinations'], models: ['flux'],                                                        hasLog: false },
-  { name: 'generate-blog',             label: 'Generate Blog',             description: 'Writes full SEO blog posts with metadata and image prompt',                          api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
+  { name: 'generate-blog',             label: 'Generate Blog',             description: 'Writes full SEO blog posts with metadata and image prompt',                          api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
   { name: 'generate-blog-image',       label: 'Generate Blog Image',       description: 'Creates 16:9 cover and thumbnail images for blog posts',                             api: ['Pollinations'], models: ['flux'],                                                        hasLog: false },
-  { name: 'generate-custom-page',      label: 'Generate Custom Page',      description: 'Generates full storefront pages (about, contact, custom) with AI content',           api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'generate-section-content',  label: 'Generate Section Content',  description: 'Writes copy for individual theme sections; image mode uses Pollinations',            api: ['NVIDIA', 'Pollinations'], models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning', 'flux'],  hasLog: false },
-  { name: 'generate-store-policies',   label: 'Generate Store Policies',   description: 'Writes privacy, refund, shipping and T&C policy pages',                              api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'generate-email-templates',  label: 'Generate Email Templates',  description: 'Creates HTML transactional email templates for the store',                           api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'generate-marketing-copy',   label: 'Generate Marketing Copy',   description: 'Writes WhatsApp messages, SMS blasts, Instagram captions',                          api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'generate-reviews',          label: 'Generate Reviews',          description: 'Seeds realistic product reviews for new stores',                                     api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'generate-dashboard-insights', label: 'Dashboard Insights',      description: 'AI narrative summary of store performance metrics',                                  api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'generate-and-ship-theme',   label: 'Generate & Ship Theme',     description: 'Full theme generation pipeline — DNA, sections, images, deploy',                    api: ['NVIDIA', 'Pollinations'], models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning', 'flux'],  hasLog: true  },
-  { name: 'refine-theme',              label: 'Refine Theme',              description: 'Applies merchant feedback to iteratively improve theme design',                      api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: true  },
-  { name: 'remix-theme',               label: 'Remix Theme',               description: 'Creates a fresh color/font variant from an existing theme pack',                     api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'generate-theme-pack',       label: 'Generate Theme Pack',       description: 'Builds a complete multi-page theme pack with images and sections',                   api: ['NVIDIA', 'Pollinations'], models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning', 'flux'],  hasLog: false },
-  { name: 'plan-monthly-calendar',     label: 'Plan Monthly Calendar',     description: 'Plans monthly theme generation schedule with category variety',                      api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: true  },
-  { name: 'merchant-assistant',        label: 'Merchant Assistant',        description: 'Conversational AI assistant for merchants (primary: Sarvam, fallback: NVIDIA)',      api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'storefront-assistant',      label: 'Storefront Assistant',      description: 'Customer-facing AI chatbot for storefronts (primary: NVIDIA, fallback: Groq)',       api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'sourcing-import',           label: 'Sourcing Import',           description: 'Rewrites wholesale supplier product copy into D2C storefront copy',                  api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
-  { name: 'store-engagement',          label: 'Store Engagement',          description: 'Generates engagement prompts and notification copy for merchants',                   api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-v3b-reasoning'],             hasLog: false },
+  { name: 'generate-custom-page',      label: 'Generate Custom Page',      description: 'Generates full storefront pages (about, contact, custom) with AI content',           api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'generate-section-content',  label: 'Generate Section Content',  description: 'Writes copy for individual theme sections; image mode uses Pollinations',            api: ['NVIDIA', 'Pollinations'], models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning', 'flux'],  hasLog: false },
+  { name: 'generate-store-policies',   label: 'Generate Store Policies',   description: 'Writes privacy, refund, shipping and T&C policy pages',                              api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'generate-email-templates',  label: 'Generate Email Templates',  description: 'Creates HTML transactional email templates for the store',                           api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'generate-marketing-copy',   label: 'Generate Marketing Copy',   description: 'Writes WhatsApp messages, SMS blasts, Instagram captions',                          api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'generate-reviews',          label: 'Generate Reviews',          description: 'Seeds realistic product reviews for new stores',                                     api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'generate-dashboard-insights', label: 'Dashboard Insights',      description: 'AI narrative summary of store performance metrics',                                  api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'generate-and-ship-theme',   label: 'Generate & Ship Theme',     description: 'Full theme generation pipeline — DNA, sections, images, deploy',                    api: ['NVIDIA', 'Pollinations'], models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning', 'flux'],  hasLog: true  },
+  { name: 'refine-theme',              label: 'Refine Theme',              description: 'Applies merchant feedback to iteratively improve theme design',                      api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: true  },
+  { name: 'remix-theme',               label: 'Remix Theme',               description: 'Creates a fresh color/font variant from an existing theme pack',                     api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'generate-theme-pack',       label: 'Generate Theme Pack',       description: 'Builds a complete multi-page theme pack with images and sections',                   api: ['NVIDIA', 'Pollinations'], models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning', 'flux'],  hasLog: false },
+  { name: 'plan-monthly-calendar',     label: 'Plan Monthly Calendar',     description: 'Plans monthly theme generation schedule with category variety',                      api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: true  },
+  { name: 'merchant-assistant',        label: 'Merchant Assistant',        description: 'Conversational AI assistant for merchants (primary: Sarvam, fallback: NVIDIA)',      api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'storefront-assistant',      label: 'Storefront Assistant',      description: 'Customer-facing AI chatbot for storefronts (primary: NVIDIA, fallback: Groq)',       api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'sourcing-import',           label: 'Sourcing Import',           description: 'Rewrites wholesale supplier product copy into D2C storefront copy',                  api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
+  { name: 'store-engagement',          label: 'Store Engagement',          description: 'Generates engagement prompts and notification copy for merchants',                   api: ['NVIDIA'],       models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],             hasLog: false },
   { name: 'send-newsletter',           label: 'Send Newsletter',           description: 'Sends newsletters via Resend API (no LLM — direct email relay)',                    api: [],               models: [],                                                              hasLog: false },
   { name: 'send-order-notification',   label: 'Order Notification',        description: 'Sends order emails via Resend API (no LLM — direct email relay)',                   api: [],               models: [],                                                              hasLog: false },
   { name: 'auth-email-hook',           label: 'Auth Email Hook',           description: 'Renders React Email templates for Supabase auth events (no LLM)',                   api: [],               models: [],                                                              hasLog: false },
@@ -74,8 +74,8 @@ const FEATURE_MAPPING = [
     title: "AI Store Customiser & Section Writer",
     place: "Visual Storefront Editor (/customise)",
     purpose: "Generates tailored copy, landing page hooks, headlines, and newsletter text for theme sections. Generates section-specific stock images based on store design DNA.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
-    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     fallbackModel: "—",
     fallbackModelId: null
   },
@@ -83,8 +83,8 @@ const FEATURE_MAPPING = [
     title: "AI Marketing Copy Generator",
     place: "Marketing Hub (/marketing/copywriter)",
     purpose: "Drafts conversational, conversion-optimized text copy for SMS blasts, WhatsApp campaigns, and Instagram captions.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
-    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     fallbackModel: "—",
     fallbackModelId: null
   },
@@ -92,8 +92,8 @@ const FEATURE_MAPPING = [
     title: "AI Blog & Cover Generator",
     place: "Blog Management (/blog-posts/new)",
     purpose: "Writes full SEO blog posts with metadata and automatically generates matching 16:9 banner and thumbnail illustrations.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
-    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     fallbackModel: "—",
     fallbackModelId: null
   },
@@ -101,8 +101,8 @@ const FEATURE_MAPPING = [
     title: "Merchant Assistant Copilot",
     place: "Dashboard Sidebar Chat Widget",
     purpose: "Conversational assistant that helps merchants manage their shop settings, understand sales metrics, and guide them on e-commerce best practices.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
-    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     fallbackModel: "Sarvam AI (External API)",
     fallbackModelId: null
   },
@@ -110,8 +110,8 @@ const FEATURE_MAPPING = [
     title: "Customer Support Chatbot",
     place: "Customer Storefront Widget (/store/:slug)",
     purpose: "Automated chatbot that chats with store visitors, answers product-related questions, tells them about policies, and handles customer queries.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
-    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     fallbackModel: "Groq Llama 3 (External API)",
     fallbackModelId: null
   }
@@ -119,7 +119,7 @@ const FEATURE_MAPPING = [
 
 // ─── API registry ─────────────────────────────────────────────────────────────
 const API_META = {
-  NVIDIA:      { label: 'NVIDIA NIM',       endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions', color: 'bg-green-100 text-green-800',  testModel: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning' },
+  NVIDIA:      { label: 'NVIDIA NIM',       endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions', color: 'bg-green-100 text-green-800',  testModel: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning' },
   Pollinations:{ label: 'Pollinations.ai',  endpoint: 'https://image.pollinations.ai',                        color: 'bg-blue-100 text-blue-800',    testModel: 'flux' },
 } as const;
 
@@ -656,7 +656,7 @@ const ModelFormDialog = ({
               <p className="text-[10px] text-muted-foreground">Click to prefill the form. Groq models need a free Groq API key. Ollama models are local — no key needed.</p>
             </div>
           )}
-          {F('model_id', 'Model ID', 'e.g. nvidia/nemotron-3-nano-omni-30b-v3b-reasoning')}
+          {F('model_id', 'Model ID', 'e.g. nvidia/nemotron-3-nano-omni-30b-a3b-reasoning')}
           {F('label', 'Display Name', 'e.g. Nemotron 3 Nano')}
 
           <div className="space-y-1.5">

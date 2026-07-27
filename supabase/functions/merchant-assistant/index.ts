@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${NVIDIA_API_KEY}` },
         body: JSON.stringify({
-          model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
+          model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
           temperature: 0.5,
           messages: [{ role: 'system', content: systemPrompt }, ...messages],
         }),

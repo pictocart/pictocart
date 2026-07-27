@@ -39,12 +39,12 @@ Deno.serve(async (req) => {
       try {
         const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
           method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning", messages: [{ role: "user", content: prompt }], temperature: 0.7 }),
+          body: JSON.stringify({ model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", messages: [{ role: "user", content: prompt }], temperature: 0.7 }),
         });
         if (r.ok) {
           const data = await r.json();
           const content = data.choices?.[0]?.message?.content ?? "";
-          await supabase.from("ai_call_log").insert({ function_name: "plan-monthly-calendar", model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning", prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: 0 });
+          await supabase.from("ai_call_log").insert({ function_name: "plan-monthly-calendar", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: 0 });
           const m = content.match(/\{[\s\S]*\}/);
           if (m) themes = (JSON.parse(m[0]).themes ?? []).slice(0, count);
         }

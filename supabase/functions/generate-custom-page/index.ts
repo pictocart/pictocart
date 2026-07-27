@@ -142,7 +142,7 @@ ${uploadedImages.length ? uploadedImages.map((u, i) => `${i + 1}. ${u}`).join("\
         "Authorization": `Bearer ${NVIDIA_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+        model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         messages: [
           { role: "system", content: SYSTEM_PROMPT + "\n\nReturn ONLY valid JSON, no markdown fences." },
           { role: "user", content: userPrompt },
@@ -191,7 +191,7 @@ ${uploadedImages.length ? uploadedImages.map((u, i) => `${i + 1}. ${u}`).join("\
         },
         theme_snapshot: themeSnapshot,
         credits_spent: (page.credits_spent || 0) + (regenerate ? 8 : 25),
-        ai_model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+        ai_model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         version: (page.version || 1) + 1,
         history: trimmedHistory,
       })

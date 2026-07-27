@@ -87,7 +87,7 @@ Submit the results by calling the submit_copy tool.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+        model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         messages: [
           { role: "system", content: sysPrompt + "\n\nReturn ONLY valid JSON, no markdown fences: {\"whatsapp\": \"...\", \"sms\": \"...\"}" },
           { role: "user", content: userPrompt },

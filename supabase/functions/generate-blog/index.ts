@@ -50,7 +50,7 @@ Return ONLY valid JSON, no markdown fences, in this shape:
       method: 'POST',
       headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
+        model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.5,
       }),

@@ -15,7 +15,7 @@ async function aiRewrite(title: string, description: string | null): Promise<{ t
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+        model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         messages: [
           { role: "system", content: "You rewrite wholesale product copy into compelling, India-friendly D2C storefront copy. Output STRICT JSON with no markdown fences: {\"title\": string (<60 chars), \"description\": string (60-120 words, benefits-led, no emojis)}" },
           { role: "user", content: `Title: ${title}\n\nOriginal description: ${description ?? "(none)"}` },

@@ -111,7 +111,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
+        model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
         messages: [
           { role: 'system', content: 'You are a professional email template designer. Return only valid JSON, no markdown fences.' },
           { role: 'user', content: prompt },

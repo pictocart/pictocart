@@ -82,7 +82,7 @@ ${JSON.stringify(catalog)}`;
         method: 'POST',
         headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning',
+          model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
           messages: [{ role: 'system', content: systemPrompt }, ...messages],
           temperature: 0.5,
         }),

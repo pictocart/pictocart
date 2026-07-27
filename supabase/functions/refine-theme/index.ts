@@ -31,12 +31,12 @@ ${feedback}`;
 
     const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning", messages: [{ role: "user", content: prompt }], temperature: 0.5 }),
+      body: JSON.stringify({ model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", messages: [{ role: "user", content: prompt }], temperature: 0.5 }),
     });
     if (!r.ok) throw new Error(`AI ${r.status}: ${await r.text()}`);
     const data = await r.json();
     const content = data.choices?.[0]?.message?.content ?? "{}";
-    await supabase.from("ai_call_log").insert({ function_name: "refine-theme", model: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning", prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: 0 });
+    await supabase.from("ai_call_log").insert({ function_name: "refine-theme", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", prompt_tokens: data.usage?.prompt_tokens ?? 0, completion_tokens: data.usage?.completion_tokens ?? 0, cost_inr: 0 });
 
     let newDna: any;
     try { newDna = JSON.parse(content); } catch { const m = content.match(/\{[\s\S]*\}/); newDna = m ? JSON.parse(m[0]) : null; }
