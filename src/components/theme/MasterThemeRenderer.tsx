@@ -603,7 +603,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   if (variant === "centered_logo") {
     return (
       <>
-      <header className={wrap} style={bg}>
+      <header className={wrap} style={bg} data-section-anchor="header">
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col items-center gap-2">
           {Brand}
           <nav className="flex flex-wrap items-center justify-center gap-4 text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>
@@ -678,7 +678,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   }
   return (
     <>
-    <header className={wrap} style={bg}>
+    <header className={wrap} style={bg} data-section-anchor="header">
       <div className={`max-w-6xl mx-auto px-6 ${variant === "minimal_thin" ? "h-12" : "h-16"} flex items-center justify-between gap-4`}>
         {Brand}
         <nav className="hidden md:flex gap-6 text-sm shrink-0" style={{ color: dna.palette?.muted }}>

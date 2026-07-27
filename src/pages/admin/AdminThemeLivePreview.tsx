@@ -303,6 +303,15 @@ export default function AdminThemeLivePreview(){
         if (ev.data.overrides) setOverrides(ev.data.overrides);
         if (ev.data.page) setPage(ev.data.page);
       }
+      if (ev.data?.type === "customiser:scroll") {
+        const anchor = ev.data.anchor;
+        if (anchor) {
+          const el = document.querySelector(`[data-section-anchor="${anchor}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      }
     };
     window.addEventListener("message", onMessage);
     
