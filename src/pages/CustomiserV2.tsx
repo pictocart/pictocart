@@ -910,18 +910,20 @@ export default function CustomiserV2() {
           return (
             <main ref={mainRef} className="flex-1 bg-muted/40 flex items-center justify-center overflow-hidden p-4 relative">
               <div
-                className="bg-background shadow-lg rounded-md overflow-hidden border transition-all duration-200"
+                className="bg-background shadow-lg rounded-md border transition-all duration-200"
                 style={{
                   width: outerWidth,
                   height: "100%",
                   maxWidth: device === "mobile" ? 390 : "100%",
                   position: "relative",
+                  overflow: "hidden",
                 }}
               >
                 <div
                   style={device === "mobile" ? {
                     width: "100%",
                     height: "100%",
+                    overflow: "hidden",
                   } : {
                     width: 1200,
                     height: `${100 / previewScale}%`,
@@ -930,6 +932,7 @@ export default function CustomiserV2() {
                     position: "absolute",
                     top: 0,
                     left: 0,
+                    overflow: "hidden",
                   }}
                 >
                   <iframe 
