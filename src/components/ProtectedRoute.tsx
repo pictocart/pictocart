@@ -7,7 +7,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Keep last known user so auth token refreshes don't flash a spinner
   const lastUserRef = useRef(user);
-  if (user) lastUserRef.current = user;
+  if (user || !loading) lastUserRef.current = user;
 
   // Only show spinner on the very first load (no user seen yet at all)
   if (loading && !lastUserRef.current) {
