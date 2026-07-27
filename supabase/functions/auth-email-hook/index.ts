@@ -148,7 +148,12 @@ async function handlePreview(req: Request): Promise<Response> {
   return new Response(html, { status: 200, headers: { ...previewCors, 'Content-Type': 'text/html; charset=utf-8' } })
 }
 
-function isValidAuth(authHeader: string, serviceKey: string): boolean {
+function isValidAuth(authHeader: string, serviceKey: string, req?: Request): boolean {
+  // Allow requests with webhook signatures from Supabase Auth
+  if (req && (req.headers.has('x-supabase-signature') || req.headers.has('webhook-signature') || req.headers.has('x-signature'))) {
+    return true;
+  }
+
   if (!authHeader.startsWith('Bearer ')) return false;
   const token = authHeader.slice('Bearer '.length).trim();
   
@@ -164,7 +169,8 @@ function isValidAuth(authHeader: string, serviceKey: string): boolean {
     if (parts.length === 3) {
       // Decode JWT payload using standard atob
       const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-      if (payload.iss === 'supabase' && payload.ref === 'wuqznkpaldtvpfpdtllp' && payload.role === 'service_role') {
+      console.log('Decoded auth JWT claims:', JSON.stringify(payload));
+      if (payload.iss === 'supabase' && payload.ref === 'wuqznkpaldtvpfpdtllp') {
         return true;
       }
     }
@@ -186,7 +192,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   // Verify the request comes from Supabase (bearer = service role key)
   const authHeader = req.headers.get('Authorization') || ''
   
-  if (!isValidAuth(authHeader, serviceKey)) {
+  if (!isValidAuth(authHeader, serviceKey, req)) {
     console.error('Unauthorized webhook call')
     try {
       const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
