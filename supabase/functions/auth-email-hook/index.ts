@@ -247,7 +247,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
     if (!sent) return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     console.log('Auth email sent via store domain', { emailType, recipientEmail, storeSlug, run_id })
-    return new Response(null, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({}), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   // Send directly via Resend to guarantee immediate delivery
@@ -266,7 +266,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   
   if (sent) {
     console.log('Auth email sent via direct Resend successfully')
-    return new Response(null, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({}), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } else {
     console.error('Failed to send auth email directly via Resend')
     return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
