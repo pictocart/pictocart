@@ -30,6 +30,7 @@ import HomeSourcePicker from "@/components/store-design/HomeSourcePicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Sparkles, FileText as FileTextIcon, LayoutGrid } from "lucide-react";
 import Cropper, { Area } from "react-easy-crop";
+import RechargeSheet from "@/components/wallet/RechargeSheet";
 
 const PAGES = [
   { id: "home", label: "Home" },
@@ -359,12 +360,96 @@ export default function CustomiserV2() {
   const [cropFileName, setCropFileName] = useState<string>("image.png");
   const [cropOpen, setCropOpen] = useState(false);
   const [cropIsAi, setCropIsAi] = useState(false);
+  const [cropAiPrompt, setCropAiPrompt] = useState<string>("");
+  const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [popupPrompt, setPopupPrompt] = useState("");
+  const [popupBusy, setPopupBusy] = useState(false);
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [cropAspect, setCropAspect] = useState<number>(1.5);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [cropUploading, setCropUploading] = useState(false);
+
+  const getAiHeroGenerationCount = useCallback((): number => {
+    if (!store?.id) return 0;
+    return Number(localStorage.getItem(`pic_to_cart_ai_hero_count_${store.id}`) || "0");
+  }, [store?.id]);
+
+  const incrementAiHeroGenerationCount = useCallback(() => {
+    if (!store?.id) return;
+    const current = getAiHeroGenerationCount();
+    localStorage.setItem(`pic_to_cart_ai_hero_count_${store.id}`, String(current + 1));
+  }, [store?.id, getAiHeroGenerationCount]);
+
+  // Sync popupPrompt state whenever cropAiPrompt changes
+  useEffect(() => {
+    setPopupPrompt(cropAiPrompt);
+  }, [cropAiPrompt]);
+
+  const handleGenerateAnother = async () => {
+    if (!popupPrompt.trim()) {
+      toast.error("Please enter a description for the image");
+      return;
+    }
+    if (!store?.id) return;
+
+    const count = getAiHeroGenerationCount();
+    const isFirstFree = count === 0;
+
+    setPopupBusy(true);
+
+    if (!isFirstFree) {
+      // Consume 1 credit via sourcing_import
+      try {
+        const { data: newBalance, error: chargeErr } = await supabase.rpc("consume_credits", {
+          _store_id: store.id,
+          _action_key: "sourcing_import",
+          _cache_hit: false,
+        });
+
+        if (chargeErr || newBalance === -1) {
+          toast.error("Out of AI credits — please recharge your wallet to continue", {
+            description: 'Tap "Top up" to add credits.',
+            action: { label: 'Top up', onClick: () => setRechargeOpen(true) },
+          });
+          setRechargeOpen(true);
+          setPopupBusy(false);
+          return;
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['wallet', store.id] });
+        queryClient.invalidateQueries({ queryKey: ['wallet-tx', store.id] });
+      } catch (err: any) {
+        toast.error(err.message || "Failed to verify credits");
+        setPopupBusy(false);
+        return;
+      }
+    }
+
+    try {
+      const cleanPrompt = encodeURIComponent(`Wide cinematic e-commerce hero banner of ${popupPrompt.trim()}. Photorealistic, hyper-detailed, no text, no watermark.`);
+      const newUrl = `https://image.pollinations.ai/p/${cleanPrompt}?width=1200&height=600&nologo=true&private=true&model=flux&seed=${Math.floor(Math.random() * 100000)}`;
+
+      setCropSrc(newUrl);
+      setCropAiPrompt(popupPrompt);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedArea(null);
+
+      incrementAiHeroGenerationCount();
+
+      if (isFirstFree) {
+        toast.success("Hero image generated successfully (free)!");
+      } else {
+        toast.success("Hero image generated · 1 credit used");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Generation failed");
+    } finally {
+      setPopupBusy(false);
+    }
+  };
 
   const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
     setCroppedArea(croppedAreaPixels);
@@ -380,7 +465,8 @@ export default function CustomiserV2() {
     fileName: string,
     idx: number,
     target: any,
-    isAiImage: boolean = false
+    isAiImage: boolean = false,
+    promptText?: string
   ) => {
     let targetAspect: number | undefined = undefined;
     try {
@@ -455,6 +541,7 @@ export default function CustomiserV2() {
     setCropTarget(target);
     setCropAspect(targetAspect || 1.5);
     setCropIsAi(isAiImage);
+    setCropAiPrompt(promptText || "");
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setCroppedArea(null);
@@ -466,11 +553,12 @@ export default function CustomiserV2() {
     file: File | string,
     target: "image" | "logo_url" | { slideIndex: number; key?: string } | { videoKey: "poster" | "src" } | { categoryId: string } = "image",
     isCropped = false,
+    promptText?: string,
   ) => {
     if (!store?.id) return;
 
     if (typeof file === "string") {
-      startCropForTarget(file, "ai-generated.png", idx, target, true);
+      startCropForTarget(file, "ai-generated.png", idx, target, true, promptText);
       return;
     }
 
@@ -1067,6 +1155,39 @@ export default function CustomiserV2() {
             )}
           </div>
           <div className="space-y-4 pt-2">
+            {cropIsAi && (
+              <div className="border rounded-lg p-3 bg-violet-500/5 border-violet-500/20 space-y-2">
+                <Label className="text-xs font-semibold flex items-center gap-1.5 text-violet-700">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" /> Don't like this image? Generate another
+                </Label>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Change prompt or describe something else..."
+                    value={popupPrompt}
+                    onChange={(e) => setPopupPrompt(e.target.value)}
+                    className="text-xs flex-1 bg-background h-8"
+                    disabled={popupBusy}
+                  />
+                  <Button 
+                    onClick={handleGenerateAnother}
+                    disabled={popupBusy}
+                    className="bg-violet-600 hover:bg-violet-700 text-white text-xs h-8 px-3 shrink-0"
+                  >
+                    {popupBusy ? (
+                      <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Generating...</>
+                    ) : (
+                      <>Regenerate {getAiHeroGenerationCount() === 0 ? "Free" : "(1 cr)"}</>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-[9px] text-muted-foreground">
+                  {getAiHeroGenerationCount() === 0 
+                    ? "First AI generation is free. Subsequent generations cost 1 credit." 
+                    : "Regenerating will cost 1 credit from your AI wallet."}
+                </p>
+              </div>
+            )}
+
             <div className="text-[11px] text-muted-foreground bg-muted/40 p-2 rounded border border-dashed text-center">
               Aspect ratio is locked to match the target element's actual container size.
             </div>
@@ -1127,6 +1248,8 @@ export default function CustomiserV2() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <RechargeSheet open={rechargeOpen} onOpenChange={setRechargeOpen} />
 
       <Dialog open={pagesDialogOpen} onOpenChange={setPagesDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1555,6 +1678,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         previewUrl={previewUrl}
         manifest={manifest}
         iframeRef={iframeRef}
+        onInsufficientCredits={() => setRechargeOpen(true)}
       />
     );
   }
@@ -2344,7 +2468,7 @@ const ALIGN_GRID = [
   "bottom-left", "bottom-center", "bottom-right",
 ];
 
-function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, manifest, iframeRef }: any) {
+function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, manifest, iframeRef, onInsufficientCredits }: any) {
   const defaults = section?.props ?? {};
   const merged = { ...defaults, ...sectionOv };
   const style = merged.style ?? "centered";
@@ -2571,7 +2695,7 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(idx, f); }} />
                 </label>
               </Button>
-              <HeroAiImageButton idx={idx} merged={merged} onUpdate={onUpdate} onAiImageGenerated={(url) => onUploadImage(idx, url, "image")} />
+              <HeroAiImageButton idx={idx} merged={merged} onUpdate={onUpdate} onAiImageGenerated={(url, promptText) => onUploadImage(idx, url, "image", false, promptText)} onInsufficientCredits={onInsufficientCredits} />
               {merged.image && <Button size="sm" variant="outline" onClick={() => onUpdate(idx, "image", "")}><Trash2 className="mr-1 h-3.5 w-3.5" /> Remove</Button>}
             </div>
           </div>
@@ -2918,57 +3042,75 @@ function HeroAiImageButton({
   idx, 
   merged, 
   onUpdate,
-  onAiImageGenerated
+  onAiImageGenerated,
+  onInsufficientCredits
 }: { 
   idx: number; 
   merged: any; 
   onUpdate: (idx: number, key: string, value: any) => void;
-  onAiImageGenerated?: (url: string) => void;
+  onAiImageGenerated?: (url: string, promptText?: string) => void;
+  onInsufficientCredits?: () => void;
 }) {
   const { store } = useStore();
+  const queryClient = useQueryClient();
   const [showPrompt, setShowPrompt] = useState(false);
   const [prompt, setPrompt] = useState<string>(merged.title ? `${merged.title} hero banner` : "");
   const [busy, setBusy] = useState(false);
 
   const run = async () => {
     if (!prompt.trim()) { toast.error("Describe the hero image"); return; }
+    if (!store?.id) return;
     setBusy(true);
-    
-    // Try to run Edge function first:
-    try {
-      if (store?.id) {
-        const { data, error } = await supabase.functions.invoke("generate-product-image", {
-          body: { store_id: store.id, prompt: `Wide cinematic e-commerce hero banner: ${prompt.trim()}`, productName: merged.title || "", category: (store as any)?.category || "", storeName: store.name },
+
+    const count = Number(localStorage.getItem(`pic_to_cart_ai_hero_count_${store.id}`) || "0");
+    const isFirstFree = count === 0;
+
+    if (!isFirstFree) {
+      // Consume 1 credit via sourcing_import
+      try {
+        const { data: newBalance, error: chargeErr } = await supabase.rpc("consume_credits", {
+          _store_id: store.id,
+          _action_key: "sourcing_import",
+          _cache_hit: false,
         });
-        if (!error && data?.imageUrl) {
-          if (onAiImageGenerated) {
-            onAiImageGenerated(data.imageUrl);
-          } else {
-            onUpdate(idx, "image", data.imageUrl);
-          }
-          toast.success(`Hero image generated · 10 credits used`);
-          setShowPrompt(false);
+
+        if (chargeErr || newBalance === -1) {
+          toast.error("Out of AI credits — please recharge your wallet to continue", {
+            description: 'Tap "Top up" to add credits.',
+            action: { label: 'Top up', onClick: () => onInsufficientCredits?.() },
+          });
+          onInsufficientCredits?.();
           setBusy(false);
           return;
         }
-        if (data?.error === "INSUFFICIENT_CREDITS") {
-          console.warn("Insufficient credits. Falling back to free generation.");
-        }
+
+        queryClient.invalidateQueries({ queryKey: ['wallet', store.id] });
+        queryClient.invalidateQueries({ queryKey: ['wallet-tx', store.id] });
+      } catch (err: any) {
+        toast.error(err.message || "Failed to verify credits");
+        setBusy(false);
+        return;
       }
-    } catch (e) {
-      console.warn("Edge function failed, falling back to free generation:", e);
     }
 
-    // Client-side fallback to Pollinations.ai (flux model):
     try {
       const cleanPrompt = encodeURIComponent(`Wide cinematic e-commerce hero banner of ${prompt.trim()}. Photorealistic, hyper-detailed, no text, no watermark.`);
-      const fallbackUrl = `https://image.pollinations.ai/p/${cleanPrompt}?width=1200&height=600&nologo=true&private=true&model=flux&seed=${Math.floor(Math.random() * 100000)}`;
+      const generatedUrl = `https://image.pollinations.ai/p/${cleanPrompt}?width=1200&height=600&nologo=true&private=true&model=flux&seed=${Math.floor(Math.random() * 100000)}`;
+
       if (onAiImageGenerated) {
-        onAiImageGenerated(fallbackUrl);
+        onAiImageGenerated(generatedUrl, prompt);
       } else {
-        onUpdate(idx, "image", fallbackUrl);
+        onUpdate(idx, "image", generatedUrl);
       }
-      toast.success("Hero image generated successfully (free fallback)!");
+
+      // Save to localStorage
+      localStorage.setItem(`pic_to_cart_ai_hero_count_${store.id}`, String(count + 1));
+
+      if (isFirstFree) {
+        toast.success("Hero image generated successfully (free)!");
+      } else {
+        toast.success("Hero image generated · 1 credit used");
+      }
       setShowPrompt(false);
     } catch (err: any) {
       toast.error(err?.message || "Generation failed");
@@ -2977,6 +3119,8 @@ function HeroAiImageButton({
     }
   };
 
+  const count = Number(localStorage.getItem(`pic_to_cart_ai_hero_count_${store?.id}`) || "0");
+  const isFirstFree = count === 0;
 
   return (
     <div className="w-full space-y-2.5 mt-1">
@@ -3009,7 +3153,7 @@ function HeroAiImageButton({
             {busy ? (
               <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Generating...</>
             ) : (
-              <><Sparkles className="mr-1.5 h-3.5 w-3.5" /> Generate Image</>
+              <><Sparkles className="mr-1.5 h-3.5 w-3.5" /> Generate Image {isFirstFree ? "Free" : "(1 credit)"}</>
             )}
           </Button>
         </div>
