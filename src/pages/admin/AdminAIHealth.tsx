@@ -57,49 +57,63 @@ const FEATURE_MAPPING = [
     place: "Product Management (Add/Edit Product Form)",
     purpose: "Analyzes uploaded product images using Vision AI to automatically extract and generate detailed product titles, descriptions, categories, selling highlights, pricing, and search tags.",
     primaryModel: "meta/llama-3.2-11b-vision-instruct (NVIDIA NIM)",
-    fallbackModel: "meta/llama-3.2-90b-vision-instruct (NVIDIA NIM)"
+    primaryModelId: "meta/llama-3.2-11b-vision-instruct",
+    fallbackModel: "meta/llama-3.2-90b-vision-instruct (NVIDIA NIM)",
+    fallbackModelId: "meta/llama-3.2-90b-vision-instruct"
   },
   {
     title: "AI Product Image Generator",
     place: "Product Management (Add/Edit Product Form)",
     purpose: "Generates realistic, premium product mockup photos and advertising graphics directly from text descriptions.",
     primaryModel: "flux (Pollinations.ai)",
-    fallbackModel: "—"
+    primaryModelId: "flux",
+    fallbackModel: "—",
+    fallbackModelId: null
   },
   {
     title: "AI Store Customiser & Section Writer",
     place: "Visual Storefront Editor (/customise)",
     purpose: "Generates tailored copy, landing page hooks, headlines, and newsletter text for theme sections. Generates section-specific stock images based on store design DNA.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM) / flux (Pollinations.ai) for images",
-    fallbackModel: "—"
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    fallbackModel: "—",
+    fallbackModelId: null
   },
   {
     title: "AI Marketing Copy Generator",
     place: "Marketing Hub (/marketing/copywriter)",
     purpose: "Drafts conversational, conversion-optimized text copy for SMS blasts, WhatsApp campaigns, and Instagram captions.",
     primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
-    fallbackModel: "—"
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    fallbackModel: "—",
+    fallbackModelId: null
   },
   {
     title: "AI Blog & Cover Generator",
     place: "Blog Management (/blog-posts/new)",
     purpose: "Writes full SEO blog posts with metadata and automatically generates matching 16:9 banner and thumbnail illustrations.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (Text) & flux (Images)",
-    fallbackModel: "—"
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    fallbackModel: "—",
+    fallbackModelId: null
   },
   {
     title: "Merchant Assistant Copilot",
     place: "Dashboard Sidebar Chat Widget",
     purpose: "Conversational assistant that helps merchants manage their shop settings, understand sales metrics, and guide them on e-commerce best practices.",
     primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
-    fallbackModel: "Sarvam AI (External API)"
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    fallbackModel: "Sarvam AI (External API)",
+    fallbackModelId: null
   },
   {
     title: "Customer Support Chatbot",
     place: "Customer Storefront Widget (/store/:slug)",
     purpose: "Automated chatbot that chats with store visitors, answers product-related questions, tells them about policies, and handles customer queries.",
     primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
-    fallbackModel: "Groq Llama 3 (External API)"
+    primaryModelId: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning",
+    fallbackModel: "Groq Llama 3 (External API)",
+    fallbackModelId: null
   }
 ];
 
@@ -934,6 +948,7 @@ const ModelsTab = () => {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const AdminAIHealth = () => {
   const { data: logs = [] } = useCallLog();
+  const { data: models = [] } = useLlmModels();
 
   const totalFunctions = AI_FUNCTIONS.length;
   const apisUsed = ['NVIDIA', 'Pollinations'] as ApiName[];
@@ -1020,37 +1035,64 @@ const AdminAIHealth = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {FEATURE_MAPPING.map((feat, fIdx) => (
-              <Card key={fIdx} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow transition-shadow">
-                <CardHeader className="bg-slate-50/50 pb-2.5 border-b">
-                  <div className="flex flex-col gap-1.5 md:flex-row md:justify-between md:items-center">
-                    <CardTitle className="text-xs font-bold text-slate-800">{feat.title}</CardTitle>
-                    <Badge variant="outline" className="text-[9px] bg-white text-indigo-700 border-indigo-200 whitespace-nowrap self-start md:self-auto">
-                      {feat.place}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-3 space-y-2.5">
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {feat.purpose}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t text-[11px]">
-                    <div>
-                      <span className="text-slate-500 block font-medium">Primary Model</span>
-                      <code className="text-[10px] bg-slate-100 text-slate-700 px-1 py-0.5 rounded block mt-0.5 truncate" title={feat.primaryModel}>
-                        {feat.primaryModel}
-                      </code>
+            {FEATURE_MAPPING.map((feat, fIdx) => {
+              const primaryModelObj = models.find(m => m.model_id === feat.primaryModelId);
+              const fallbackModelObj = feat.fallbackModelId ? models.find(m => m.model_id === feat.fallbackModelId) : null;
+
+              return (
+                <Card key={fIdx} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow transition-shadow">
+                  <CardHeader className="bg-slate-50/50 pb-2.5 border-b">
+                    <div className="flex flex-col gap-1.5 md:flex-row md:justify-between md:items-center">
+                      <CardTitle className="text-xs font-bold text-slate-800">{feat.title}</CardTitle>
+                      <Badge variant="outline" className="text-[9px] bg-white text-indigo-700 border-indigo-200 whitespace-nowrap self-start md:self-auto">
+                        {feat.place}
+                      </Badge>
                     </div>
-                    <div>
-                      <span className="text-slate-500 block font-medium">Fallback Model</span>
-                      <code className="text-[10px] bg-slate-100 text-slate-700 px-1 py-0.5 rounded block mt-0.5 truncate" title={feat.fallbackModel}>
-                        {feat.fallbackModel}
-                      </code>
+                  </CardHeader>
+                  <CardContent className="pt-3 space-y-2.5">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {feat.purpose}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t text-[11px]">
+                      <div>
+                        <span className="text-slate-500 block font-medium">Primary Model</span>
+                        {primaryModelObj ? (
+                          <div className="flex items-center gap-1.5 mt-1 bg-slate-50 border rounded px-1.5 py-0.5 w-full">
+                            <code className="text-[10px] text-slate-700 truncate flex-1" title={feat.primaryModel}>
+                              {feat.primaryModel}
+                            </code>
+                            <div className="shrink-0 scale-90 origin-right">
+                              <ModelTestButton model={primaryModelObj} />
+                            </div>
+                          </div>
+                        ) : (
+                          <code className="text-[10px] bg-slate-100 text-slate-700 px-1 py-0.5 rounded block mt-1 truncate" title={feat.primaryModel}>
+                            {feat.primaryModel}
+                          </code>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block font-medium">Fallback Model</span>
+                        {fallbackModelObj ? (
+                          <div className="flex items-center gap-1.5 mt-1 bg-slate-50 border rounded px-1.5 py-0.5 w-full">
+                            <code className="text-[10px] text-slate-700 truncate flex-1" title={feat.fallbackModel}>
+                              {feat.fallbackModel}
+                            </code>
+                            <div className="shrink-0 scale-90 origin-right">
+                              <ModelTestButton model={fallbackModelObj} />
+                            </div>
+                          </div>
+                        ) : (
+                          <code className="text-[10px] bg-slate-100 text-slate-700 px-1 py-0.5 rounded block mt-1 truncate" title={feat.fallbackModel}>
+                            {feat.fallbackModel}
+                          </code>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           <div className="space-y-1 pt-4">
