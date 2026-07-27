@@ -1602,7 +1602,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
               </div>
             )}
 
-            <div>
+            <div className={`transition-opacity duration-200 ${!merged.scroll_horizontal ? "opacity-50 pointer-events-none" : ""}`}>
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-[11px] text-muted-foreground font-medium">Drag to resize Card Width</Label>
                 <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_card_width ?? 220}px</span>
@@ -1612,6 +1612,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                 min={130} 
                 max={350} 
                 step={10} 
+                disabled={!merged.scroll_horizontal}
                 onValueChange={([val]) => onUpdate(idx, "product_card_width", val)} 
                 className="my-2"
               />
