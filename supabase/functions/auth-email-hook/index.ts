@@ -182,28 +182,31 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   let body: any
-  try { body = await req.json() } catch {
+  try { 
+    body = await req.json() 
+    console.log('Raw body received:', JSON.stringify(body))
+  } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
-  const emailType = body?.email_action_type || body?.data?.action_type || body?.type
-  const data = body?.data || body
-  const user = body?.user || data?.user
+  const emailData = body?.email_data || body?.data || body
+  const user = body?.user || emailData?.user
   
-  const recipientEmail = getCustomerRecipientEmail(data, user)
+  const emailType = emailData?.email_action_type || emailData?.action_type || body?.type || emailData?.type
+  const recipientEmail = getCustomerRecipientEmail(emailData, user)
   
   // Construct confirmation URL properly for Supabase Auth Hooks
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || `https://wuqznkpaldtvpfpdtllp.supabase.co`
-  const tokenHash = body?.token_hash || data?.token_hash
-  const token = body?.token || data?.token
-  const redirectTo = body?.redirect_to || data?.redirect_to || body?.site_url || data?.site_url || `https://${ROOT_DOMAIN}`
-  const authUrl = body?.url || data?.url
+  const tokenHash = emailData?.token_hash
+  const token = emailData?.token
+  const redirectTo = emailData?.redirect_to || emailData?.site_url || `https://${ROOT_DOMAIN}`
+  const authUrl = emailData?.url || body?.url
   
   const confirmationUrl = tokenHash
     ? `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=${emailType}&redirect_to=${encodeURIComponent(redirectTo)}`
     : (authUrl || `https://${ROOT_DOMAIN}`)
 
-  const storeSlug = getStoreSlugFromPayload(data, user, authUrl || redirectTo)
+  const storeSlug = getStoreSlugFromPayload(emailData, user, authUrl || redirectTo)
   const run_id = body?.run_id || crypto.randomUUID()
 
   console.log('Received auth event', { emailType, recipientEmail, storeSlug, run_id, confirmationUrl })
@@ -220,9 +223,9 @@ async function handleWebhook(req: Request): Promise<Response> {
     recipient: recipientEmail,
     confirmationUrl: confirmationUrl,
     token: token,
-    email: user?.email || data?.email,
-    oldEmail: body?.old_email || data?.old_email,
-    newEmail: body?.new_email || data?.new_email,
+    email: user?.email || emailData?.email,
+    oldEmail: emailData?.old_email,
+    newEmail: emailData?.new_email,
   }
 
   const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
@@ -244,7 +247,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
     if (!sent) return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     console.log('Auth email sent via store domain', { emailType, recipientEmail, storeSlug, run_id })
-    return new Response(null, { status: 200, headers: corsHeaders })
+    return new Response(null, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   // Send directly via Resend to guarantee immediate delivery
@@ -263,7 +266,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   
   if (sent) {
     console.log('Auth email sent via direct Resend successfully')
-    return new Response(null, { status: 200, headers: corsHeaders })
+    return new Response(null, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } else {
     console.error('Failed to send auth email directly via Resend')
     return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
