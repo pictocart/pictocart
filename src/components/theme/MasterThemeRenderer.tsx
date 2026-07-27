@@ -221,6 +221,104 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             font-weight: 700 !important;
           }
         ` : ''}
+
+        /* Global Button Overrides */
+        [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only), 
+        [data-master-theme] .btn,
+        [data-master-theme] .button,
+        [data-master-theme] a.button,
+        [data-master-theme] [role="button"]:not([aria-label="Close"]) {
+          ${globalOv.buttons?.fontSize === 'small' ? `
+            font-size: 11px !important;
+            padding: 6px 12px !important;
+            height: auto !important;
+          ` : ''}
+          ${globalOv.buttons?.fontSize === 'large' ? `
+            font-size: 16px !important;
+            padding: 14px 28px !important;
+            height: auto !important;
+          ` : ''}
+
+          ${globalOv.buttons?.uppercase ? `
+            text-transform: uppercase !important;
+            letter-spacing: 0.07em !important;
+          ` : ''}
+
+          ${globalOv.buttons?.radius === 'sharp' ? 'border-radius: 0px !important;' : ''}
+          ${globalOv.buttons?.radius === 'rounded' ? 'border-radius: 8px !important;' : ''}
+          ${globalOv.buttons?.radius === 'round' ? 'border-radius: 9999px !important;' : ''}
+
+          ${globalOv.buttons?.style === 'outline' ? `
+            background: transparent !important;
+            border: 2px solid currentColor !important;
+            color: inherit !important;
+          ` : ''}
+          ${globalOv.buttons?.style === 'minimal' ? `
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            text-decoration: underline !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            color: inherit !important;
+          ` : ''}
+
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        /* Hover animation classes */
+        ${globalOv.buttons?.animation === 'scale' ? `
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):hover, 
+          [data-master-theme] .btn:hover,
+          [data-master-theme] .button:hover {
+            transform: scale(1.05) !important;
+          }
+        ` : ''}
+        ${globalOv.buttons?.animation === 'glow' ? `
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):hover, 
+          [data-master-theme] .btn:hover,
+          [data-master-theme] .button:hover {
+            box-shadow: 0 0 15px var(--p) !important;
+          }
+        ` : ''}
+        ${globalOv.buttons?.animation === 'pulse' ? `
+          @keyframes btn-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(100, 100, 250, 0.5); }
+            70% { box-shadow: 0 0 0 8px rgba(100, 100, 250, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(100, 100, 250, 0); }
+          }
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):hover, 
+          [data-master-theme] .btn:hover,
+          [data-master-theme] .button:hover {
+            animation: btn-pulse 1.5s infinite !important;
+          }
+        ` : ''}
+        ${globalOv.buttons?.animation === 'shine' ? `
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only), 
+          [data-master-theme] .btn,
+          [data-master-theme] .button {
+            position: relative !important;
+            overflow: hidden !important;
+          }
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only)::after, 
+          [data-master-theme] .btn::after,
+          [data-master-theme] .button::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -150% !important;
+            width: 50% !important;
+            height: 100% !important;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent) !important;
+            transform: skewX(-25deg) !important;
+            transition: 0.75s !important;
+          }
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):hover::after, 
+          [data-master-theme] .btn:hover::after,
+          [data-master-theme] .button:hover::after {
+            left: 150% !important;
+          }
+        ` : ''}
       `}} />
       {/* Header is first child — sticky top-0 works against window scroll */}
       <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} />

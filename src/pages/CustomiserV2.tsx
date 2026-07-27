@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useStore } from "@/hooks/useStore";
 import { useThemeManifest } from '@/hooks/useThemeManifest';
@@ -2096,6 +2096,73 @@ function GlobalDesignInspector({
             onValueChange={([v]) => onUpdateGlobal("radius", v)} 
             className="mt-2" 
           />
+        </div>
+      </div>
+
+      {/* 2.5. Global Buttons */}
+      <div className="space-y-3">
+        <div className="px-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Global Buttons</h3>
+        </div>
+        <div className="p-4 border rounded-lg bg-card space-y-4">
+          <div>
+            <Label className="text-xs">Button Style</Label>
+            <select
+              value={globalOv?.buttons?.style || "solid"}
+              onChange={(e) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), style: e.target.value })}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="solid">Solid (Default)</option>
+              <option value="outline">Outline</option>
+              <option value="minimal">Minimal / Underline</option>
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Button Size</Label>
+            <select
+              value={globalOv?.buttons?.fontSize || "medium"}
+              onChange={(e) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), fontSize: e.target.value })}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Button Shape</Label>
+            <select
+              value={globalOv?.buttons?.radius || "inherit"}
+              onChange={(e) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), radius: e.target.value })}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="inherit">Inherit Global Layout ({radius}px)</option>
+              <option value="sharp">Sharp (0px)</option>
+              <option value="rounded">Rounded (8px)</option>
+              <option value="round">Pill / Round (999px)</option>
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Hover Animation</Label>
+            <select
+              value={globalOv?.buttons?.animation || "none"}
+              onChange={(e) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), animation: e.target.value })}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs mt-1 cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="none">None</option>
+              <option value="scale">Scale Up</option>
+              <option value="shine">Shine Sweep</option>
+              <option value="glow">Glow Shadow</option>
+              <option value="pulse">Pulse Ring</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between pt-1">
+            <Label className="text-xs">Force ALL CAPS Text</Label>
+            <Switch
+              checked={!!globalOv?.buttons?.uppercase}
+              onCheckedChange={(checked) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), uppercase: checked })}
+            />
+          </div>
         </div>
       </div>
 
