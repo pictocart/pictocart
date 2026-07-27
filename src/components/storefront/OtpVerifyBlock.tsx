@@ -28,7 +28,28 @@ export default function OtpVerifyBlock({
 }: OtpVerifyBlockProps) {
   const [secondsLeft, setSecondsLeft] = useState(OTP_TTL);
   const [resending, setResending] = useState(false);
-  const [resendCount, setResendCount] = useState(0);
+  
+  const getResendAttempts = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(`otp_resends_${email}`);
+      if (!stored) return [];
+      const timestamps = JSON.parse(stored) as number[];
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      return timestamps.filter((t) => t > oneDayAgo);
+    } catch {
+      return [];
+    }
+  }, [email]);
+
+  const [resendTimestamps, setResendTimestamps] = useState<number[]>(getResendAttempts());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setResendTimestamps(getResendAttempts());
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [getResendAttempts]);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startTimer = useCallback(() => {
@@ -45,11 +66,16 @@ export default function OtpVerifyBlock({
   useEffect(() => { startTimer(); return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
 
   const handleResend = async () => {
-    if (resendCount >= 3) return;
+    const currentAttempts = getResendAttempts();
+    if (currentAttempts.length >= 5) return;
     setResending(true);
     await onResend();
     setResending(false);
-    setResendCount((c) => c + 1);
+    const newTimestamps = [...currentAttempts, Date.now()];
+    try {
+      localStorage.setItem(`otp_resends_${email}`, JSON.stringify(newTimestamps));
+    } catch {}
+    setResendTimestamps(newTimestamps);
     onOtpChange('');
     startTimer();
   };
@@ -148,9 +174,9 @@ export default function OtpVerifyBlock({
 
       {/* Resend section */}
       <div className="text-center">
-        {resendCount >= 3 ? (
-          <p className="text-xs font-semibold text-destructive animate-fade-in">
-            Maximum resend attempts reached. Please wait or try again later.
+        {resendTimestamps.length >= 5 ? (
+          <p className="text-xs font-semibold text-destructive animate-fade-in leading-relaxed max-w-[280px] mx-auto">
+            Maximum limit of 5 resends per day reached. Please try again tomorrow.
           </p>
         ) : expired ? (
           <button
