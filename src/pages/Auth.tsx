@@ -44,7 +44,11 @@ const Auth = () => {
     } else {
       const { error } = await signUp(email, password, fullName);
       if (error) {
-        toast.error(error.message);
+        if (error.message.toLowerCase().includes('security') || error.message.toLowerCase().includes('rate limit')) {
+          toast.error(`Supabase Rate Limit: ${error.message} (Tip: To remove this limit completely, disable "Confirm email" or adjust "Rate Limits" in your Supabase Dashboard under Settings > Authentication > Providers > Email).`, { duration: 10000 });
+        } else {
+          toast.error(error.message);
+        }
       } else {
         toast.success('Verification code sent! Check your email.');
         setIsVerifyingSignup(true);
