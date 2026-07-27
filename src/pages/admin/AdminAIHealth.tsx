@@ -136,7 +136,7 @@ const useCallLog = () => useQuery({
       .order('created_at', { ascending: false })
       .limit(500);
     if (error) throw error;
-    return (data || []) as {
+    return (data || []) as unknown as {
       function_name: string; model: string; prompt_tokens: number;
       completion_tokens: number; cost_inr: number; reuse_hit: boolean; created_at: string;
     }[];
@@ -151,7 +151,7 @@ const useActionCosts = () => useQuery({
       .from('ai_action_costs' as any)
       .select('action_key, model, credits_cost, is_active')
       .order('action_key');
-    return (data || []) as { action_key: string; model: string; credits_cost: number; is_active: boolean }[];
+    return (data || []) as unknown as { action_key: string; model: string; credits_cost: number; is_active: boolean }[];
   },
 });
 
@@ -199,7 +199,7 @@ const useLlmModels = () => useQuery({
       .order('provider')
       .order('label');
     if (error) throw error;
-    return (data || []) as LlmModel[];
+    return (data || []) as unknown as LlmModel[];
   },
 });
 // ─── API Status Card ──────────────────────────────────────────────────────────
