@@ -231,7 +231,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   const authUrl = emailData?.url || body?.url
   
   const confirmationUrl = tokenHash
-    ? `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=${emailType}&redirect_to=${encodeURIComponent(redirectTo)}`
+    ? `${supabaseUrl}/auth/v1/verify?token=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(emailType)}&redirect_to=${encodeURIComponent(redirectTo)}`
     : (authUrl || `https://${ROOT_DOMAIN}`)
 
   const storeSlug = getStoreSlugFromPayload(emailData, user, authUrl || redirectTo)
