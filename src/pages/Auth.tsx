@@ -14,6 +14,8 @@ import PicToCartLogo from '@/components/PicToCartLogo';
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otpToken, setOtpToken] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,8 +45,26 @@ const Auth = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success('Account created! Check your email for verification.');
+        toast.success('Account created! Verification code sent to your email.');
+        setShowOtpInput(true);
       }
+    }
+    setLoading(false);
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: otpToken,
+      type: 'signup',
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Email verified successfully! Welcome to PicToCart.');
+      navigate('/dashboard');
     }
     setLoading(false);
   };
@@ -74,14 +94,18 @@ const Auth = () => {
         <CardHeader className="text-center space-y-2">
           <PicToCartLogo size={64} className="mx-auto" />
           <CardTitle className="text-2xl font-bold">
-            {isForgotPassword
+            {showOtpInput
+              ? 'Verify your email'
+              : isForgotPassword
               ? 'Reset Password'
               : isLogin
               ? 'Welcome back'
               : 'Create your store'}
           </CardTitle>
           <CardDescription>
-            {isForgotPassword
+            {showOtpInput
+              ? `Enter the 6-digit verification code sent to ${email}`
+              : isForgotPassword
               ? "Enter your email and we'll send you a reset link"
               : isLogin
               ? 'Sign in to manage your store'
@@ -89,7 +113,33 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isForgotPassword ? (
+          {showOtpInput ? (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp">Verification Code (OTP)</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  value={otpToken}
+                  onChange={(e) => setOtpToken(e.target.value)}
+                  placeholder="123456"
+                  maxLength={6}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Verifying...' : 'Verify & Continue'}
+              </Button>
+              <button
+                type="button"
+                onClick={() => setShowOtpInput(false)}
+                className="w-full flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back to sign up
+              </button>
+            </form>
+          ) : isForgotPassword ? (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
