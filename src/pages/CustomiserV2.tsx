@@ -2180,6 +2180,42 @@ function GlobalDesignInspector({
               onCheckedChange={(checked) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), uppercase: checked })}
             />
           </div>
+          <div className="grid grid-cols-2 gap-2 pt-3 border-t">
+            <div className="space-y-1">
+              <Label className="text-[10px]">Button Bg Color</Label>
+              <div className="flex gap-1 items-center">
+                <input
+                  type="color"
+                  value={globalOv?.buttons?.bgColor || "#4f46e5"}
+                  onChange={(e) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), bgColor: e.target.value })}
+                  className="h-7 w-7 rounded border cursor-pointer shrink-0"
+                />
+                <Input
+                  value={globalOv?.buttons?.bgColor || ""}
+                  onChange={(e) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), bgColor: e.target.value })}
+                  placeholder="default"
+                  className="h-7 text-xs px-2"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px]">Button Text Color</Label>
+              <div className="flex gap-1 items-center">
+                <input
+                  type="color"
+                  value={globalOv?.buttons?.textColor || "#ffffff"}
+                  onChange={(e) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), textColor: e.target.value })}
+                  className="h-7 w-7 rounded border cursor-pointer shrink-0"
+                />
+                <Input
+                  value={globalOv?.buttons?.textColor || ""}
+                  onChange={(e) => onUpdateGlobal("buttons", { ...(globalOv?.buttons || {}), textColor: e.target.value })}
+                  placeholder="default"
+                  className="h-7 text-xs px-2"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

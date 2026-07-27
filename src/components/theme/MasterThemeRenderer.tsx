@@ -268,6 +268,16 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             color: inherit !important;
           ` : ''}
 
+          ${globalOv.buttons?.bgColor ? `
+            background: ${globalOv.buttons.bgColor} !important;
+            background-color: ${globalOv.buttons.bgColor} !important;
+            border-color: ${globalOv.buttons.bgColor} !important;
+          ` : ''}
+          ${globalOv.buttons?.textColor ? `
+            color: ${globalOv.buttons.textColor} !important;
+            ${!globalOv.buttons?.bgColor ? `border-color: ${globalOv.buttons.textColor} !important;` : ''}
+          ` : ''}
+
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
 
