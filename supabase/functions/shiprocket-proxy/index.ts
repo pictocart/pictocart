@@ -144,7 +144,7 @@ serve(async (req) => {
           billing_pincode: s.customer_pincode,
           billing_state: s.customer_state,
           billing_country: "India",
-          billing_email: s.customer_email || "noreply@pictocart.in",
+          billing_email: s.customer_email || "noreply@notify.pictocart.in",
           billing_phone: s.customer_phone,
           shipping_is_billing: true,
           order_items: [{

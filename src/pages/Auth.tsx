@@ -103,7 +103,15 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary/30 px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-secondary/30 px-4">
+      <Button
+        variant="ghost"
+        className="absolute top-4 left-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onClick={() => navigate('/')}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Button>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
           <PicToCartLogo size={64} className="mx-auto" />

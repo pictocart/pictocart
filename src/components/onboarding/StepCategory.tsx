@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { Shirt, UtensilsCrossed, Cpu, Gem, Sparkles, MoreHorizontal, Receipt, Scissors } from 'lucide-react';
+import { Shirt, UtensilsCrossed, Cpu, Sparkles, MoreHorizontal, Receipt } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { OnboardingData } from '@/pages/Onboarding';
@@ -11,12 +11,10 @@ interface Props {
 }
 
 const categories = [
-  { id: 'fashion',         label: 'Fashion',           desc: 'Clothing & accessories',  icon: Shirt,           iconColor: 'text-pink-500',    selBg: '#fdf2f8', selBorder: '#f472b6' },
+  { id: 'fashion',         label: 'Fashion & Clothing', desc: 'Clothing & accessories',  icon: Shirt,           iconColor: 'text-pink-500',    selBg: '#fdf2f8', selBorder: '#f472b6' },
   { id: 'food',            label: 'Food & Beverages',  desc: 'Snacks, drinks & gourmet', icon: UtensilsCrossed, iconColor: 'text-amber-500',   selBg: '#fffbeb', selBorder: '#fbbf24' },
-  { id: 'beauty_services', label: 'Salon / Stylist',   desc: 'Bookings & services',      icon: Scissors,        iconColor: 'text-fuchsia-500', selBg: '#fdf4ff', selBorder: '#d946ef' },
-  { id: 'electronics',     label: 'Electronics',       desc: 'Gadgets & tech',           icon: Cpu,             iconColor: 'text-blue-500',    selBg: '#eff6ff', selBorder: '#3b82f6' },
-  { id: 'handmade',        label: 'Handmade & Craft',  desc: 'Artisan & DIY',            icon: Gem,             iconColor: 'text-purple-500',  selBg: '#faf5ff', selBorder: '#a855f7' },
   { id: 'beauty',          label: 'Beauty & Wellness', desc: 'Skincare & makeup',        icon: Sparkles,        iconColor: 'text-rose-500',    selBg: '#fff1f2', selBorder: '#fb7185' },
+  { id: 'electronics',     label: 'Electronics',       desc: 'Gadgets & tech',           icon: Cpu,             iconColor: 'text-blue-500',    selBg: '#eff6ff', selBorder: '#3b82f6' },
   { id: 'other',           label: 'Other',             desc: 'Something unique',         icon: MoreHorizontal,  iconColor: 'text-gray-500',    selBg: '#f9fafb', selBorder: '#9ca3af' },
 ];
 

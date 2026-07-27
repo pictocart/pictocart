@@ -29,26 +29,7 @@ export default function OtpVerifyBlock({
   const [secondsLeft, setSecondsLeft] = useState(OTP_TTL);
   const [resending, setResending] = useState(false);
   
-  const getResendAttempts = useCallback(() => {
-    try {
-      const stored = localStorage.getItem(`otp_resends_${email}`);
-      if (!stored) return [];
-      const timestamps = JSON.parse(stored) as number[];
-      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-      return timestamps.filter((t) => t > oneDayAgo);
-    } catch {
-      return [];
-    }
-  }, [email]);
 
-  const [resendTimestamps, setResendTimestamps] = useState<number[]>(getResendAttempts());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setResendTimestamps(getResendAttempts());
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [getResendAttempts]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -66,16 +47,9 @@ export default function OtpVerifyBlock({
   useEffect(() => { startTimer(); return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
 
   const handleResend = async () => {
-    const currentAttempts = getResendAttempts();
-    if (currentAttempts.length >= 5) return;
     setResending(true);
     await onResend();
     setResending(false);
-    const newTimestamps = [...currentAttempts, Date.now()];
-    try {
-      localStorage.setItem(`otp_resends_${email}`, JSON.stringify(newTimestamps));
-    } catch {}
-    setResendTimestamps(newTimestamps);
     onOtpChange('');
     startTimer();
   };
@@ -174,11 +148,7 @@ export default function OtpVerifyBlock({
 
       {/* Resend section */}
       <div className="text-center">
-        {resendTimestamps.length >= 5 ? (
-          <p className="text-xs font-semibold text-destructive animate-fade-in leading-relaxed max-w-[280px] mx-auto">
-            Maximum limit of 5 resends per day reached. Please try again tomorrow.
-          </p>
-        ) : expired ? (
+        {expired ? (
           <button
             type="button"
             onClick={handleResend}

@@ -198,6 +198,14 @@ export default function CustomerAuth() {
     <StorefrontLayout store={store}>
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-14">
         <div className="w-full max-w-[430px]">
+          <Link
+            to={`/store/${slug}`}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold mb-5 transition-colors opacity-70 hover:opacity-100"
+            style={{ color: colors.text }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to {store.name}
+          </Link>
 
           {/* ── Card ── */}
           <div className="relative overflow-hidden"
