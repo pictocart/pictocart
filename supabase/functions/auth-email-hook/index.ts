@@ -76,22 +76,22 @@ function getStoreSlugFromAuthUrl(authUrl?: string) {
   return null
 }
 
-function getAuthMetadata(data: any) {
-  return data?.user?.user_metadata || data?.user_metadata || data?.raw_user_meta_data || data?.raw_user_metadata || {}
+function getAuthMetadata(data: any, user?: any) {
+  return data?.user?.user_metadata || data?.user_metadata || data?.raw_user_meta_data || data?.raw_user_metadata || user?.user_metadata || {}
 }
 
-function getCustomerRecipientEmail(data: any) {
-  const metadata = getAuthMetadata(data)
+function getCustomerRecipientEmail(data: any, user?: any) {
+  const metadata = getAuthMetadata(data, user)
   return typeof metadata.customer_email === 'string' && metadata.customer_email.includes('@')
     ? metadata.customer_email
-    : data.email
+    : (data?.email || user?.email)
 }
 
-function getStoreSlugFromPayload(data: any) {
-  const metadata = getAuthMetadata(data)
+function getStoreSlugFromPayload(data: any, user?: any, authUrl?: string) {
+  const metadata = getAuthMetadata(data, user)
   return typeof metadata.store_slug === 'string' && metadata.store_slug
     ? metadata.store_slug
-    : getStoreSlugFromAuthUrl(data.url)
+    : getStoreSlugFromAuthUrl(authUrl)
 }
 
 async function getVerifiedStoreSender(supabase: any, authUrl?: string, storeSlug?: string) {
@@ -214,13 +214,27 @@ async function handleWebhook(req: Request): Promise<Response> {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
-  const emailType = body?.data?.action_type || body?.type
+  const emailType = body?.email_action_type || body?.data?.action_type || body?.type
   const data = body?.data || body
-  const recipientEmail = getCustomerRecipientEmail(data)
-  const storeSlug = getStoreSlugFromPayload(data)
+  const user = body?.user || data?.user
+  
+  const recipientEmail = getCustomerRecipientEmail(data, user)
+  
+  // Construct confirmation URL properly for Supabase Auth Hooks
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || `https://wuqznkpaldtvpfpdtllp.supabase.co`
+  const tokenHash = body?.token_hash || data?.token_hash
+  const token = body?.token || data?.token
+  const redirectTo = body?.redirect_to || data?.redirect_to || body?.site_url || data?.site_url || `https://${ROOT_DOMAIN}`
+  const authUrl = body?.url || data?.url
+  
+  const confirmationUrl = tokenHash
+    ? `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=${emailType}&redirect_to=${encodeURIComponent(redirectTo)}`
+    : (authUrl || `https://${ROOT_DOMAIN}`)
+
+  const storeSlug = getStoreSlugFromPayload(data, user, authUrl || redirectTo)
   const run_id = body?.run_id || crypto.randomUUID()
 
-  console.log('Received auth event', { emailType, recipientEmail, storeSlug, run_id })
+  console.log('Received auth event', { emailType, recipientEmail, storeSlug, run_id, confirmationUrl })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {
@@ -232,11 +246,11 @@ async function handleWebhook(req: Request): Promise<Response> {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
     recipient: recipientEmail,
-    confirmationUrl: data.url,
-    token: data.token,
-    email: data.email,
-    oldEmail: data.old_email,
-    newEmail: data.new_email,
+    confirmationUrl: confirmationUrl,
+    token: token,
+    email: user?.email || data?.email,
+    oldEmail: body?.old_email || data?.old_email,
+    newEmail: body?.new_email || data?.new_email,
   }
 
   const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
@@ -244,7 +258,7 @@ async function handleWebhook(req: Request): Promise<Response> {
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const messageId = crypto.randomUUID()
-  const storeSender = await getVerifiedStoreSender(supabase, data.url, storeSlug)
+  const storeSender = await getVerifiedStoreSender(supabase, authUrl, storeSlug)
 
   if (storeSender) {
     const sent = await sendViaResend(recipientEmail, storeSender.from, EMAIL_SUBJECTS[emailType] || 'Notification', html, text)
