@@ -56,63 +56,56 @@ const FEATURE_MAPPING = [
     title: "Product Add Form: Detail Auto-Extraction",
     place: "Product Management (Add/Edit Product Form)",
     purpose: "Analyzes uploaded product images using Vision AI to automatically extract and generate detailed product titles, descriptions, categories, selling highlights, pricing, and search tags.",
-    primaryModel: "meta/llama-3.2-11b-vision-instruct (NVIDIA NIM)",
+    actionKey: "generate-product",
     primaryModelId: "meta/llama-3.2-11b-vision-instruct",
-    fallbackModel: "meta/llama-3.2-90b-vision-instruct (NVIDIA NIM)",
     fallbackModelId: "meta/llama-3.2-90b-vision-instruct"
   },
   {
     title: "AI Product Image Generator",
     place: "Product Management (Add/Edit Product Form)",
     purpose: "Generates realistic, premium product mockup photos and advertising graphics directly from text descriptions.",
-    primaryModel: "flux (Pollinations.ai)",
+    actionKey: "generate-product-image",
     primaryModelId: "flux",
-    fallbackModel: "—",
     fallbackModelId: null
   },
   {
     title: "AI Store Customiser & Section Writer",
     place: "Visual Storefront Editor (/customise)",
     purpose: "Generates tailored copy, landing page hooks, headlines, and newsletter text for theme sections. Generates section-specific stock images based on store design DNA.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    actionKey: "generate-section-content",
     primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
-    fallbackModel: "—",
     fallbackModelId: null
   },
   {
     title: "AI Marketing Copy Generator",
     place: "Marketing Hub (/marketing/copywriter)",
     purpose: "Drafts conversational, conversion-optimized text copy for SMS blasts, WhatsApp campaigns, and Instagram captions.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    actionKey: "generate-marketing-copy",
     primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
-    fallbackModel: "—",
     fallbackModelId: null
   },
   {
     title: "AI Blog & Cover Generator",
     place: "Blog Management (/blog-posts/new)",
     purpose: "Writes full SEO blog posts with metadata and automatically generates matching 16:9 banner and thumbnail illustrations.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    actionKey: "generate-blog",
     primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
-    fallbackModel: "—",
     fallbackModelId: null
   },
   {
     title: "Merchant Assistant Copilot",
     place: "Dashboard Sidebar Chat Widget",
     purpose: "Conversational assistant that helps merchants manage their shop settings, understand sales metrics, and guide them on e-commerce best practices.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    actionKey: "merchant-assistant",
     primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
-    fallbackModel: "Sarvam AI (External API)",
     fallbackModelId: null
   },
   {
     title: "Customer Support Chatbot",
     place: "Customer Storefront Widget (/store/:slug)",
     purpose: "Automated chatbot that chats with store visitors, answers product-related questions, tells them about policies, and handles customer queries.",
-    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (NVIDIA NIM)",
+    actionKey: "storefront-assistant",
     primaryModelId: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
-    fallbackModel: "Groq Llama 3 (External API)",
     fallbackModelId: null
   }
 ];
@@ -949,6 +942,7 @@ const ModelsTab = () => {
 const AdminAIHealth = () => {
   const { data: logs = [] } = useCallLog();
   const { data: models = [] } = useLlmModels();
+  const { data: costs = [] } = useActionCosts();
 
   const totalFunctions = AI_FUNCTIONS.length;
   const apisUsed = ['NVIDIA', 'Pollinations'] as ApiName[];
@@ -983,47 +977,11 @@ const AdminAIHealth = () => {
         ))}
       </div>
 
-      <Tabs defaultValue="apis" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="apis" className="gap-1.5 text-xs"><Globe className="h-3 w-3" /> APIs</TabsTrigger>
+      <Tabs defaultValue="functions" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="functions" className="gap-1.5 text-xs"><Zap className="h-3 w-3" /> Functions</TabsTrigger>
           <TabsTrigger value="models" className="gap-1.5 text-xs"><Cpu className="h-3 w-3" /> Models</TabsTrigger>
-          <TabsTrigger value="logs" className="gap-1.5 text-xs"><Activity className="h-3 w-3" /> Call Log</TabsTrigger>
-          <TabsTrigger value="costs" className="gap-1.5 text-xs"><IndianRupee className="h-3 w-3" /> Action Costs</TabsTrigger>
         </TabsList>
-
-        {/* ── APIs Tab ── */}
-        <TabsContent value="apis" className="space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold mb-1">Live API Connectivity Test</h2>
-            <p className="text-xs text-muted-foreground mb-3">
-              Click "Test" on each API to fire a minimal ping via the <code>merchant-assistant</code> edge function and check response time.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {apisUsed.map((api) => <ApiStatusCard key={api} api={api} />)}
-          </div>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Model Inventory</CardTitle>
-              <CardDescription>All LLM models currently used across the platform</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {uniqueModels.map((m) => {
-                  const api = AI_FUNCTIONS.find((f) => f.models.includes(m))?.api[0];
-                  return (
-                    <div key={m} className="flex items-center gap-1.5 border rounded px-2 py-1">
-                      {api && <Badge className={`text-[10px] ${API_META[api].color}`}>{api}</Badge>}
-                      <code className="text-xs">{m}</code>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* ── Functions Tab ── */}
         <TabsContent value="functions" className="space-y-6">
@@ -1036,8 +994,17 @@ const AdminAIHealth = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {FEATURE_MAPPING.map((feat, fIdx) => {
-              const primaryModelObj = models.find(m => m.model_id === feat.primaryModelId);
-              const fallbackModelObj = feat.fallbackModelId ? models.find(m => m.model_id === feat.fallbackModelId) : null;
+              const dbCostRow = costs.find(c => c.action_key === feat.actionKey);
+              
+              // Get assigned primary/fallback model IDs from DB row if found, else default
+              const primaryModelId = dbCostRow?.model || feat.primaryModelId;
+              const fallbackModelId = dbCostRow ? dbCostRow.fallback_model : feat.fallbackModelId;
+
+              // Look up active LLM model objects for testing
+              const primaryModelObj = models.find(m => m.model_id === primaryModelId);
+              const fallbackModelObj = fallbackModelId ? models.find(m => m.model_id === fallbackModelId) : null;
+              
+              const qc = useQueryClient();
 
               return (
                 <Card key={fIdx} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow transition-shadow">
@@ -1049,44 +1016,88 @@ const AdminAIHealth = () => {
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-3 space-y-2.5">
+                  <CardContent className="pt-3 space-y-3">
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {feat.purpose}
                     </p>
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t text-[11px]">
-                      <div>
-                        <span className="text-slate-500 block font-medium">Primary Model</span>
-                        {primaryModelObj ? (
-                          <div className="flex items-center gap-1.5 mt-1 bg-slate-50 border rounded px-1.5 py-0.5 w-full">
-                            <code className="text-[10px] text-slate-700 truncate flex-1" title={feat.primaryModel}>
-                              {feat.primaryModel}
-                            </code>
-                            <div className="shrink-0 scale-90 origin-right">
+                    
+                    <div className="grid grid-cols-2 gap-4 pt-2.5 border-t text-[11px]">
+                      {/* Primary Model Section */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 font-medium">Primary Model</span>
+                          {primaryModelObj && (
+                            <div className="scale-75 origin-right">
                               <ModelTestButton model={primaryModelObj} />
                             </div>
-                          </div>
-                        ) : (
-                          <code className="text-[10px] bg-slate-100 text-slate-700 px-1 py-0.5 rounded block mt-1 truncate" title={feat.primaryModel}>
-                            {feat.primaryModel}
-                          </code>
-                        )}
+                          )}
+                        </div>
+                        <Select
+                          value={primaryModelId}
+                          onValueChange={async (newModelId) => {
+                            const { error } = await supabase
+                              .from('ai_action_costs' as any)
+                              .update({ model: newModelId })
+                              .eq('action_key', feat.actionKey);
+                            if (error) {
+                              toast.error(`Failed to update primary model: ${error.message}`);
+                            } else {
+                              toast.success(`Primary model updated for ${feat.title}`);
+                              qc.invalidateQueries({ queryKey: ['admin-action-costs-ai'] });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-[10px] w-full mt-1 bg-white border">
+                            <SelectValue placeholder="Select primary model" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {models.filter(m => m.is_active).map(m => (
+                              <SelectItem key={m.model_id} value={m.model_id} className="text-[10px]">
+                                {m.label} ({m.provider})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block font-medium">Fallback Model</span>
-                        {fallbackModelObj ? (
-                          <div className="flex items-center gap-1.5 mt-1 bg-slate-50 border rounded px-1.5 py-0.5 w-full">
-                            <code className="text-[10px] text-slate-700 truncate flex-1" title={feat.fallbackModel}>
-                              {feat.fallbackModel}
-                            </code>
-                            <div className="shrink-0 scale-90 origin-right">
+
+                      {/* Fallback Model Section */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 font-medium">Fallback Model</span>
+                          {fallbackModelObj && (
+                            <div className="scale-75 origin-right">
                               <ModelTestButton model={fallbackModelObj} />
                             </div>
-                          </div>
-                        ) : (
-                          <code className="text-[10px] bg-slate-100 text-slate-700 px-1 py-0.5 rounded block mt-1 truncate" title={feat.fallbackModel}>
-                            {feat.fallbackModel}
-                          </code>
-                        )}
+                          )}
+                        </div>
+                        <Select
+                          value={fallbackModelId || "none"}
+                          onValueChange={async (newModelId) => {
+                            const dbVal = newModelId === "none" ? null : newModelId;
+                            const { error } = await supabase
+                              .from('ai_action_costs' as any)
+                              .update({ fallback_model: dbVal })
+                              .eq('action_key', feat.actionKey);
+                            if (error) {
+                              toast.error(`Failed to update fallback model: ${error.message}`);
+                            } else {
+                              toast.success(`Fallback model updated for ${feat.title}`);
+                              qc.invalidateQueries({ queryKey: ['admin-action-costs-ai'] });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-[10px] w-full mt-1 bg-white border">
+                            <SelectValue placeholder="None" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none" className="text-[10px]">None (Disabled)</SelectItem>
+                            {models.filter(m => m.is_active && m.model_id !== primaryModelId).map(m => (
+                              <SelectItem key={m.model_id} value={m.model_id} className="text-[10px]">
+                                {m.label} ({m.provider})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </CardContent>
@@ -1120,14 +1131,10 @@ const AdminAIHealth = () => {
           </Card>
         </TabsContent>
 
-        {/* ── Call Log Tab ── */}
-        <TabsContent value="logs"><CallLogTab /></TabsContent>
-
         {/* ── Models Tab ── */}
-        <TabsContent value="models"><ModelsTab /></TabsContent>
-
-        {/* ── Action Costs Tab ── */}
-        <TabsContent value="costs"><ActionCostsTab /></TabsContent>
+        <TabsContent value="models">
+          <ModelsTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
