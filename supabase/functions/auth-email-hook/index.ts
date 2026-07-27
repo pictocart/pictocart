@@ -149,8 +149,36 @@ async function handlePreview(req: Request): Promise<Response> {
 }
 
 function isValidAuth(authHeader: string, serviceKey: string, req?: Request): boolean {
-  // Temporarily allow all requests to log headers and diagnose webhook calls
-  return true;
+  // Allow requests with webhook signatures from Supabase Auth
+  if (req && (req.headers.has('x-supabase-signature') || req.headers.has('webhook-signature') || req.headers.has('x-signature'))) {
+    return true;
+  }
+
+  if (!authHeader.startsWith('Bearer ')) return false;
+  const token = authHeader.slice('Bearer '.length).trim();
+  
+  // 1. Exact match
+  if (token === serviceKey) return true;
+  
+  // 2. Starts with Deno's service key (handles truncated copy-paste keys)
+  if (serviceKey && token.startsWith(serviceKey)) return true;
+  
+  // 3. Decode JWT and check claims
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      // Decode JWT payload using standard atob
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      console.log('Decoded auth JWT claims:', JSON.stringify(payload));
+      if (payload.iss === 'supabase' && payload.ref === 'wuqznkpaldtvpfpdtllp') {
+        return true;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to parse auth JWT', e);
+  }
+  
+  return false;
 }
 
 // Webhook handler — Supabase Auth Hook sends a POST with user/email data
