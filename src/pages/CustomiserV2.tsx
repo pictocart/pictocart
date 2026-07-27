@@ -906,34 +906,44 @@ export default function CustomiserV2() {
         {/* Middle: Live preview with auto-scaled desktop preview */}
         {(() => {
           const previewScale = device === "mobile" ? 1 : (containerWidth ? Math.min(1, (containerWidth - 32) / 1200) : 0.85);
+          const outerWidth = device === "mobile" ? 390 : (containerWidth ? Math.min(1200, containerWidth - 32) : 1020);
           return (
             <main ref={mainRef} className="flex-1 bg-muted/40 flex items-center justify-center overflow-hidden p-4 relative">
               <div
                 className="bg-background shadow-lg rounded-md overflow-hidden border transition-all duration-200"
-                style={device === "mobile" ? {
-                  width: 390,
+                style={{
+                  width: outerWidth,
                   height: "100%",
-                  maxWidth: 390,
-                } : {
-                  width: 1200,
-                  height: `${100 / previewScale}%`,
-                  transform: `scale(${previewScale})`,
-                  transformOrigin: "top center",
-                  position: "absolute",
-                  top: 16,
+                  maxWidth: device === "mobile" ? 390 : "100%",
+                  position: "relative",
                 }}
               >
-                <iframe 
-                  ref={iframeRef} 
-                  src={iframeUrl} 
-                  onLoad={() => {
-                    iframeRef.current?.contentWindow?.postMessage(
-                      { type: "customiser:update", overrides: overridesRef.current, page: pageRef.current }, "*"
-                    );
+                <div
+                  style={device === "mobile" ? {
+                    width: "100%",
+                    height: "100%",
+                  } : {
+                    width: 1200,
+                    height: `${100 / previewScale}%`,
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: "top left",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
                   }}
-                  title="Live preview" 
-                  className="w-full h-full border-0" 
-                />
+                >
+                  <iframe 
+                    ref={iframeRef} 
+                    src={iframeUrl} 
+                    onLoad={() => {
+                      iframeRef.current?.contentWindow?.postMessage(
+                        { type: "customiser:update", overrides: overridesRef.current, page: pageRef.current }, "*"
+                      );
+                    }}
+                    title="Live preview" 
+                    className="w-full h-full border-0" 
+                  />
+                </div>
               </div>
             </main>
           );
