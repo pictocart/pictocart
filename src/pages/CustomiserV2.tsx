@@ -913,6 +913,7 @@ export default function CustomiserV2() {
                 className="bg-background shadow-lg rounded-md border transition-all duration-200"
                 style={{
                   width: outerWidth,
+                  height: "calc(100% - 32px)",
                   position: "absolute",
                   top: 16,
                   bottom: 16,
