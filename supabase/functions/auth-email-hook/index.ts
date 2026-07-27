@@ -263,8 +263,14 @@ async function handleWebhook(req: Request): Promise<Response> {
   const messageId = crypto.randomUUID()
   const storeSender = await getVerifiedStoreSender(supabase, authUrl, storeSlug)
 
+  const subject = (emailType === 'signup' && token)
+    ? `${token} is your ${SITE_NAME} verification code`
+    : (emailType === 'recovery' && token)
+    ? `${token} is your password reset code`
+    : (EMAIL_SUBJECTS[emailType] || 'Notification');
+
   if (storeSender) {
-    const sent = await sendViaResend(recipientEmail, storeSender.from, EMAIL_SUBJECTS[emailType] || 'Notification', html, text)
+    const sent = await sendViaResend(recipientEmail, storeSender.from, subject, html, text)
     await supabase.from('email_send_log').insert({ 
       message_id: messageId, 
       template_name: emailType, 
@@ -281,7 +287,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   // Send directly via Resend to guarantee immediate delivery
   console.log('Sending auth email directly via Resend...')
   const fallbackFrom = `${SITE_NAME} <noreply@${FROM_DOMAIN}>`
-  const sent = await sendViaResend(recipientEmail, fallbackFrom, EMAIL_SUBJECTS[emailType] || 'Notification', html, text)
+  const sent = await sendViaResend(recipientEmail, fallbackFrom, subject, html, text)
   
   await supabase.from('email_send_log').insert({
     message_id: messageId,
