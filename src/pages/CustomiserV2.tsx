@@ -913,9 +913,12 @@ export default function CustomiserV2() {
                 className="bg-background shadow-lg rounded-md border transition-all duration-200"
                 style={{
                   width: outerWidth,
-                  height: "100%",
+                  position: "absolute",
+                  top: 16,
+                  bottom: 16,
+                  left: "50%",
+                  transform: "translateX(-50%)",
                   maxWidth: device === "mobile" ? 390 : "100%",
-                  position: "relative",
                   overflow: "hidden",
                 }}
               >
