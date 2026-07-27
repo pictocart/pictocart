@@ -28,6 +28,7 @@ export default function OtpVerifyBlock({
 }: OtpVerifyBlockProps) {
   const [secondsLeft, setSecondsLeft] = useState(OTP_TTL);
   const [resending, setResending] = useState(false);
+  const [resendCount, setResendCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startTimer = useCallback(() => {
@@ -44,9 +45,11 @@ export default function OtpVerifyBlock({
   useEffect(() => { startTimer(); return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
 
   const handleResend = async () => {
+    if (resendCount >= 3) return;
     setResending(true);
     await onResend();
     setResending(false);
+    setResendCount((c) => c + 1);
     onOtpChange('');
     startTimer();
   };
@@ -145,7 +148,11 @@ export default function OtpVerifyBlock({
 
       {/* Resend section */}
       <div className="text-center">
-        {expired ? (
+        {resendCount >= 3 ? (
+          <p className="text-xs font-semibold text-destructive animate-fade-in">
+            Maximum resend attempts reached. Please wait or try again later.
+          </p>
+        ) : expired ? (
           <button
             type="button"
             onClick={handleResend}
@@ -160,16 +167,9 @@ export default function OtpVerifyBlock({
             {resending ? 'Sending…' : 'Resend Code'}
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={resending}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline transition-opacity"
-            style={{ color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', opacity: resending ? 0.6 : 0.8 }}
-          >
-            {resending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
-            {resending ? 'Sending…' : "Didn't receive it? Resend"}
-          </button>
+          <span className="text-xs text-muted-foreground font-medium">
+            Didn't receive it? Resend in <strong className="tabular-nums font-bold" style={{ color: primaryColor }}>{mins}:{secs}</strong>
+          </span>
         )}
       </div>
     </div>
