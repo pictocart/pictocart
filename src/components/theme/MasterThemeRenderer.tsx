@@ -223,11 +223,16 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         ` : ''}
 
         /* Global Button Overrides */
-        [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only), 
+        [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"]), 
         [data-master-theme] .btn,
         [data-master-theme] .button,
         [data-master-theme] a.button,
-        [data-master-theme] [role="button"]:not([aria-label="Close"]) {
+        [data-master-theme] [role="button"]:not([aria-label="Close"]):not([type="submit"]),
+        [data-master-theme] [data-hero-section="true"] a,
+        [data-master-theme] [data-hero-section] a,
+        [data-master-theme] header a[href*="/cart"],
+        [data-master-theme] header a[href*="/account"],
+        [data-master-theme] header button:not([type="submit"]):not([aria-label="Close"]) {
           ${globalOv.buttons?.fontSize === 'small' ? `
             font-size: 11px !important;
             padding: 6px 12px !important;
@@ -268,16 +273,26 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
 
         /* Hover animation classes */
         ${globalOv.buttons?.animation === 'scale' ? `
-          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):hover, 
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"]):hover, 
           [data-master-theme] .btn:hover,
-          [data-master-theme] .button:hover {
+          [data-master-theme] .button:hover,
+          [data-master-theme] [data-hero-section="true"] a:hover,
+          [data-master-theme] [data-hero-section] a:hover,
+          [data-master-theme] header a[href*="/cart"]:hover,
+          [data-master-theme] header a[href*="/account"]:hover,
+          [data-master-theme] header button:not([type="submit"]):not([aria-label="Close"]):hover {
             transform: scale(1.05) !important;
           }
         ` : ''}
         ${globalOv.buttons?.animation === 'glow' ? `
-          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):hover, 
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"]):hover, 
           [data-master-theme] .btn:hover,
-          [data-master-theme] .button:hover {
+          [data-master-theme] .button:hover,
+          [data-master-theme] [data-hero-section="true"] a:hover,
+          [data-master-theme] [data-hero-section] a:hover,
+          [data-master-theme] header a[href*="/cart"]:hover,
+          [data-master-theme] header a[href*="/account"]:hover,
+          [data-master-theme] header button:not([type="submit"]):not([aria-label="Close"]):hover {
             box-shadow: 0 0 15px var(--p) !important;
           }
         ` : ''}
@@ -287,22 +302,37 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             70% { box-shadow: 0 0 0 8px rgba(100, 100, 250, 0); }
             100% { box-shadow: 0 0 0 0 rgba(100, 100, 250, 0); }
           }
-          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):hover, 
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"]):hover, 
           [data-master-theme] .btn:hover,
-          [data-master-theme] .button:hover {
+          [data-master-theme] .button:hover,
+          [data-master-theme] [data-hero-section="true"] a:hover,
+          [data-master-theme] [data-hero-section] a:hover,
+          [data-master-theme] header a[href*="/cart"]:hover,
+          [data-master-theme] header a[href*="/account"]:hover,
+          [data-master-theme] header button:not([type="submit"]):not([aria-label="Close"]):hover {
             animation: btn-pulse 1.5s infinite !important;
           }
         ` : ''}
         ${globalOv.buttons?.animation === 'shine' ? `
-          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only), 
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"]), 
           [data-master-theme] .btn,
-          [data-master-theme] .button {
+          [data-master-theme] .button,
+          [data-master-theme] [data-hero-section="true"] a,
+          [data-master-theme] [data-hero-section] a,
+          [data-master-theme] header a[href*="/cart"],
+          [data-master-theme] header a[href*="/account"],
+          [data-master-theme] header button:not([type="submit"]):not([aria-label="Close"]) {
             position: relative !important;
             overflow: hidden !important;
           }
-          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only)::after, 
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"])::after, 
           [data-master-theme] .btn::after,
-          [data-master-theme] .button::after {
+          [data-master-theme] .button::after,
+          [data-master-theme] [data-hero-section="true"] a::after,
+          [data-master-theme] [data-hero-section] a::after,
+          [data-master-theme] header a[href*="/cart"]::after,
+          [data-master-theme] header a[href*="/account"]::after,
+          [data-master-theme] header button:not([type="submit"]):not([aria-label="Close"])::after {
             content: '' !important;
             position: absolute !important;
             top: 0 !important;
@@ -313,9 +343,14 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             transform: skewX(-25deg) !important;
             transition: 0.75s !important;
           }
-          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):hover::after, 
+          [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"]):hover::after, 
           [data-master-theme] .btn:hover::after,
-          [data-master-theme] .button:hover::after {
+          [data-master-theme] .button:hover::after,
+          [data-master-theme] [data-hero-section="true"] a:hover::after,
+          [data-master-theme] [data-hero-section] a:hover::after,
+          [data-master-theme] header a[href*="/cart"]:hover::after,
+          [data-master-theme] header a[href*="/account"]:hover::after,
+          [data-master-theme] header button:not([type="submit"]):not([aria-label="Close"]):hover::after {
             left: 150% !important;
           }
         ` : ''}
