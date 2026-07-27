@@ -354,17 +354,32 @@ const ThemePreview = () => {
         );
 
       case 'category_grid':
+        const mockCats = ['Category 1', 'Category 2', 'Category 3', 'Category 4', 'Category 5', 'Category 6'];
         return (
           <AnimSection key={i} animation={anim}>
             <div className="py-16 px-6 max-w-6xl mx-auto">
               <h2 className="text-2xl font-bold mb-8 text-center" style={{ fontFamily: fonts.heading }}>{section.title || 'Shop by Category'}</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {['Category 1', 'Category 2', 'Category 3', 'Category 4'].map((cat, ci) => (
-                  <div key={ci} className={`p-6 text-center rounded-xl cursor-pointer transition-all hover:scale-105 ${cardEffect}`} style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
-                    <span className="text-xs font-semibold">{cat}</span>
-                  </div>
-                ))}
-              </div>
+              {section.style === 'carousel_strip' ? (
+                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-none">
+                  {mockCats.map((cat, ci) => (
+                    <div 
+                      key={ci} 
+                      className={`p-6 text-center rounded-xl cursor-pointer transition-all hover:scale-105 shrink-0 snap-center min-w-[150px] ${cardEffect}`} 
+                      style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}
+                    >
+                      <span className="text-xs font-semibold">{cat}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {mockCats.slice(0, 4).map((cat, ci) => (
+                    <div key={ci} className={`p-6 text-center rounded-xl cursor-pointer transition-all hover:scale-105 ${cardEffect}`} style={{ backgroundColor: colors.card, borderRadius: `${borderRadius}px`, border: `1px solid ${colors.secondary}` }}>
+                      <span className="text-xs font-semibold">{cat}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </AnimSection>
         );

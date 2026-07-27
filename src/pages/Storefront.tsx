@@ -291,13 +291,28 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
         return categories.length > 0 ? wrapAnimated(
           <section className="max-w-6xl mx-auto px-4 py-8">
             <h2 className="text-lg font-bold mb-4" style={{ fontFamily: fonts.heading }}>{section.title || 'Shop by Category'}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {categories.map((cat) => (
-                <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat!)} className="p-4 text-center text-sm font-medium rounded-lg transition-colors" style={{ backgroundColor: selectedCategory === cat ? colors.primary : colors.secondary, color: selectedCategory === cat ? '#fff' : colors.text }}>
-                  {cat}
-                </button>
-              ))}
-            </div>
+            {section.style === 'carousel_strip' ? (
+              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 scrollbar-none">
+                {categories.map((cat) => (
+                  <button 
+                    key={cat} 
+                    onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat!)} 
+                    className="p-4 text-center text-sm font-medium rounded-lg transition-colors min-w-[140px] shrink-0 snap-center" 
+                    style={{ backgroundColor: selectedCategory === cat ? colors.primary : colors.secondary, color: selectedCategory === cat ? '#fff' : colors.text }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {categories.map((cat) => (
+                  <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat!)} className="p-4 text-center text-sm font-medium rounded-lg transition-colors" style={{ backgroundColor: selectedCategory === cat ? colors.primary : colors.secondary, color: selectedCategory === cat ? '#fff' : colors.text }}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
         ) : null;
       case 'testimonials':
