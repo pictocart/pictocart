@@ -10,14 +10,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { Store, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import PicToCartLogo from '@/components/PicToCartLogo';
+import OtpVerifyBlock from '@/components/storefront/OtpVerifyBlock';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isVerifyingSignup, setIsVerifyingSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -43,10 +46,41 @@ const Auth = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success('Account created! Check your email for verification.');
+        toast.success('Verification code sent! Check your email.');
+        setIsVerifyingSignup(true);
       }
     }
     setLoading(false);
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length < 6) {
+      toast.error('Please enter the 6-digit code');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: otp,
+      type: 'signup',
+    });
+    if (error) {
+      toast.error(error.message || 'Invalid or expired OTP. Please try again.');
+    } else {
+      toast.success('Email verified successfully!');
+      navigate('/dashboard');
+    }
+    setLoading(false);
+  };
+
+  const handleResendOtp = async () => {
+    const { error } = await signUp(email, password, fullName);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Verification code resent!');
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -74,14 +108,18 @@ const Auth = () => {
         <CardHeader className="text-center space-y-2">
           <PicToCartLogo size={64} className="mx-auto" />
           <CardTitle className="text-2xl font-bold">
-            {isForgotPassword
+            {isVerifyingSignup
+              ? 'Verify your email'
+              : isForgotPassword
               ? 'Reset Password'
               : isLogin
               ? 'Welcome back'
               : 'Create your store'}
           </CardTitle>
           <CardDescription>
-            {isForgotPassword
+            {isVerifyingSignup
+              ? `Enter the code sent to ${email}`
+              : isForgotPassword
               ? "Enter your email and we'll send you a reset link"
               : isLogin
               ? 'Sign in to manage your store'
@@ -89,7 +127,30 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isForgotPassword ? (
+          {isVerifyingSignup ? (
+            <div className="space-y-4">
+              <OtpVerifyBlock
+                email={email}
+                otp={otp}
+                onOtpChange={setOtp}
+                onSubmit={handleVerifyOtp}
+                onResend={handleResendOtp}
+                submitting={loading}
+                primaryColor="#f97316"
+                cardColor="#ffffff"
+                borderColor="#e2e8f0"
+                textColor="#0f172a"
+              />
+              <button
+                type="button"
+                onClick={() => setIsVerifyingSignup(false)}
+                className="w-full flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground mt-4"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back to sign up
+              </button>
+            </div>
+          ) : isForgotPassword ? (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

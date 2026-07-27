@@ -41,7 +41,7 @@ const RESEND_API_URL = 'https://api.resend.com'
 const SAMPLE_PROJECT_URL = "https://pictocart.in"
 const SAMPLE_EMAIL = "user@example.test"
 const SAMPLE_DATA: Record<string, object> = {
-  signup: { siteName: SITE_NAME, siteUrl: SAMPLE_PROJECT_URL, recipient: SAMPLE_EMAIL, confirmationUrl: SAMPLE_PROJECT_URL },
+  signup: { siteName: SITE_NAME, siteUrl: SAMPLE_PROJECT_URL, recipient: SAMPLE_EMAIL, confirmationUrl: SAMPLE_PROJECT_URL, token: '123456' },
   magiclink: { siteName: SITE_NAME, confirmationUrl: SAMPLE_PROJECT_URL },
   recovery: { siteName: SITE_NAME, confirmationUrl: SAMPLE_PROJECT_URL },
   invite: { siteName: SITE_NAME, siteUrl: SAMPLE_PROJECT_URL, confirmationUrl: SAMPLE_PROJECT_URL },

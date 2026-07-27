@@ -18,8 +18,7 @@ import {
   BRAND,
   brandMark,
   brandName,
-  button,
-  buttonWrap,
+  codeStyle,
   container,
   footer,
   h1,
@@ -33,10 +32,10 @@ interface SignupEmailProps {
   siteName: string
   siteUrl: string
   recipient: string
-  confirmationUrl: string
+  token: string
 }
 
-export const SignupEmail = ({ recipient, confirmationUrl }: SignupEmailProps) => (
+export const SignupEmail = ({ recipient, token }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Confirm your email to launch your {BRAND.name} store</Preview>
@@ -50,16 +49,14 @@ export const SignupEmail = ({ recipient, confirmationUrl }: SignupEmailProps) =>
         <Text style={text}>Hi there,</Text>
         <Text style={text}>
           Welcome to {BRAND.name}! We're excited to help you launch your online
-          store in minutes. Please confirm <strong>{recipient}</strong> so we
-          can save your work and start setting up your store.
+          store in minutes. Please use the verification code below to confirm
+          your email address (<strong>{recipient}</strong>):
         </Text>
-        <Section style={buttonWrap}>
-          <Button style={button} href={confirmationUrl}>
-            Confirm email & continue
-          </Button>
+        <Section style={{ textAlign: 'center' }}>
+          <Text style={codeStyle}>{token}</Text>
         </Section>
         <Text style={muted}>
-          Didn't sign up for {BRAND.name}? You can safely ignore this email.
+          This code is valid for <strong>2 minutes</strong>. If you did not sign up for {BRAND.name}, you can safely ignore this email.
         </Text>
         <Text style={footer}>
           {BRAND.name} · {BRAND.tagline}
