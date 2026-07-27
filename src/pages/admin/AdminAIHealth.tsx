@@ -51,6 +51,58 @@ const AI_FUNCTIONS: {
   { name: 'auth-email-hook',           label: 'Auth Email Hook',           description: 'Renders React Email templates for Supabase auth events (no LLM)',                   api: [],               models: [],                                                              hasLog: false },
 ];
 
+const FEATURE_MAPPING = [
+  {
+    title: "Product Add Form: Detail Auto-Extraction",
+    place: "Product Management (Add/Edit Product Form)",
+    purpose: "Analyzes uploaded product images using Vision AI to automatically extract and generate detailed product titles, descriptions, categories, selling highlights, pricing, and search tags.",
+    primaryModel: "meta/llama-3.2-11b-vision-instruct (NVIDIA NIM)",
+    fallbackModel: "meta/llama-3.2-90b-vision-instruct (NVIDIA NIM)"
+  },
+  {
+    title: "AI Product Image Generator",
+    place: "Product Management (Add/Edit Product Form)",
+    purpose: "Generates realistic, premium product mockup photos and advertising graphics directly from text descriptions.",
+    primaryModel: "flux (Pollinations.ai)",
+    fallbackModel: "—"
+  },
+  {
+    title: "AI Store Customiser & Section Writer",
+    place: "Visual Storefront Editor (/customise)",
+    purpose: "Generates tailored copy, landing page hooks, headlines, and newsletter text for theme sections. Generates section-specific stock images based on store design DNA.",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM) / flux (Pollinations.ai) for images",
+    fallbackModel: "—"
+  },
+  {
+    title: "AI Marketing Copy Generator",
+    place: "Marketing Hub (/marketing/copywriter)",
+    purpose: "Drafts conversational, conversion-optimized text copy for SMS blasts, WhatsApp campaigns, and Instagram captions.",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
+    fallbackModel: "—"
+  },
+  {
+    title: "AI Blog & Cover Generator",
+    place: "Blog Management (/blog-posts/new)",
+    purpose: "Writes full SEO blog posts with metadata and automatically generates matching 16:9 banner and thumbnail illustrations.",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (Text) & flux (Images)",
+    fallbackModel: "—"
+  },
+  {
+    title: "Merchant Assistant Copilot",
+    place: "Dashboard Sidebar Chat Widget",
+    purpose: "Conversational assistant that helps merchants manage their shop settings, understand sales metrics, and guide them on e-commerce best practices.",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
+    fallbackModel: "Sarvam AI (External API)"
+  },
+  {
+    title: "Customer Support Chatbot",
+    place: "Customer Storefront Widget (/store/:slug)",
+    purpose: "Automated chatbot that chats with store visitors, answers product-related questions, tells them about policies, and handles customer queries.",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-v3b-reasoning (NVIDIA NIM)",
+    fallbackModel: "Groq Llama 3 (External API)"
+  }
+];
+
 // ─── API registry ─────────────────────────────────────────────────────────────
 const API_META = {
   NVIDIA:      { label: 'NVIDIA NIM',       endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions', color: 'bg-green-100 text-green-800',  testModel: 'nvidia/nemotron-3-nano-omni-30b-v3b-reasoning' },
@@ -959,7 +1011,55 @@ const AdminAIHealth = () => {
         </TabsContent>
 
         {/* ── Functions Tab ── */}
-        <TabsContent value="functions">
+        <TabsContent value="functions" className="space-y-6">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold">AI Feature & Model Mapping Registry</h2>
+            <p className="text-xs text-muted-foreground">
+              A comprehensive directory mapping platform features and user actions to the active AI/LLM models serving them.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {FEATURE_MAPPING.map((feat, fIdx) => (
+              <Card key={fIdx} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow transition-shadow">
+                <CardHeader className="bg-slate-50/50 pb-2.5 border-b">
+                  <div className="flex flex-col gap-1.5 md:flex-row md:justify-between md:items-center">
+                    <CardTitle className="text-xs font-bold text-slate-800">{feat.title}</CardTitle>
+                    <Badge variant="outline" className="text-[9px] bg-white text-indigo-700 border-indigo-200 whitespace-nowrap self-start md:self-auto">
+                      {feat.place}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-3 space-y-2.5">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {feat.purpose}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t text-[11px]">
+                    <div>
+                      <span className="text-slate-500 block font-medium">Primary Model</span>
+                      <code className="text-[10px] bg-slate-100 text-slate-700 px-1 py-0.5 rounded block mt-0.5 truncate" title={feat.primaryModel}>
+                        {feat.primaryModel}
+                      </code>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block font-medium">Fallback Model</span>
+                      <code className="text-[10px] bg-slate-100 text-slate-700 px-1 py-0.5 rounded block mt-0.5 truncate" title={feat.fallbackModel}>
+                        {feat.fallbackModel}
+                      </code>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="space-y-1 pt-4">
+            <h2 className="text-sm font-semibold">Underlying Edge Functions (Technical)</h2>
+            <p className="text-xs text-muted-foreground">
+              Technical registry of platform microservices, underlying API endpoints, execution costs, and logged events.
+            </p>
+          </div>
+
           <Card className="overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/40">
