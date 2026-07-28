@@ -427,37 +427,7 @@ const StepTheme = ({ data, setData }: Props) => {
           </div>
         ) : (
           <div className="space-y-5 pb-4">
-            {/* Custom Theme Builder Card Box */}
-            <div className={cn(
-              "rounded-xl border-2 border-dashed p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm transition duration-300",
-              data.selectedThemeId.startsWith('custom-theme-')
-                ? "border-primary ring-2 ring-primary/20 bg-primary/[0.01]"
-                : "border-primary/40 hover:border-primary/80 hover:shadow-md"
-            )}>
-              <div className="flex items-center gap-3.5 text-left">
-                <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                  <LayoutGrid className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-sm text-foreground">Make your own custom theme layout</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5 max-w-md">Mix and match any of the 19 headers, hero banners, product grids, and footers to create your own unique storefront brand identity.</p>
-                </div>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Button 
-                  type="button"
-                  onClick={() => setBuilderOpen(true)}
-                  className="font-bold text-xs px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm rounded-lg"
-                >
-                  {data.selectedThemeId.startsWith('custom-theme-') ? 'Edit Custom Layout' : 'Build Custom Theme'}
-                </Button>
-                {data.selectedThemeId.startsWith('custom-theme-') && (
-                  <div className="h-9 w-9 flex items-center justify-center bg-primary text-primary-foreground rounded-lg shadow-sm">
-                    <Check className="h-5 w-5" strokeWidth={3} />
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Custom Theme Builder Card Box hidden */}
 
             {aiInRecommended.length > 0 && (
               <Section title={genTheme ? `Your AI Theme + ${data.category} picks` : `For ${data.category}`} icon={<Sparkles className="h-3 w-3" />}>
