@@ -170,7 +170,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           STORE_ID="${{ github.event.client_payload.store_id }}"
-          DOWNLOAD_URL="${{ env.DOWNLOAD_URL }}"
+          DOWNLOAD_URL="$DOWNLOAD_URL"
           
           echo "Retrieving current settings..."
           SETTINGS_JSON=$(curl -s -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
