@@ -46,7 +46,7 @@ jobs:
               webDir: "dist",
               bundledWebRuntime: false,
               server: {
-                url: "https://pictocart.com/store/${{ github.event.client_payload.store_slug }}/menu",
+                url: "${{ github.event.client_payload.base_url }}/store/${{ github.event.client_payload.store_slug }}",
                 cleartext: true
               }
             };

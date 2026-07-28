@@ -48,6 +48,7 @@ const AdminApkRequests = () => {
             store_slug: storeRow.slug,
             app_name: storeRow.request.app_name,
             logo_url: storeRow.logo_url || null,
+            base_url: window.location.origin,
           }
         })
       });
