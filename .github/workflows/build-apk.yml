@@ -40,13 +40,15 @@ jobs:
           CLEAN_APP_ID=$(echo "com.pictocart.${{ github.event.client_payload.store_slug }}" | sed 's/-/_/g')
           node -e '
             const fs = require("fs");
+            const rawBase = "${{ github.event.client_payload.base_url }}";
+            const base = (rawBase && rawBase !== "null" && rawBase.trim() !== "") ? rawBase.trim() : "https://www.pictocart.in";
             const config = {
               appId: "'"$CLEAN_APP_ID"'",
               appName: "${{ github.event.client_payload.app_name }}",
               webDir: "dist",
               bundledWebRuntime: false,
               server: {
-                url: "${{ github.event.client_payload.base_url }}/store/${{ github.event.client_payload.store_slug }}",
+                url: base + "/store/${{ github.event.client_payload.store_slug }}",
                 cleartext: true
               }
             };
