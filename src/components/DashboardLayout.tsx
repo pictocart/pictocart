@@ -400,7 +400,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           <GraceBanner />
           <SubscriptionGate>{children}</SubscriptionGate>
         </div>
-        <HelpLauncher />
+        {/* <HelpLauncher /> */}
       </main>
 
       {/* Mobile bottom nav */}

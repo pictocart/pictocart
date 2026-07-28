@@ -309,6 +309,7 @@ const ProductForm = () => {
   const [discountPercent, setDiscountPercent] = useState('');
   const [productHint, setProductHint] = useState('');
   const [category, setCategory] = useState('');
+  const [mealTypes, setMealTypes] = useState<string[]>([]);
   const [sku, setSku] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -422,6 +423,8 @@ const ProductForm = () => {
       const aiData = (existingProduct.ai_generated_data || {}) as Record<string, any>;
       if (aiData.product_hint) setProductHint(aiData.product_hint);
       setCategory(existingProduct.category || '');
+      const meta = (existingProduct.menu_meta as any) || {};
+      setMealTypes(meta.meal_types || []);
       setSku(existingProduct.sku || '');
       setTags((existingProduct.tags as string[]) || []);
       setImages((existingProduct.images as string[]) || []);
@@ -535,6 +538,9 @@ const ProductForm = () => {
     if (!category.trim()) { toast.error('Category is required'); return; }
     if (!sku.trim()) { toast.error('SKU is required'); return; }
     setSaving(true);
+    const existingMeta = isEdit && existingProduct ? ((existingProduct.menu_meta as any) || {}) : {};
+    const updatedMeta = { ...existingMeta, meal_types: mealTypes };
+
     const payload = {
       title: title.trim(),
       description,
@@ -557,6 +563,7 @@ const ProductForm = () => {
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
       ai_generated_data: { product_type: productType, highlights, product_hint: productHint || undefined, product_videos: productVideos, ...typeMetadata } as any,
+      menu_meta: updatedMeta as any,
     };
 
     try {
@@ -999,6 +1006,31 @@ const ProductForm = () => {
                   </SelectContent>
                 </Select>
                 {!category && <p className="text-xs text-destructive">Category is required</p>}
+              </div>
+              <div className="space-y-1.5 pt-1">
+                <Label>Food / Meal Type (Multi-select)</Label>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {(['breakfast', 'lunch', 'dinner', 'drink'] as const).map((type) => (
+                    <label
+                      key={type}
+                      className="flex items-center gap-2 text-xs font-medium cursor-pointer border rounded-lg p-2 hover:bg-stone-50 transition"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={mealTypes.includes(type)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setMealTypes([...mealTypes, type]);
+                          } else {
+                            setMealTypes(mealTypes.filter((t) => t !== type));
+                          }
+                        }}
+                        className="rounded border-stone-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span className="capitalize">{type === 'drink' ? 'drink / beverage' : type}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="sku">SKU <span className="text-destructive">*</span></Label>

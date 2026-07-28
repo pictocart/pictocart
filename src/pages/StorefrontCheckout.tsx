@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
 import { getStoreThemeTokens } from '@/lib/storefrontManifest';
@@ -74,9 +74,64 @@ const loadRazorpayScript = (): Promise<boolean> => {
 const StorefrontCheckout = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { store, loading } = useStorefront(slug || '');
-  const { items, totalPrice, clearCart, fulfillmentMode, tableLabel, appliedCoupon, setAppliedCoupon, clearCoupon } = useCart(slug || '');
+  const { items: cartItems, totalPrice: cartTotalPrice, clearCart, fulfillmentMode, tableLabel, appliedCoupon, setAppliedCoupon, clearCoupon } = useCart(slug || '');
   const { settings } = useFulfillment(store?.id);
+
+  const buyNowProductId = searchParams.get('buyNowProductId');
+  const buyNowQty = Number(searchParams.get('buyNowQty') || '1');
+  const [buyNowProduct, setBuyNowProduct] = useState<any>(null);
+
+  useEffect(() => {
+    if (buyNowProductId) {
+      (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('products')
+            .select('id, title, price, images, compare_at_price')
+            .eq('id', buyNowProductId)
+            .maybeSingle();
+          if (!error && data) {
+            setBuyNowProduct(data);
+          }
+        } catch (e) {
+          console.warn('Failed to load buy now product', e);
+        }
+      })();
+    }
+  }, [buyNowProductId]);
+
+  const storeSettings = (store?.settings as any) || {};
+  const takeawayMarkupPercent = typeof storeSettings.fulfillment_takeaway_markup_percent === 'number'
+    ? storeSettings.fulfillment_takeaway_markup_percent
+    : 5;
+
+  const getFulfillmentPrice = (basePrice: number) => {
+    if (fulfillmentMode === 'delivery') return Math.round(basePrice * 1.10);
+    if (fulfillmentMode === 'takeaway') return Math.round(basePrice * (1 + takeawayMarkupPercent / 100));
+    return Math.round(basePrice);
+  };
+
+  const items = useMemo(() => {
+    if (buyNowProductId && buyNowProduct) {
+      return [{
+        productId: buyNowProduct.id,
+        title: buyNowProduct.title,
+        price: getFulfillmentPrice(Number(buyNowProduct.price)),
+        image: buyNowProduct.images?.[0] || '',
+        quantity: buyNowQty
+      }];
+    }
+    return cartItems;
+  }, [buyNowProductId, buyNowProduct, buyNowQty, cartItems, fulfillmentMode, takeawayMarkupPercent]);
+
+  const totalPrice = useMemo(() => {
+    if (buyNowProductId && buyNowProduct) {
+      return getFulfillmentPrice(Number(buyNowProduct.price)) * buyNowQty;
+    }
+    return cartTotalPrice;
+  }, [buyNowProductId, buyNowProduct, buyNowQty, cartTotalPrice, fulfillmentMode, takeawayMarkupPercent]);
   
   // Destructure auth methods from hook
   const { user, loading: customerAuthLoading, signInWithEmail, signUpWithEmail } = useCustomerAuth(slug || '');
@@ -268,8 +323,8 @@ const StorefrontCheckout = () => {
   };
 
   const steps = isGuestMode 
-    ? [{ step: 1, label: 'Contact Details' }, { step: 3, label: 'Payment & Notes' }]
-    : [{ step: 1, label: 'Contact Details' }, { step: 2, label: 'Delivery Address' }, { step: 3, label: 'Payment & Notes' }];
+    ? [{ step: 1, label: 'Contact Details' }, { step: 3, label: 'Payment & Instructions' }]
+    : [{ step: 1, label: 'Contact Details' }, { step: 2, label: 'Delivery Address' }, { step: 3, label: 'Payment & Instructions' }];
 
   const validateStep1 = () => {
     if (!form.name.trim()) { toast.error('Please enter your full name'); return false; }
@@ -326,21 +381,42 @@ const StorefrontCheckout = () => {
     })();
   }, [store?.id, items.length, totalPrice]);
 
+  // Load saved address from localStorage if any (set via storefront menu address dialog)
+  const initialAddr = useMemo(() => {
+    try {
+      const saved = localStorage.getItem(`cart_delivery_address_${slug}`);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  }, [slug]);
+
   const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    house: '',
-    street: '',
-    landmark: '',
-    address: '',
-    city: '',
-    state: '',
-    country: 'India',
-    pincode: '',
-    addressType: 'home' as 'home' | 'office' | 'other',
+    name: initialAddr?.name || '',
+    email: initialAddr?.email || '',
+    phone: initialAddr?.phone || '',
+    house: initialAddr?.house || '',
+    street: initialAddr?.street || '',
+    landmark: initialAddr?.landmark || '',
+    address: initialAddr?.address || '',
+    city: initialAddr?.city || '',
+    state: initialAddr?.state || '',
+    country: initialAddr?.country || 'India',
+    pincode: initialAddr?.pincode || '',
+    addressType: (initialAddr?.addressType || initialAddr?.label?.toLowerCase() || 'home') as 'home' | 'office' | 'other',
     paymentMethod: 'cod',
   });
+
+  // Load user name, email, and phone into form if they log in and fields are empty
+  useEffect(() => {
+    if (user) {
+      setForm((f) => ({
+        ...f,
+        name: f.name || user.user_metadata?.full_name || '',
+        email: f.email || user.email || '',
+        phone: f.phone || user.user_metadata?.phone || '',
+      }));
+    }
+  }, [user]);
 
   // Check if store has Razorpay configured and domain is verified (or test mode)
   // domain_verified flag is synced into stores.settings by PaymentSettings on toggle
@@ -681,7 +757,20 @@ const StorefrontCheckout = () => {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: notifBody('new_order_seller'),
             }).catch(() => {});
-            clearCart();
+            if (!buyNowProductId) clearCart();
+            
+            const existingIds = (() => {
+              try {
+                return JSON.parse(localStorage.getItem(`placed_order_ids_${slug}`) || '[]');
+              } catch {
+                return [];
+              }
+            })();
+            if (!existingIds.includes(order.id)) {
+              localStorage.setItem(`placed_order_ids_${slug}`, JSON.stringify([...existingIds, order.id]));
+              window.dispatchEvent(new Event('order_placed'));
+            }
+
             track({ store_id: store.id, event_type: 'purchase', order_id: order.id, value: totalPrice, metadata: { payment: 'razorpay' } });
             setOrderPlaced({ number: order.order_number, trackingCode: order.guest_tracking_code });
           } else {
@@ -710,6 +799,19 @@ const StorefrontCheckout = () => {
     setPlacing(true);
     try {
       const order = await createOrder();
+      
+      const existingIds = (() => {
+        try {
+          return JSON.parse(localStorage.getItem(`placed_order_ids_${slug}`) || '[]');
+        } catch {
+          return [];
+        }
+      })();
+      if (!existingIds.includes(order.id)) {
+        localStorage.setItem(`placed_order_ids_${slug}`, JSON.stringify([...existingIds, order.id]));
+        window.dispatchEvent(new Event('order_placed'));
+      }
+
       if (appliedCoupon) await incrementUsage(appliedCoupon.id, order.id);
       // Send notification
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -722,7 +824,7 @@ const StorefrontCheckout = () => {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: notifBody('new_order_seller'),
       }).catch(() => {});
-      clearCart();
+      if (!buyNowProductId) clearCart();
       track({ store_id: store.id, event_type: 'purchase', order_id: order.id, value: totalPrice, metadata: { payment: 'cod' } });
       setOrderPlaced({ number: order.order_number, trackingCode: order.guest_tracking_code });
     } catch (err) {
@@ -1175,10 +1277,10 @@ const StorefrontCheckout = () => {
                 {/* Delivery Instructions */}
                 <div className="space-y-2 pt-3">
                   <h2 className="text-sm font-semibold" style={{ fontFamily: fonts.heading }}>
-                    Delivery Instructions / Order Notes
+                    Special instructions
                   </h2>
                   <textarea
-                    placeholder="e.g. Leave at the gate, call before delivery, don't ring the bell..."
+                    placeholder="e.g. less spicy, no onion, leave at the gate, call before delivery..."
                     value={deliveryInstructions}
                     onChange={(e) => setDeliveryInstructions(e.target.value)}
                     className="w-full px-3 py-2 text-sm border resize-none outline-none focus:ring-1"

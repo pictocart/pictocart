@@ -1,8 +1,9 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
-import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X } from "lucide-react";
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { Link, useSearchParams, useParams, useNavigate, useLocation } from "react-router-dom";
+import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X, ChefHat, GripVertical } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCardActions from "@/components/storefront/ProductCardActions";
 import ProductPageRenderer from "@/components/storefront/ProductPageRenderer";
@@ -82,10 +83,260 @@ interface Props {
 }
 
 export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, onNavigate, products, sellerCategories, product, store }: Props) {
-  const storeCategory = store?.category || manifest?.store?.category || "";
+  const navigate = useNavigate();
+  // Floating Live Status Tracker States with Instant Cache Loading
+  const [activeOrders, setActiveOrders] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem(`active_orders_cache_${storeSlug}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [isClosed, setIsClosed] = useState(false);
+
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem(`tracker_pos_${storeSlug}`);
+      return saved ? JSON.parse(saved) : { x: 0, y: 0 };
+    } catch {
+      return { x: 0, y: 0 };
+    }
+  });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [hasMoved, setHasMoved] = useState(false);
+  const initialCoordsRef = useRef({ x: 0, y: 0 });
+
+  // Play browser synthesizer sound alerts for order placement and status updates
+  const playAlertSound = (type: 'placed' | 'status_changed') => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      
+      if (type === 'placed') {
+        o.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        g.gain.setValueAtTime(0.2, ctx.currentTime);
+        o.start();
+        o.frequency.setValueAtTime(659.25, ctx.currentTime + 0.12); // E5
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+        o.stop(ctx.currentTime + 0.4);
+      } else {
+        o.frequency.setValueAtTime(440, ctx.currentTime); // A4
+        g.gain.setValueAtTime(0.2, ctx.currentTime);
+        o.start();
+        o.frequency.setValueAtTime(554.37, ctx.currentTime + 0.08); // C#5
+        o.frequency.setValueAtTime(659.25, ctx.currentTime + 0.16); // E5
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+        o.stop(ctx.currentTime + 0.5);
+      }
+    } catch (e) {
+      console.warn('[sound] failed to play synth alert', e);
+    }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    setHasMoved(false);
+    initialCoordsRef.current = { x: e.clientX, y: e.clientY };
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    setPosition({ x: newX, y: newY });
+    
+    // Check drag distance threshold to distinguish click from drag
+    const dist = Math.sqrt(
+      Math.pow(e.clientX - initialCoordsRef.current.x, 2) +
+      Math.pow(e.clientY - initialCoordsRef.current.y, 2)
+    );
+    if (dist > 5) {
+      setHasMoved(true);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    try {
+      localStorage.setItem(`tracker_pos_${storeSlug}`, JSON.stringify(position));
+    } catch (err) {}
+
+    // Redirect or expand based on status of isClosed
+    if (!hasMoved) {
+      if (isClosed) {
+        setIsClosed(false);
+      } else {
+        navigate(`/store/${storeSlug}/account`);
+      }
+    }
+  };
+
+  // Realtime subscription setup
+  useEffect(() => {
+    if (!storeSlug) return;
+    const orderIdsKey = `placed_order_ids_${storeSlug}`;
+    
+    const checkActiveOrders = async () => {
+      let ids: string[] = [];
+      try {
+        ids = JSON.parse(localStorage.getItem(orderIdsKey) || '[]');
+      } catch {
+        return;
+      }
+      if (ids.length === 0) {
+        setActiveOrders([]);
+        localStorage.removeItem(`active_orders_cache_${storeSlug}`);
+        return;
+      }
+
+      // Query active orders from DB
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, prep_status, total, items, fulfillment_mode, table_label')
+        .in('id', ids)
+        .not('prep_status', 'in', '(completed,cancelled)')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[tracker] failed to fetch active orders', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setActiveOrders(data);
+        localStorage.setItem(`active_orders_cache_${storeSlug}`, JSON.stringify(data));
+      } else {
+        setActiveOrders([]);
+        localStorage.removeItem(`active_orders_cache_${storeSlug}`);
+      }
+    };
+
+    checkActiveOrders();
+
+    // Fast polling fallback (every 5 seconds) to catch KOT updates instantly
+    const pollInterval = setInterval(checkActiveOrders, 5000);
+
+    const handleOrderPlaced = () => {
+      playAlertSound('placed');
+      setIsClosed(false);
+      checkActiveOrders();
+    };
+
+    window.addEventListener('order_placed', handleOrderPlaced);
+
+    // Live Postgres updates using Supabase Realtime
+    let ids: string[] = [];
+    try {
+      ids = JSON.parse(localStorage.getItem(orderIdsKey) || '[]');
+    } catch {}
+
+    const channel = supabase
+      .channel('public:orders')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload: any) => {
+          if (ids.includes(payload.new.id)) {
+            setActiveOrders((current: any[]) => {
+              const updated = current.map((order) => {
+                if (order.id === payload.new.id) {
+                  if (order.prep_status !== payload.new.prep_status) {
+                    playAlertSound('status_changed');
+                    setIsClosed(false);
+                  }
+                  return {
+                    ...order,
+                    prep_status: payload.new.prep_status,
+                  };
+                }
+                return order;
+              }).filter(o => !['completed', 'cancelled'].includes(o.prep_status));
+              
+              if (updated.length > 0) {
+                localStorage.setItem(`active_orders_cache_${storeSlug}`, JSON.stringify(updated));
+              } else {
+                localStorage.removeItem(`active_orders_cache_${storeSlug}`);
+              }
+              return updated;
+            });
+            if (['completed', 'cancelled'].includes(payload.new.prep_status)) {
+              checkActiveOrders();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    const broadcastChannel = supabase.channel(`store_kitchen_${storeSlug}`)
+      .on('broadcast', { event: 'status_update' }, ({ payload }) => {
+        if (ids.includes(payload.orderId)) {
+          setActiveOrders((current: any[]) => {
+            const updated = current.map((order) => {
+              if (order.id === payload.orderId) {
+                if (order.prep_status !== payload.prep_status) {
+                  playAlertSound('status_changed');
+                  setIsClosed(false);
+                }
+                return {
+                  ...order,
+                  prep_status: payload.prep_status,
+                };
+              }
+              return order;
+            }).filter(o => !['completed', 'cancelled'].includes(o.prep_status));
+            
+            if (updated.length > 0) {
+              localStorage.setItem(`active_orders_cache_${storeSlug}`, JSON.stringify(updated));
+            } else {
+              localStorage.removeItem(`active_orders_cache_${storeSlug}`);
+            }
+            return updated;
+          });
+          if (['completed', 'cancelled'].includes(payload.prep_status)) {
+            checkActiveOrders();
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('order_placed', handleOrderPlaced);
+      supabase.removeChannel(channel);
+      supabase.removeChannel(broadcastChannel);
+    };
+  }, [storeSlug]);
+
+  const storeCategory = store?.category || (overrides as any)?.category || manifest?.store?.category || "";
   const baseDna = manifest?.dna ?? {};
-  // Merge global palette overrides into dna so every Section/Header/Footer picks them up.
-  const palette = { ...(baseDna.palette ?? {}), ...((overrides as any)?.palette ?? {}) };
+  const overridesPalette = (overrides as any)?.palette ?? {};
+  
+  // Merge global palette overrides
+  const palette = { ...(baseDna.palette ?? {}), ...overridesPalette };
+
+  if (storeCategory === "food") {
+    palette.primary = "#8c2d19";
+    palette.primary_fg = "#ffffff";
+    palette.accent = "#8c2d19";
+    palette.bg = "#faf6f0";
+    palette.surface = "#faf6f0";
+    palette.border = "rgba(140, 45, 25, 0.12)";
+    palette.fg = "#2a1b15";
+    palette.muted = "#706053";
+  }
   
   // Merge global fonts and layout overrides
   const globalOv = (overrides as any)?.global || {};
@@ -107,6 +358,119 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   };
 
   useMemo(() => { loadFont(fonts.heading); loadFont(fonts.body); }, [fonts.heading, fonts.body]);
+
+  useEffect(() => {
+    // Select all sections and footers to observe
+    const elements = document.querySelectorAll('[data-section-index], [data-section-anchor="footer"]');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('reveal-active');
+        }
+      });
+    }, { threshold: 0.05, rootMargin: "0px 0px -50px 0px" });
+    
+    elements.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, [page, manifest, overrides]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).triggerParabolicFly = (e: React.MouseEvent, qty: number = 1) => {
+        const button = e?.currentTarget as HTMLElement;
+        if (!button) return;
+        const card = button.closest(".group") || button.closest(".rounded-2xl") || button.closest("a") || button.closest("div");
+        const imgEl = card ? card.querySelector("img") : null;
+        let startRect = imgEl ? imgEl.getBoundingClientRect() : null;
+        
+        if (!startRect || startRect.top < 0 || startRect.bottom > window.innerHeight) {
+          startRect = button.getBoundingClientRect();
+        }
+        
+        const getCartButton = () => {
+          const floatingCart = document.getElementById("floating-checkout-btn");
+          if (floatingCart) {
+            const rect = floatingCart.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight && rect.width > 0) {
+              return floatingCart;
+            }
+          }
+          const mobileCart = document.getElementById("mobile-cart-btn");
+          if (mobileCart) {
+            const rect = mobileCart.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight && rect.width > 0) {
+              return mobileCart;
+            }
+          }
+          const headerCart = document.getElementById("header-cart-btn");
+          if (headerCart) {
+            const rect = headerCart.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight && rect.width > 0) {
+              return headerCart;
+            }
+          }
+          return document.getElementById("floating-checkout-btn") ||
+                 document.getElementById("header-cart-btn") || 
+                 document.getElementById("mobile-cart-btn") || 
+                 document.querySelector(".shopping-bag");
+        };
+
+        const cartBtn = getCartButton();
+        const endRect = cartBtn 
+          ? cartBtn.getBoundingClientRect()
+          : {
+              left: window.innerWidth - 80,
+              top: window.innerHeight - 80,
+              width: 50,
+              height: 50
+            } as DOMRect;
+        
+        const startX = startRect.left + startRect.width - 12;
+        const startY = startRect.top - 12;
+        
+        const endX = endRect.left + endRect.width / 2 - 11;
+        const endY = endRect.top + endRect.height / 2 - 11;
+        
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        
+        const flyEl = document.createElement("div");
+        flyEl.className = "dynamic-cart-flyer";
+        flyEl.style.left = `${startX}px`;
+        flyEl.style.top = `${startY}px`;
+        flyEl.style.setProperty("--tx", `${deltaX}px`);
+        flyEl.style.setProperty("--ty", `${deltaY}px`);
+        
+        const flyInner = document.createElement("div");
+        flyInner.className = "dynamic-cart-flyer-inner";
+        flyInner.innerText = String(qty);
+        flyEl.appendChild(flyInner);
+        
+        document.body.appendChild(flyEl);
+        
+        setTimeout(() => {
+          flyEl.remove();
+          
+          if (cartBtn) {
+            cartBtn.classList.remove("shake-cart");
+            void cartBtn.offsetWidth;
+            cartBtn.classList.add("shake-cart");
+            
+            const badge = cartBtn.querySelector(".animate-badge-pop");
+            if (badge) {
+              badge.classList.remove("animate-badge-pop");
+              void (badge as HTMLElement).offsetWidth;
+              badge.classList.add("animate-badge-pop");
+            }
+          }
+          
+          setTimeout(() => {
+            cartBtn.classList.remove("shake-cart");
+          }, 500);
+        }, 800);
+      };
+    }
+  }, []);
 
   const style: React.CSSProperties = {
     background: palette.bg,
@@ -245,6 +609,165 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           background-color: hsl(${hslBg}) !important;
           color: hsl(${hslFg}) !important;
         }
+
+        /* Scroll Reveal Animations */
+        [data-section-index], [data-section-anchor="footer"] {
+          opacity: 0;
+          transform: translateY(30px);
+          transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          will-change: transform, opacity;
+        }
+        [data-section-index].reveal-active, [data-section-anchor="footer"].reveal-active {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Hover Cards Lift, Zoom & Premium Shadow */
+        .group, [data-section-index] a, [data-section-index] .rounded-xl, [data-section-index] .rounded-2xl {
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .group:hover {
+          transform: translateY(-8px) scale(1.005) !important;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
+        }
+        
+        /* Ken burns zoom on images */
+        .group img, [data-section-index] img {
+          transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .group:hover img {
+          transform: scale(1.06) !important;
+        }
+
+        /* Button micro-animations on hover/click */
+        button:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart):not(#header-cart-btn):not(#mobile-cart-btn), 
+        a:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart):not(#header-cart-btn):not(#mobile-cart-btn), 
+        .btn:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart) {
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s, border-color 0.2s, opacity 0.2s;
+        }
+        button:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart):not(#header-cart-btn):not(#mobile-cart-btn):hover, 
+        a:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart):not(#header-cart-btn):not(#mobile-cart-btn):hover, 
+        .btn:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart):hover {
+          transform: translateY(-2px) scale(1.02);
+        }
+        button:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart):not(#header-cart-btn):not(#mobile-cart-btn):active, 
+        a:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart):not(#header-cart-btn):not(#mobile-cart-btn):active, 
+        .btn:not(.cart-bounce):not(.cart-wiggle):not(.shake-cart):active {
+          transform: scale(0.95);
+        }
+
+        /* Pop-up Opening Anim */
+        @keyframes modalScaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        .animate-modal-in {
+          animation: modalScaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Cart Button & Badge Animations */
+        @keyframes cartBounce {
+          0% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.25);
+            box-shadow: 0 0 15px var(--p);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+        .cart-bounce {
+          animation: cartBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+        }
+
+        @keyframes cartWiggle {
+          0% { transform: scale(1) rotate(0); }
+          15% { transform: scale(1.1) rotate(-8deg); }
+          30% { transform: scale(1.1) rotate(8deg); }
+          45% { transform: scale(1.1) rotate(-6deg); }
+          60% { transform: scale(1.1) rotate(6deg); }
+          75% { transform: scale(1.05) rotate(-3deg); }
+          90% { transform: scale(1.05) rotate(3deg); }
+          100% { transform: scale(1) rotate(0); }
+        }
+        .cart-wiggle {
+          animation: cartWiggle 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+          box-shadow: 0 0 15px var(--p) !important;
+        }
+
+        @keyframes badgePop {
+          0% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.4);
+            color: #FFC107;
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+        .animate-badge-pop {
+          animation: badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Curved Parabolic Fly Path Animations */
+        @keyframes xAxisCurve {
+          100% {
+            transform: translateX(var(--tx));
+          }
+        }
+        @keyframes yAxisCurve {
+          100% {
+            transform: translateY(var(--ty));
+          }
+        }
+        @keyframes shakeCart {
+          25% { transform: translateX(6px); }
+          50% { transform: translateX(-4px); }
+          75% { transform: translateX(2px); }
+          100% { transform: translateX(0); }
+        }
+        
+        .dynamic-cart-flyer {
+          position: fixed;
+          z-index: 99999;
+          pointer-events: none;
+          animation: xAxisCurve 0.8s forwards cubic-bezier(1.000, 0.440, 0.840, 0.165);
+        }
+        .dynamic-cart-flyer-inner {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: var(--p, #8c2d19);
+          color: white;
+          font-size: 12px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 10px rgba(140, 45, 25, 0.35);
+          animation: yAxisCurve 0.8s forwards cubic-bezier(0.165, 0.840, 0.440, 1.000);
+        }
+        .shake-cart {
+          animation: shakeCart 0.4s ease-in-out forwards !important;
+        }
+        @keyframes spin-slow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 20s linear infinite;
+        }
+
         [data-master-theme] {
           --background: ${hslBg} !important;
           --foreground: ${hslFg} !important;
@@ -543,7 +1066,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         ` : ''}
       `}} />
       {/* Header is first child — sticky top-0 works against window scroll */}
-      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} />
+      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} storeCategory={storeCategory} />
       {renderedSections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
@@ -655,7 +1178,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             style={{ scrollMarginTop: 80, ...sectionStyle }}
             {...extraAttrs}
           >
-            <Section s={{ ...s, props: mergedProps }} dna={sectionDna} storeSlug={storeSlug} page={page} store={store} products={products} />
+            <Section s={{ ...s, props: mergedProps }} dna={sectionDna} storeSlug={storeSlug} page={page} store={store} products={products} storeCategory={storeCategory} />
           </div>
         );
       })}
@@ -666,13 +1189,160 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
       >
         <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
       </div>
+
+      {activeOrders && activeOrders.length > 0 && (
+        <div
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          className="fixed bottom-24 right-4 z-50 select-none cursor-grab active:cursor-grabbing"
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px)`,
+            touchAction: 'none',
+          }}
+        >
+          {isClosed ? (
+            /* Collapsed Floating Bubble */
+            <div 
+              className="h-12 w-12 bg-stone-950/95 backdrop-blur border border-stone-800 text-stone-100 shadow-[0_10px_30px_rgba(0,0,0,0.35)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 relative"
+              style={{ borderRadius: '50%' }}
+            >
+              <ChefHat className="h-5.5 w-5.5 text-[#ff6b4a] animate-bounce" />
+              {activeOrders.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-[#ff6b4a] text-white h-5 w-5 rounded-full flex items-center justify-center border border-stone-950 shadow-sm">
+                  {activeOrders.length}
+                </span>
+              )}
+            </div>
+          ) : (
+            /* Expanded Tracker Panel */
+            <div 
+              className="w-76 bg-stone-950/95 backdrop-blur border border-stone-800 text-stone-100 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex flex-col gap-3 transition-all duration-300 animate-badge-pop"
+              style={{ borderRadius: radius }}
+            >
+              {/* Header Drag Bar */}
+              <div className="flex items-center justify-between pb-1.5 border-b border-stone-800 text-stone-450">
+                <span className="text-[10px] uppercase tracking-[0.2em] font-black flex items-center gap-1.5">
+                  <ChefHat className="h-3.5 w-3.5 text-[#ff6b4a] animate-bounce" /> Live Kitchen Tracker
+                </span>
+                <div className="flex items-center gap-2">
+                  {activeOrders.length > 1 && (
+                    <span className="text-[9px] font-bold bg-[#ff6b4a]/20 text-[#ff6b4a] px-2 py-0.5 rounded-full">
+                      {activeOrders.length} Orders
+                    </span>
+                  )}
+                  <GripVertical className="h-3.5 w-3.5 text-stone-600 shrink-0 cursor-grab" />
+                  <button
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setIsClosed(true);
+                    }}
+                    className="p-1 text-stone-500 hover:text-stone-300 transition-colors"
+                    title="Close Tracker"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable list of active orders */}
+              <div className="max-h-[280px] overflow-y-auto pr-1 space-y-3.5 divide-y divide-stone-800">
+                {activeOrders.map((order: any, idx: number) => (
+                  <div key={order.id} className={idx > 0 ? "pt-3.5" : ""}>
+                    {/* Status Information */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-stone-400">#{order.order_number}</span>
+                          <span>
+                            {order.prep_status === 'received' ? 'Order Placed' :
+                             order.prep_status === 'preparing' ? 'Cooking in Kitchen' :
+                             order.prep_status === 'ready' ? (order.fulfillment_mode === 'delivery' ? 'Ready for Delivery' : 'Ready to Serve') :
+                             order.prep_status === 'out_for_delivery' ? 'Out for Delivery' : 'Preparing Order'}
+                          </span>
+                        </span>
+                        <span className="text-[10px] opacity-75 text-[#ff6b4a] font-bold">
+                          {order.fulfillment_mode === 'dine_in' ? 'Dine-In' :
+                           order.fulfillment_mode === 'takeaway' ? 'Takeaway' : 'Delivery'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-400 leading-tight">
+                        {order.prep_status === 'received' ? 'Waiting for the kitchen to accept your order.' :
+                         order.prep_status === 'preparing' ? 'The chef has started preparing your fresh dish!' :
+                         order.prep_status === 'ready' ? (order.fulfillment_mode === 'delivery' ? 'Your order is packed and ready for delivery!' : 'Your food is hot and ready. Bon appétit!') :
+                         order.prep_status === 'out_for_delivery' ? 'Our delivery partner is on the way to you!' :
+                         'Order is being reviewed.'}
+                      </p>
+                    </div>
+
+                    {/* Stepper Progress Bar */}
+                    <div className="space-y-1.5 mt-2">
+                      {order.fulfillment_mode === 'delivery' ? (
+                        <>
+                          <div className="flex justify-between items-center gap-1 text-[9px] uppercase tracking-wider text-stone-500 font-bold">
+                            <span className={['received', 'preparing', 'ready', 'out_for_delivery'].includes(order.prep_status) ? 'text-[#ff6b4a]' : ''}>Accepted</span>
+                            <span className={['preparing', 'ready', 'out_for_delivery'].includes(order.prep_status) ? 'text-[#ff6b4a]' : ''}>Cooking</span>
+                            <span className={['ready', 'out_for_delivery'].includes(order.prep_status) ? 'text-[#ff6b4a]' : ''}>Ready</span>
+                            <span className={order.prep_status === 'out_for_delivery' ? 'text-[#ff6b4a]' : ''}>On Way</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-stone-850 rounded-full overflow-hidden flex">
+                            <div 
+                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full"
+                              style={{ 
+                                width: order.prep_status === 'received' ? '25%' :
+                                       order.prep_status === 'preparing' ? '50%' :
+                                       order.prep_status === 'ready' ? '75%' :
+                                       order.prep_status === 'out_for_delivery' ? '100%' : '15%'
+                              }}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex justify-between items-center gap-1 text-[9px] uppercase tracking-wider text-stone-500 font-bold">
+                            <span className={['received', 'preparing', 'ready'].includes(order.prep_status) ? 'text-[#ff6b4a]' : ''}>Accepted</span>
+                            <span className={['preparing', 'ready'].includes(order.prep_status) ? 'text-[#ff6b4a]' : ''}>Cooking</span>
+                            <span className={order.prep_status === 'ready' ? 'text-[#ff6b4a]' : ''}>Ready</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-stone-850 rounded-full overflow-hidden flex">
+                            <div 
+                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full"
+                              style={{ 
+                                width: order.prep_status === 'received' ? '33%' :
+                                       order.prep_status === 'preparing' ? '66%' :
+                                       order.prep_status === 'ready' ? '100%' : '15%'
+                              }}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Additional details */}
+                    {order.table_label && (
+                      <div className="text-[10px] text-stone-450 flex items-center justify-between mt-2 font-medium">
+                        <span>Dining Table:</span>
+                        <span className="text-stone-200 font-bold">{order.table_label}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, headerOv, products, disabledPages = [] }: any) {
+function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, headerOv, products, disabledPages = [], storeCategory }: any) {
   const base = storeSlug ? `/store/${storeSlug}` : "";
   const navigate = useNavigate();
+  const location = useLocation();
+  const isMenuPage = location.pathname.endsWith('/menu');
   const [searchVal, setSearchVal] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -723,14 +1393,14 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   const showName = ov.show_name !== false; // default true
   const logoUrl = ov.logo_url || "";
   const defaultLinks: Array<{ label: string; page: string }> = [
-    { label: "Shop", page: "shop" },
+    { label: storeCategory === "food" ? "Our Menu" : "Shop", page: "shop" },
     { label: "Collections", page: "collections" },
     { label: "About", page: "about" },
     { label: "Journal", page: "journal" },
     { label: "Contact", page: "contact" },
   ];
   const pageToPath: Record<string, string> = {
-    home: "", shop: "/shop", collections: "/collections", about: "/about", contact: "/contact",
+    home: "", shop: storeCategory === "food" ? "/menu" : "/shop", collections: "/collections", about: "/about", contact: "/contact",
     journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
   };
   const links = (ov.nav_links && ov.nav_links.length > 0 ? ov.nav_links : defaultLinks)
@@ -741,7 +1411,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   const { user } = useCustomerAuth(storeSlug || "");
   const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split("@")[0] || "Account";
   const wrap = "sticky top-0 z-50 border-b backdrop-blur transition-shadow hover:shadow-md";
-  const bg = { background: `${dna.palette?.bg}ee`, borderColor: dna.palette?.border };
+  const bg = { background: `${dna.palette?.bg}ee`, borderColor: storeCategory === "food" ? "transparent" : dna.palette?.border };
   const brandSize = variant === "bold_serif" ? 32 : variant === "minimal_thin" ? 16 : 22;
   const brandStyle: React.CSSProperties = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700, fontSize: brandSize, color: dna.palette?.fg, cursor: (storeSlug || onNavigate) ? "pointer" : "default" };
   const logoSize = Math.max(20, Math.min(160, Number((ov as any).logo_size) || (brandSize + 8)));
@@ -770,16 +1440,34 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       ? <button onClick={() => onNavigate("home")} style={{ background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>{BrandInner}</button>
       : <div>{BrandInner}</div>;
   const CartBtn = storeSlug ? (
-    <Link to={`/store/${storeSlug}/cart`} className="text-sm px-4 py-2 inline-flex items-center gap-2" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>
-      <ShoppingBag className="h-4 w-4" /> Cart · {totalItems}
+    <Link 
+      id="header-cart-btn" 
+      to={`/store/${storeSlug}/cart`} 
+      className="text-sm px-5 py-2.5 inline-flex items-center gap-2 transition-all duration-300 font-bold hover:scale-[1.03]" 
+      style={{ 
+        background: "var(--p)", 
+        color: "var(--pf)", 
+        borderRadius: storeCategory === "food" ? "9999px" : "var(--r)" 
+      }}
+    >
+      <span>{storeCategory === "food" ? 'Order Now' : 'Cart'}</span>
+      <ShoppingBag className="h-4 w-4" /> 
+      {totalItems > 0 && <span className="inline-block animate-badge-pop" key={totalItems}>· {totalItems}</span>}
     </Link>
   ) : (
     <button
+      id="header-cart-btn"
       onClick={() => onNavigate?.("cart")}
-      className="text-sm px-4 py-2 inline-flex items-center gap-2"
-      style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}
+      className="text-sm px-5 py-2.5 inline-flex items-center gap-2 transition-all duration-300 font-bold hover:scale-[1.03]"
+      style={{ 
+        background: "var(--p)", 
+        color: "var(--pf)", 
+        borderRadius: storeCategory === "food" ? "9999px" : "var(--r)" 
+      }}
     >
-      <ShoppingBag className="h-4 w-4" /> Cart · 0
+      <span>{storeCategory === "food" ? 'Order Now' : 'Cart'}</span>
+      <ShoppingBag className="h-4 w-4" /> 
+      <span className="inline-block animate-badge-pop" key={0}>· 0</span>
     </button>
   );
   const AccountBtn = storeSlug ? (
@@ -800,6 +1488,117 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
         ? <button key={l.label} onClick={() => onNavigate(l.page)} className={cls} style={{ opacity: 0.85, background: "transparent", border: 0, cursor: "pointer", color: "inherit" }}>{l.label}</button>
         : <span key={l.label} className={cls} style={{ opacity: 0.85 }}>{l.label}</span>;
 
+
+  if (storeCategory === "food") {
+    const FoodLogoIcon = (
+      <div className="w-10 h-10 rounded-full bg-[#8c2d19] flex items-center justify-center shadow-sm shrink-0">
+        <span className="text-xl filter drop-shadow" style={{ transform: 'translateY(-1px)' }}>🍲</span>
+      </div>
+    );
+
+    const BrandInner = (
+      <span className="inline-flex items-center gap-2.5">
+        {logoUrl ? <img data-logo-element="true" src={logoUrl} alt={effectiveBrand} style={logoStyle} /> : FoodLogoIcon}
+        <span style={brandStyle}>{effectiveBrand}</span>
+      </span>
+    );
+
+    const Brand = storeSlug
+      ? <Link to={`/store/${storeSlug}`}>{BrandInner}</Link>
+      : onNavigate
+        ? <button onClick={() => onNavigate("home")} style={{ background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>{BrandInner}</button>
+        : <div>{BrandInner}</div>;
+
+    const AccountBtnIcon = storeSlug ? (
+      user ? (
+        <Link
+          to={`/store/${storeSlug}/account`}
+          className="p-2.5 rounded-full border transition-all duration-300 hover:scale-[1.05] flex items-center justify-center"
+          style={{ borderColor: 'rgba(140, 45, 25, 0.2)', backgroundColor: 'rgba(140, 45, 25, 0.05)', color: '#8c2d19' }}
+          title="My Profile"
+        >
+          <User className="h-4 w-4" />
+        </Link>
+      ) : (
+        <button
+          onClick={() => setAuthOpen(true)}
+          className="p-2.5 rounded-full border transition-all duration-300 hover:scale-[1.05] flex items-center justify-center"
+          style={{ borderColor: 'rgba(140, 45, 25, 0.2)', backgroundColor: 'rgba(140, 45, 25, 0.05)', color: '#8c2d19' }}
+          title="Sign In / My Profile"
+        >
+          <User className="h-4 w-4" />
+        </button>
+      )
+    ) : null;
+
+    return (
+      <>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes nav-shimmer {
+            0% { left: -150%; }
+            20% { left: 150%; }
+            100% { left: 150%; }
+          }
+          .nav-shine-effect {
+            animation: nav-shimmer 7s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
+          }
+        `}} />
+        <div className="w-full py-4 px-6 sticky top-0 z-50 transition-all duration-300" style={{ background: '#faf6f0' }}>
+          <header 
+            className="max-w-6xl mx-auto px-5 py-2 flex items-center justify-between gap-4 relative rounded-full border border-white/30 shadow-[0_12px_40px_rgba(140,45,25,0.07)] backdrop-blur-md overflow-hidden"
+            style={{ background: 'rgba(240, 228, 214, 0.95)' }}
+          >
+            {/* Periodic Glossy Shine element */}
+            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none rounded-full z-0">
+              <div 
+                className="absolute top-0 h-full w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-25deg] nav-shine-effect"
+                style={{ left: '-150%' }}
+              />
+            </div>
+
+            {/* Brand/Logo (left) */}
+            <div className="flex items-center pl-2 relative z-10">
+              {Brand}
+            </div>
+            
+            {/* Nav Links (centered absolute) */}
+            <nav className="hidden md:flex items-center justify-center gap-8 text-sm absolute left-1/2 -translate-x-1/2 z-10" style={{ fontFamily: 'var(--hf)' }}>
+              {links.map(l => {
+                const isActive = l.page === "home" || l.page === "";
+                return (
+                  <span key={l.label}>
+                    {storeSlug
+                      ? <Link to={l.to} className={`transition duration-300 font-medium ${isActive ? "text-[#8c2d19] font-bold" : "text-stone-800 hover:text-[#8c2d19]"}`}>{l.label}</Link>
+                      : onNavigate
+                        ? <button onClick={() => onNavigate(l.page)} className={`transition duration-300 font-medium ${isActive ? "text-[#8c2d19] font-bold" : "text-stone-800 hover:text-[#8c2d19]"}`} style={{ background: "transparent", border: 0, cursor: "pointer" }}>{l.label}</button>
+                        : <span className={`font-medium ${isActive ? "text-[#8c2d19] font-bold" : "text-stone-800"}`}>{l.label}</span>
+                    }
+                  </span>
+                );
+              })}
+            </nav>
+            
+            {/* Cart/CTA button (right) */}
+            <div className="flex items-center gap-2.5 pr-2 relative z-10">
+              {AccountBtnIcon}
+              {!isMenuPage && CartBtn}
+            </div>
+          </header>
+        </div>
+        {authOpen && storeSlug && (
+          <CustomerAuthModal
+            storeSlug={storeSlug}
+            storeName={brandName}
+            primaryColor={dna.palette?.primary}
+            cardColor={dna.palette?.bg}
+            borderColor={dna.palette?.border}
+            textColor={dna.palette?.fg}
+            onClose={() => setAuthOpen(false)}
+          />
+        )}
+      </>
+    );
+  }
 
   if (variant === "centered_logo") {
     return (
@@ -969,12 +1768,40 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   );
 }
 
-function Section({ s, dna, storeSlug, page, store, products }: any) {
+function Section({ s, dna, storeSlug, page, store, products, storeCategory }: any) {
   const p = s.props ?? {};
   // If image was explicitly cleared via override (image === ""), do not render image.
   switch (s.type) {
-    case "hero": return <Hero p={p} dna={dna} storeSlug={storeSlug} />;
+    case "hero": return <Hero p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} />;
     case "usp_strip": {
+      if (storeCategory === "food") {
+        const foodItems = (p.items && p.items.length > 0) ? p.items : [
+          { title: "Freshly Made", sub: "With the best local ingredients", icon: "sparkles" },
+          { title: "Always Hot", sub: "Delivered sizzling and aromatic.", icon: "gift" },
+          { title: "Bursting with Flavor", sub: "It awaken your taste buds", icon: "sparkles" },
+          { title: "Swift Delivery", sub: "Delivered fast and hot.", icon: "truck" }
+        ];
+        return (
+          <section className="w-full text-white py-6" style={{ background: "#8c2d19" }}>
+            <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              {foodItems.map((u: any, i: number) => {
+                const Ico = ICONS[u.icon] ?? Sparkles;
+                return (
+                  <div key={i} className="flex items-center gap-3.5 justify-center md:justify-start">
+                    <div className="p-2.5 bg-white/10 rounded-full flex items-center justify-center">
+                      <Ico className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[13px] font-bold tracking-wider leading-tight text-white">{u.title}</div>
+                      <div className="text-[11px] text-white/80 mt-0.5 leading-snug">{u.sub}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      }
       const uspStyle = p.style ?? "classic";
       if (uspStyle === "3d_neon_bar")   return <Usp3DNeonBar   p={p} dna={dna} />;
       if (uspStyle === "chrome_bar")    return <UspChrome      p={p} dna={dna} />;
@@ -1006,7 +1833,7 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
     case "trending":
     case "featured_products":
     case "new_arrivals":
-    case "product_grid": return <ProductBlock p={p} dna={dna} storeSlug={storeSlug} page={page} storeCategory={store?.category} />;
+    case "product_grid": return <ProductBlock p={p} dna={dna} storeSlug={storeSlug} page={page} storeCategory={storeCategory} />;
     case "promo_banner": {
       const promoStyle = p.style ?? "classic_split";
       if (promoStyle === "aurora_wave")     return <PromoAuroraWave   p={p} dna={dna} storeSlug={storeSlug} />;
@@ -2604,8 +3431,116 @@ function HeroBtn({ kind, label, href, cfg, freePos }: { kind: "primary" | "secon
   );
 }
 
-function Hero({ p, dna, storeSlug }: any) {
+function HeroFood({ p, dna, storeSlug }: any) {
+  const shopHref = storeSlug ? `/store/${storeSlug}/shop` : "#products";
+  const title = p.title || "Craving Naija Flavors?";
+  const sub = p.sub || "Get It Hot, Fast, and Fresh!";
+  const desc = p.description || p.sub || "Order authentic Nigerian dishes like vegetable soup, jollof rice, and pepper soup, delivered hot and fresh to your doorstep in minutes.";
+  const image = p.image || "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80";
+
+  const renderFormattedTitle = (text: string) => {
+    if (!text) return null;
+    const parts = text.split(" ");
+    if (parts.length > 1) {
+      const lastWord = parts.pop();
+      return (
+        <>
+          {parts.join(" ")} <span style={{ color: '#8c2d19' }}>{lastWord}</span>
+        </>
+      );
+    }
+    return text;
+  };
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes float-subtle {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-12px) rotate(4deg); }
+        }
+        @keyframes float-leaf {
+          0%, 100% { transform: translateY(0) rotate(12deg); }
+          50% { transform: translateY(-8px) rotate(24deg); }
+        }
+        .float-chili {
+          animation: float-subtle 4s ease-in-out infinite;
+        }
+        .float-leaf-1 {
+          animation: float-leaf 5s ease-in-out infinite;
+        }
+        .float-leaf-2 {
+          animation: float-subtle 6s ease-in-out infinite;
+        }
+      `}} />
+      <section data-hero-section="true" className="relative py-20 md:py-28 overflow-hidden" style={{ background: '#faf6f0' }}>
+        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+          <div className="text-left flex flex-col items-start z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 text-xs font-semibold" style={{ background: 'rgba(140, 45, 25, 0.06)', color: '#8c2d19' }}>
+              <div className="flex -space-x-1.5">
+                <img className="w-5 h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=60" />
+                <img className="w-5 h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=60" />
+                <img className="w-5 h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=60" />
+              </div>
+              <span>Rated 4.9/5 by food lovers nationwide.</span>
+            </div>
+
+            <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight text-stone-900 mb-2" style={{ fontFamily: "var(--hf)" }}>
+              {renderFormattedTitle(title)}
+            </h1>
+
+            <div className="text-2xl md:text-3xl font-extrabold text-stone-800 mb-5 leading-snug">
+              {sub}
+            </div>
+
+            <p className="text-sm md:text-base text-stone-600 mb-8 max-w-xl leading-relaxed">
+              {desc}
+            </p>
+
+            <div className="flex flex-wrap gap-4 items-center">
+              <a 
+                href={p.cta_href || shopHref} 
+                className="px-8 py-3.5 rounded-full font-bold text-white bg-[#8c2d19] hover:bg-[#722314] transition-all flex items-center gap-2 hover:scale-[1.03]"
+              >
+                <span>Order Now</span>
+                <ShoppingBag className="w-4 h-4" />
+              </a>
+              <a 
+                href={p.cta_secondary_href || shopHref} 
+                className="px-8 py-3.5 rounded-full font-bold bg-transparent border-2 border-stone-300 hover:border-stone-400 text-stone-800 transition-all hover:scale-[1.03]"
+              >
+                <span>View Menu &gt;</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="relative w-full aspect-[4/3] max-w-lg mx-auto flex items-center justify-center">
+            <div className="absolute inset-0 rounded-[32px] overflow-hidden flex shadow-lg">
+              <div className="w-1/2 h-full bg-[#fde9cd]" />
+              <div className="w-1/2 h-full bg-[#8c2d19]" />
+            </div>
+
+            <img 
+              src={image} 
+              alt={title} 
+              className="absolute w-3/4 aspect-square object-cover rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.35)] border-[6px] border-white z-10 hover:scale-105 transition-transform duration-700" 
+            />
+
+            <span className="float-chili absolute -left-6 top-1/4 text-5xl z-20 pointer-events-none select-none">🌶️</span>
+            <span className="float-leaf-1 absolute -right-6 bottom-1/4 text-3xl z-20 pointer-events-none select-none">🍃</span>
+            <span className="float-leaf-2 absolute left-1/4 bottom-[-10px] text-2xl z-20 pointer-events-none select-none">🌿</span>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function Hero({ p, dna, storeSlug, storeCategory }: any) {
   const v = p.style ?? "centered";
+  if (storeCategory === "food") {
+    return <HeroFood p={p} dna={dna} storeSlug={storeSlug} />;
+  }
   // ── 3D theme styles ───────────────────────────────────────────────────────
   if (v === "holographic_3d") return <HeroHolographic3D p={p} dna={dna} storeSlug={storeSlug} />;
   if (v === "liquid_metal")   return <HeroLiquidMetal   p={p} dna={dna} storeSlug={storeSlug} />;
@@ -3138,8 +4073,281 @@ function CollectionDetailBlock({ p, dna, storeSlug }: any) {
 
 
 
+function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
+  const { themeId } = useParams<{ themeId: string }>();
+  const allItems: any[] = p.items ?? [];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCategory = page === "shop" ? (searchParams.get("category") || "") : "";
+  const { addItem } = useCart(storeSlug || "");
+  const navigate = useNavigate();
+
+  const items = selectedCategory
+    ? allItems.filter((it) => (it.category || "").toLowerCase() === selectedCategory.toLowerCase())
+    : allItems;
+
+  const setCategory = (next: string) => {
+    const sp = new URLSearchParams(searchParams);
+    if (next) sp.set("category", next); else sp.delete("category");
+    setSearchParams(sp, { replace: true });
+  };
+
+  const linkFor = (pr: any) => storeSlug && pr.id 
+    ? `/store/${storeSlug}/product/${pr.id}${themeId ? `/${themeId}` : ""}` 
+    : "#";
+
+  const categories = useMemo(() => {
+    const seen = new Map<string, string>();
+    (p.sellerCategories ?? []).forEach((c: any) => {
+      const name = (c?.name || "").trim();
+      if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name);
+    });
+    allItems.forEach((it) => {
+      const c = (it.category || "").trim();
+      if (c && !seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c);
+    });
+    return Array.from(seen.values());
+  }, [allItems, p.sellerCategories]);
+
+  const titleText = p.title || "Our Signature Dishes";
+  const subText = p.subtitle || "From classic favorites to modern culinary creations, our menu is designed to tantalize your taste buds. Every dish is made with the freshest ingredients and an extra dash of love.";
+
+  const cardStyles = [
+    {
+      bg: '#fff7ed', // orange tint
+      border: 'rgba(249, 115, 22, 0.15)',
+      accent: '#f97316',
+      shadow: '#c2410c',
+      btnText: '#ffffff'
+    },
+    {
+      bg: '#faf5ff', // purple tint
+      border: 'rgba(168, 85, 247, 0.15)',
+      accent: '#7c3aed',
+      shadow: '#5b21b6',
+      btnText: '#ffffff'
+    },
+    {
+      bg: '#f0fdfa', // teal/mint tint
+      border: 'rgba(20, 184, 166, 0.15)',
+      accent: '#0d9488',
+      shadow: '#115e59',
+      btnText: '#ffffff'
+    }
+  ];
+
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.8 },
+      colors: ['#FFC107', '#8BC34A', '#FFFFFF', '#FF5722']
+    });
+  };
+
+  const Chips = page === "shop" && categories.length > 0 ? (
+    <div className="flex flex-wrap gap-2 justify-center mb-8">
+      <button
+        type="button"
+        onClick={() => setCategory("")}
+        className="text-xs px-4 py-2 border transition duration-300 font-semibold"
+        style={{
+          borderColor: dna.palette?.border || '#e5e7eb',
+          borderRadius: "9999px",
+          background: !selectedCategory ? 'var(--p)' : "transparent",
+          color: !selectedCategory ? 'var(--pf)' : dna.palette?.fg,
+        }}
+      >
+        All ({allItems.length})
+      </button>
+      {categories.map((cat) => {
+        const active = selectedCategory.toLowerCase() === cat.toLowerCase();
+        const count = allItems.filter((it) => (it.category || "").toLowerCase() === cat.toLowerCase()).length;
+        return (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => setCategory(cat)}
+            className="text-xs px-4 py-2 border transition duration-300 font-semibold"
+            style={{
+              borderColor: dna.palette?.border || '#e5e7eb',
+              borderRadius: "9999px",
+              background: active ? 'var(--p)' : "transparent",
+              color: active ? 'var(--pf)' : dna.palette?.fg,
+            }}
+          >
+            {cat} ({count})
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
+
+  const productCols = p.product_cols ?? 3;
+  const cardWidth = p.product_card_width;
+  const sectionId = p.id || "sec-prod-food";
+
+  return (
+    <section id="products" className="max-w-6xl mx-auto px-6 py-20 text-center">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (min-width: 768px) {
+          .dynamic-grid-${sectionId} {
+            grid-template-columns: repeat(${productCols}, minmax(0, 1fr)) !important;
+            display: grid !important;
+          }
+        }
+      `}} />
+
+      {/* Cartoonish Sticker Badge */}
+      <div className="w-20 h-20 mx-auto mb-5 relative flex items-center justify-center rounded-full bg-amber-400 border-4 border-white shadow-md transform rotate-3 hover:rotate-6 transition-transform">
+        <div className="absolute inset-0.5 rounded-full border-2 border-white/40 border-dashed animate-spin-slow" />
+        <span className="text-2xl filter drop-shadow">👌</span>
+        <span className="absolute -top-3 -right-3 text-sm">✨</span>
+        <span className="absolute -bottom-2 -left-2 text-sm">✨</span>
+      </div>
+
+      <h2 className="text-4xl font-bold mb-3 text-stone-900" style={{ fontFamily: "var(--hf)", fontWeight: 800 }}>
+        {titleText}
+      </h2>
+      <p className="text-sm text-stone-500 max-w-2xl mx-auto mb-12 leading-relaxed">
+        {subText}
+      </p>
+
+      {Chips}
+
+      <div 
+        className={p.scroll_horizontal
+          ? "flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin"
+          : cardWidth 
+            ? "flex flex-wrap gap-6 justify-center" 
+            : `grid grid-cols-1 sm:grid-cols-2 dynamic-grid-${sectionId} gap-8`
+        }
+      >
+        {items.map((pr: any, i: number) => {
+          const style = cardStyles[i % cardStyles.length];
+          const isOutOfStock = pr.inventory_count === 0;
+          const fallbackDesc = "Freshly prepared with handpicked ingredients and love.";
+          const desc = pr.short_description || pr.description || fallbackDesc;
+
+          const handleAddToCart = (e: React.MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isOutOfStock) { toast.error('This item is out of stock'); return; }
+            
+            if (typeof (window as any).triggerParabolicFly === 'function') {
+              (window as any).triggerParabolicFly(e, 1);
+            }
+            
+            addItem({ productId: pr.id, title: pr.name, price: Number(pr.price), image: pr.image }, 1);
+            triggerConfetti();
+            toast.success(`${pr.name} added to cart!`);
+          };
+
+          const handleBuyNow = (e: React.MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isOutOfStock) { toast.error('This item is out of stock'); return; }
+            
+            const basePath = storeSlug ? `/store/${storeSlug}` : "";
+            navigate(`${basePath}/checkout?buyNowProductId=${pr.id}&buyNowQty=1`);
+          };
+
+          return (
+            <div 
+              key={i} 
+              className={`group flex flex-col rounded-[24px] overflow-hidden border p-4 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 animate-reveal ${p.scroll_horizontal ? "snap-start shrink-0" : ""}`}
+              style={{ 
+                backgroundColor: style.bg, 
+                borderColor: style.border,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+                ...(p.scroll_horizontal
+                  ? { width: cardWidth ? `${cardWidth}px` : "280px" }
+                  : cardWidth 
+                    ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } 
+                    : {}
+                )
+              }}
+            >
+              {/* Image Container */}
+              <Link to={linkFor(pr)} className="block relative aspect-[4/3] rounded-[18px] overflow-hidden mb-4 bg-stone-100">
+                {pr.image ? (
+                  <img 
+                    src={pr.image} 
+                    alt={pr.name} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-stone-400">No Image</div>
+                )}
+                
+                {/* Floating circular basket badge */}
+                <button 
+                  onClick={handleAddToCart}
+                  className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md border border-stone-100 transition-transform active:scale-90 hover:scale-105"
+                >
+                  <ShoppingBag className="w-4 h-4 text-stone-800" />
+                </button>
+
+                {isOutOfStock && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                    <span className="bg-stone-800 text-white font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider">
+                      Out of Stock
+                    </span>
+                  </div>
+                )}
+              </Link>
+
+              {/* Details Container */}
+              <div className="flex-1 flex flex-col text-left px-1">
+                <div className="flex justify-between items-baseline gap-2 mb-2">
+                  <Link to={linkFor(pr)} className="font-bold text-lg text-stone-900 hover:underline truncate flex-1">{pr.name}</Link>
+                  <span className="font-bold text-lg text-stone-900 shrink-0">₹{pr.price}</span>
+                </div>
+                
+                <p className="text-xs text-stone-500 leading-relaxed mb-5 line-clamp-2 h-8">
+                  {desc}
+                </p>
+
+                {/* 3D Order Button */}
+                <button
+                  onClick={handleBuyNow}
+                  disabled={isOutOfStock}
+                  className="w-full py-3 text-sm font-bold text-white flex items-center justify-center gap-2 transition-all active:translate-y-[2px]"
+                  style={{
+                    backgroundColor: style.accent,
+                    borderRadius: '9999px',
+                    boxShadow: `0 4px 0 ${style.shadow}`,
+                    borderBottom: `2px solid rgba(0,0,0,0.1)`
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.boxShadow = `0 1px 0 ${style.shadow}`;
+                    e.currentTarget.style.transform = 'translateY(3px)';
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.boxShadow = `0 4px 0 ${style.shadow}`;
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = `0 4px 0 ${style.shadow}`;
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
+                  <span>Order Now</span>
+                  <ShoppingBag className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function ProductBlock({ p, dna, storeSlug, page, storeCategory }: any) {
   const v = p.style ?? "grid_clean";
+  if (storeCategory === "food") {
+    return <ProductsFoodTheme p={p} dna={dna} storeSlug={storeSlug} page={page} />;
+  }
   // ── 3D theme product styles ───────────────────────────────────────────────
   if (v === "glass_3d")        return <ProductsGlass3D    p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} />;
   if (v === "chrome_3d")       return <ProductsChrome     p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} />;

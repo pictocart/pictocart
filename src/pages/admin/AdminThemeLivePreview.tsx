@@ -523,6 +523,7 @@ export default function AdminThemeLivePreview(){
   const[page,setPage]=useState<string>(params.get("page")??"home");
   const[products,setProducts]=useState<any[]>([]);
   const[sellerCategories,setSellerCategories]=useState<any[]>([]);
+  const[storeCategory,setStoreCategory]=useState<string>("");
 
   // 1. Load theme manifest file
   useEffect(()=>{
@@ -538,17 +539,16 @@ export default function AdminThemeLivePreview(){
     let received = false;
     const onMessage = (ev: MessageEvent) => {
       if (ev.data?.type === "customiser:update") {
+        const payload = ev.data;
+        if (payload.overrides) setOverrides(payload.overrides);
+        if (payload.page) setPage(payload.page);
         received = true;
-        if (ev.data.overrides) setOverrides(ev.data.overrides);
-        if (ev.data.page) setPage(ev.data.page);
       }
       if (ev.data?.type === "customiser:scroll") {
         const anchor = ev.data.anchor;
-        if (anchor) {
-          const el = document.querySelector(`[data-section-anchor="${anchor}"]`);
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
+        const target = document.querySelector(`[data-section-anchor="${anchor}"]`) || document.querySelector(`[data-section-index="${anchor}"]`);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }
     };
@@ -561,7 +561,7 @@ export default function AdminThemeLivePreview(){
       } else {
         clearInterval(interval);
       }
-    }, 500);
+    }, 1500);
 
     // Initial immediate post
     window.parent.postMessage({ type: "customiser:ready" }, "*");
@@ -579,10 +579,14 @@ export default function AdminThemeLivePreview(){
       try {
         const { data: storeData, error: storeError } = await supabase
           .from("stores")
-          .select("id, resolved_storefront_manifest")
+          .select("id, category, resolved_storefront_manifest")
           .eq("slug", storeSlug)
           .maybeSingle();
         if (storeError || !storeData) return;
+
+        if (storeData.category) {
+          setStoreCategory(storeData.category);
+        }
 
         const m = storeData.resolved_storefront_manifest as any;
         if (m && typeof m === "object" && m.pages) {
@@ -625,5 +629,5 @@ export default function AdminThemeLivePreview(){
     description: "This is a premium quality sample product designed to demonstrate your theme's product detail page layout."
   };
 
-  return <MasterThemeRenderer manifest={manifest} page={page} overrides={overrides} storeSlug={storeSlug} onNavigate={setPage} products={products} sellerCategories={sellerCategories} product={activeProduct}/>;
+  return <MasterThemeRenderer manifest={manifest} page={page} overrides={overrides} storeSlug={storeSlug} onNavigate={setPage} products={products} sellerCategories={sellerCategories} product={activeProduct} store={{ category: storeCategory }} />;
 }

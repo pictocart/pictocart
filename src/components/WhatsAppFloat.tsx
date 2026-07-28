@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -6,10 +7,11 @@ const DEFAULT_MESSAGE = 'Need Support? Contact Us';
 
 const WhatsAppFloat = () => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
-  // Hide for logged-in sellers — Pica 2 already has a WhatsApp CTA inside.
-  // Keep it visible for guests and customer-storefront visitors.
+  // Hide on customer storefront pages (/store/*) and for logged-in sellers
   if (loading) return null;
+  if (location.pathname.startsWith('/store/')) return null;
   if (user && !user.user_metadata?.is_customer) return null;
 
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(DEFAULT_MESSAGE)}`;

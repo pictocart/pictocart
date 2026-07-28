@@ -45,6 +45,7 @@ const BottomNav = ({ colors, onSearchOpen, storeId }: Props) => {
         return (
           <Component
             key={item.label}
+            id={item.label === 'Cart' ? 'mobile-cart-btn' : undefined}
             {...(props as any)}
             className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] transition-colors relative"
             style={{ color: isActive ? colors.primary : colors.text + '80' }}

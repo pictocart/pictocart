@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Star, Heart, Share2, ShoppingCart, Minus, Plus, ChevronRight, Play, Check, Loader2, Send, Zap } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { getPageSections, getPageThemeOverrides, getDefaultProductSections } from '@/lib/storefrontManifest';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -66,6 +67,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
   const [quantity, setQuantity] = React.useState(1);
   const [selectedImage, setSelectedImage] = React.useState(0);
   const [added, setAdded] = React.useState(false);
+  const [isAdding, setIsAdding] = React.useState(false);
   const [imageZoom, setImageZoom] = React.useState(false);
   const [zoomPos, setZoomPos] = React.useState({ x: 50, y: 50 });
   const [coupons, setCoupons] = React.useState<any[]>([]);
@@ -220,32 +222,142 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
     : 0;
   const variantLabel = Object.values(selectedVariants).filter(Boolean).join(' / ');
 
-  const handleAddToCart = () => {
-    if (isOutOfStock) { toast.error('This product is currently out of stock'); return; }
-    addItem({
-      productId: product.id,
-      title: product.title,
-      price: Number(product.price),
-      image: images[0] || null,
-      variant: variantLabel || undefined,
-    }, quantity);
-    track({ store_id: store.id, event_type: 'add_to_cart', product_id: product.id, value: Number(product.price) * quantity });
-    setAdded(true);
-    toast.success(`${product.title} added to cart`);
-    setTimeout(() => setAdded(false), 2000);
+  const triggerConfetti = () => {
+    if (store?.category === 'food') {
+      confetti({
+        particleCount: 60,
+        spread: 70,
+        origin: { y: 0.8 },
+        colors: ['#FFC107', '#8BC34A', '#FFFFFF', '#FF5722']
+      });
+    }
   };
 
-  const handleBuyNow = () => {
+  const triggerParabolicFly = (e?: React.MouseEvent, qty: number = 1) => {
+    const button = (e?.currentTarget as HTMLElement) || document.querySelector('button[onClick*="handleAddToCart"]');
+    const imgEl = document.querySelector('[data-main-product-image="true"]') || document.querySelector('.aspect-[4/5] img') || document.querySelector('img');
+    let startRect = imgEl ? imgEl.getBoundingClientRect() : null;
+    
+    if (!startRect || startRect.top < 0 || startRect.bottom > window.innerHeight) {
+      startRect = button ? button.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 24, height: 24 } as DOMRect;
+    }
+    
+    const getCartButton = () => {
+      const mobileCart = document.getElementById('mobile-cart-btn');
+      if (mobileCart) {
+        const rect = mobileCart.getBoundingClientRect();
+        if (rect.top >= 0 && rect.bottom <= window.innerHeight && rect.width > 0) {
+          return mobileCart;
+        }
+      }
+      const headerCart = document.getElementById('header-cart-btn');
+      if (headerCart) {
+        const rect = headerCart.getBoundingClientRect();
+        if (rect.top >= 0 && rect.bottom <= window.innerHeight && rect.width > 0) {
+          return headerCart;
+        }
+      }
+      return document.getElementById('header-cart-btn') || 
+             document.getElementById('mobile-cart-btn') || 
+             document.querySelector('.shopping-bag');
+    };
+
+    const cartBtn = getCartButton();
+    if (!cartBtn) return;
+    const endRect = cartBtn.getBoundingClientRect();
+    
+    // Starting coordinates (top right of the card image or center of button)
+    const startX = startRect.left + startRect.width - 12;
+    const startY = startRect.top - 12;
+    
+    // Target coordinates (center of the cart icon)
+    const endX = endRect.left + endRect.width / 2 - 11;
+    const endY = endRect.top + endRect.height / 2 - 11;
+    
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    
+    const flyEl = document.createElement('div');
+    flyEl.className = 'dynamic-cart-flyer';
+    flyEl.style.left = `${startX}px`;
+    flyEl.style.top = `${startY}px`;
+    flyEl.style.setProperty('--tx', `${deltaX}px`);
+    flyEl.style.setProperty('--ty', `${deltaY}px`);
+    
+    const flyInner = document.createElement('div');
+    flyInner.className = 'dynamic-cart-flyer-inner';
+    flyInner.innerText = String(qty);
+    flyEl.appendChild(flyInner);
+    
+    document.body.appendChild(flyEl);
+    
+    setTimeout(() => {
+      flyEl.remove();
+      
+      // Apply shake animation on the cart button
+      cartBtn.classList.remove('shake-cart');
+      void cartBtn.offsetWidth; // trigger reflow
+      cartBtn.classList.add('shake-cart');
+      
+      // Wiggle badge if any
+      const badge = cartBtn.querySelector('.animate-badge-pop');
+      if (badge) {
+        badge.classList.remove('animate-badge-pop');
+        void (badge as HTMLElement).offsetWidth;
+        badge.classList.add('animate-badge-pop');
+      }
+      
+      setTimeout(() => {
+        cartBtn.classList.remove('shake-cart');
+      }, 500);
+    }, 800);
+  };
+
+  // Expose to window for global access
+  if (typeof window !== 'undefined') {
+    (window as any).triggerParabolicFly = triggerParabolicFly;
+  }
+
+  const handleAddToCart = (e?: React.MouseEvent) => {
     if (isOutOfStock) { toast.error('This product is currently out of stock'); return; }
-    addItem({
-      productId: product.id,
-      title: product.title,
-      price: Number(product.price),
-      image: images[0] || null,
-      variant: variantLabel || undefined,
-    }, quantity);
-    track({ store_id: store.id, event_type: 'add_to_cart', product_id: product.id, value: Number(product.price) * quantity, metadata: { source: 'buy_now' } });
-    navigate(`/store/${slug}/cart`);
+    if (isAdding || added) return;
+
+    setIsAdding(true);
+    triggerParabolicFly(e, quantity);
+    
+    setTimeout(() => {
+      addItem({
+        productId: product.id,
+        title: product.title,
+        price: Number(product.price),
+        image: images[0] || undefined,
+        variant: variantLabel || undefined,
+      }, quantity);
+      track({ store_id: store.id, event_type: 'add_to_cart', product_id: product.id, value: Number(product.price) * quantity });
+      setIsAdding(false);
+      setAdded(true);
+      triggerConfetti();
+      toast.success(`${product.title} added to cart`);
+      setTimeout(() => setAdded(false), 2000);
+    }, 800);
+  };
+
+  const handleBuyNow = (e?: React.MouseEvent) => {
+    if (isOutOfStock) { toast.error('This product is currently out of stock'); return; }
+    triggerParabolicFly(e, quantity);
+    
+    setTimeout(() => {
+      addItem({
+        productId: product.id,
+        title: product.title,
+        price: Number(product.price),
+        image: images[0] || null,
+        variant: variantLabel || undefined,
+      }, quantity);
+      track({ store_id: store.id, event_type: 'add_to_cart', product_id: product.id, value: Number(product.price) * quantity, metadata: { source: 'buy_now' } });
+      triggerConfetti();
+      navigate(`/store/${slug}/cart`);
+    }, 800);
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -379,6 +491,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                   <img
                     src={current.url}
                     alt={product.title}
+                    data-main-product-image="true"
                     className="w-full h-full object-contain transition-transform duration-300"
                     style={{
                       transform: imageZoom ? 'scale(1.8)' : 'scale(1)',
@@ -539,7 +652,8 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                     {section.props?.showAddToCart !== false && (
                       <button
                         onClick={handleAddToCart}
-                        className="flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2 border-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        disabled={isAdding || added}
+                        className="flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2 border-2 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-85"
                         style={{
                           borderColor: added ? '#16a34a' : colors.primary,
                           color: added ? '#16a34a' : colors.primary,
@@ -547,7 +661,13 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                           borderRadius: `${borderRadius}px`,
                         }}
                       >
-                        {added ? <><Check className="h-4 w-4" /> Added!</> : <><ShoppingCart className="h-4 w-4" /> Add to Cart</>}
+                        {isAdding ? (
+                          <><Loader2 className="h-4 w-4 animate-spin" /> Adding...</>
+                        ) : added ? (
+                          <><Check className="h-4 w-4" /> Added!</>
+                        ) : (
+                          <><ShoppingCart className="h-4 w-4" /> Add to Cart</>
+                        )}
                       </button>
                     )}
                     <button
@@ -862,6 +982,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
         onAdd={handleAddToCart}
         onBuyNow={handleBuyNow}
         added={added}
+        isAdding={isAdding}
         colors={colors}
         borderRadius={borderRadius}
         variantLabel={variantLabel}

@@ -32,7 +32,10 @@ export type StorefrontConfig = {
     product?: Record<string, unknown>;
     cart?: Record<string, unknown>;
     checkout?: Record<string, unknown>;
-  } | Record<string, unknown> | null;
+    palette?: Record<string, string>;
+    disabled_pages?: string[];
+    [key: string]: any;
+  } | null;
   features?: Record<string, unknown> | null;
   seo?: Record<string, unknown> | null;
   show_all_products_grid?: boolean;

@@ -200,7 +200,7 @@ export default function CustomerAuthModal({
       style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
 
-      <div className="w-full max-w-[410px] relative"
+      <div className="w-full max-w-[410px] relative animate-modal-in"
         style={{ backgroundColor: cardColor, borderRadius, color: textColor,
           boxShadow: '0 40px 100px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06)' }}>
 

@@ -9,6 +9,7 @@ export interface MenuMeta {
   prep_minutes?: number;
   available_modes?: FulfillmentMode[];
   daily_window?: { from: string; to: string };
+  meal_types?: ('breakfast' | 'lunch' | 'dinner' | 'drink')[];
 }
 
 export interface MenuVariantOption { name: string; values: string[] }

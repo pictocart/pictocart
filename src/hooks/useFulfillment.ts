@@ -58,10 +58,27 @@ export const useFulfillment = (storeId: string | undefined) => {
     mutationFn: async (patch: Partial<FulfillmentSettings>) => {
       if (!storeId) throw new Error('No store');
       const payload = { ...DEFAULT_FULFILLMENT, ...(query.data ?? {}), ...patch, store_id: storeId };
-      const { error } = await supabase
+      // Check if a row already exists for this store
+      const { data: existing } = await supabase
         .from('store_fulfillment_settings' as any)
-        .upsert(payload, { onConflict: 'store_id' });
-      if (error) throw error;
+        .select('store_id')
+        .eq('store_id', storeId)
+        .maybeSingle();
+
+      if (existing) {
+        // Perform UPDATE
+        const { error } = await supabase
+          .from('store_fulfillment_settings' as any)
+          .update(payload)
+          .eq('store_id', storeId);
+        if (error) throw error;
+      } else {
+        // Perform INSERT
+        const { error } = await supabase
+          .from('store_fulfillment_settings' as any)
+          .insert(payload);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fulfillment', storeId] });

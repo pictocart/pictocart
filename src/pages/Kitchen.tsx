@@ -4,6 +4,14 @@ import { useStore } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ChefHat, Clock, MapPin, Phone, Utensils, Bell, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -59,9 +67,11 @@ const Kitchen = () => {
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [soundOn, setSoundOn] = useState(true);
+  const [rejectingOrder, setRejectingOrder] = useState<KitchenOrder | null>(null);
   const soundOnRef = useRef(soundOn);
   soundOnRef.current = soundOn;
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     // Soft 2-tone beep encoded as data URI
@@ -90,45 +100,84 @@ const Kitchen = () => {
     }
   };
 
+  const fetchOrders = async () => {
+    if (!store?.id) return;
+    const { data, error } = await supabase
+      .from('orders')
+      .select(
+        'id, order_number, fulfillment_mode, prep_status, table_label, customer_name, customer_phone, items, total, created_at, guest_tracking_code, customer_address',
+      )
+      .eq('store_id', store.id)
+      .not('prep_status', 'is', null)
+      .not('prep_status', 'in', '(completed,cancelled)')
+      .order('created_at', { ascending: true });
+    
+    if (error) {
+      toast.error(error.message);
+    } else {
+      const fetched: KitchenOrder[] = (data as any) ?? [];
+      
+      setOrders((prev) => {
+        if (!isInitialLoadRef.current && prev.length > 0) {
+          const prevIds = new Set(prev.map(o => o.id));
+          const hasNewOrder = fetched.some(o => !prevIds.has(o.id));
+          if (hasNewOrder) {
+            playPing();
+            toast.success("New KOT order received in kitchen!");
+          }
+        }
+        return fetched;
+      });
+
+      isInitialLoadRef.current = false;
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (!store?.id) return;
-    let mounted = true;
-
-    const load = async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(
-          'id, order_number, fulfillment_mode, prep_status, table_label, customer_name, customer_phone, items, total, created_at, guest_tracking_code, customer_address',
-        )
-        .eq('store_id', store.id)
-        .not('prep_status', 'is', null)
-        .not('prep_status', 'in', '(completed,cancelled)')
-        .order('created_at', { ascending: true });
-      if (!mounted) return;
-      if (error) {
-        toast.error(error.message);
-      } else {
-        setOrders((data as any) ?? []);
-      }
-      setLoading(false);
-    };
-    load();
+    fetchOrders();
 
     // Poll every 10s (orders removed from Realtime publication for PII safety)
-    const interval = setInterval(load, 10000);
+    const interval = setInterval(fetchOrders, 10000);
 
     return () => {
-      mounted = false;
       clearInterval(interval);
     };
   }, [store?.id]);
 
   const advance = async (order: KitchenOrder, next: PrepStatus) => {
+    // Optimistically update the UI instantly
+    setOrders((prev) =>
+      prev.map((o) => (o.id === order.id ? { ...o, prep_status: next } : o))
+    );
+
+    // Broadcast status change instantly over Supabase WebSockets Broadcast channel
+    try {
+      if (store?.slug) {
+        const channel = supabase.channel(`store_kitchen_${store.slug}`);
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            channel.send({
+              type: 'broadcast',
+              event: 'status_update',
+              payload: { orderId: order.id, prep_status: next }
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('[broadcast] failed to send status change', err);
+    }
+
     const patch: any = { prep_status: next };
     if (next === 'completed') patch.status = 'delivered';
     if (next === 'out_for_delivery') patch.status = 'shipped';
     const { error } = await supabase.from('orders').update(patch).eq('id', order.id);
-    if (error) toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      fetchOrders(); // Revert on failure
+    }
   };
 
   const grouped = useMemo(() => {
@@ -236,7 +285,7 @@ const Kitchen = () => {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => advance(order, 'cancelled')}
+                            onClick={() => setRejectingOrder(order)}
                             className="text-destructive"
                           >
                             Reject
@@ -251,6 +300,42 @@ const Kitchen = () => {
           ))}
         </div>
       )}
+
+      {/* Reject Confirmation Dialog */}
+      <Dialog open={!!rejectingOrder} onOpenChange={(open) => !open && setRejectingOrder(null)}>
+        <DialogContent className="max-w-md p-6 rounded-2xl">
+          <DialogHeader className="pb-3 border-b">
+            <DialogTitle className="text-lg font-bold text-destructive">
+              Reject Order?
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reject Order #{rejectingOrder?.order_number}? This action will cancel the order and remove it from the kitchen dashboard.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="pt-4 gap-2 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectingOrder(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (rejectingOrder) {
+                  advance(rejectingOrder, 'cancelled');
+                  setRejectingOrder(null);
+                }
+              }}
+            >
+              Yes, Reject Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

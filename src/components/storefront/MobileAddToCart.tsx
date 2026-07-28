@@ -1,11 +1,12 @@
-import { ShoppingBag, Check, Zap } from 'lucide-react';
+import { ShoppingBag, Check, Zap, Loader2 } from 'lucide-react';
 
 interface Props {
   price: number;
   comparePrice?: number | null;
-  onAdd: () => void;
-  onBuyNow: () => void;
+  onAdd: (e?: React.MouseEvent) => void;
+  onBuyNow: (e?: React.MouseEvent) => void;
   added: boolean;
+  isAdding?: boolean;
   colors: any;
   borderRadius: number;
   variantLabel?: string;
@@ -13,7 +14,7 @@ interface Props {
   storeCategory?: string;
 }
 
-const MobileAddToCart = ({ price, comparePrice, onAdd, onBuyNow, added, colors, borderRadius, variantLabel, isOutOfStock, storeCategory }: Props) => {
+const MobileAddToCart = ({ price, comparePrice, onAdd, onBuyNow, added, isAdding, colors, borderRadius, variantLabel, isOutOfStock, storeCategory }: Props) => {
   return (
     <div
       className="fixed left-0 right-0 z-[60] flex items-center gap-3 p-3 border-t md:hidden backdrop-blur-md"
@@ -50,7 +51,8 @@ const MobileAddToCart = ({ price, comparePrice, onAdd, onBuyNow, added, colors, 
         <div className="flex gap-2">
           <button
             onClick={onAdd}
-            className="flex items-center gap-1.5 px-4 py-3 text-xs font-semibold border-2 transition-transform active:scale-95"
+            disabled={isAdding || added}
+            className="flex items-center gap-1.5 px-4 py-3 text-xs font-semibold border-2 transition-transform active:scale-95 disabled:opacity-80"
             style={{
               borderColor: added ? '#16a34a' : colors.primary,
               color: added ? '#16a34a' : colors.primary,
@@ -58,8 +60,14 @@ const MobileAddToCart = ({ price, comparePrice, onAdd, onBuyNow, added, colors, 
               borderRadius: `${borderRadius}px`,
             }}
           >
-            {added ? <Check className="h-3.5 w-3.5" /> : <ShoppingBag className="h-3.5 w-3.5" />}
-            {added ? 'Added!' : 'Cart'}
+            {isAdding ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : added ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <ShoppingBag className="h-3.5 w-3.5" />
+            )}
+            {isAdding ? 'Adding...' : added ? 'Added!' : 'Cart'}
           </button>
           <button
             onClick={onBuyNow}

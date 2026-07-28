@@ -1143,7 +1143,7 @@ const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }:
         url={`${window.location.origin}/store/${slug}${page !== 'home' ? '/' + page : ''}`}
       />
       {/* Customer-facing promotional ticker — also visible on master-theme storefronts */}
-      <PromoTicker storeSlug={slug} config={storefrontConfig?.promo_ticker} />
+      {store?.category !== 'food' && <PromoTicker storeSlug={slug} config={storefrontConfig?.promo_ticker} />}
       {/* Owner-only premium-theme free-trial countdown */}
       <PremiumTrialTicker storeId={store.id} storeUserId={store.user_id} settings={storefrontConfig} />
       <MasterThemeRenderer
