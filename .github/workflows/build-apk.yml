@@ -57,6 +57,12 @@ jobs:
         run: |
           npx cap add android
 
+      - name: Upgrade Gradle Version
+        run: |
+          if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then
+            sed -i 's/gradle-8.2.1-all.zip/gradle-8.8-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
+          fi
+
       - name: Generate App Launcher Icons
         run: |
           node -e '
