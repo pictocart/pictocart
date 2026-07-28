@@ -1752,50 +1752,55 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
           <Label className="text-xs font-semibold flex items-center gap-1.5">
             <LayoutGrid className="h-3.5 w-3.5 text-primary" /> Category Grid Styling
           </Label>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
-              <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_cols ?? 4} cols</span>
-            </div>
-            <Select 
-              value={String(merged.product_cols ?? 4)} 
-              onValueChange={(val) => onUpdate(idx, "product_cols", Number(val))}
-            >
-              <SelectTrigger className="h-8 text-xs bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2">2 Columns</SelectItem>
-                <SelectItem value="3">3 Columns</SelectItem>
-                <SelectItem value="4">4 Columns</SelectItem>
-                <SelectItem value="5">5 Columns</SelectItem>
-                <SelectItem value="6">6 Columns</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          
+          <div className="space-y-3">
+            {!merged.scroll_horizontal && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
+                  <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_cols ?? 4} cols</span>
+                </div>
+                <Select 
+                  value={String(merged.product_cols ?? 4)} 
+                  onValueChange={(val) => onUpdate(idx, "product_cols", Number(val))}
+                >
+                  <SelectTrigger className="h-8 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2 Columns</SelectItem>
+                    <SelectItem value="3">3 Columns</SelectItem>
+                    <SelectItem value="4">4 Columns</SelectItem>
+                    <SelectItem value="5">5 Columns</SelectItem>
+                    <SelectItem value="6">6 Columns</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-          <div className="flex items-center justify-between pt-1.5 border-t">
-            <Label className="text-[11px] text-muted-foreground font-medium">Horizontal Scroll / Swipe</Label>
-            <Switch 
-              checked={!!merged.scroll_horizontal} 
-              onCheckedChange={(val) => onUpdate(idx, "scroll_horizontal", val)} 
-            />
-          </div>
-
-          <div className={`transition-opacity duration-200 ${!merged.scroll_horizontal ? "opacity-50 pointer-events-none" : ""}`}>
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-[11px] text-muted-foreground font-medium">Drag to resize Card Width</Label>
-              <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_card_width ?? 220}px</span>
+            <div className="flex items-center justify-between pt-1.5 border-t">
+              <Label className="text-[11px] text-muted-foreground font-medium">Horizontal Scroll / Swipe</Label>
+              <Switch 
+                checked={!!merged.scroll_horizontal} 
+                onCheckedChange={(val) => onUpdate(idx, "scroll_horizontal", val)} 
+              />
             </div>
-            <Slider 
-              value={[Number(merged.product_card_width ?? 220)]} 
-              min={130} 
-              max={350} 
-              step={10} 
-              disabled={!merged.scroll_horizontal}
-              onValueChange={([val]) => onUpdate(idx, "product_card_width", val)} 
-              className="my-2"
-            />
+
+            <div className={`transition-opacity duration-200 ${!merged.scroll_horizontal ? "opacity-50 pointer-events-none" : ""}`}>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-[11px] text-muted-foreground font-medium">Drag to resize Card Width</Label>
+                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_card_width ?? 220}px</span>
+              </div>
+              <Slider 
+                value={[Number(merged.product_card_width ?? 220)]} 
+                min={130} 
+                max={350} 
+                step={10} 
+                disabled={!merged.scroll_horizontal}
+                onValueChange={([val]) => onUpdate(idx, "product_card_width", val)} 
+                className="my-2"
+              />
+            </div>
           </div>
         </div>
       )}

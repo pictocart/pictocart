@@ -100,7 +100,7 @@ const AdminLaunchChecklist = () => {
       const emailDom = emailDomain.data?.[0];
       out.push({
         group: 'Notifications',
-        label: 'Platform email sender verified (notify.pictocart.in)',
+        label: 'Platform email sender verified (pictocart.in)',
         status: emailDom?.status === 'verified' ? 'pass' : emailDom ? 'warn' : 'fail',
         detail: emailDom ? `Status: ${emailDom.status}` : 'No platform email domain configured',
       });

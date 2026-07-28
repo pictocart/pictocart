@@ -475,7 +475,7 @@ Deno.serve(async (req: Request) => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              from: `${cleanStoreName} <noreply@notify.pictocart.in>`,
+              from: `${cleanStoreName} <noreply@pictocart.in>`,
               to: [email],
               subject: `${otp} is your ${store.name} verification code`,
               html: emailHtml,
@@ -584,7 +584,7 @@ Deno.serve(async (req: Request) => {
             method: "POST",
             headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              from: `${cleanStoreName} <noreply@notify.pictocart.in>`,
+              from: `${cleanStoreName} <noreply@pictocart.in>`,
               to: [email],
               subject: `${otp} — your ${store.name} password reset code`,
               html: emailHtml,

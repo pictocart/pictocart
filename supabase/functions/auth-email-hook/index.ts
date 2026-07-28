@@ -33,9 +33,9 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 const SITE_NAME = "PicToCart"
-const SENDER_DOMAIN = "notify.pictocart.in"
+const SENDER_DOMAIN = "pictocart.in"
 const ROOT_DOMAIN = "pictocart.in"
-const FROM_DOMAIN = "notify.pictocart.in"
+const FROM_DOMAIN = "pictocart.in"
 const RESEND_API_URL = 'https://api.resend.com'
 
 const SAMPLE_PROJECT_URL = "https://pictocart.in"

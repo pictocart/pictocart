@@ -191,9 +191,11 @@ const PaymentSettings = () => {
   // Online payments are active only when keys are set AND domain is verified (or test mode)
   const onlinePaymentsActive = isConnected && (form.test_mode || domainVerified);
 
-  const storeUrl = store?.slug
-    ? `https://www.pictocart.in`
-    : 'https://www.pictocart.in';
+  const storeUrl = store?.custom_domain 
+    ? `https://${store.custom_domain}`
+    : store?.slug 
+      ? `https://www.pictocart.in/store/${store.slug}` 
+      : 'https://www.pictocart.in';
 
   const handleSave = async () => {
     if (!store) return;

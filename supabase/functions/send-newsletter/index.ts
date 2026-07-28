@@ -67,7 +67,7 @@ serve(async (req) => {
 
     const fromEmail = domain && domain.status === "verified"
       ? `${store.name} <${domain.sender_prefix}@${domain.domain}>`
-      : `${store.name} <noreply@notify.pictocart.in>`;
+      : `${store.name} <noreply@pictocart.in>`;
 
     const storeUrl = `https://store-on-tips.lovable.app/store/${store.slug}`;
 

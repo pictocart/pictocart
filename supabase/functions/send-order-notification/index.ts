@@ -96,7 +96,7 @@ async function sendEmail(to: string, subject: string, html: string, fromName: st
 
   const fromField = fromAddress
     ? `${fromName} <${fromAddress}>`
-    : `${fromName} <noreply@notify.pictocart.in>`;
+    : `${fromName} <noreply@pictocart.in>`;
 
   const res = await fetch(`${GATEWAY_URL}/emails`, {
     method: 'POST',
