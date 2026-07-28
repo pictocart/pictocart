@@ -35,19 +35,20 @@ jobs:
           mkdir -p dist
           echo "<html><body>WebView App Loading...</body></html>" > dist/index.html
 
-      - name: Initialize Capacitor Project
+      - name: Configure Capacitor Project
         run: |
           CLEAN_APP_ID=$(echo "com.pictocart.${{ github.event.client_payload.store_slug }}" | sed 's/-/_/g')
-          npx cap init "${{ github.event.client_payload.app_name }}" "$CLEAN_APP_ID" --web-dir=dist
-
-      - name: Configure Capacitor Server URL
-        run: |
           node -e '
             const fs = require("fs");
-            const config = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
-            config.server = {
-              url: "https://pictocart.com/store/${{ github.event.client_payload.store_slug }}/menu",
-              cleartext: true
+            const config = {
+              appId: "'"$CLEAN_APP_ID"'",
+              appName: "${{ github.event.client_payload.app_name }}",
+              webDir: "dist",
+              bundledWebRuntime: false,
+              server: {
+                url: "https://pictocart.com/store/${{ github.event.client_payload.store_slug }}/menu",
+                cleartext: true
+              }
             };
             fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2), "utf8");
           '
