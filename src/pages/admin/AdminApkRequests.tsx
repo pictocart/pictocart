@@ -61,6 +61,7 @@ const AdminApkRequests = () => {
       const updatedRequest = {
         ...storeRow.request,
         status: 'building',
+        download_url: null, // Clear old link while active compile runs
       };
       const updatedSettings = {
         ...storeRow.rawSettings,
@@ -290,12 +291,24 @@ const AdminApkRequests = () => {
 
                       {/* Status */}
                       <td className="py-4 px-4">
-                        <Badge
-                          variant={s.request.status === 'completed' ? 'default' : s.request.status === 'building' ? 'secondary' : 'outline'}
-                          className="capitalize text-xs font-semibold"
-                        >
-                          {s.request.status === 'building' ? 'Building...' : s.request.status}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge
+                            variant={s.request.status === 'completed' ? 'default' : s.request.status === 'building' ? 'secondary' : 'outline'}
+                            className="capitalize text-xs font-semibold w-fit"
+                          >
+                            {s.request.status === 'building' ? 'Building...' : s.request.status}
+                          </Badge>
+                          {s.request.status === 'building' && gitHubRepo && (
+                            <a
+                              href={`https://github.com/${gitHubRepo.trim()}/actions`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-primary hover:underline flex items-center gap-1 font-semibold"
+                            >
+                              View Live Logs ↗
+                            </a>
+                          )}
+                        </div>
                       </td>
 
                       {/* Download / Actions */}
@@ -331,7 +344,7 @@ const AdminApkRequests = () => {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            {s.request.download_url ? (
+                            {s.request.status === 'completed' && s.request.download_url ? (
                               <Button
                                 size="sm"
                                 variant="outline"

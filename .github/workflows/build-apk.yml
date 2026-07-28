@@ -37,7 +37,8 @@ jobs:
 
       - name: Initialize Capacitor Project
         run: |
-          npx cap init "${{ github.event.client_payload.app_name }}" "com.pictocart.${{ github.event.client_payload.store_slug }}" --web-dir=dist
+          CLEAN_APP_ID=$(echo "com.pictocart.${{ github.event.client_payload.store_slug }}" | sed 's/-/_/g')
+          npx cap init "${{ github.event.client_payload.app_name }}" "$CLEAN_APP_ID" --web-dir=dist
 
       - name: Configure Capacitor Server URL
         run: |
