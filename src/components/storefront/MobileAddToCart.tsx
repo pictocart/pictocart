@@ -10,9 +10,10 @@ interface Props {
   borderRadius: number;
   variantLabel?: string;
   isOutOfStock?: boolean;
+  storeCategory?: string;
 }
 
-const MobileAddToCart = ({ price, comparePrice, onAdd, onBuyNow, added, colors, borderRadius, variantLabel, isOutOfStock }: Props) => {
+const MobileAddToCart = ({ price, comparePrice, onAdd, onBuyNow, added, colors, borderRadius, variantLabel, isOutOfStock, storeCategory }: Props) => {
   return (
     <div
       className="fixed left-0 right-0 z-[60] flex items-center gap-3 p-3 border-t md:hidden backdrop-blur-md"
@@ -69,7 +70,7 @@ const MobileAddToCart = ({ price, comparePrice, onAdd, onBuyNow, added, colors, 
               borderRadius: `${borderRadius}px`,
             }}
           >
-            <Zap className="h-3.5 w-3.5" /> Buy Now
+            <Zap className="h-3.5 w-3.5" /> {storeCategory === 'food' ? 'Order Now' : 'Buy Now'}
           </button>
         </div>
       )}

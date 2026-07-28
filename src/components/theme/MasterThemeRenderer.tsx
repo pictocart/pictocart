@@ -82,6 +82,7 @@ interface Props {
 }
 
 export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, onNavigate, products, sellerCategories, product, store }: Props) {
+  const storeCategory = store?.category || manifest?.store?.category || "";
   const baseDna = manifest?.dna ?? {};
   // Merge global palette overrides into dna so every Section/Header/Footer picks them up.
   const palette = { ...(baseDna.palette ?? {}), ...((overrides as any)?.palette ?? {}) };
@@ -1005,7 +1006,7 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
     case "trending":
     case "featured_products":
     case "new_arrivals":
-    case "product_grid": return <ProductBlock p={p} dna={dna} storeSlug={storeSlug} page={page} />;
+    case "product_grid": return <ProductBlock p={p} dna={dna} storeSlug={storeSlug} page={page} storeCategory={store?.category} />;
     case "promo_banner": {
       const promoStyle = p.style ?? "classic_split";
       if (promoStyle === "aurora_wave")     return <PromoAuroraWave   p={p} dna={dna} storeSlug={storeSlug} />;
@@ -1706,7 +1707,7 @@ function JournalStrip({ p, dna, storeSlug }: any) {
           .eq("store_id", store.id)
           .eq("is_published", true)
           .order("created_at", { ascending: false })
-          .limit(p.limit || 2); // Fetch up to 2 posts, leaving the 3rd column for the redirect card
+          .limit(p.limit || 3); // Fetch up to 3 posts
         setPosts(data || []);
       } catch (e) {
         console.warn("Failed to fetch blog posts:", e);
@@ -1727,15 +1728,44 @@ function JournalStrip({ p, dna, storeSlug }: any) {
   const blogLink = storeSlug ? `/store/${storeSlug}/journal` : "#";
   const headingFont = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 } as React.CSSProperties;
 
+  const productCols = p.product_cols ?? 3;
+  const cardWidth = p.product_card_width;
+  const sectionId = p.id || `sec-journal-strip`;
+
   return (
     <section className="max-w-6xl mx-auto px-6 py-16">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (min-width: 768px) {
+          .dynamic-grid-${sectionId} {
+            grid-template-columns: repeat(${productCols}, minmax(0, 1fr)) !important;
+            display: grid !important;
+          }
+        }
+      `}} />
       <div className="flex items-end justify-between mb-8">
         <h2 className="text-3xl font-bold s-title" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>{displayTitle}</h2>
         {storeSlug && <Link to={blogLink} className="text-sm font-semibold hover:underline" style={{ color: dna.palette?.accent }}>Read all →</Link>}
       </div>
-      <div className="grid md:grid-cols-3 gap-6">
+      <div 
+        className={p.scroll_horizontal
+          ? "flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin"
+          : cardWidth 
+            ? "flex flex-wrap gap-6 justify-center" 
+            : `grid grid-cols-1 md:grid-cols-3 gap-6 dynamic-grid-${sectionId}`
+        }
+      >
         {posts.map((post) => (
-          <Link key={post.id} to={storeSlug ? `/store/${storeSlug}/journal/${post.slug}` : "#"} className="group flex flex-col overflow-hidden border" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+          <Link 
+            key={post.id} 
+            to={storeSlug ? `/store/${storeSlug}/journal/${post.slug}` : "#"} 
+            className={`group flex flex-col overflow-hidden border ${p.scroll_horizontal ? 'snap-start shrink-0' : ''}`} 
+            style={{ 
+              background: dna.palette?.surface, 
+              borderColor: dna.palette?.border, 
+              borderRadius: "var(--r)",
+              width: p.scroll_horizontal ? `${cardWidth ?? 280}px` : cardWidth ? `${cardWidth}px` : 'auto'
+            }}
+          >
             <div className="aspect-[16/10] overflow-hidden bg-muted/10">
               {post.cover_image ? (
                 <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
@@ -1763,17 +1793,6 @@ function JournalStrip({ p, dna, storeSlug }: any) {
             </div>
           </Link>
         ))}
-        {/* Redirect to Blogs card */}
-        <Link to={blogLink} className="group flex flex-col items-center justify-center p-6 border-2 border-dashed hover:border-solid text-center cursor-pointer transition-all bg-muted/5 hover:bg-muted/10" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", minHeight: "220px" }}>
-          <div className="p-3 rounded-full mb-3" style={{ background: `${dna.palette?.accent}15` }}>
-            <Sparkles className="h-6 w-6" style={{ color: dna.palette?.accent }} />
-          </div>
-          <h3 className="text-base font-bold" style={{ color: dna.palette?.fg }}>Explore Our Blog</h3>
-          <p className="text-xs text-muted-foreground mt-1 mb-4" style={{ color: dna.palette?.muted }}>Read all our latest articles, guides, and stories.</p>
-          <span className="text-xs font-semibold px-4 py-2 border rounded-lg transition-transform group-hover:scale-105" style={{ borderColor: dna.palette?.accent, color: dna.palette?.accent }}>
-            Read All Posts
-          </span>
-        </Link>
       </div>
     </section>
   );
@@ -2320,7 +2339,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
             <a href={`/store/${storeSlug}/checkout`} onClick={() => handleAdd()}
               className="w-full py-3 text-center font-bold text-sm rounded-xl border-2 transition-all hover:opacity-80"
               style={{ borderColor: dna.palette?.primary, color: dna.palette?.primary, borderRadius: "var(--r)" }}>
-              Buy Now
+              {store?.category === 'food' ? "Order Now" : "Buy Now"}
             </a>
           )}
 
@@ -3119,12 +3138,12 @@ function CollectionDetailBlock({ p, dna, storeSlug }: any) {
 
 
 
-function ProductBlock({ p, dna, storeSlug, page }: any) {
+function ProductBlock({ p, dna, storeSlug, page, storeCategory }: any) {
   const v = p.style ?? "grid_clean";
   // ── 3D theme product styles ───────────────────────────────────────────────
-  if (v === "glass_3d")        return <ProductsGlass3D    p={p} dna={dna} storeSlug={storeSlug} />;
-  if (v === "chrome_3d")       return <ProductsChrome     p={p} dna={dna} storeSlug={storeSlug} />;
-  if (v === "botanical_cards") return <ProductsBotanical  p={p} dna={dna} storeSlug={storeSlug} />;
+  if (v === "glass_3d")        return <ProductsGlass3D    p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} />;
+  if (v === "chrome_3d")       return <ProductsChrome     p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} />;
+  if (v === "botanical_cards") return <ProductsBotanical  p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} />;
   const allItems: any[] = p.items ?? [];
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = page === "shop" ? (searchParams.get("category") || "") : "";
@@ -3296,6 +3315,7 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
                   primaryColor={dna.palette?.primary}
                   primaryFg={dna.palette?.primary_fg}
                   borderRadius={dna.radius ?? "8px"}
+                  storeCategory={storeCategory}
                 />
               )}
             </div>
@@ -3704,7 +3724,7 @@ function HeroLiquidMetal({ p, dna, storeSlug }: any) {
   );
 }
 
-function ProductsChrome({ p, dna, storeSlug }: any) {
+function ProductsChrome({ p, dna, storeSlug, storeCategory }: any) {
   const { themeId } = useParams<{ themeId: string }>();
   const P = "#94a3b8", A = "#e2e8f0";
   const items: any[] = (p.items && p.items.length > 0) ? p.items : [
@@ -3770,7 +3790,7 @@ function ProductsChrome({ p, dna, storeSlug }: any) {
                 </Link>
                 {storeSlug && pr.id && (
                   <div className="px-4 pb-4">
-                    <ProductCardActions storeSlug={storeSlug} product={{ id:pr.id, title:pr.name, price:pr.price, image:pr.image, inventory_count: pr.inventory_count }} primaryColor={P} primaryFg="#050810" borderRadius="10px" compact />
+                    <ProductCardActions storeSlug={storeSlug} product={{ id:pr.id, title:pr.name, price:pr.price, image:pr.image, inventory_count: pr.inventory_count }} primaryColor={P} primaryFg="#050810" borderRadius="10px" compact storeCategory={storeCategory} />
                   </div>
                 )}
               </div>
@@ -3933,7 +3953,7 @@ function HeroNeonBotanical({ p, dna, storeSlug }: any) {
   );
 }
 
-function ProductsBotanical({ p, dna, storeSlug }: any) {
+function ProductsBotanical({ p, dna, storeSlug, storeCategory }: any) {
   const { themeId } = useParams<{ themeId: string }>();
   const N = "#10b981", G = "#34d399";
   const items: any[] = (p.items && p.items.length > 0) ? p.items : [
@@ -4003,7 +4023,7 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
                 </Link>
                 {storeSlug && pr.id && (
                   <div className="px-4 pb-4">
-                    <ProductCardActions storeSlug={storeSlug} product={{ id:pr.id, title:pr.name, price:pr.price, image:pr.image, inventory_count: pr.inventory_count }} primaryColor={N} primaryFg="#010d08" borderRadius="12px" compact />
+                    <ProductCardActions storeSlug={storeSlug} product={{ id:pr.id, title:pr.name, price:pr.price, image:pr.image, inventory_count: pr.inventory_count }} primaryColor={N} primaryFg="#010d08" borderRadius="12px" compact storeCategory={storeCategory} />
                   </div>
                 )}
               </div>
@@ -4208,7 +4228,7 @@ function HeroHolographic3D({ p, dna, storeSlug }: any) {
   );
 }
 
-function ProductsGlass3D({ p, dna, storeSlug }: any) {
+function ProductsGlass3D({ p, dna, storeSlug, storeCategory }: any) {
   const { themeId } = useParams<{ themeId: string }>();
   const primary = dna.palette?.primary ?? "#6366f1";
   const accent  = dna.palette?.accent  ?? "#a855f7";
@@ -4265,7 +4285,7 @@ function ProductsGlass3D({ p, dna, storeSlug }: any) {
                     </div>
                   </div>
                 </Link>
-                {storeSlug && pr.id && <div className="mt-2"><ProductCardActions storeSlug={storeSlug} product={{ id:pr.id,title:pr.name,price:pr.price,image:pr.image,inventory_count: pr.inventory_count }} primaryColor={primary} primaryFg="#ffffff" borderRadius="12px" compact /></div>}
+                {storeSlug && pr.id && <div className="mt-2"><ProductCardActions storeSlug={storeSlug} product={{ id:pr.id,title:pr.name,price:pr.price,image:pr.image,inventory_count: pr.inventory_count }} primaryColor={primary} primaryFg="#ffffff" borderRadius="12px" compact storeCategory={storeCategory} /></div>}
               </div>
             );
           })}

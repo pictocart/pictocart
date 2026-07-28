@@ -20,6 +20,7 @@ interface Props {
   primaryFg?: string;
   borderRadius?: string | number;
   compact?: boolean;
+  storeCategory?: string;
 }
 
 /**
@@ -27,7 +28,7 @@ interface Props {
  * Clicking either stops parent <Link> navigation. Buy Now adds the item then
  * routes straight to the store checkout.
  */
-const ProductCardActions = ({ storeSlug, product, primaryColor = 'hsl(var(--primary))', primaryFg = '#fff', borderRadius = '8px', compact = false }: Props) => {
+const ProductCardActions = ({ storeSlug, product, primaryColor = 'hsl(var(--primary))', primaryFg = '#fff', borderRadius = '8px', compact = false, storeCategory }: Props) => {
   const navigate = useNavigate();
   const { addItem } = useCart(storeSlug);
 
@@ -81,7 +82,7 @@ const ProductCardActions = ({ storeSlug, product, primaryColor = 'hsl(var(--prim
         style={{ background: primaryColor, color: primaryFg, borderRadius: radius }}
       >
         <Zap className="h-3.5 w-3.5" />
-        <span>Buy Now</span>
+        <span>{storeCategory === 'food' ? 'Order Now' : 'Buy Now'}</span>
       </button>
       <button
         type="button"

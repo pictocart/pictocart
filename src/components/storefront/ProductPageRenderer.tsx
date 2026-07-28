@@ -559,7 +559,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                         borderRadius: `${borderRadius}px`,
                       }}
                     >
-                      <Zap className="h-4 w-4" /> Buy Now
+                      <Zap className="h-4 w-4" /> {store?.category === 'food' ? 'Order Now' : 'Buy Now'}
                     </button>
                   </div>
                 )}
@@ -866,6 +866,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
         borderRadius={borderRadius}
         variantLabel={variantLabel}
         isOutOfStock={isOutOfStock}
+        storeCategory={store?.category}
       />
 
       {/* Social Proof Toast */}

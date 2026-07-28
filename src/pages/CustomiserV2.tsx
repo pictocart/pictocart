@@ -1687,10 +1687,10 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
 
   return (
     <div className="p-4 space-y-4">
-      {isProductSection && (
+      {(isProductSection || section?.type === "journal_strip") && (
         <div className="space-y-3 p-3 border rounded-lg bg-muted/40">
           <Label className="text-xs font-semibold flex items-center gap-1.5">
-            <LayoutGrid className="h-3.5 w-3.5 text-primary" /> Product Grid Styling
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" /> {section?.type === "journal_strip" ? "Blog Grid Styling" : "Product Grid Styling"}
           </Label>
           
           <div className="space-y-3">
@@ -1698,10 +1698,10 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
-                  <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_cols ?? 4} cols</span>
+                  <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_cols ?? (section?.type === "journal_strip" ? 3 : 4)} cols</span>
                 </div>
                 <Select 
-                  value={String(merged.product_cols ?? 4)} 
+                  value={String(merged.product_cols ?? (section?.type === "journal_strip" ? 3 : 4))} 
                   onValueChange={(val) => onUpdate(idx, "product_cols", Number(val))}
                 >
                   <SelectTrigger className="h-8 text-xs bg-background">
@@ -1731,10 +1731,10 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
             <div className={`transition-opacity duration-200 ${!merged.scroll_horizontal ? "opacity-50 pointer-events-none" : ""}`}>
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-[11px] text-muted-foreground font-medium">Drag to resize Card Width</Label>
-                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_card_width ?? 220}px</span>
+                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_card_width ?? (section?.type === "journal_strip" ? 280 : 220)}px</span>
               </div>
               <Slider 
-                value={[Number(merged.product_card_width ?? 220)]} 
+                value={[Number(merged.product_card_width ?? (section?.type === "journal_strip" ? 280 : 220))]} 
                 min={130} 
                 max={350} 
                 step={10} 

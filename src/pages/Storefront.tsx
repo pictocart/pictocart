@@ -760,7 +760,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
                     {product.compare_at_price && product.compare_at_price > product.price && <span className="text-[10px] md:text-xs line-through opacity-40">₹{Number(product.compare_at_price).toLocaleString('en-IN')}</span>}
                   </div>
                   <ProductShareButtons productTitle={product.title} productUrl={`/store/${slug}/product/${product.id}${previewThemeId ? `/${previewThemeId}` : ''}`} productImage={product.images?.[0]} primaryColor={colors.primary} />
-                  <ProductCardActions storeSlug={slug!} product={product} primaryColor={colors.primary} primaryFg="#fff" borderRadius={borderRadius} />
+                  <ProductCardActions storeSlug={slug!} product={product} primaryColor={colors.primary} primaryFg="#fff" borderRadius={borderRadius} storeCategory={store?.category} />
 
                 </div>
               </Link>
