@@ -791,7 +791,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
                           </div>
                           <div className="h-1.5 w-full bg-stone-850 rounded-full overflow-hidden flex">
                             <div 
-                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full"
+                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full animate-pulse-glow"
                               style={{ 
                                 width: order.prep_status === 'received' ? '25%' :
                                        order.prep_status === 'preparing' ? '50%' :
@@ -810,7 +810,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
                           </div>
                           <div className="h-1.5 w-full bg-stone-850 rounded-full overflow-hidden flex">
                             <div 
-                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full"
+                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full animate-pulse-glow"
                               style={{ 
                                 width: order.prep_status === 'received' ? '33%' :
                                        order.prep_status === 'preparing' ? '66%' :

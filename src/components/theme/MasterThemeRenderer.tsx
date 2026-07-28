@@ -366,13 +366,28 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('reveal-active');
+        } else {
+          entry.target.classList.remove('reveal-active');
         }
       });
-    }, { threshold: 0.05, rootMargin: "0px 0px -50px 0px" });
+    }, { threshold: 0.05, rootMargin: "0px 0px -20px 0px" });
     
     elements.forEach(el => observer.observe(el));
     return () => observer.disconnect();
   }, [page, manifest, overrides]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = maxScroll > 0 ? scrolled / maxScroll : 0;
+      document.documentElement.style.setProperty('--scroll-y', `${scrolled}px`);
+      document.documentElement.style.setProperty('--scroll-progress', `${progress}`);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -603,23 +618,102 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const hslSecondary = hexToHsl(palette.border || '#e5e7eb');
 
   return (
-    <div style={style} data-master-theme>
+    <div style={style} data-master-theme key={page} className="animate-page-enter">
+      <div className="scroll-progress-indicator" />
       <style dangerouslySetInnerHTML={{ __html: `
         body {
           background-color: hsl(${hslBg}) !important;
           color: hsl(${hslFg}) !important;
         }
 
-        /* Scroll Reveal Animations */
+        /* Floating Scroll Progress Bar */
+        .scroll-progress-indicator {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #ff6b4a, #ff8c4a);
+          width: calc(var(--scroll-progress, 0) * 100vw);
+          z-index: 1000;
+          pointer-events: none;
+          box-shadow: 0 0 8px rgba(255, 107, 74, 0.5);
+          transition: width 0.1s ease-out;
+        }
+
+        /* Smooth Page Transition/Reveal overlay on entrance */
+        @keyframes pageFadeIn {
+          from {
+            opacity: 0;
+            filter: blur(8px);
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            filter: blur(0);
+            transform: translateY(0);
+          }
+        }
+        .animate-page-enter {
+          animation: pageFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Smooth Scrolling */
+        html {
+          scroll-behavior: smooth;
+        }
+
+        /* Stepper pulse glow animation */
+        @keyframes pulseGlow {
+          0%, 100% {
+            opacity: 0.8;
+            box-shadow: 0 0 0 0 rgba(255, 107, 74, 0.4);
+          }
+          50% {
+            opacity: 1;
+            box-shadow: 0 0 10px 4px rgba(255, 107, 74, 0.25);
+          }
+        }
+        .animate-pulse-glow {
+          animation: pulseGlow 2s infinite ease-in-out;
+        }
+
+        /* Entrance Reveal for headings */
+        @keyframes headingReveal {
+          from {
+            opacity: 0;
+            transform: translateY(15px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        [data-master-theme] h1, [data-master-theme] h2 {
+          animation: headingReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Premium 3D Scroll Reveal Animations */
         [data-section-index], [data-section-anchor="footer"] {
           opacity: 0;
-          transform: translateY(30px);
-          transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-          will-change: transform, opacity;
+          filter: blur(10px);
+          transform: perspective(1000px) rotateX(8deg) translateY(45px) scale(0.97);
+          transition: 
+            opacity 1.3s cubic-bezier(0.16, 1, 0.3, 1), 
+            filter 1.3s cubic-bezier(0.16, 1, 0.3, 1), 
+            transform 1.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          will-change: transform, opacity, filter;
         }
         [data-section-index].reveal-active, [data-section-anchor="footer"].reveal-active {
           opacity: 1;
-          transform: translateY(0);
+          filter: blur(0);
+          transform: perspective(1000px) rotateX(0deg) translateY(0) scale(1);
+        }
+
+        /* Premium Card Hover glow for F&B category/product lists */
+        [data-master-theme] .rounded-2xl:hover, [data-master-theme] .rounded-xl:hover {
+          box-shadow: 0 20px 45px rgba(140, 45, 25, 0.08) !important;
+          border-color: rgba(140, 45, 25, 0.25) !important;
+          transform: translateY(-6px) scale(1.005) !important;
         }
 
         /* Hover Cards Lift, Zoom & Premium Shadow */
@@ -1289,7 +1383,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
                           </div>
                           <div className="h-1.5 w-full bg-stone-850 rounded-full overflow-hidden flex">
                             <div 
-                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full"
+                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full animate-pulse-glow"
                               style={{ 
                                 width: order.prep_status === 'received' ? '25%' :
                                        order.prep_status === 'preparing' ? '50%' :
@@ -1308,7 +1402,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
                           </div>
                           <div className="h-1.5 w-full bg-stone-850 rounded-full overflow-hidden flex">
                             <div 
-                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full"
+                              className="h-full bg-gradient-to-r from-[#ff6b4a] to-[#ff8c4a] transition-all duration-500 rounded-full animate-pulse-glow"
                               style={{ 
                                 width: order.prep_status === 'received' ? '33%' :
                                        order.prep_status === 'preparing' ? '66%' :
