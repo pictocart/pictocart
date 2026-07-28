@@ -1,0 +1,197 @@
+name: Build Store WebView APK
+
+on:
+  repository_dispatch:
+    types: [build-apk]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Capacitor & Dependencies
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android jimp --no-save
+
+      - name: Create Web Asset Dummy Dir
+        run: |
+          mkdir -p dist
+          echo "<html><body>WebView App Loading...</body></html>" > dist/index.html
+
+      - name: Initialize Capacitor Project
+        run: |
+          npx cap init "${{ github.event.client_payload.app_name }}" "com.pictocart.${{ github.event.client_payload.store_slug }}" --web-dir=dist
+
+      - name: Configure Capacitor Server URL
+        run: |
+          node -e '
+            const fs = require("fs");
+            const config = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+            config.server = {
+              url: "https://pictocart.com/store/${{ github.event.client_payload.store_slug }}/menu",
+              cleartext: true
+            };
+            fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2), "utf8");
+          '
+
+      - name: Add Android Platform
+        run: |
+          npx cap add android
+
+      - name: Generate App Launcher Icons
+        run: |
+          node -e '
+            const fs = require("fs");
+            const https = require("https");
+            const jimp = require("jimp");
+
+            const logoUrl = "${{ github.event.client_payload.logo_url }}";
+            const slug = "${{ github.event.client_payload.store_slug }}";
+
+            // Default icon fallback if logo is not provided
+            const iconPath = "app_icon.png";
+
+            const download = (url, dest, cb) => {
+              const file = fs.createWriteStream(dest);
+              https.get(url, (response) => {
+                response.pipe(file);
+                file.on("finish", () => {
+                  file.close(cb);
+                });
+              }).on("error", (err) => {
+                fs.unlink(dest, () => {});
+                cb(err);
+              });
+            };
+
+            const resizeAndCopy = async () => {
+              try {
+                if (!fs.existsSync(iconPath)) {
+                  console.log("No logo provided, using default launcher icon");
+                  return;
+                }
+                const image = await jimp.read(iconPath);
+                
+                const sizes = [
+                  { size: 48, folder: "mipmap-mdpi" },
+                  { size: 72, folder: "mipmap-hdpi" },
+                  { size: 96, folder: "mipmap-xhdpi" },
+                  { size: 144, folder: "mipmap-xxhdpi" },
+                  { size: 192, folder: "mipmap-xxxhdpi" }
+                ];
+
+                for (const s of sizes) {
+                  const resized = image.clone().resize(s.size, s.size);
+                  const dir = `android/app/src/main/res/${s.folder}`;
+                  if (fs.existsSync(dir)) {
+                    await resized.writeAsync(`${dir}/ic_launcher.png`);
+                    await resized.writeAsync(`${dir}/ic_launcher_round.png`);
+                  }
+                }
+                console.log("Successfully generated app launcher icons!");
+              } catch (e) {
+                console.warn("Icon resizing failed, using default icons", e);
+              }
+            };
+
+            if (logoUrl && logoUrl !== "null" && logoUrl !== "undefined") {
+              console.log("Downloading store logo:", logoUrl);
+              download(logoUrl, iconPath, (err) => {
+                if (err) {
+                  console.error("Download failed:", err);
+                  process.exit(0);
+                }
+                resizeAndCopy();
+              });
+            } else {
+              console.log("No custom logo URL provided.");
+            }
+          '
+
+      - name: Sync Capacitor
+        run: |
+          npx cap sync
+
+      - name: Build Android Release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK to Supabase Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          APK_FILE="android/app/build/outputs/apk/debug/app-debug.apk"
+          STORE_SLUG="${{ github.event.client_payload.store_slug }}"
+          TARGET_NAME="${STORE_SLUG}_webview_app.apk"
+          
+          echo "Uploading $APK_FILE to Supabase Storage bucket..."
+          
+          # Upload via curl to public storage bucket (store-templates or custom apks bucket)
+          UPLOAD_URL="$SUPABASE_URL/storage/v1/object/store-templates/apks/$TARGET_NAME"
+          
+          curl -X POST -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+               -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+               -H "Content-Type: application/vnd.android.package-archive" \
+               --data-binary "@$APK_FILE" \
+               "$UPLOAD_URL" || \
+          curl -X PUT -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+               -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+               -H "Content-Type: application/vnd.android.package-archive" \
+               --data-binary "@$APK_FILE" \
+               "$UPLOAD_URL"
+
+          DOWNLOAD_URL="$SUPABASE_URL/storage/v1/object/public/store-templates/apks/$TARGET_NAME"
+          echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
+
+      - name: Update Database Store APK status to Completed
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          STORE_ID="${{ github.event.client_payload.store_id }}"
+          DOWNLOAD_URL="${{ env.DOWNLOAD_URL }}"
+          
+          echo "Retrieving current settings..."
+          SETTINGS_JSON=$(curl -s -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+               -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+               "$SUPABASE_URL/rest/v1/stores?id=eq.$STORE_ID&select=settings" | node -e '
+                 const fs = require("fs");
+                 const data = JSON.parse(fs.readFileSync(0, "utf-8"));
+                 console.log(JSON.stringify(data[0].settings || {}));
+               ')
+
+          UPDATED_SETTINGS=$(node -e '
+            const settings = '"$SETTINGS_JSON"';
+            if (settings.apk_build_request) {
+              settings.apk_build_request.status = "completed";
+              settings.apk_build_request.download_url = "'"$DOWNLOAD_URL"'";
+            }
+            console.log(JSON.stringify(settings));
+          ')
+
+          echo "Updating store settings row..."
+          curl -X PATCH -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+               -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+               -H "Content-Type: application/json" \
+               -d "{\"settings\": $UPDATED_SETTINGS}" \
+               "$SUPABASE_URL/rest/v1/stores?id=eq.$STORE_ID"

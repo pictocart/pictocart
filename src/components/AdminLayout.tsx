@@ -25,6 +25,7 @@ import {
   Layers,
   Boxes,
   Bot,
+  Smartphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ const adminNavItems = [
   { label: 'Overview', icon: LayoutDashboard, path: '/admin' },
   { label: 'Stores', icon: Store, path: '/admin/stores' },
   { label: 'Domains', icon: Globe, path: '/admin/domains' },
+  { label: 'APK Requests', icon: Smartphone, path: '/admin/apk-requests' },
   { label: 'Theme Components', icon: Layers, path: '/admin/theme-components' },
   { label: 'Provisioning', icon: Rocket, path: '/admin/provisioning' },
   { label: 'Users', icon: Users, path: '/admin/users' },

@@ -38,6 +38,7 @@ import {
   Receipt,
   Wallet as WalletIcon,
   CalendarClock,
+  Smartphone,
   Stethoscope,
   Scissors,
   HeartHandshake,
@@ -142,6 +143,7 @@ const navTree: NavEntry[] = [
     children: [
       { label: 'Themes', icon: Palette, path: '/themes' },
       { label: 'Store Design', icon: SettingsIcon, path: '/customise' },
+      { label: 'Mobile App', icon: Smartphone, path: '/settings/mobile-app' },
       { label: 'Promo Ticker', icon: Megaphone, path: '/promo-ticker' },
       { label: 'Policies & Pages', icon: FileText, path: '/policies' },
       { label: 'Analytics', icon: TrendingUp, path: '/analytics' },

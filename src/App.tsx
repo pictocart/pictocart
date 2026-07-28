@@ -60,6 +60,7 @@ const PaymentSettings = lazy(() => import("@/pages/PaymentSettings"));
 const CodSettings = lazy(() => import("@/pages/CodSettings"));
 const ShippingSettings = lazy(() => import("@/pages/ShippingSettings"));
 const FulfillmentSettings = lazy(() => import("@/pages/FulfillmentSettings"));
+const MobileAppSettings = lazy(() => import("@/pages/MobileAppSettings"));
 const QRCodes = lazy(() => import("@/pages/QRCodes"));
 const QRRedirect = lazy(() => import("@/pages/QRRedirect"));
 const Menu = lazy(() => import("@/pages/Menu"));
@@ -144,6 +145,7 @@ const PartnerHierarchy = lazy(() => import("@/pages/partner/PartnerHierarchy"));
 const PartnerPayouts = lazy(() => import("@/pages/partner/PartnerPayouts"));
 const AdminPartnerPayouts = lazy(() => import("@/pages/admin/AdminPartnerPayouts"));
 const AdminDomains = lazy(() => import("@/pages/admin/AdminDomains"));
+const AdminApkRequests = lazy(() => import("@/pages/admin/AdminApkRequests"));
 const AdminPartnerAnalytics = lazy(() => import("@/pages/admin/AdminPartnerAnalytics"));
 const StoreInviteAccept = lazy(() => import("@/pages/storefront/StoreInviteAccept"));
 const Help = lazy(() => import("@/pages/Help"));
@@ -310,6 +312,7 @@ const AppRoutes = () => {
             <Route path="/settings/cod" element={<CodSettings />} />
             <Route path="/settings/shipping" element={<ShippingSettings />} />
             <Route path="/settings/fulfillment" element={<FulfillmentSettings />} />
+            <Route path="/settings/mobile-app" element={<MobileAppSettings />} />
             <Route path="/settings/qr" element={<QRCodes />} />
             <Route path="/settings/domain" element={<DomainSettings />} />
             <Route path="/settings/seo" element={<SEOSettings />} />
@@ -367,6 +370,7 @@ const AppRoutes = () => {
             <Route path="/admin/partner-payouts" element={<AdminPartnerPayouts />} />
             <Route path="/admin/partner-analytics" element={<AdminPartnerAnalytics />} />
             <Route path="/admin/domains" element={<AdminDomains />} />
+            <Route path="/admin/apk-requests" element={<AdminApkRequests />} />
             <Route path="/admin/theme-components" element={<AdminThemeComponentLibrary />} />
 
           </Route>
