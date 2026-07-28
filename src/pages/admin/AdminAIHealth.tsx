@@ -142,9 +142,9 @@ const useActionCosts = () => useQuery({
   queryFn: async () => {
     const { data } = await supabase
       .from('ai_action_costs' as any)
-      .select('action_key, model, credits_cost, is_active')
+      .select('action_key, model, credits_cost:credits, fallback_model, is_active')
       .order('action_key');
-    return (data || []) as unknown as { action_key: string; model: string; credits_cost: number; is_active: boolean }[];
+    return (data || []) as unknown as { action_key: string; model: string; credits_cost: number; fallback_model: string | null; is_active: boolean }[];
   },
 });
 
@@ -737,7 +737,7 @@ const ModelFormDialog = ({
 };
 
 // ─── Action Cost Model Editor ─────────────────────────────────────────────────
-const ActionCostModelCell = ({ row, models }: { row: { action_key: string; model: string; credits_cost: number; is_active: boolean }; models: LlmModel[] }) => {
+const ActionCostModelCell = ({ row, models }: { row: { action_key: string; model: string; credits_cost: number; fallback_model: string | null; is_active: boolean }; models: LlmModel[] }) => {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(row.model);

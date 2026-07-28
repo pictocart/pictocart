@@ -120,10 +120,10 @@ const PAGE_SECTION_DEFAULTS: Record<string, Array<{ id: string; label: string; e
   ],
   blog: [
     { id: 'page_title', label: 'Page Title', enabled: true, style: 'classic', compulsive: true },
-    { id: 'journal_list', label: 'Journal List', enabled: true, style: 'classic', compulsive: true },
+    { id: 'journal_list', label: 'Blog List', enabled: true, style: 'classic', compulsive: true },
   ],
   blog_post: [
-    { id: 'journal_strip', label: 'Journal Content', enabled: true, style: 'classic', compulsive: true },
+    { id: 'journal_strip', label: 'Blog', enabled: true, style: 'classic', compulsive: true },
     { id: 'newsletter', label: 'Newsletter', enabled: true, style: 'classic' },
   ],
   search: [
@@ -189,12 +189,12 @@ const GEN_STEPS = [
   { label: 'Publishing to theme library',     pct: 98 },
 ];
 
-const matchesCategory = (themeCategory: string | null, merchantCategory: string) => {
-  if (!themeCategory) return false;
-  const tc = themeCategory.toLowerCase();
+const matchesCategory = (themeCategory: string | null, merchantCategory: string, themeName: string = "") => {
+  const tc = (themeCategory || "").toLowerCase();
+  const tn = themeName.toLowerCase();
   const aliases = CATEGORY_ALIASES[merchantCategory] || [merchantCategory];
   if (aliases.length === 0) return false;
-  return aliases.some((a) => tc.includes(a));
+  return aliases.some((a) => tc.includes(a) || tn.includes(a));
 };
 
 type GenState = 'idle' | 'confirm' | 'generating' | 'done' | 'used';

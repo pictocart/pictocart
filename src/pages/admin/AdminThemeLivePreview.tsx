@@ -14,6 +14,67 @@ import MasterThemeRenderer from "@/components/theme/MasterThemeRenderer";
    and animated gradient meshes - theme-aware and performant.
    ============================================================================ */
 
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  phase: number;
+  speed: number;
+}
+
+interface Shape3D {
+  x: number;
+  y: number;
+  z: number;
+  size: number;
+  type: 'cube' | 'tetrahedron' | 'ring';
+  rx: number;
+  ry: number;
+  rz: number;
+  vrx: number;
+  vry: number;
+  vrz: number;
+  vx: number;
+  vy: number;
+  color: string;
+}
+
+function createParticle(theme: TK, width: number, height: number): Particle {
+  return {
+    x: Math.random() * width,
+    y: Math.random() * height,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    size: Math.random() * 2.5 + 0.5,
+    alpha: Math.random() * 0.4 + 0.1,
+    phase: Math.random() * Math.PI * 2,
+    speed: Math.random() * 0.02 + 0.005,
+  };
+}
+
+function createShape3D(theme: TK, width: number, height: number): Shape3D {
+  const types: ('cube' | 'tetrahedron' | 'ring')[] = ['cube', 'tetrahedron', 'ring'];
+  return {
+    x: Math.random() * width,
+    y: Math.random() * height,
+    z: Math.random() * 200 + 50,
+    size: Math.random() * 25 + 10,
+    type: types[Math.floor(Math.random() * types.length)],
+    rx: Math.random() * Math.PI * 2,
+    ry: Math.random() * Math.PI * 2,
+    rz: Math.random() * Math.PI * 2,
+    vrx: (Math.random() - 0.5) * 0.015,
+    vry: (Math.random() - 0.5) * 0.015,
+    vrz: (Math.random() - 0.5) * 0.015,
+    vx: (Math.random() - 0.5) * 0.4,
+    vy: (Math.random() - 0.5) * 0.4,
+    color: theme.accent,
+  };
+}
+
 interface Dynamic3DBackgroundProps {
   theme: TK;
   intensity?: 'subtle' | 'medium' | 'intense';
@@ -37,6 +98,184 @@ function Dynamic3DBackground({ theme, intensity = 'medium', className = '' }: Dy
     };
     return base[intensity];
   }, [intensity]);
+
+  // Draw animated gradient mesh background
+  const drawGradientMesh = (ctx: CanvasRenderingContext2D, width: number, height: number, theme: TK, t: number) => {
+    ctx.save();
+    const x1 = width * (0.3 + 0.15 * Math.sin(t * 0.5));
+    const y1 = height * (0.3 + 0.15 * Math.cos(t * 0.4));
+    const r1 = Math.min(width, height) * 0.6;
+    const g1 = ctx.createRadialGradient(x1, y1, 0, x1, y1, r1);
+    g1.addColorStop(0, theme.accent + '1a'); // 10% opacity
+    g1.addColorStop(1, 'transparent');
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, width, height);
+
+    const x2 = width * (0.7 + 0.15 * Math.cos(t * 0.3));
+    const y2 = height * (0.6 + 0.15 * Math.sin(t * 0.6));
+    const r2 = Math.min(width, height) * 0.7;
+    const g2 = ctx.createRadialGradient(x2, y2, 0, x2, y2, r2);
+    g2.addColorStop(0, theme.surface + '44');
+    g2.addColorStop(1, 'transparent');
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  };
+
+  // Rotate and project 3D wireframe shapes
+  const drawShapes3D = (ctx: CanvasRenderingContext2D, width: number, height: number, theme: TK, t: number, mouse: { x: number; y: number }) => {
+    const dx = (mouse.x - 0.5) * 40;
+    const dy = (mouse.y - 0.5) * 40;
+
+    shapesRef.current.forEach((shape) => {
+      // Update position
+      shape.x += shape.vx;
+      shape.y += shape.vy;
+      shape.rx += shape.vrx;
+      shape.ry += shape.vry;
+      shape.rz += shape.vrz;
+
+      // Screen wrapping
+      const margin = shape.size * 2;
+      if (shape.x < -margin) shape.x = width + margin;
+      if (shape.x > width + margin) shape.x = -margin;
+      if (shape.y < -margin) shape.y = height + margin;
+      if (shape.y > height + margin) shape.y = -margin;
+
+      // Rotate vertices
+      const rotate = (x: number, y: number, z: number) => {
+        // X-axis rotation
+        let y1 = y * Math.cos(shape.rx) - z * Math.sin(shape.rx);
+        let z1 = y * Math.sin(shape.rx) + z * Math.cos(shape.rx);
+        // Y-axis rotation
+        let x2 = x * Math.cos(shape.ry) + z1 * Math.sin(shape.ry);
+        let z2 = -x * Math.sin(shape.ry) + z1 * Math.cos(shape.ry);
+        // Z-axis rotation
+        let x3 = x2 * Math.cos(shape.rz) - y1 * Math.sin(shape.rz);
+        let y3 = x2 * Math.sin(shape.rz) + y1 * Math.cos(shape.rz);
+        return { x: x3, y: y3, z: z2 };
+      };
+
+      // Projection factor (parallax depth)
+      const focal = 150;
+      const project = (v3d: { x: number; y: number; z: number }) => {
+        const scale = focal / (v3d.z + shape.z + focal);
+        // Add mouse parallax based on depth (closer items move more)
+        const parallaxX = dx * (150 / shape.z);
+        const parallaxY = dy * (150 / shape.z);
+        return {
+          x: v3d.x * scale * shape.size + shape.x + parallaxX,
+          y: v3d.y * scale * shape.size + shape.y + parallaxY,
+        };
+      };
+
+      ctx.beginPath();
+      ctx.strokeStyle = theme.accent + '22'; // low opacity
+      ctx.lineWidth = 1;
+
+      if (shape.type === 'cube') {
+        const vertices = [
+          { x: -1, y: -1, z: -1 }, { x: 1, y: -1, z: -1 },
+          { x: 1, y: 1, z: -1 }, { x: -1, y: 1, z: -1 },
+          { x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 },
+          { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 },
+        ].map(v => project(rotate(v.x, v.y, v.z)));
+
+        const edges = [
+          [0, 1], [1, 2], [2, 3], [3, 0], // back
+          [4, 5], [5, 6], [6, 7], [7, 4], // front
+          [0, 4], [1, 5], [2, 6], [3, 7], // sides
+        ];
+
+        edges.forEach(([p1, p2]) => {
+          ctx.moveTo(vertices[p1].x, vertices[p1].y);
+          ctx.lineTo(vertices[p2].x, vertices[p2].y);
+        });
+      } else if (shape.type === 'tetrahedron') {
+        const vertices = [
+          { x: 0, y: -1, z: 0 },
+          { x: -1.0, y: 0.8, z: -0.6 },
+          { x: 1.0, y: 0.8, z: -0.6 },
+          { x: 0, y: 0.8, z: 1.2 },
+        ].map(v => project(rotate(v.x, v.y, v.z)));
+
+        const edges = [
+          [0, 1], [0, 2], [0, 3],
+          [1, 2], [2, 3], [3, 1],
+        ];
+
+        edges.forEach(([p1, p2]) => {
+          ctx.moveTo(vertices[p1].x, vertices[p1].y);
+          ctx.lineTo(vertices[p2].x, vertices[p2].y);
+        });
+      } else if (shape.type === 'ring') {
+        const segments = 16;
+        const ringVertices = [];
+        for (let i = 0; i < segments; i++) {
+          const angle = (i / segments) * Math.PI * 2;
+          ringVertices.push(project(rotate(Math.cos(angle), Math.sin(angle), 0)));
+        }
+        for (let i = 0; i < segments; i++) {
+          const next = (i + 1) % segments;
+          ctx.moveTo(ringVertices[i].x, ringVertices[i].y);
+          ctx.lineTo(ringVertices[next].x, ringVertices[next].y);
+        }
+      }
+      ctx.stroke();
+    });
+  };
+
+  // Draw particle system
+  const drawParticles = (ctx: CanvasRenderingContext2D, width: number, height: number, theme: TK, t: number, mouse: { x: number; y: number }) => {
+    const dx = (mouse.x - 0.5) * 20;
+    const dy = (mouse.y - 0.5) * 20;
+
+    particlesRef.current.forEach((p) => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.phase += p.speed;
+
+      if (p.x < 0) p.x = width;
+      if (p.x > width) p.x = 0;
+      if (p.y < 0) p.y = height;
+      if (p.y > height) p.y = 0;
+
+      const currentAlpha = p.alpha * (0.6 + 0.4 * Math.sin(p.phase));
+
+      ctx.beginPath();
+      ctx.fillStyle = theme.accent;
+      ctx.globalAlpha = currentAlpha;
+      ctx.arc(p.x + dx, p.y + dy, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1.0;
+  };
+
+  // Draw depth grid
+  const drawDepthGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, theme: TK, t: number, mouse: { x: number; y: number }) => {
+    ctx.save();
+    ctx.strokeStyle = theme.border + '15';
+    ctx.lineWidth = 0.5;
+
+    const gridSize = 80;
+    const dx = (mouse.x - 0.5) * 15;
+    const dy = (mouse.y - 0.5) * 15;
+
+    for (let x = 0; x < width; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x + dx, 0);
+      ctx.lineTo(x + dx, height);
+      ctx.stroke();
+    }
+
+    for (let y = 0; y < height; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + dy);
+      ctx.lineTo(width, y + dy);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
 
   // Initialize particles and 3D shapes
   useEffect(() => {

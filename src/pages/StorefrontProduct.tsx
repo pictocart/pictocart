@@ -70,7 +70,7 @@ const MasterProductView = ({
     // render with classic layout but still use theme's colors/fonts via
     // StorefrontLayout which reads the manifest for header/footer.
     const storeThemeTokens = getStoreThemeTokens(store);
-    const theme = resolveTheme(storeThemeTokens);
+    const theme = resolveTheme(storeThemeTokens, store);
     const relatedProducts = products
       .filter((p: any) => p.id !== product.id && p.category === product.category)
       .slice(0, 8);
@@ -180,7 +180,7 @@ const StorefrontProduct = () => {
   // ── Classic / legacy theme ───────────────────────────────────────────────
   // No manifest, use store.settings.product_sections (or defaults)
   const storeThemeTokens = getStoreThemeTokens(store);
-  const theme = resolveTheme(storeThemeTokens);
+  const theme = resolveTheme(storeThemeTokens, store);
   const relatedProducts = products
     .filter((p: any) => p.id !== dbProduct.id && p.category === dbProduct.category)
     .slice(0, 8);

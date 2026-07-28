@@ -85,6 +85,7 @@ const OrderDetail = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -142,11 +143,26 @@ const OrderDetail = () => {
       return;
     }
 
+    setPendingStatus(status);
+  };
+
+  const confirmStatusChange = () => {
+    if (!pendingStatus) return;
     updateStatus.mutate(
-      { id: order.id, status: status as OrderStatus },
-      { onSuccess: () => refetch() }
+      { id: order.id, status: pendingStatus as OrderStatus },
+      {
+        onSuccess: () => {
+          refetch();
+          toast.success(`Order status changed to ${pendingStatus}`);
+          setPendingStatus(null);
+        },
+        onError: (err: any) => {
+          toast.error(err.message);
+          setPendingStatus(null);
+        }
+      }
     );
-    const notificationType = STATUS_NOTIFICATION_MAP[status];
+    const notificationType = STATUS_NOTIFICATION_MAP[pendingStatus];
     if (notificationType) {
       sendOrderNotification(notificationType);
     }
@@ -160,6 +176,30 @@ const OrderDetail = () => {
     sendOrderNotification('order_shipped');
     refetch();
     toast.success('Order marked as shipped — customer notified');
+  };
+
+  const handleShipClick = async () => {
+    if (!(order as any).invoice_number) {
+      toast('Invoice not generated', {
+        description: 'Generating an invoice is required before shipping. Generate now?',
+        action: {
+          label: 'Generate & Ship',
+          onClick: async () => {
+            const { data, error } = await (supabase as any).rpc('next_invoice_number', {
+              _store_id: order.store_id,
+              _prefix: 'INV',
+            });
+            if (error) { toast.error(error.message); return; }
+            await supabase.from('orders').update({ invoice_number: data } as any).eq('id', order.id);
+            toast.success(`Invoice ${data} generated`);
+            refetch();
+            setShipDialogOpen(true);
+          }
+        },
+      });
+      return;
+    }
+    setShipDialogOpen(true);
   };
 
   const handleTrack = async () => {
@@ -288,7 +328,7 @@ const OrderDetail = () => {
             </Button>
           )}
           {!order.tracking_number && store && (
-            <Button data-tour="order-ship" variant="outline" size="sm" onClick={() => setShipDialogOpen(true)}>
+            <Button data-tour="order-ship" variant="outline" size="sm" onClick={handleShipClick}>
               <Truck className="h-4 w-4 mr-1" /> Ship Order
             </Button>
           )}
@@ -737,6 +777,23 @@ const OrderDetail = () => {
             >
               {rejecting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               Yes, Reject Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!pendingStatus} onOpenChange={(o) => { if (!o) setPendingStatus(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Order Status</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to change the status of order <span className="font-semibold">#{order.order_number}</span> to <span className="font-semibold capitalize">{pendingStatus}</span>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmStatusChange}>
+              Yes, Change Status
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

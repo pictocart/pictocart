@@ -61,7 +61,7 @@ interface Props {
   themeOverride?: ThemeTokens | null;
 }
 
-function resolveTheme(themeData: ThemeTokens | null | undefined): ThemeTemplate {
+export function resolveTheme(themeData: ThemeTokens | null | undefined, store?: any): ThemeTemplate {
   const base = THEME_TEMPLATES.find((t) => t.id === themeData?.name) || THEME_TEMPLATES[0];
   const flattenedColors = Object.fromEntries(
     Object.entries({
@@ -74,16 +74,41 @@ function resolveTheme(themeData: ThemeTokens | null | undefined): ThemeTemplate 
     }).filter(([, value]) => typeof value === 'string' && value.length > 0)
   ) as Partial<ThemeTemplate['colors']>;
 
+  const resolved = store?.resolved_storefront_manifest;
+  const manifestPalette = resolved?.manifest?.dna?.palette || {};
+  const storefrontConfig = getStorefrontConfig(store);
+  const customPalette = storefrontConfig?.theme_overrides?.palette || {};
+
+  const mergedColors = {
+    ...base.colors,
+    ...flattenedColors,
+    ...(themeData?.colors || {}),
+  };
+
+  const themeId = themeData?.theme_id || store?.theme_id || '';
+  const isThemeManifestTheme = !!themeId && (themeId.startsWith('theme-') || themeId.startsWith('custom-theme-') || themeId.startsWith('layout1-'));
+
+  if (isThemeManifestTheme && (Object.keys(manifestPalette).length > 0 || Object.keys(customPalette).length > 0)) {
+    const combinedPalette = { ...manifestPalette, ...customPalette };
+    if (combinedPalette.primary) mergedColors.primary = combinedPalette.primary;
+    if (combinedPalette.surface) {
+      mergedColors.secondary = combinedPalette.surface;
+      mergedColors.card = combinedPalette.surface;
+    }
+    if (combinedPalette.accent) mergedColors.accent = combinedPalette.accent;
+    if (combinedPalette.bg) mergedColors.background = combinedPalette.bg;
+    if (combinedPalette.fg) mergedColors.text = combinedPalette.fg;
+  }
+
+  const headingFont = resolved?.manifest?.dna?.fonts?.heading || themeData?.fonts?.heading || base.fonts.heading;
+  const bodyFont = resolved?.manifest?.dna?.fonts?.body || themeData?.fonts?.body || base.fonts.body;
+
   return {
     ...base,
-    colors: {
-      ...base.colors,
-      ...flattenedColors,
-      ...(themeData?.colors || {}),
-    },
+    colors: mergedColors,
     fonts: {
-      heading: themeData?.fonts?.heading || base.fonts.heading,
-      body: themeData?.fonts?.body || base.fonts.body,
+      heading: headingFont,
+      body: bodyFont,
     },
     borderRadius: themeData?.borderRadius ?? base.borderRadius,
   };
@@ -101,7 +126,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
   const storefrontConfig = getStorefrontConfig(store) as LooseRecord;
   const resolvedManifest = getResolvedManifest(store);
   const storeThemeTokens = getStoreThemeTokens(store);
-  const theme = resolveTheme(themeOverride || storeThemeTokens);
+  const theme = resolveTheme(themeOverride || storeThemeTokens, store);
   const { colors, fonts } = theme;
   const { totalItems } = useCart(store.slug);
   const { user } = useCustomerAuth(store.slug);
@@ -129,16 +154,20 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
   const manifestData = ((useDbManifest ? dbManifest : resolvedManifest?.manifest) || dbManifest || null) as ThemeManifest | null;
   const baseDna = getManifestDna(manifestData) as LooseRecord;
   const manifestPalette = getManifestPalette(manifestData) as LooseRecord;
-  // When using a manifest-based theme (theme-style-*), the manifest palette takes
+  const customPalette = storefrontConfig?.theme_overrides?.palette || {};
+
+  // When using a manifest-based theme (theme-style-*), the manifest palette and customizer palette take
   // priority so the dark/custom bg, fg, primary colors are respected on all pages.
-  const mergedPalette = isThemeManifestTheme && Object.keys(manifestPalette).length > 0
+  const mergedPalette = isThemeManifestTheme && (Object.keys(manifestPalette).length > 0 || Object.keys(customPalette).length > 0)
     ? {
         ...((themeOverride?.colors || storeThemeTokens?.colors || {}) as LooseRecord),
         ...manifestPalette,
+        ...customPalette,
       }
     : {
         ...manifestPalette,
         ...((themeOverride?.colors || storeThemeTokens?.colors || {}) as LooseRecord),
+        ...customPalette,
       };
   const headerManifest = getManifestHeader(manifestData) as LooseRecord | null;
   const footerManifest = getManifestFooter(manifestData) as LooseRecord | null;
@@ -243,8 +272,67 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
     themeId.includes('theme-style-17')
   );
 
+  const hexToHsl = (hexColor: string) => {
+    try {
+      let hex = hexColor.replace(/^#/, '');
+      if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      }
+      let r = parseInt(hex.substring(0, 2), 16) / 255;
+      let g = parseInt(hex.substring(2, 4), 16) / 255;
+      let b = parseInt(hex.substring(4, 6), 16) / 255;
+      let max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0, l = (max + min) / 2;
+      if (max !== min) {
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+    } catch {
+      return '0 0% 100%';
+    }
+  };
+
+  const hslBg = hexToHsl(extendedColors.background);
+  const hslFg = hexToHsl(extendedColors.text);
+  const hslCard = hexToHsl(extendedColors.card || extendedColors.surface);
+  const hslBorder = hexToHsl(extendedColors.border || extendedColors.secondary);
+  const hslMuted = hexToHsl(extendedColors.muted || '#888888');
+  const hslPrimary = hexToHsl(extendedColors.primary);
+  const hslAccent = hexToHsl(extendedColors.accent);
+  const hslSecondary = hexToHsl(extendedColors.secondary || extendedColors.border);
+
   return (
     <div className="min-h-screen flex flex-col storefront-root" style={layoutStyleObj}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        body {
+          background-color: hsl(${hslBg}) !important;
+          color: hsl(${hslFg}) !important;
+        }
+        .storefront-root {
+          --background: ${hslBg} !important;
+          --foreground: ${hslFg} !important;
+          --card: ${hslCard} !important;
+          --card-foreground: ${hslFg} !important;
+          --popover: ${hslCard} !important;
+          --popover-foreground: ${hslFg} !important;
+          --primary: ${hslPrimary} !important;
+          --primary-foreground: 0 0% 100% !important;
+          --secondary: ${hslSecondary} !important;
+          --secondary-foreground: ${hslFg} !important;
+          --muted: ${hslMuted} !important;
+          --muted-foreground: ${hslFg} !important;
+          --border: ${hslBorder} !important;
+          --input: ${hslBorder} !important;
+          --ring: ${hslPrimary} !important;
+        }
+      ` }} />
       {is3DTheme && <Theme3DPageBackground themeId={themeId} palette={mergedPalette} />}
       <SiteOfferBanner storeId={store.id} />
       <PromoTicker
@@ -341,4 +429,3 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
 };
 
 export default StorefrontLayout;
-export { resolveTheme };

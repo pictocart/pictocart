@@ -52,6 +52,21 @@ const ProductCardActions = ({ storeSlug, product, primaryColor = 'hsl(var(--prim
     navigate(`/store/${storeSlug}/checkout`);
   };
 
+  if (isOutOfStock) {
+    return (
+      <div className="mt-2.5 w-full">
+        <button
+          type="button"
+          disabled
+          className="w-full h-8 text-[11px] font-bold inline-flex items-center justify-center gap-1.5 bg-gray-500/20 text-gray-500 cursor-not-allowed border-none"
+          style={{ borderRadius: radius }}
+        >
+          <span>Out of Stock</span>
+        </button>
+      </div>
+    );
+  }
+
   const heightClass = compact ? 'h-8' : 'h-9';
   const textClass = compact ? 'text-[11px]' : 'text-xs';
   const iconBtnWidth = compact ? 'w-8' : 'w-9';

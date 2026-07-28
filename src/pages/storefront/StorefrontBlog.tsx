@@ -14,7 +14,7 @@ const StorefrontBlog = () => {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   if (!store) return <div className="min-h-screen flex items-center justify-center"><p>Store not found</p></div>;
 
-  const theme = resolveTheme(getStoreThemeTokens(store));
+  const theme = resolveTheme(getStoreThemeTokens(store), store);
   const { colors, fonts, borderRadius } = theme;
 
   return (

@@ -182,6 +182,30 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
         const heightMap: Record<string, string> = { small: 'h-[200px] md:h-[250px]', medium: 'h-[300px] md:h-[400px]', large: 'h-[400px] md:h-[550px]' };
         const heroMargin = section.topMargin ? `${section.topMargin}px` : '0px';
 
+        if (section.scroll_horizontal && heroImages.length > 1) {
+          return wrapAnimated(
+            <section className="relative overflow-hidden" style={{ marginTop: heroMargin }}>
+              <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-none px-4">
+                {heroImages.map((img, i) => (
+                  <div key={i} className={`relative shrink-0 snap-center min-w-[85%] md:min-w-[70%] rounded-2xl overflow-hidden ${heightMap[sizeMode] || 'h-[300px]'}`}>
+                    <img src={img} className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/35" />
+                    <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 text-white">
+                      <h1 className="text-xl md:text-3xl font-bold leading-tight mb-2" style={{ fontFamily: fonts.heading }}>
+                        {section.title || store.description || `Welcome to ${store.name}`}
+                      </h1>
+                      {section.subtitle && <p className="text-xs md:text-sm opacity-90 mb-4">{section.subtitle}</p>}
+                      <a href="#products" className="inline-block w-fit px-5 py-2 text-xs font-semibold" style={{ backgroundColor: colors.primary, color: '#fff', borderRadius: `${borderRadius}px` }}>
+                        Shop Now
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        }
+
         if (isSlider) {
           return wrapAnimated(
             <section className="relative overflow-hidden" style={{ marginTop: heroMargin }}>
@@ -291,7 +315,7 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
         return categories.length > 0 ? wrapAnimated(
           <section className="max-w-6xl mx-auto px-4 py-8">
             <h2 className="text-lg font-bold mb-4" style={{ fontFamily: fonts.heading }}>{section.title || 'Shop by Category'}</h2>
-            {section.style === 'carousel_strip' ? (
+            {(section.scroll_horizontal || section.style === 'carousel_strip') ? (
               <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 scrollbar-none">
                 {categories.map((cat) => (
                   <button 

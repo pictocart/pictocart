@@ -28,9 +28,13 @@ const StorefrontSearch = () => {
   useEffect(() => {
     const cat = searchParams.get('category');
     if (cat) {
-      setSelectedCategories([cat]);
+      if (selectedCategories.length <= 1 && selectedCategories[0] !== cat) {
+        setSelectedCategories([cat]);
+      }
     } else {
-      setSelectedCategories([]);
+      if (selectedCategories.length === 1) {
+        setSelectedCategories([]);
+      }
     }
   }, [searchParams]);
   const [minPrice, setMinPrice] = useState<number>(0);
@@ -46,7 +50,7 @@ const StorefrontSearch = () => {
     setLoadingProducts(true);
     supabase
       .from('products')
-      .select('id, title, description, price, compare_at_price, images, category, is_active, created_at')
+      .select('id, title, description, price, compare_at_price, images, category, is_active, created_at, inventory_count')
       .eq('store_id', store.id)
       .eq('is_active', true)
       .then(({ data, error }) => {
@@ -139,7 +143,7 @@ const StorefrontSearch = () => {
 
   if (!store) return null;
 
-  const theme = resolveTheme(getStoreThemeTokens(store));
+  const theme = resolveTheme(getStoreThemeTokens(store), store);
   const { colors, fonts, borderRadius } = theme;
   const br = `${borderRadius}px`;
   const brHalf = `${borderRadius / 2}px`;
@@ -316,39 +320,6 @@ const StorefrontSearch = () => {
                 </div>
               </div>
 
-              {/* Customer Rating Filter */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider opacity-60">Customer Rating</h4>
-                <div className="space-y-1.5">
-                  {[4, 3, 2].map((stars) => (
-                    <label key={stars} className="flex items-center gap-2 text-xs font-medium cursor-pointer">
-                      <input
-                        type="radio"
-                        name="ratingFilter"
-                        checked={minRating === stars}
-                        onChange={() => setMinRating(stars)}
-                        className="accent-current"
-                        style={{ accentColor: colors.primary }}
-                      />
-                      <span className="flex items-center gap-1">
-                        {stars}★ & above
-                      </span>
-                    </label>
-                  ))}
-                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
-                    <input
-                      type="radio"
-                      name="ratingFilter"
-                      checked={minRating === 0}
-                      onChange={() => setMinRating(0)}
-                      className="accent-current"
-                      style={{ accentColor: colors.primary }}
-                    />
-                    <span>Any Rating</span>
-                  </label>
-                </div>
-              </div>
-
             </div>
           </div>
 
@@ -372,10 +343,11 @@ const StorefrontSearch = () => {
                 {finalFilteredProducts.map((p) => {
                   const hasDiscount = p.compare_at_price && p.compare_at_price > p.price;
                   const discountPercent = hasDiscount ? Math.round(((p.compare_at_price - p.price) / p.compare_at_price) * 100) : 0;
+                  const isOutOfStock = p.inventory_count === 0;
                   return (
                     <div 
                       key={p.id}
-                      className="p-3 border rounded-xl transition-all hover:shadow-md flex flex-col justify-between"
+                      className={`p-3 border rounded-xl transition-all flex flex-col justify-between ${isOutOfStock ? 'opacity-50 grayscale hover:shadow-none' : 'hover:shadow-md'}`}
                       style={{ borderColor: colors.secondary, backgroundColor: colors.card }}
                     >
                       <Link to={`/store/${slug}/product/${p.id}`} className="block group">
@@ -386,6 +358,11 @@ const StorefrontSearch = () => {
                           {hasDiscount && (
                             <span className="absolute top-2 left-2 text-[9px] font-bold bg-red-500 text-white px-2 py-0.5 rounded">
                               {discountPercent}% OFF
+                            </span>
+                          )}
+                          {isOutOfStock && (
+                            <span className="absolute top-2 right-2 text-[9px] font-black bg-gray-600 text-white px-2 py-0.5 rounded shadow">
+                              OUT OF STOCK
                             </span>
                           )}
                         </div>
@@ -411,11 +388,12 @@ const StorefrontSearch = () => {
                       </Link>
 
                       <button 
-                        onClick={() => handleAddToCart(p)}
-                        className="w-full mt-3 py-2 text-xs font-bold text-white flex items-center justify-center gap-1.5"
-                        style={{ backgroundColor: colors.primary, borderRadius: brHalf }}
+                        onClick={() => !isOutOfStock && handleAddToCart(p)}
+                        disabled={isOutOfStock}
+                        className={`w-full mt-3 py-2 text-xs font-bold text-white flex items-center justify-center gap-1.5 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        style={{ backgroundColor: isOutOfStock ? '#6b7280' : colors.primary, borderRadius: brHalf }}
                       >
-                        <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
+                        <ShoppingBag className="h-3.5 w-3.5" /> {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
                       </button>
                     </div>
                   );
@@ -425,13 +403,14 @@ const StorefrontSearch = () => {
               
               /* LIST VIEW MODE (Flipkart alignment) */
               <div className="space-y-4">
-                {finalFilteredProducts.map((p) => {
+                 {finalFilteredProducts.map((p) => {
                   const hasDiscount = p.compare_at_price && p.compare_at_price > p.price;
                   const discountPercent = hasDiscount ? Math.round(((p.compare_at_price - p.price) / p.compare_at_price) * 100) : 0;
+                  const isOutOfStock = p.inventory_count === 0;
                   return (
                     <div 
                       key={p.id}
-                      className="p-4 border rounded-xl flex gap-4 transition-all hover:shadow-md items-start sm:items-center bg-card"
+                      className={`p-4 border rounded-xl flex gap-4 transition-all items-start sm:items-center bg-card ${isOutOfStock ? 'opacity-50 grayscale hover:shadow-none' : 'hover:shadow-md'}`}
                       style={{ borderColor: colors.secondary }}
                     >
                       <Link to={`/store/${slug}/product/${p.id}`} className="h-24 w-24 sm:h-32 sm:w-32 bg-black/5 rounded-lg overflow-hidden shrink-0 block relative">
@@ -441,6 +420,11 @@ const StorefrontSearch = () => {
                         {hasDiscount && (
                           <span className="absolute top-2 left-2 text-[9px] font-bold bg-red-500 text-white px-2 py-0.5 rounded">
                             {discountPercent}% OFF
+                          </span>
+                        )}
+                        {isOutOfStock && (
+                          <span className="absolute top-2 right-2 text-[9px] font-black bg-gray-600 text-white px-2 py-0.5 rounded shadow">
+                            OUT OF STOCK
                           </span>
                         )}
                       </Link>
@@ -472,11 +456,12 @@ const StorefrontSearch = () => {
                           )}
                         </div>
                         <button 
-                          onClick={() => handleAddToCart(p)}
-                          className="px-4 py-2.5 text-xs font-bold text-white flex items-center gap-1.5"
-                          style={{ backgroundColor: colors.primary, borderRadius: brHalf }}
+                          onClick={() => !isOutOfStock && handleAddToCart(p)}
+                          disabled={isOutOfStock}
+                          className={`px-4 py-2.5 text-xs font-bold text-white flex items-center gap-1.5 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          style={{ backgroundColor: isOutOfStock ? '#6b7280' : colors.primary, borderRadius: brHalf }}
                         >
-                          <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
+                          <ShoppingBag className="h-3.5 w-3.5" /> {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
                         </button>
                       </div>
                     </div>
@@ -542,37 +527,7 @@ const StorefrontSearch = () => {
               />
             </div>
 
-            {/* Rating */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider opacity-60">Customer Rating</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {[4, 3, 2].map((stars) => (
-                  <button
-                    key={stars}
-                    onClick={() => setMinRating(stars)}
-                    className="px-3 py-2 text-xs border rounded-lg text-center"
-                    style={{ 
-                      borderColor: minRating === stars ? colors.primary : '#e5e7eb',
-                      backgroundColor: minRating === stars ? colors.primary + '12' : 'transparent',
-                      color: minRating === stars ? colors.primary : '#374151'
-                    }}
-                  >
-                    {stars}★ & above
-                  </button>
-                ))}
-                <button
-                  onClick={() => setMinRating(0)}
-                  className="px-3 py-2 text-xs border rounded-lg text-center"
-                  style={{ 
-                    borderColor: minRating === 0 ? colors.primary : '#e5e7eb',
-                    backgroundColor: minRating === 0 ? colors.primary + '12' : 'transparent',
-                    color: minRating === 0 ? colors.primary : '#374151'
-                  }}
-                >
-                  Any Rating
-                </button>
-              </div>
-            </div>
+
 
             <div className="flex gap-3 pt-4 border-t">
               <button 

@@ -9,7 +9,6 @@ import ImageUploader from '@/components/products/ImageUploader';
 import VideoUploader from '@/components/products/VideoUploader';
 import VoiceVideoRecorder from '@/components/products/VoiceVideoRecorder';
 import VariantMatrix, { type VariantOption } from '@/components/products/VariantMatrix';
-import ProductTypeFields, { PRODUCT_TYPES, getDefaultProductType, type ProductType } from '@/components/products/ProductTypeFields';
 import ProductPreviewCard from '@/components/products/ProductPreviewCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -328,7 +327,7 @@ const ProductForm = () => {
   const [seoDescription, setSeoDescription] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [productType, setProductType] = useState<ProductType>(getDefaultProductType(store?.category));
+  const [productType] = useState('physical');
   const [typeMetadata, setTypeMetadata] = useState<Record<string, any>>({});
 
   // Pre-fill FSSAI license from store settings once store is loaded (new product only)
@@ -437,10 +436,9 @@ const ProductForm = () => {
       setExchangeWindowDays(String((existingProduct as any).exchange_window_days ?? 7));
       setSeoTitle(existingProduct.seo_title || '');
       setSeoDescription(existingProduct.seo_description || '');
-      if (aiData.product_type) setProductType(aiData.product_type as ProductType);
       if (aiData.highlights) setHighlights(aiData.highlights);
       if (Array.isArray(aiData.product_videos)) setProductVideos(aiData.product_videos);
-      const { product_type, highlights: _h, product_hint: _hint, product_videos: _pv, ...rest } = aiData;
+      const { highlights: _h, product_hint: _hint, product_videos: _pv, ...rest } = aiData;
       setTypeMetadata(rest);
     }
   }, [existingProduct]);
@@ -481,8 +479,6 @@ const ProductForm = () => {
       if (p.tags) setTags(p.tags);
       if (p.seoTitle) setSeoTitle(p.seoTitle);
       if (p.seoDescription) setSeoDescription(p.seoDescription);
-      if (p.highlights) setHighlights(p.highlights);
-      if (p.product_type) setProductType(p.product_type as ProductType);
       if (p.metadata && typeof p.metadata === 'object') {
         setTypeMetadata((prev) => ({ ...prev, ...p.metadata }));
       }
@@ -660,25 +656,6 @@ const ProductForm = () => {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left column */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Product Type */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Product Type</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select value={productType} onValueChange={(v) => setProductType(v as ProductType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRODUCT_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-
           {/* Images & Product Hint */}
           <Card>
             <CardHeader className="pb-3">
@@ -793,21 +770,7 @@ const ProductForm = () => {
             </CardContent>
           </Card>
 
-          {/* Category-specific fields */}
-          {productType !== 'physical' && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">{PRODUCT_TYPES.find(t => t.value === productType)?.label} Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProductTypeFields
-                  productType={productType}
-                  metadata={typeMetadata}
-                  onChange={handleTypeMetadataChange}
-                />
-              </CardContent>
-            </Card>
-          )}
+
 
           {/* Pricing & Discount */}
           <Card>

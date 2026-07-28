@@ -43,7 +43,7 @@ const CustomerResetPassword = () => {
   }
   if (!store) return null;
 
-  const theme = resolveTheme(getStoreThemeTokens(store));
+  const theme = resolveTheme(getStoreThemeTokens(store), store);
   const { colors, fonts, borderRadius } = theme;
 
   const inputStyle = {

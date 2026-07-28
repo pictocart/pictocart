@@ -40,7 +40,7 @@ const CustomerOrderDetail = () => {
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
-  const theme = useMemo(() => (store ? resolveTheme(getStoreThemeTokens(store)) : null), [store]);
+  const theme = useMemo(() => (store ? resolveTheme(getStoreThemeTokens(store), store) : null), [store]);
 
   if (storeLoading || loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   if (!store || !user || !theme) return null;

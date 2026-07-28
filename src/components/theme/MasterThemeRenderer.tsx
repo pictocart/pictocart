@@ -184,37 +184,213 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
                     ? [{ type: "page_title", props: { title: "Contact Us" } }, { type: "contact_form", props: {} }]
                     : (manifest?.pages?.[page]?.sections ?? []);
 
+  const footerOv = overrides?.footer || {};
+  const footerStyle: Record<string, any> = {};
+  const footerAttrs: Record<string, string> = {};
+  const TEXT_KEYS = ["title", "sub", "subtitle", "kicker", "cta", "cta_secondary", "body", "email", "phone", "address", "hours"];
+  TEXT_KEYS.forEach((k) => {
+    if (footerOv[`${k}_color`]) {
+      footerStyle[`--${k}-color` as any] = footerOv[`${k}_color`];
+      footerAttrs[`data-has-${k}-color`] = "true";
+    }
+    if (footerOv[`${k}_font_size`]) {
+      const fsVal = footerOv[`${k}_font_size`];
+      const fsStr = typeof fsVal === "number" ? `${fsVal}px` : fsVal;
+      footerStyle[`--${k}-font-size` as any] = fsStr;
+      footerAttrs[`data-has-${k}-font-size`] = "true";
+    }
+  });
+
+  const hexToHsl = (hexColor: string) => {
+    try {
+      let hex = hexColor.replace(/^#/, '');
+      if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      }
+      let r = parseInt(hex.substring(0, 2), 16) / 255;
+      let g = parseInt(hex.substring(2, 4), 16) / 255;
+      let b = parseInt(hex.substring(4, 6), 16) / 255;
+      let max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0, l = (max + min) / 2;
+      if (max !== min) {
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+    } catch {
+      return '0 0% 100%';
+    }
+  };
+
+  const hslBg = hexToHsl(palette.bg || '#ffffff');
+  const hslFg = hexToHsl(palette.fg || '#000000');
+  const hslCard = hexToHsl(palette.surface || palette.bg || '#ffffff');
+  const hslBorder = hexToHsl(palette.border || '#e5e7eb');
+  const hslMuted = hexToHsl(palette.muted || '#f3f4f6');
+  const hslPrimary = hexToHsl(palette.primary || '#000000');
+  const hslAccent = hexToHsl(palette.accent || '#000000');
+  const hslSecondary = hexToHsl(palette.border || '#e5e7eb');
+
   return (
     <div style={style} data-master-theme>
       <style dangerouslySetInnerHTML={{ __html: `
-        [data-section-index] {
+        body {
+          background-color: hsl(${hslBg}) !important;
+          color: hsl(${hslFg}) !important;
+        }
+        [data-master-theme] {
+          --background: ${hslBg} !important;
+          --foreground: ${hslFg} !important;
+          --card: ${hslCard} !important;
+          --card-foreground: ${hslFg} !important;
+          --popover: ${hslCard} !important;
+          --popover-foreground: ${hslFg} !important;
+          --primary: ${hslPrimary} !important;
+          --primary-foreground: 0 0% 100% !important;
+          --secondary: ${hslSecondary} !important;
+          --secondary-foreground: ${hslFg} !important;
+          --muted: ${hslMuted} !important;
+          --muted-foreground: ${hslFg} !important;
+          --border: ${hslBorder} !important;
+          --input: ${hslBorder} !important;
+          --ring: ${hslPrimary} !important;
+        }
+
+        [data-section-index], [data-section-anchor="footer"] {
           --title-color: inherit;
           --body-color: inherit;
           --sub-color: inherit;
           --kicker-color: inherit;
           --cta-color: inherit;
+          --cta_secondary-color: inherit;
+          --subtitle-color: inherit;
+          --email-color: inherit;
+          --phone-color: inherit;
+          --address-color: inherit;
+          --hours-color: inherit;
+
+          --title-font-size: inherit;
+          --body-font-size: inherit;
+          --sub-font-size: inherit;
+          --kicker-font-size: inherit;
+          --cta-font-size: inherit;
+          --cta_secondary-font-size: inherit;
+          --subtitle-font-size: inherit;
+          --email-font-size: inherit;
+          --phone-font-size: inherit;
+          --address-font-size: inherit;
+          --hours-font-size: inherit;
         }
-        [data-section-index] h1, 
-        [data-section-index] h2, 
-        [data-section-index] h3, 
-        [data-section-index] .s-title, 
-        [data-section-index] .section-title {
+        
+        /* Apply Colors conditionally using data attributes */
+        [data-has-title-color="true"] h1, 
+        [data-has-title-color="true"] h2, 
+        [data-has-title-color="true"] h3, 
+        [data-has-title-color="true"] .s-title, 
+        [data-has-title-color="true"] .section-title {
           color: var(--title-color) !important;
         }
-        [data-section-index] p:not(.s-sub):not(.s-kicker):not(.section-sub):not(.section-subtitle):not(.section-kicker), 
-        [data-section-index] .s-body, 
-        [data-section-index] .section-body, 
-        [data-section-index] .section-desc {
+        [data-has-body-color="true"] p:not(.s-sub):not(.s-kicker):not(.section-sub):not(.section-subtitle):not(.section-kicker), 
+        [data-has-body-color="true"] .s-body, 
+        [data-has-body-color="true"] .section-body, 
+        [data-has-body-color="true"] .section-desc {
           color: var(--body-color) !important;
         }
-        [data-section-index] .s-sub, 
-        [data-section-index] .section-sub, 
-        [data-section-index] .section-subtitle {
+        [data-has-sub-color="true"] .s-sub, 
+        [data-has-sub-color="true"] .section-sub, 
+        [data-has-sub-color="true"] .section-subtitle {
           color: var(--sub-color) !important;
         }
-        [data-section-index] .s-kicker, 
-        [data-section-index] .section-kicker {
+        [data-has-kicker-color="true"] .s-kicker, 
+        [data-has-kicker-color="true"] .section-kicker {
           color: var(--kicker-color) !important;
+        }
+        [data-has-cta-color="true"] .s-cta,
+        [data-has-cta-color="true"] .section-cta {
+          color: var(--cta-color) !important;
+        }
+        [data-has-cta_secondary-color="true"] .s-cta_secondary,
+        [data-has-cta_secondary-color="true"] .section-cta_secondary {
+          color: var(--cta_secondary-color) !important;
+        }
+        [data-has-email-color="true"] .s-email,
+        [data-has-email-color="true"] .section-email {
+          color: var(--email-color) !important;
+        }
+        [data-has-phone-color="true"] .s-phone,
+        [data-has-phone-color="true"] .section-phone {
+          color: var(--phone-color) !important;
+        }
+        [data-has-address-color="true"] .s-address,
+        [data-has-address-color="true"] .section-address {
+          color: var(--address-color) !important;
+        }
+        [data-has-hours-color="true"] .s-hours,
+        [data-has-hours-color="true"] .section-hours {
+          color: var(--hours-color) !important;
+        }
+
+        /* Apply Font Sizes conditionally using data attributes */
+        [data-has-title-font-size="true"] h1, 
+        [data-has-title-font-size="true"] h2, 
+        [data-has-title-font-size="true"] h3, 
+        [data-has-title-font-size="true"] .s-title, 
+        [data-has-title-font-size="true"] .section-title {
+          font-size: var(--title-font-size) !important;
+        }
+        [data-has-body-font-size="true"] p:not(.s-sub):not(.s-kicker):not(.section-sub):not(.section-subtitle):not(.section-kicker), 
+        [data-has-body-font-size="true"] .s-body, 
+        [data-has-body-font-size="true"] .section-body, 
+        [data-has-body-font-size="true"] .section-desc {
+          font-size: var(--body-font-size) !important;
+        }
+        [data-has-sub-font-size="true"] .s-sub, 
+        [data-has-sub-font-size="true"] .section-sub, 
+        [data-has-sub-font-size="true"] .section-subtitle {
+          font-size: var(--sub-font-size) !important;
+        }
+        [data-has-subtitle-font-size="true"] .s-subtitle,
+        [data-has-subtitle-font-size="true"] .section-subtitle {
+          font-size: var(--subtitle-font-size) !important;
+        }
+        [data-has-kicker-font-size="true"] .s-kicker, 
+        [data-has-kicker-font-size="true"] .section-kicker {
+          font-size: var(--kicker-font-size) !important;
+        }
+        [data-has-cta-font-size="true"] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"]), 
+        [data-has-cta-font-size="true"] .btn,
+        [data-has-cta-font-size="true"] .button,
+        [data-has-cta-font-size="true"] a.button,
+        [data-has-cta-font-size="true"] [role="button"]:not([aria-label="Close"]):not([type="submit"]),
+        [data-has-cta-font-size="true"] .s-cta,
+        [data-has-cta-font-size="true"] .section-cta {
+          font-size: var(--cta-font-size) !important;
+        }
+        [data-has-cta_secondary-font-size="true"] .s-cta_secondary,
+        [data-has-cta_secondary-font-size="true"] .section-cta_secondary {
+          font-size: var(--cta_secondary-font-size) !important;
+        }
+        [data-has-email-font-size="true"] .s-email,
+        [data-has-email-font-size="true"] .section-email {
+          font-size: var(--email-font-size) !important;
+        }
+        [data-has-phone-font-size="true"] .s-phone,
+        [data-has-phone-font-size="true"] .section-phone {
+          font-size: var(--phone-font-size) !important;
+        }
+        [data-has-address-font-size="true"] .s-address,
+        [data-has-address-font-size="true"] .section-address {
+          font-size: var(--address-font-size) !important;
+        }
+        [data-has-hours-font-size="true"] .s-hours,
+        [data-has-hours-font-size="true"] .section-hours {
+          font-size: var(--hours-font-size) !important;
         }
         ${globalOv.bold ? `
           [data-master-theme], [data-master-theme] *, [data-master-theme] h1, [data-master-theme] h2, [data-master-theme] h3, [data-master-theme] p, [data-master-theme] span, [data-master-theme] button, [data-master-theme] a {
@@ -455,11 +631,20 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             }
           : {};
 
-        if (mergedProps.title_color) sectionStyle["--title-color" as any] = mergedProps.title_color;
-        if (mergedProps.body_color) sectionStyle["--body-color" as any] = mergedProps.body_color;
-        if (mergedProps.sub_color) sectionStyle["--sub-color" as any] = mergedProps.sub_color;
-        if (mergedProps.kicker_color) sectionStyle["--kicker-color" as any] = mergedProps.kicker_color;
-        if (mergedProps.cta_color) sectionStyle["--cta-color" as any] = mergedProps.cta_color;
+        const TEXT_KEYS = ["title", "sub", "subtitle", "kicker", "cta", "cta_secondary", "body", "email", "phone", "address", "hours"];
+        const extraAttrs: Record<string, string> = {};
+        TEXT_KEYS.forEach((k) => {
+          if (mergedProps[`${k}_color`]) {
+            sectionStyle[`--${k}-color` as any] = mergedProps[`${k}_color`];
+            extraAttrs[`data-has-${k}-color`] = "true";
+          }
+          if (mergedProps[`${k}_font_size`]) {
+            const fsVal = mergedProps[`${k}_font_size`];
+            const fsStr = typeof fsVal === "number" ? `${fsVal}px` : fsVal;
+            sectionStyle[`--${k}-font-size` as any] = fsStr;
+            extraAttrs[`data-has-${k}-font-size`] = "true";
+          }
+        });
         return (
           <div
             key={i}
@@ -467,12 +652,17 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             data-section-index={i}
             data-section-anchor={`s-${i}`}
             style={{ scrollMarginTop: 80, ...sectionStyle }}
+            {...extraAttrs}
           >
             <Section s={{ ...s, props: mergedProps }} dna={sectionDna} storeSlug={storeSlug} page={page} store={store} products={products} />
           </div>
         );
       })}
-      <div data-section-anchor="footer" style={{ scrollMarginTop: 80 }}>
+      <div 
+        data-section-anchor="footer" 
+        style={{ scrollMarginTop: 80, ...footerStyle }}
+        {...footerAttrs}
+      >
         <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
       </div>
     </div>
@@ -824,28 +1014,118 @@ function Section({ s, dna, storeSlug, page, store, products }: any) {
       // default promo fallback
       const title = p.title ?? "Exclusive Sale"; const cta = p.cta ?? "Shop Now";
       const href = storeSlug ? `/store/${storeSlug}/shop` : "#products";
+      const img = p.image;
+
+      // CTA button styling customizations
+      const btnBg = p.cta_bg_color || dna.palette?.primary;
+      const btnColor = p.cta_color || dna.palette?.primary_fg;
+      const btnRadius = p.cta_radius != null ? `${p.cta_radius}px` : "12px";
+      const btnFontSize = p.cta_font_size ? (typeof p.cta_font_size === "number" ? `${p.cta_font_size}px` : p.cta_font_size) : undefined;
+      
+      const BTN_SIZES: Record<string, string> = {
+        sm: "px-5 py-2.5 text-xs",
+        md: "px-8 py-4 text-sm",
+        lg: "px-10 py-5 text-base",
+        xl: "px-12 py-6 text-lg",
+      };
+      const btnSizeClass = BTN_SIZES[p.cta_size as string] || "px-8 py-4 text-sm";
+      
+      const BTN_ANIMS: Record<string, string> = {
+        none: "",
+        pulse: "animate-pulse",
+        bounce: "animate-bounce",
+        float: "hover:-translate-y-1 hover:shadow-lg transition-transform duration-300",
+      };
+      const btnAnimClass = BTN_ANIMS[p.cta_animation as string] || "";
+
+      if (img) {
+        return (
+          <section className="py-20" style={{ background: dna.palette?.surface }}>
+            <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className="text-4xl font-black mb-4 s-title" style={{ fontFamily: "var(--hf)" }}>{title}</h2>
+                {p.subtitle && <p className="mb-8 s-sub" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
+                {cta && (
+                  <a 
+                    href={href} 
+                    className={`inline-block font-bold transition-all duration-300 s-cta ${btnSizeClass} ${btnAnimClass}`} 
+                    style={{ 
+                      background: btnBg, 
+                      color: btnColor,
+                      borderRadius: btnRadius,
+                      fontSize: btnFontSize,
+                    }}
+                  >
+                    {cta}
+                  </a>
+                )}
+              </div>
+              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-lg border" style={{ borderColor: dna.palette?.border }}>
+                <img src={img} alt={title} className="w-full h-full object-cover" />
+              </div>
+            </div>
+          </section>
+        );
+      }
+
       return (
         <section className="py-20 text-center" style={{ background: dna.palette?.surface }}>
           <div className="max-w-2xl mx-auto px-6">
-            <h2 className="text-4xl font-black mb-4" style={{ fontFamily:"var(--hf)" }}>{title}</h2>
-            {p.subtitle && <p className="mb-8" style={{ color:dna.palette?.muted }}>{p.subtitle}</p>}
-            <a href={href} className="inline-block px-8 py-4 font-bold rounded-xl" style={{ background:dna.palette?.primary, color:dna.palette?.primary_fg }}>{cta}</a>
+            <h2 className="text-4xl font-black mb-4 s-title" style={{ fontFamily:"var(--hf)" }}>{title}</h2>
+            {p.subtitle && <p className="mb-8 s-sub" style={{ color:dna.palette?.muted }}>{p.subtitle}</p>}
+            {cta && (
+              <a 
+                href={href} 
+                className={`inline-block font-bold transition-all duration-300 s-cta ${btnSizeClass} ${btnAnimClass}`} 
+                style={{ 
+                  background: btnBg, 
+                  color: btnColor,
+                  borderRadius: btnRadius,
+                  fontSize: btnFontSize,
+                }}
+              >
+                {cta}
+              </a>
+            )}
           </div>
         </section>
       );
     }
 
-    case "story": return (
-      <section className="py-20" style={{ background: dna.palette?.surface }}>
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-4xl mb-6 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
-            <p className="leading-relaxed s-body" style={{ color: dna.palette?.muted }}>{p.body}</p>
+    case "story": {
+      const sizeMode = p.image_size ?? "medium";
+      let imgStyle: React.CSSProperties = { borderRadius: "var(--r)" };
+      let imgClass = "object-cover";
+      
+      if (sizeMode === "auto") {
+        imgClass = "w-auto h-auto max-h-[450px] object-contain";
+      } else if (sizeMode === "full") {
+        imgClass = "w-full h-auto max-h-[600px] object-cover";
+      } else if (sizeMode === "small") {
+        imgClass = "w-full max-w-[250px] aspect-[4/5] object-cover justify-self-center";
+      } else if (sizeMode === "large") {
+        imgClass = "w-full max-w-[550px] aspect-[4/5] object-cover justify-self-center";
+      } else {
+        // medium (default)
+        imgClass = "w-full max-w-[400px] aspect-[4/5] object-cover justify-self-center";
+      }
+
+      return (
+        <section className="py-20" style={{ background: dna.palette?.surface }}>
+          <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-4xl mb-6 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
+              <p className="leading-relaxed s-body" style={{ color: dna.palette?.muted }}>{p.body}</p>
+            </div>
+            {p.image && (
+              <div className="flex justify-center w-full">
+                <img src={p.image} className={imgClass} style={imgStyle} />
+              </div>
+            )}
           </div>
-          {p.image && <img src={p.image} className="aspect-[4/5] object-cover" style={{ borderRadius: "var(--r)" }} />}
-        </div>
-      </section>
-    );
+        </section>
+      );
+    }
     case "testimonials": return <TestimonialsBlock p={p} dna={dna} storeSlug={storeSlug} />;
     case "google_reviews": return <GoogleReviewsBlock p={p} dna={dna} storeSlug={storeSlug} />
     case "newsletter": return (
@@ -1405,18 +1685,95 @@ function CheckoutStepper({ p, dna }: any) {
 }
 
 function JournalStrip({ p, dna, storeSlug }: any) {
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!storeSlug) {
+          setLoading(false);
+          return;
+        }
+        const { data: store } = await supabase.from("stores").select("id").eq("slug", storeSlug).maybeSingle();
+        if (!store?.id) {
+          setLoading(false);
+          return;
+        }
+        const { data } = await supabase
+          .from("blog_posts")
+          .select("*")
+          .eq("store_id", store.id)
+          .eq("is_published", true)
+          .order("created_at", { ascending: false })
+          .limit(p.limit || 2); // Fetch up to 2 posts, leaving the 3rd column for the redirect card
+        setPosts(data || []);
+      } catch (e) {
+        console.warn("Failed to fetch blog posts:", e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [storeSlug, p.limit]);
+
+  if (loading) return null;
+  if (posts.length === 0) return null;
+
+  let displayTitle = p.title || "Blogs";
+  if (displayTitle === "Latest News" || displayTitle === "Journal") {
+    displayTitle = "Blogs";
+  }
+
+  const blogLink = storeSlug ? `/store/${storeSlug}/journal` : "#";
+  const headingFont = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 } as React.CSSProperties;
+
   return (
     <section className="max-w-6xl mx-auto px-6 py-16">
       <div className="flex items-end justify-between mb-8">
-        <h2 className="text-3xl" style={{ fontFamily: "var(--hf)" }}>{p.title || "Journal"}</h2>
-        {storeSlug && <Link to={`/store/${storeSlug}/journal`} className="text-sm" style={{ color: dna.palette?.accent }}>Read all →</Link>}
+        <h2 className="text-3xl font-bold s-title" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>{displayTitle}</h2>
+        {storeSlug && <Link to={blogLink} className="text-sm font-semibold hover:underline" style={{ color: dna.palette?.accent }}>Read all →</Link>}
       </div>
       <div className="grid md:grid-cols-3 gap-6">
-        {Array.from({ length: p.limit || 3 }).map((_, i) => (
-          <div key={i} className="aspect-[4/3] flex items-end p-4" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
-            <span className="text-xs" style={{ color: dna.palette?.muted }}>Post placeholder</span>
-          </div>
+        {posts.map((post) => (
+          <Link key={post.id} to={storeSlug ? `/store/${storeSlug}/journal/${post.slug}` : "#"} className="group flex flex-col overflow-hidden border" style={{ background: dna.palette?.surface, borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
+            <div className="aspect-[16/10] overflow-hidden bg-muted/10">
+              {post.cover_image ? (
+                <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No cover image</div>
+              )}
+            </div>
+            <div className="p-5 flex-1 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: dna.palette?.accent }}>
+                  {new Date(post.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
+                <h3 className="text-base font-bold line-clamp-2 leading-snug group-hover:text-primary transition-colors" style={{ color: dna.palette?.fg }}>
+                  {post.title}
+                </h3>
+                {post.seo_description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed" style={{ color: dna.palette?.muted }}>
+                    {post.seo_description}
+                  </p>
+                )}
+              </div>
+              <div className="mt-4 text-xs font-semibold inline-flex items-center gap-1 group-hover:underline" style={{ color: dna.palette?.accent }}>
+                Read Article <span className="transition-transform group-hover:translate-x-1">→</span>
+              </div>
+            </div>
+          </Link>
         ))}
+        {/* Redirect to Blogs card */}
+        <Link to={blogLink} className="group flex flex-col items-center justify-center p-6 border-2 border-dashed hover:border-solid text-center cursor-pointer transition-all bg-muted/5 hover:bg-muted/10" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", minHeight: "220px" }}>
+          <div className="p-3 rounded-full mb-3" style={{ background: `${dna.palette?.accent}15` }}>
+            <Sparkles className="h-6 w-6" style={{ color: dna.palette?.accent }} />
+          </div>
+          <h3 className="text-base font-bold" style={{ color: dna.palette?.fg }}>Explore Our Blog</h3>
+          <p className="text-xs text-muted-foreground mt-1 mb-4" style={{ color: dna.palette?.muted }}>Read all our latest articles, guides, and stories.</p>
+          <span className="text-xs font-semibold px-4 py-2 border rounded-lg transition-transform group-hover:scale-105" style={{ borderColor: dna.palette?.accent, color: dna.palette?.accent }}>
+            Read All Posts
+          </span>
+        </Link>
       </div>
     </section>
   );
@@ -1624,7 +1981,7 @@ function ContactForm({ p, dna, storeSlug }: any) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" style={{ color: dna.palette?.muted }}>Email Us</h4>
-                  <p className="text-sm font-semibold mt-0.5 break-all" style={{ color: p.email_color ?? dna.palette?.fg }}>{email}</p>
+                  <p className="text-sm font-semibold mt-0.5 break-all s-email" style={{ color: p.email_color ?? dna.palette?.fg }}>{email}</p>
                 </div>
               </div>
 
@@ -1634,7 +1991,7 @@ function ContactForm({ p, dna, storeSlug }: any) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" style={{ color: dna.palette?.muted }}>Call Us</h4>
-                  <p className="text-sm font-semibold mt-0.5" style={{ color: p.phone_color ?? dna.palette?.fg }}>{phone}</p>
+                  <p className="text-sm font-semibold mt-0.5 s-phone" style={{ color: p.phone_color ?? dna.palette?.fg }}>{phone}</p>
                 </div>
               </div>
 
@@ -1644,7 +2001,7 @@ function ContactForm({ p, dna, storeSlug }: any) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" style={{ color: dna.palette?.muted }}>Visit Our Store</h4>
-                  <p className="text-sm font-semibold mt-0.5 leading-relaxed" style={{ color: p.address_color ?? dna.palette?.fg }}>{address}</p>
+                  <p className="text-sm font-semibold mt-0.5 leading-relaxed s-address" style={{ color: p.address_color ?? dna.palette?.fg }}>{address}</p>
                 </div>
               </div>
 
@@ -1654,7 +2011,7 @@ function ContactForm({ p, dna, storeSlug }: any) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" style={{ color: dna.palette?.muted }}>Working Hours</h4>
-                  <p className="text-sm font-semibold mt-0.5" style={{ color: p.hours_color ?? dna.palette?.fg }}>{hours}</p>
+                  <p className="text-sm font-semibold mt-0.5 s-hours" style={{ color: p.hours_color ?? dna.palette?.fg }}>{hours}</p>
                 </div>
               </div>
             </div>
@@ -2224,7 +2581,7 @@ function HeroBtn({ kind, label, href, cfg, freePos }: { kind: "primary" | "secon
     } as React.CSSProperties);
   }
   return (
-    <a href={href} className={`${size} inline-block ${hover} ${anim}`} style={style}>{label}</a>
+    <a href={href} className={`${size} inline-block ${hover} ${anim} ${isPrimary ? "s-cta" : "s-cta_secondary"}`} style={style}>{label}</a>
   );
 }
 
@@ -2243,6 +2600,59 @@ function Hero({ p, dna, storeSlug }: any) {
   const parallax = effects.parallax;
   const kenBurns = effects.ken_burns;
   const buttons = p.buttons || {};
+
+  // --- HORIZONTAL SCROLL / SWIPE --------------------------------------------
+  if (p.scroll_horizontal) {
+    const slides = (p.slides && p.slides.length > 0)
+      ? p.slides
+      : [{ image: p.image, title: p.title, sub: p.sub, kicker: p.kicker, cta: p.cta, cta_href: p.cta_href, cta_secondary: p.cta_secondary, cta_secondary_href: p.cta_secondary_href }];
+    return (
+      <>
+        <HeroBtnStyles />
+        <section data-hero-section="true" className="relative w-full overflow-hidden" style={{ background: dna.palette?.surface }}>
+          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-none px-6 py-4">
+            {slides.map((s: any, i: number) => (
+              <div 
+                key={i} 
+                className={`relative shrink-0 snap-center min-w-[85%] md:min-w-[70%] rounded-2xl overflow-hidden ${heightClass(height) || "min-h-[50vh] h-[350px] md:h-[450px]"}`}
+                style={{ background: dna.palette?.bg }}
+              >
+                {s.image && (
+                  <img
+                    src={s.image}
+                    alt={s.title ?? ""}
+                    className={`absolute inset-0 w-full h-full object-cover ${kenBurns ? "animate-[ken-burns_18s_ease-out_infinite]" : ""}`}
+                    style={{ objectPosition: s.focal || "50% 50%" }}
+                  />
+                )}
+                <Overlay overlay={overlay} />
+                <div className={`relative h-full w-full flex ${alignClass(contentAlign)} p-6 md:p-10 text-white z-10`}>
+                  <div 
+                    className={s.content_bg ? "max-w-xl p-5 md:p-8 rounded-xl backdrop-blur-sm text-left" : "max-w-xl"} 
+                    style={{ 
+                      color: "#fff",
+                      backgroundColor: s.content_bg || undefined,
+                      boxShadow: s.content_bg ? "0 10px 30px -10px rgba(0, 0, 0, 0.15)" : undefined,
+                    }}
+                  >
+                    {s.kicker && <div className="text-xs uppercase tracking-[0.3em] mb-2 opacity-90">{s.kicker}</div>}
+                    {s.title && <h2 className="text-2xl md:text-4xl leading-tight font-bold" style={headingFont}>{s.title}</h2>}
+                    {s.sub && <p className="mt-2 text-sm opacity-90">{s.sub}</p>}
+                    {(s.cta || s.cta_secondary) && (
+                      <div className="mt-4 flex gap-2 flex-wrap" style={{ justifyContent: (s.content_bg || (contentAlign?.endsWith("-center") || !contentAlign)) ? "center" : (contentAlign?.endsWith("-right") ? "flex-end" : "flex-start") }}>
+                        {s.cta && <HeroBtn kind="primary" label={s.cta} href={s.cta_href || shopHref} cfg={buttons?.primary} />}
+                        {s.cta_secondary && <HeroBtn kind="secondary" label={s.cta_secondary} href={s.cta_secondary_href || shopHref} cfg={buttons?.secondary} />}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </>
+    );
+  }
   const contentBgStyle = p.content_bg ? {
     backgroundColor: p.content_bg,
     padding: "2rem",
@@ -2464,6 +2874,30 @@ function CategoryBlock({ p, dna, storeSlug }: any) {
   const hrefFor = (name: string) =>
     storeSlug ? `/store/${storeSlug}/shop?category=${encodeURIComponent(name || "")}` : "#products";
   const Title = <h2 className="text-3xl mb-10 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>;
+
+  if (p.scroll_horizontal) {
+    return (
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        {Title}
+        <div className="flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin">
+          {items.map((c: any, i: number) => (
+            <Link 
+              to={hrefFor(c.name)} 
+              key={i} 
+              className="group block aspect-[3/4] relative overflow-hidden shrink-0 snap-start" 
+              style={{ borderRadius: "var(--r)", width: p.product_card_width ? `${p.product_card_width}px` : "220px" }}
+            >
+              {c.image ? <img src={c.image} className="w-full h-full object-cover transition-transform group-hover:scale-105" /> : <div className="w-full h-full" style={{ background: dna.palette?.surface }} />}
+              <div className="absolute inset-0 flex items-end p-4" style={{ background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.7))" }}>
+                <span className="text-white font-medium" style={{ fontFamily: "var(--hf)" }}>{c.name}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   if (v === "carousel_strip") {
     return (
       <section className="py-16">
@@ -2817,52 +3251,56 @@ function ProductBlock({ p, dna, storeSlug, page }: any) {
             : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
         }
       >
-        {items.map((pr: any, i: number) => (
-          <div 
-            key={i} 
-            className={`group ${p.scroll_horizontal ? "snap-start shrink-0" : ""}`} 
-            style={p.scroll_horizontal
-              ? { width: cardWidth ? `${cardWidth}px` : "260px" }
-              : cardWidth 
-                ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } 
-                : {}
-            }
-          >
-            <Link to={linkFor(pr)} className="block">
-              <div className="aspect-square mb-3 overflow-hidden relative" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
-                {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
-                {pr.badge && <span className="absolute top-2 left-2 text-[10px] px-2 py-1 uppercase tracking-wider z-10" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{pr.badge}</span>}
-              </div>
-              <div 
-                className="text-sm font-medium" 
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  height: "2.5rem",
-                  lineHeight: "1.25rem"
-                }}
-              >
-                {pr.name}
-              </div>
-              <div className="mt-1 text-sm flex gap-2">
-                <span>₹{pr.price}</span>
-                {pr.compare_at > pr.price && <span className="line-through" style={{ color: dna.palette?.muted }}>₹{pr.compare_at}</span>}
-              </div>
-            </Link>
-            {storeSlug && pr.id && (
-              <ProductCardActions
-                storeSlug={storeSlug}
-                product={{ id: pr.id, title: pr.name, price: pr.price, image: pr.image }}
-                primaryColor={dna.palette?.primary}
-                primaryFg={dna.palette?.primary_fg}
-                borderRadius={dna.radius ?? "8px"}
-              />
-            )}
-          </div>
-        ))}
+        {items.map((pr: any, i: number) => {
+          const isOutOfStock = pr.inventory_count === 0;
+          return (
+            <div 
+              key={i} 
+              className={`group ${p.scroll_horizontal ? "snap-start shrink-0" : ""} ${isOutOfStock ? "opacity-50 grayscale" : ""}`} 
+              style={p.scroll_horizontal
+                ? { width: cardWidth ? `${cardWidth}px` : "260px" }
+                : cardWidth 
+                  ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } 
+                  : {}
+              }
+            >
+              <Link to={linkFor(pr)} className="block">
+                <div className="aspect-square mb-3 overflow-hidden relative" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
+                  {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
+                  {pr.badge && <span className="absolute top-2 left-2 text-[10px] px-2 py-1 uppercase tracking-wider z-10" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{pr.badge}</span>}
+                  {isOutOfStock && <span className="absolute top-2 right-2 text-[9px] font-black bg-gray-600 text-white px-2 py-0.5 rounded shadow z-10">OUT OF STOCK</span>}
+                </div>
+                <div 
+                  className="text-sm font-medium" 
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    height: "2.5rem",
+                    lineHeight: "1.25rem"
+                  }}
+                >
+                  {pr.name}
+                </div>
+                <div className="mt-1 text-sm flex gap-2">
+                  <span>₹{pr.price}</span>
+                  {pr.compare_at > pr.price && <span className="line-through" style={{ color: dna.palette?.muted }}>₹{pr.compare_at}</span>}
+                </div>
+              </Link>
+              {storeSlug && pr.id && (
+                <ProductCardActions
+                  storeSlug={storeSlug}
+                  product={{ id: pr.id, title: pr.name, price: pr.price, image: pr.image, inventory_count: pr.inventory_count }}
+                  primaryColor={dna.palette?.primary}
+                  primaryFg={dna.palette?.primary_fg}
+                  borderRadius={dna.radius ?? "8px"}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -3309,31 +3747,35 @@ function ProductsChrome({ p, dna, storeSlug }: any) {
             : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
           }
         >
-          {items.map((pr, i) => (
-            <div key={i} className="chrome-card group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-3"
-              style={{ background:"linear-gradient(145deg,rgba(226,232,240,0.07) 0%,rgba(148,163,184,0.02) 100%)", border:`1px solid rgba(226,232,240,0.10)`, boxShadow:"0 8px 40px rgba(0,0,0,0.5)", width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
-              <Link to={linkFor(pr)}>
-                <div className="aspect-square overflow-hidden relative">
-                  {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
-                  <div className="card-shine absolute inset-0 w-1/3" style={{ background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)" }} />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background:"linear-gradient(to bottom,transparent 40%,rgba(5,8,16,0.9))" }} />
-                  {pr.badge && <span className="absolute top-3 left-3 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider" style={{ background:P, color:"#050810" }}>{pr.badge}</span>}
-                </div>
-                <div className="p-4">
-                  <div className="text-sm font-bold truncate mb-1" style={{ color: A }}>{pr.name}</div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-base font-black" style={{ color: P }}>₹{pr.price}</span>
-                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#334155" }}>₹{pr.compare_at}</span>}
+          {items.map((pr, i) => {
+            const isOutOfStock = pr.inventory_count === 0;
+            return (
+              <div key={i} className={`chrome-card group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ${isOutOfStock ? "opacity-50 grayscale hover:-translate-y-0" : "hover:-translate-y-3"}`}
+                style={{ background:"linear-gradient(145deg,rgba(226,232,240,0.07) 0%,rgba(148,163,184,0.02) 100%)", border:`1px solid rgba(226,232,240,0.10)`, boxShadow:"0 8px 40px rgba(0,0,0,0.5)", width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
+                <Link to={linkFor(pr)}>
+                  <div className="aspect-square overflow-hidden relative">
+                    {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
+                    <div className="card-shine absolute inset-0 w-1/3" style={{ background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)" }} />
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background:"linear-gradient(to bottom,transparent 40%,rgba(5,8,16,0.9))" }} />
+                    {pr.badge && <span className="absolute top-3 left-3 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider" style={{ background:P, color:"#050810" }}>{pr.badge}</span>}
+                    {isOutOfStock && <span className="absolute top-3 right-3 text-[9px] font-black bg-gray-600 text-white px-2 py-1 rounded-lg uppercase tracking-wider z-10">OUT OF STOCK</span>}
                   </div>
-                </div>
-              </Link>
-              {storeSlug && pr.id && (
-                <div className="px-4 pb-4">
-                  <ProductCardActions storeSlug={storeSlug} product={{ id:pr.id, title:pr.name, price:pr.price, image:pr.image }} primaryColor={P} primaryFg="#050810" borderRadius="10px" compact />
-                </div>
-              )}
-            </div>
-          ))}
+                  <div className="p-4">
+                    <div className="text-sm font-bold truncate mb-1" style={{ color: A }}>{pr.name}</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-base font-black" style={{ color: P }}>₹{pr.price}</span>
+                      {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#334155" }}>₹{pr.compare_at}</span>}
+                    </div>
+                  </div>
+                </Link>
+                {storeSlug && pr.id && (
+                  <div className="px-4 pb-4">
+                    <ProductCardActions storeSlug={storeSlug} product={{ id:pr.id, title:pr.name, price:pr.price, image:pr.image, inventory_count: pr.inventory_count }} primaryColor={P} primaryFg="#050810" borderRadius="10px" compact />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -3537,32 +3979,36 @@ function ProductsBotanical({ p, dna, storeSlug }: any) {
             : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
           }
         >
-          {items.map((pr, i) => (
-            <div key={i} className="bot-card group relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-4"
-              style={{ background:`linear-gradient(160deg,${N}08,${G}03)`, border:`1px solid ${N}20`, boxShadow:`0 8px 40px rgba(16,185,129,0.08)`, width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
-              <Link to={linkFor(pr)}>
-                <div className="aspect-square overflow-hidden relative">
-                  {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background:`radial-gradient(circle at 30% 30%,${N}25,transparent 60%)` }} />
-                  {pr.badge && <span className="absolute top-3 right-3 text-lg">{pr.badge}</span>}
-                  {/* Corner glow on hover */}
-                  <div className="absolute bottom-0 left-0 right-0 h-24 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background:`linear-gradient(to top,${N}30,transparent)` }} />
-                </div>
-                <div className="p-4">
-                  <div className="text-sm font-bold truncate mb-1" style={{ color:"#d1fae5" }}>{pr.name}</div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-black text-base" style={{ color:N, textShadow:`0 0 10px ${N}60` }}>₹{pr.price}</span>
-                    {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#065f46" }}>₹{pr.compare_at}</span>}
+          {items.map((pr, i) => {
+            const isOutOfStock = pr.inventory_count === 0;
+            return (
+              <div key={i} className={`bot-card group relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 ${isOutOfStock ? "opacity-50 grayscale hover:-translate-y-0" : "hover:-translate-y-4"}`}
+                style={{ background:`linear-gradient(160deg,${N}08,${G}03)`, border:`1px solid ${N}20`, boxShadow:`0 8px 40px rgba(16,185,129,0.08)`, width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
+                <Link to={linkFor(pr)}>
+                  <div className="aspect-square overflow-hidden relative">
+                    {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background:`radial-gradient(circle at 30% 30%,${N}25,transparent 60%)` }} />
+                    {pr.badge && <span className="absolute top-3 right-3 text-lg">{pr.badge}</span>}
+                    {isOutOfStock && <span className="absolute top-3 left-3 text-[9px] font-black bg-gray-600 text-white px-2 py-1 rounded-lg uppercase tracking-wider z-10">OUT OF STOCK</span>}
+                    {/* Corner glow on hover */}
+                    <div className="absolute bottom-0 left-0 right-0 h-24 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background:`linear-gradient(to top,${N}30,transparent)` }} />
                   </div>
-                </div>
-              </Link>
-              {storeSlug && pr.id && (
-                <div className="px-4 pb-4">
-                  <ProductCardActions storeSlug={storeSlug} product={{ id:pr.id, title:pr.name, price:pr.price, image:pr.image }} primaryColor={N} primaryFg="#010d08" borderRadius="12px" compact />
-                </div>
-              )}
-            </div>
-          ))}
+                  <div className="p-4">
+                    <div className="text-sm font-bold truncate mb-1" style={{ color:"#d1fae5" }}>{pr.name}</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-black text-base" style={{ color:N, textShadow:`0 0 10px ${N}60` }}>₹{pr.price}</span>
+                      {pr.compare_at > pr.price && <span className="text-xs line-through" style={{ color:"#065f46" }}>₹{pr.compare_at}</span>}
+                    </div>
+                  </div>
+                </Link>
+                {storeSlug && pr.id && (
+                  <div className="px-4 pb-4">
+                    <ProductCardActions storeSlug={storeSlug} product={{ id:pr.id, title:pr.name, price:pr.price, image:pr.image, inventory_count: pr.inventory_count }} primaryColor={N} primaryFg="#010d08" borderRadius="12px" compact />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -3797,28 +4243,32 @@ function ProductsGlass3D({ p, dna, storeSlug }: any) {
             : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
           }
         >
-          {items.map((pr,i)=>(
-            <div key={i} className="glass-card group cursor-pointer" style={{ animationDelay:`${i*.8}s`, width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
-              <Link to={linkFor(pr)} className="block h-full">
-                <div className="relative rounded-2xl overflow-hidden h-full flex flex-col" style={{ background:"linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.03))",border:"1px solid rgba(255,255,255,.15)",backdropFilter:"blur(16px)",boxShadow:`0 8px 32px ${primary}25,inset 0 1px 0 rgba(255,255,255,.1)` }}>
-                  <div className="aspect-square overflow-hidden relative">
-                    {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
-                    <div className="absolute inset-0" style={{ background:`linear-gradient(to bottom,transparent 40%,${primary}60)` }} />
-                    {pr.badge && <span className="absolute top-3 right-3 text-[10px] font-black px-2 py-1 rounded-lg" style={{ background:primary,color:"#fff",borderRadius:"8px" }}>{pr.badge}</span>}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background:"linear-gradient(135deg,rgba(255,255,255,.15) 0%,transparent 50%)" }} />
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div className="text-sm font-bold text-white mb-2">{pr.name}</div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-black" style={{ color:primary }}>₹{pr.price}</span>
-                      {pr.compare_at>pr.price && <span className="text-xs line-through text-white/40">₹{pr.compare_at}</span>}
+          {items.map((pr,i)=>{
+            const isOutOfStock = pr.inventory_count === 0;
+            return (
+              <div key={i} className={`glass-card group cursor-pointer ${isOutOfStock ? "opacity-50 grayscale" : ""}`} style={{ animationDelay:`${i*.8}s`, width: cardWidth ? `${cardWidth}px` : undefined, minWidth: cardWidth ? `${cardWidth}px` : undefined }}>
+                <Link to={linkFor(pr)} className="block h-full">
+                  <div className="relative rounded-2xl overflow-hidden h-full flex flex-col" style={{ background:"linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.03))",border:"1px solid rgba(255,255,255,.15)",backdropFilter:"blur(16px)",boxShadow:`0 8px 32px ${primary}25,inset 0 1px 0 rgba(255,255,255,.1)` }}>
+                    <div className="aspect-square overflow-hidden relative">
+                      {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
+                      <div className="absolute inset-0" style={{ background:`linear-gradient(to bottom,transparent 40%,${primary}60)` }} />
+                      {pr.badge && <span className="absolute top-3 right-3 text-[10px] font-black px-2 py-1 rounded-lg" style={{ background:primary,color:"#fff",borderRadius:"8px" }}>{pr.badge}</span>}
+                      {isOutOfStock && <span className="absolute top-3 left-3 text-[9px] font-black bg-gray-600 text-white px-2 py-1 rounded-lg z-10">OUT OF STOCK</span>}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background:"linear-gradient(135deg,rgba(255,255,255,.15) 0%,transparent 50%)" }} />
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div className="text-sm font-bold text-white mb-2">{pr.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-black" style={{ color:primary }}>₹{pr.price}</span>
+                        {pr.compare_at>pr.price && <span className="text-xs line-through text-white/40">₹{pr.compare_at}</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-              {storeSlug && pr.id && <div className="mt-2"><ProductCardActions storeSlug={storeSlug} product={{ id:pr.id,title:pr.name,price:pr.price,image:pr.image }} primaryColor={primary} primaryFg="#ffffff" borderRadius="12px" compact /></div>}
-            </div>
-          ))}
+                </Link>
+                {storeSlug && pr.id && <div className="mt-2"><ProductCardActions storeSlug={storeSlug} product={{ id:pr.id,title:pr.name,price:pr.price,image:pr.image,inventory_count: pr.inventory_count }} primaryColor={primary} primaryFg="#ffffff" borderRadius="12px" compact /></div>}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

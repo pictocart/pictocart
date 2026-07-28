@@ -91,7 +91,7 @@ const StorefrontPolicy = () => {
     );
   }
 
-  const theme = resolveTheme(getStoreThemeTokens(store));
+  const theme = resolveTheme(getStoreThemeTokens(store), store);
   const { colors, fonts } = theme;
   const settings = (store as any).settings || {};
   const storeInfo = settings.store_info || settings.business_info || {};

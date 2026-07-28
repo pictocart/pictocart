@@ -55,7 +55,7 @@ export default function CustomerAuth() {
   if (!store) return null;
   if (user) return <Navigate to={dest()} replace />;
 
-  const theme = resolveTheme(getStoreThemeTokens(store));
+  const theme = resolveTheme(getStoreThemeTokens(store), store);
   const { colors, fonts, borderRadius } = theme;
   const pr = colors.primary;
 

@@ -186,7 +186,7 @@ const AdminUsers = () => {
   const handleDeleteUser = async () => {
     if (!deleteUser) return;
     try {
-      await manageMutation.mutateAsync({ action: 'delete_user', userId: deleteUser.user_id });
+      await manageMutation.mutateAsync({ action: 'permanent_delete_user', userId: deleteUser.user_id });
       toast.success(`Deleted user ${deleteUser.full_name || deleteUser.email}`);
       setDeleteUser(null);
     } catch (e: any) {

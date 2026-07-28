@@ -15,6 +15,45 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import OrderActions from '@/components/storefront/OrderActions';
 
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry"
+];
+
 const statusColors: Record<string, string> = {
   pending: '#f59e0b',
   confirmed: '#3b82f6',
@@ -124,7 +163,7 @@ const CustomerAccount = () => {
   if (!store || !user) return null;
   const displayName = customerMeta.full_name || 'Welcome!';
 
-  const theme = resolveTheme(getStoreThemeTokens(store));
+  const theme = resolveTheme(getStoreThemeTokens(store), store);
   const { colors, fonts, borderRadius } = theme;
   const br = `${borderRadius}px`;
   const brHalf = `${borderRadius / 2}px`;
@@ -711,7 +750,17 @@ const CustomerAccount = () => {
                           </div>
                           <div>
                             <label className="text-xs font-semibold opacity-60 mb-1 block">State *</label>
-                            <input value={addrForm.state} onChange={(e) => setAddrForm((p) => ({ ...p, state: e.target.value }))} className={inputCls} style={{ ...inputStyle, ...focusRing }} />
+                            <select
+                              value={addrForm.state}
+                              onChange={(e) => setAddrForm((p) => ({ ...p, state: e.target.value }))}
+                              className={inputCls}
+                              style={{ ...inputStyle, ...focusRing, appearance: 'none', WebkitAppearance: 'none' }}
+                            >
+                              <option value="" style={{ color: '#000' }}>Select State *</option>
+                              {INDIAN_STATES.map((st) => (
+                                <option key={st} value={st} style={{ color: '#000' }}>{st}</option>
+                              ))}
+                            </select>
                           </div>
                           <div>
                             <label className="text-xs font-semibold opacity-60 mb-1 block">Pincode *</label>

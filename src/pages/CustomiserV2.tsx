@@ -54,8 +54,8 @@ const SECTION_LABEL: Record<string, string> = {
   values: "Values", signup: "Sign up form", signin: "Sign in form",
   forgot_password: "Forgot password", reset_password: "Reset password",
   line_items: "Line items", cart_summary: "Cart summary",
-  checkout_stepper: "Checkout stepper", journal_strip: "Journal strip",
-  journal_list: "Journal list", account_panel: "Account panel",
+  checkout_stepper: "Checkout stepper", journal_strip: "Blog",
+  journal_list: "Blog list", account_panel: "Account panel",
   contact_form: "Contact form", product_detail: "Product detail",
   collections_grid: "Collections grid", collection_detail: "Collection detail",
 };
@@ -1124,6 +1124,7 @@ export default function CustomiserV2() {
                 manifest={manifest}
                 paletteOv={paletteOv}
                 iframeRef={iframeRef}
+                onInsufficientCredits={() => setRechargeOpen(true)}
               />
             )}
           </ScrollArea>
@@ -1561,7 +1562,7 @@ function FooterInspector({ footerOv, onChange }: { footerOv: any; onChange: (k: 
   );
 }
 
-function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, categories = [], updateCategory, deleteCategory, products = [], manifest, paletteOv, iframeRef }: any) {
+function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, categories = [], updateCategory, deleteCategory, products = [], manifest, paletteOv, iframeRef, onInsufficientCredits }: any) {
   const handleUploadCatImage = async (catId: string, file: File) => {
     const loadingToast = toast.loading("Uploading category image...");
     try {
@@ -1598,7 +1599,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
     map_and_contact: ["title", "subtitle", "address", "hours", "phone"],
     newsletter: ["title", "sub", "cta"],
     values: ["title"],
-    usp_strip: ["title"],
+    usp_strip: [],
     promo_banner: ["title", "subtitle", "cta", "promo_code"],
   };
   const forcedKeys = typeSpecificKeys[section?.type] ?? [];
@@ -1678,7 +1679,8 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         previewUrl={previewUrl}
         manifest={manifest}
         iframeRef={iframeRef}
-        onInsufficientCredits={() => setRechargeOpen(true)}
+        paletteOv={paletteOv}
+        onInsufficientCredits={onInsufficientCredits}
       />
     );
   }
@@ -1770,6 +1772,30 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                 <SelectItem value="6">6 Columns</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex items-center justify-between pt-1.5 border-t">
+            <Label className="text-[11px] text-muted-foreground font-medium">Horizontal Scroll / Swipe</Label>
+            <Switch 
+              checked={!!merged.scroll_horizontal} 
+              onCheckedChange={(val) => onUpdate(idx, "scroll_horizontal", val)} 
+            />
+          </div>
+
+          <div className={`transition-opacity duration-200 ${!merged.scroll_horizontal ? "opacity-50 pointer-events-none" : ""}`}>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-[11px] text-muted-foreground font-medium">Drag to resize Card Width</Label>
+              <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.product_card_width ?? 220}px</span>
+            </div>
+            <Slider 
+              value={[Number(merged.product_card_width ?? 220)]} 
+              min={130} 
+              max={350} 
+              step={10} 
+              disabled={!merged.scroll_horizontal}
+              onValueChange={([val]) => onUpdate(idx, "product_card_width", val)} 
+              className="my-2"
+            />
           </div>
         </div>
       )}
@@ -1915,7 +1941,29 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         </div>
       )}
 
+      {section?.type === "story" && (
+        <div className="space-y-1.5 border-t pt-3 animate-fade-in">
+          <Label className="text-xs font-semibold">Image Size</Label>
+          <Select 
+            value={merged.image_size || "medium"} 
+            onValueChange={(val) => onUpdate(idx, "image_size", val)}
+          >
+            <SelectTrigger className="h-8 text-xs bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto</SelectItem>
+              <SelectItem value="full">Full Width</SelectItem>
+              <SelectItem value="small">Small</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="large">Large</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {textKeys.map((k) => {
+        if (section?.type === "usp_strip" && k === "title") return null;
         const FIELD_FALLBACKS: Record<string, string> = {
           email: "support@storeontips.com",
           phone: "+91 98765 43210",
@@ -1943,7 +1991,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                 type="color" 
                 value={merged[`${k}_color`] || defaultTextColor} 
                 onChange={(e) => onUpdate(idx, `${k}_color`, e.target.value)} 
-                className="w-4.5 h-4.5 rounded cursor-pointer border p-0 bg-transparent shrink-0" 
+                className="w-4.5 h-4.5 rounded cursor-pointer border p-0 shrink-0" 
               />
               <Input 
                 value={merged[`${k}_color`] || ""} 
@@ -1963,9 +2011,152 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                 </button>
               )}
             </div>
+
+            {/* Font Size Selector */}
+            <div className="flex items-center gap-2 mt-1 justify-end">
+              <span className="text-[9px] text-muted-foreground font-medium">Font size:</span>
+              <Select 
+                value={String(merged[`${k}_font_size`] || "default")}
+                onValueChange={(val) => onUpdate(idx, `${k}_font_size`, val === "default" ? null : val)}
+              >
+                <SelectTrigger className="h-5 text-[9px] w-28 px-1 bg-background">
+                  <SelectValue placeholder="Default" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="10px">10px (Tiny)</SelectItem>
+                  <SelectItem value="12px">12px</SelectItem>
+                  <SelectItem value="14px">14px</SelectItem>
+                  <SelectItem value="16px">16px (Normal)</SelectItem>
+                  <SelectItem value="18px">18px</SelectItem>
+                  <SelectItem value="20px">20px (Medium)</SelectItem>
+                  <SelectItem value="24px">24px (Large)</SelectItem>
+                  <SelectItem value="30px">30px (X-Large)</SelectItem>
+                  <SelectItem value="36px">36px (2X-Large)</SelectItem>
+                  <SelectItem value="42px">42px</SelectItem>
+                  <SelectItem value="48px">48px (3X-Large)</SelectItem>
+                  <SelectItem value="56px">56px</SelectItem>
+                  <SelectItem value="64px">64px (4X-Large)</SelectItem>
+                  <SelectItem value="72px">72px</SelectItem>
+                  <SelectItem value="80px">80px (5X-Large)</SelectItem>
+                </SelectContent>
+              </Select>
+              {merged[`${k}_font_size`] && (
+                <button 
+                  type="button" 
+                  onClick={() => onUpdate(idx, `${k}_font_size`, null)}
+                  className="text-[9px] text-destructive hover:underline ml-1 font-semibold"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
         );
       })}
+
+      {section?.type === "promo_banner" && (
+        <div className="border-t pt-4 space-y-3">
+          <Label className="text-[11px] font-semibold">CTA Button Styles</Label>
+          
+          {/* Button Background Color */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground font-medium">Button BG:</span>
+            <div className="flex items-center gap-1.5">
+              <input 
+                type="color" 
+                value={merged.cta_bg_color || activePalette.primary || "#000000"} 
+                onChange={(e) => onUpdate(idx, "cta_bg_color", e.target.value)} 
+                className="w-5 h-5 rounded cursor-pointer border p-0 shrink-0" 
+              />
+              <Input 
+                value={merged.cta_bg_color || ""} 
+                onChange={(e) => onUpdate(idx, "cta_bg_color", e.target.value)} 
+                placeholder={`Default (${activePalette.primary || "#000000"})`} 
+                className="h-5 text-[9px] w-28 px-1 font-mono" 
+              />
+              {merged.cta_bg_color && (
+                <button type="button" onClick={() => onUpdate(idx, "cta_bg_color", null)} className="text-[9px] text-destructive hover:underline ml-1 font-semibold">Clear</button>
+              )}
+            </div>
+          </div>
+
+          {/* Button Text Color */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground font-medium">Button Text Color:</span>
+            <div className="flex items-center gap-1.5">
+              <input 
+                type="color" 
+                value={merged.cta_color || activePalette.primary_fg || "#ffffff"} 
+                onChange={(e) => onUpdate(idx, "cta_color", e.target.value)} 
+                className="w-5 h-5 rounded cursor-pointer border p-0 shrink-0" 
+              />
+              <Input 
+                value={merged.cta_color || ""} 
+                onChange={(e) => onUpdate(idx, "cta_color", e.target.value)} 
+                placeholder={`Default (${activePalette.primary_fg || "#ffffff"})`} 
+                className="h-5 text-[9px] w-28 px-1 font-mono" 
+              />
+              {merged.cta_color && (
+                <button type="button" onClick={() => onUpdate(idx, "cta_color", null)} className="text-[9px] text-destructive hover:underline ml-1 font-semibold">Clear</button>
+              )}
+            </div>
+          </div>
+
+          {/* Button Size */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground font-medium">Button Size:</span>
+            <select 
+              value={merged.cta_size || "md"} 
+              onChange={(e) => onUpdate(idx, "cta_size", e.target.value)} 
+              className="rounded border border-input h-6 text-[10px] bg-background w-24 px-1"
+            >
+              <option value="sm">Small</option>
+              <option value="md">Medium</option>
+              <option value="lg">Large</option>
+              <option value="xl">X-Large</option>
+            </select>
+          </div>
+
+          {/* Button Radius */}
+          <div className="space-y-1 p-1.5 border rounded bg-background/50">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span className="font-medium">Corner Radius:</span>
+              <span className="font-mono font-bold">{merged.cta_radius != null ? `${merged.cta_radius}px` : "12px (Default)"}</span>
+            </div>
+            <div className="flex gap-2 items-center">
+              <input 
+                type="range" 
+                min={0} 
+                max={30} 
+                step={2} 
+                value={merged.cta_radius != null ? merged.cta_radius : 12} 
+                onChange={(e) => onUpdate(idx, "cta_radius", Number(e.target.value))} 
+                className="flex-1 h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+              />
+              {merged.cta_radius != null && (
+                <button type="button" onClick={() => onUpdate(idx, "cta_radius", null)} className="text-[9px] text-destructive hover:underline shrink-0 font-semibold">Reset</button>
+              )}
+            </div>
+          </div>
+
+          {/* Button Animation */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground font-medium">Animation:</span>
+            <select 
+              value={merged.cta_animation || "none"} 
+              onChange={(e) => onUpdate(idx, "cta_animation", e.target.value)} 
+              className="rounded border border-input h-6 text-[10px] bg-background w-28 px-1"
+            >
+              <option value="none">None</option>
+              <option value="pulse">Pulse (Glow)</option>
+              <option value="bounce">Bounce</option>
+              <option value="float">Float on Hover</option>
+            </select>
+          </div>
+        </div>
+      )}
+
 
       {hasItems && itemShape === "usp" && (
         <ItemsEditor
@@ -2468,8 +2659,18 @@ const ALIGN_GRID = [
   "bottom-left", "bottom-center", "bottom-right",
 ];
 
-function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, manifest, iframeRef, onInsufficientCredits }: any) {
+function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, manifest, iframeRef, paletteOv, onInsufficientCredits }: any) {
   const defaults = section?.props ?? {};
+  const activePalette = {
+    ...(manifest?.dna?.palette ?? {}),
+    ...(paletteOv ?? {}),
+  };
+  const getHeroDefaultColor = (k: string) => {
+    if (k === "cta") return activePalette.primary_fg || "#ffffff";
+    if (k === "cta_secondary") return activePalette.fg || "#000000";
+    if (k === "kicker" || k === "sub") return activePalette.muted || activePalette.fg || "#6b7280";
+    return activePalette.fg || "#000000";
+  };
   const merged = { ...defaults, ...sectionOv };
   const style = merged.style ?? "centered";
   const slides: any[] = merged.slides ?? [];
@@ -2558,6 +2759,13 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
 
       {style === "slider" && (
         <div className="space-y-3 border-t pt-4">
+          <div className="flex items-center justify-between pb-2 border-b">
+            <Label className="text-xs font-semibold">Horizontal Scroll / Swipe</Label>
+            <Switch 
+              checked={!!merged.scroll_horizontal} 
+              onCheckedChange={(val) => onUpdate(idx, "scroll_horizontal", val)} 
+            />
+          </div>
           <div className="flex items-center justify-between">
             <Label className="text-xs">Slides ({slides.length})</Label>
             <Button size="sm" variant="outline" onClick={addSlide} className="h-7 text-xs"><Plus className="h-3 w-3 mr-1" /> Add slide</Button>
@@ -2822,6 +3030,47 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
           <span className="text-xs">Ken Burns zoom</span>
           <Switch checked={!!effects.ken_burns} onCheckedChange={(v) => setEffects("ken_burns", v)} />
         </div>
+      </div>
+
+      {/* Typography & Colors */}
+      <div className="border-t pt-4 space-y-2.5">
+        <Label className="text-[11px] font-semibold">Text Styles</Label>
+        {["kicker", "title", "sub", "cta", "cta_secondary"].map((k) => {
+          if (k === "cta_secondary" && !merged.cta_secondary && !merged.slides?.[0]?.cta_secondary) return null;
+          if (k === "cta" && !merged.cta && !merged.slides?.[0]?.cta) return null;
+          return (
+            <div key={k} className="p-2 border rounded bg-background/50 space-y-1.5 animate-fade-in">
+              <div className="text-[10px] font-medium capitalize">{k.replace("_", " ")} Style</div>
+              <div className="flex gap-2 items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] text-muted-foreground">Color:</span>
+                  <input 
+                    type="color" 
+                    value={merged[`${k}_color`] || getHeroDefaultColor(k)} 
+                    onChange={(e) => onUpdate(idx, `${k}_color`, e.target.value)} 
+                    className="w-4 h-4 rounded cursor-pointer border p-0 shrink-0" 
+                  />
+                  {merged[`${k}_color`] && (
+                    <button type="button" onClick={() => onUpdate(idx, `${k}_color`, null)} className="text-[9px] text-destructive hover:underline ml-1">Clear</button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] text-muted-foreground">Size:</span>
+                  <select 
+                    value={merged[`${k}_font_size`] || ""} 
+                    onChange={(e) => onUpdate(idx, `${k}_font_size`, e.target.value || null)} 
+                    className="rounded border border-input h-5 text-[9px] bg-background w-20 px-1 font-medium cursor-pointer"
+                  >
+                    <option value="">Default</option>
+                    {["12px", "14px", "16px", "18px", "20px", "24px", "30px", "36px", "42px", "48px", "56px", "64px", "72px"].map(sz => (
+                      <option key={sz} value={sz}>{sz}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
     </div>

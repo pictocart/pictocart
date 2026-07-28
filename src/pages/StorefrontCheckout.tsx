@@ -21,6 +21,45 @@ declare global {
   }
 }
 
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry"
+];
+
 const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
     if (window.Razorpay) { resolve(true); return; }
@@ -396,7 +435,7 @@ const StorefrontCheckout = () => {
 
   if (!store) return null;
 
-  const theme = resolveTheme(getStoreThemeTokens(store));
+  const theme = resolveTheme(getStoreThemeTokens(store), store);
   const { colors, fonts, borderRadius } = theme;
 
   const handleField = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -983,13 +1022,17 @@ const StorefrontCheckout = () => {
                       className="w-full px-3 py-2.5 text-sm border"
                       style={inputStyle}
                     />
-                    <input
-                      placeholder="State"
+                    <select
                       value={form.state}
                       onChange={(e) => handleField('state', e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm border"
+                      className="w-full px-3 py-2.5 text-sm border bg-transparent"
                       style={inputStyle}
-                    />
+                    >
+                      <option value="" style={{ color: '#000' }}>Select State *</option>
+                      {INDIAN_STATES.map((st) => (
+                        <option key={st} value={st} style={{ color: '#000' }}>{st}</option>
+                      ))}
+                    </select>
                     <input
                       placeholder="Country"
                       value={form.country}
@@ -1278,7 +1321,7 @@ const StorefrontCheckout = () => {
             </div>
 
             {/* Shipping Policy Collapsible */}
-            {store.settings?.policies?.shipping?.trim() && (
+            {(store.settings as any)?.policies?.shipping?.trim() && (
               <div 
                 className="mt-4 p-4 border text-left bg-card animate-fade-in"
                 style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px`, backgroundColor: colors.card }}
@@ -1296,7 +1339,7 @@ const StorefrontCheckout = () => {
                   <div 
                     className="mt-3 text-xs opacity-75 leading-relaxed space-y-2 border-t pt-3 policy-md"
                     style={{ borderColor: colors.secondary, color: colors.text }}
-                    dangerouslySetInnerHTML={{ __html: md(store.settings.policies.shipping) }}
+                    dangerouslySetInnerHTML={{ __html: md((store.settings as any).policies.shipping) }}
                   />
                 )}
               </div>

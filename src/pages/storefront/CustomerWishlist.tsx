@@ -14,7 +14,7 @@ const CustomerWishlist = () => {
   const { store, products, loading: storeLoading } = useStorefront(slug || '');
   const { user } = useCustomerAuth(slug || '');
   const { wishlistItems, wishlistProductIds, toggle } = useWishlist(store?.id, user?.id);
-  const theme = store ? resolveTheme(getStoreThemeTokens(store)) : null;
+  const theme = store ? resolveTheme(getStoreThemeTokens(store), store) : null;
 
   if (storeLoading || !store) {
     return (
