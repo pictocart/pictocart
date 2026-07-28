@@ -995,12 +995,12 @@ const StorefrontCheckout = () => {
                 <h2 className="text-sm font-semibold mb-3" style={{ fontFamily: fonts.heading }}>
                   Contact Information
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     placeholder="Full Name *"
                     value={form.name}
                     onChange={(e) => handleField('name', e.target.value)}
-                    className="col-span-2 w-full px-3 py-2.5 text-sm border"
+                    className="col-span-1 sm:col-span-2 w-full px-3 py-2.5 text-sm border"
                     style={inputStyle}
                   />
                   <input
@@ -1095,26 +1095,26 @@ const StorefrontCheckout = () => {
 
                 {/* New Address Form */}
                 {showNewAddressForm && (
-                  <div className="grid grid-cols-2 gap-3 p-4 border rounded-xl bg-card" style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px` }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 border rounded-xl bg-card" style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px` }}>
                     <input
                       placeholder="House / Flat No. *"
                       value={form.house}
                       onChange={(e) => handleField('house', e.target.value)}
-                      className="col-span-2 w-full px-3 py-2.5 text-sm border"
+                      className="col-span-1 sm:col-span-2 w-full px-3 py-2.5 text-sm border"
                       style={inputStyle}
                     />
                     <input
                       placeholder="Street / Area *"
                       value={form.street}
                       onChange={(e) => handleField('street', e.target.value)}
-                      className="col-span-2 w-full px-3 py-2.5 text-sm border"
+                      className="col-span-1 sm:col-span-2 w-full px-3 py-2.5 text-sm border"
                       style={inputStyle}
                     />
                     <input
                       placeholder="Landmark (optional)"
                       value={form.landmark}
                       onChange={(e) => handleField('landmark', e.target.value)}
-                      className="col-span-2 w-full px-3 py-2.5 text-sm border"
+                      className="col-span-1 sm:col-span-2 w-full px-3 py-2.5 text-sm border"
                       style={inputStyle}
                     />
                     <input
@@ -1151,7 +1151,7 @@ const StorefrontCheckout = () => {
                     />
                     
                     {/* Address Type Selection */}
-                    <div className="col-span-2 flex gap-2 mt-2">
+                    <div className="col-span-1 sm:col-span-2 flex gap-2 mt-2">
                       {(['home', 'office', 'other'] as const).map((type) => (
                         <label
                           key={type}
