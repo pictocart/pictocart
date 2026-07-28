@@ -66,6 +66,16 @@ jobs:
             sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 35/g' android/variables.gradle
             sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 35/g' android/variables.gradle
           fi
+          if [ -f android/app/build.gradle ]; then
+            echo '
+            configurations.all {
+                resolutionStrategy {
+                    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+                    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+                }
+            }
+            ' >> android/app/build.gradle
+          fi
 
       - name: Generate App Launcher Icons
         run: |
