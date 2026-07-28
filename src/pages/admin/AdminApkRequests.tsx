@@ -84,8 +84,8 @@ const AdminApkRequests = () => {
     }
   };
 
-  const loadRequests = async () => {
-    setLoading(true);
+  const loadRequests = async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('stores')
@@ -108,12 +108,19 @@ const AdminApkRequests = () => {
     } catch (e: any) {
       toast.error(e.message || 'Failed to load APK requests');
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadRequests();
+    loadRequests(true);
+    
+    // Auto refresh every 5 seconds silently to show real-time GitHub build status updates
+    const interval = setInterval(() => {
+      loadRequests(false);
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleUpdateLink = async (storeId: string, currentSettings: any, requestData: any) => {

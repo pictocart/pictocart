@@ -168,8 +168,8 @@ jobs:
           
           echo "Uploading $APK_FILE to Supabase Storage bucket..."
           
-          # Upload via curl to public storage bucket (store-templates or custom apks bucket)
-          UPLOAD_URL="$SUPABASE_URL/storage/v1/object/store-templates/apks/$TARGET_NAME"
+          # Upload via curl to public storage bucket (store-assets)
+          UPLOAD_URL="$SUPABASE_URL/storage/v1/object/store-assets/apks/$TARGET_NAME"
           
           curl -X POST -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
                -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
@@ -182,7 +182,7 @@ jobs:
                --data-binary "@$APK_FILE" \
                "$UPLOAD_URL"
 
-          DOWNLOAD_URL="$SUPABASE_URL/storage/v1/object/public/store-templates/apks/$TARGET_NAME"
+          DOWNLOAD_URL="$SUPABASE_URL/storage/v1/object/public/store-assets/apks/$TARGET_NAME"
           echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
 
       - name: Update Database Store APK status to Completed
