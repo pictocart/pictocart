@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
+import { useNavigate } from 'react-router-dom';
+
 /* Food-like categories that require FSSAI */
 const FOOD_CATEGORIES = ['food', 'grocery', 'bakery', 'restaurant', 'cafe', 'cloud kitchen', 'beverage', 'organic', 'catering', 'dairy', 'snacks', 'sweets'];
 const isFoodStore = (category?: string | null) =>
@@ -36,6 +38,7 @@ const SellerProfile = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const qc = useQueryClient();
   const { plan: currentPlan, allPlans = [] } = useSubscription();
+  const navigate = useNavigate();
 
   // License Key fields
   const [licenseKey, setLicenseKey] = useState('');
@@ -582,6 +585,16 @@ const SellerProfile = () => {
                         )}
                       </ul>
                     </div>
+
+                    {!isCurrent && config.plan !== 'free' && (
+                      <Button
+                        size="sm"
+                        className="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white font-medium text-xs h-8"
+                        onClick={() => navigate('/billing')}
+                      >
+                        Buy / Upgrade Plan
+                      </Button>
+                    )}
                   </div>
                 );
               })}

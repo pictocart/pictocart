@@ -7,6 +7,7 @@ import type { PromoTickerConfig } from '@/components/storefront/PromoTicker';
 import { toast } from 'sonner';
 import { Save, ExternalLink, Megaphone } from 'lucide-react';
 import { buildResolvedStorefrontManifest, getStorefrontConfig } from '@/lib/storefrontManifest';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const PromoTickerPage = () => {
   const { store, setStore } = useStore();
@@ -16,6 +17,7 @@ const PromoTickerPage = () => {
   });
   const [saving, setSaving] = useState(false);
   const [hydratedId, setHydratedId] = useState<string | null>(null);
+  const { plan } = useSubscription();
 
   useEffect(() => {
     if (!store?.id || hydratedId === store.id) return;
@@ -27,27 +29,68 @@ const PromoTickerPage = () => {
   const handleSave = async () => {
     if (!store) return;
     setSaving(true);
-    // Always read the latest settings from the current store to avoid stale closure
-    const currentSettings = getStorefrontConfig(store) as any;
-    const newConfig = { ...currentSettings, promo_ticker: config };
-    const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
-    // Also persist promo_ticker into store.settings so it survives
-    // resolved_storefront_manifest rebuilds triggered by other save actions.
-    const updatedSettings = { ...(store.settings as any || {}), promo_ticker: config };
-    const { error } = await supabase
-      .from('stores')
-      .update({
-        resolved_storefront_manifest: resolved_storefront_manifest as any,
-        settings: updatedSettings,
-      })
-      .eq('id', store.id);
-    if (error) {
-      toast.error('Save failed');
-    } else {
+    try {
+      // 1) Fetch current store settings to get usage_stats
+      const { data: storeData, error: fetchErr } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('id', store.id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const settings = (storeData?.settings as any) || {};
+      const stats = settings.usage_stats || {};
+
+      // 2) Check limits based on plan
+      if (plan === 'free') {
+        const changesCount = stats.promo_ticker_changes || 0;
+        if (changesCount >= 1) {
+          toast.error("Free plan allows only 1 promo ticker change. Upgrade your plan to edit.");
+          setSaving(false);
+          return;
+        }
+      } else if (plan === 'starter') {
+        const lastChanged = stats.promo_ticker_last_changed;
+        if (lastChanged) {
+          const lastDate = new Date(lastChanged).toDateString();
+          const todayDate = new Date().toDateString();
+          if (lastDate === todayDate) {
+            toast.error("Starter plan allows only 1 promo ticker change per day. Upgrade your plan to edit again today.");
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
+      // If checks pass, perform save
+      const currentSettings = getStorefrontConfig(store) as any;
+      const newConfig = { ...currentSettings, promo_ticker: config };
+      const resolved_storefront_manifest = await buildResolvedStorefrontManifest(store as any, newConfig as any);
+      
+      const newStats = {
+        ...stats,
+        promo_ticker_changes: (stats.promo_ticker_changes || 0) + 1,
+        promo_ticker_last_changed: new Date().toISOString(),
+      };
+      const updatedSettings = { ...(store.settings as any || {}), promo_ticker: config, usage_stats: newStats };
+
+      const { error: updateErr } = await supabase
+        .from('stores')
+        .update({
+          resolved_storefront_manifest: resolved_storefront_manifest as any,
+          settings: updatedSettings,
+        })
+        .eq('id', store.id);
+
+      if (updateErr) throw updateErr;
+
       setStore({ ...store, resolved_storefront_manifest, settings: updatedSettings });
       toast.success('Promo ticker saved!');
+    } catch (err: any) {
+      toast.error(err.message || 'Save failed');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const storefrontUrl = store?.slug ? `/store/${store.slug}` : null;

@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Package, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound, ShieldCheck, Info, ChevronDown, ChevronLeft, ChevronRight, Sparkles, UserCheck, Warehouse, Wallet, Key, Settings2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import PremiumGate from '@/components/PremiumGate';
 
 interface PickupAddress {
   name: string;
@@ -39,89 +40,88 @@ const ShippingSettings = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [slideDir, setSlideDir] = useState<'left' | 'right'>('right');
 
+  // -------- Load pickup details --------
   useEffect(() => {
-    const load = async () => {
-      if (!store?.id) return;
+    if (!store?.id) return;
+    (async () => {
       setLoading(true);
-      const s = (store.settings as any)?.shipping;
-      if (s?.pickup) setPickup({ ...emptyPickup, ...s.pickup });
-      if (s?.shiprocket_pickup_name) setSrPickupName(s.shiprocket_pickup_name);
-      if (s?.same_day_cutoff) setCutoffTime(s.same_day_cutoff);
-      const { data } = await supabase
-        .from('store_secrets' as any)
-        .select('shiprocket_email, shiprocket_password')
-        .eq('store_id', store.id)
+      const { data, error } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('id', store.id)
         .maybeSingle();
-      if (data) {
-        setSrEmail((data as any).shiprocket_email || '');
-        setSrPassword((data as any).shiprocket_password || '');
+
+      if (!error && data?.settings) {
+        const s = data.settings as any;
+        if (s.pickup_address) {
+          setPickup(s.pickup_address);
+        }
+        if (s.shiprocket_email) setSrEmail(s.shiprocket_email);
+        if (s.shiprocket_password) setSrPassword(s.shiprocket_password);
+        if (s.shiprocket_pickup_name) setSrPickupName(s.shiprocket_pickup_name);
+        if (s.cutoff_time) setCutoffTime(s.cutoff_time);
       }
       setLoading(false);
-    };
-    load();
+    })();
   }, [store?.id]);
-
-  const isConfigured = !!srEmail && !!srPassword && !!pickup.pincode;
-
-  useEffect(() => {
-    if (!loading) setGuideOpen(!isConfigured);
-  }, [loading, isConfigured]);
 
   const handleSave = async () => {
     if (!store) return;
     setSaving(true);
-    const settings = {
-      ...((store.settings as any) || {}),
-      shipping: {
-        ...(store.settings?.shipping || {}),
-        configured: !!(srEmail && srPassword),
-        pickup,
-        shiprocket_pickup_name: srPickupName,
-        preferred_courier: 'shiprocket',
-        same_day_cutoff: cutoffTime,
-      },
-    };
-    const { error } = await supabase.from('stores').update({ settings }).eq('id', store.id);
-    const { error: secErr } = await supabase
-      .from('store_secrets' as any)
-      .upsert({
-        store_id: store.id,
-        shiprocket_email: srEmail || null,
-        shiprocket_password: srPassword || null,
-        preferred_courier: 'shiprocket',
-      }, { onConflict: 'store_id' });
+    try {
+      const { data: currentStore } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('id', store.id)
+        .maybeSingle();
 
-    if (error || secErr) {
-      toast.error('Failed to save shipping settings');
-    } else {
+      const baseSettings = (currentStore?.settings as any) || {};
+      const updatedSettings = {
+        ...baseSettings,
+        pickup_address: pickup,
+        shiprocket_email: srEmail.trim(),
+        shiprocket_password: srPassword.trim(),
+        shiprocket_pickup_name: srPickupName.trim(),
+        cutoff_time: cutoffTime,
+      };
+
+      const { error } = await supabase
+        .from('stores')
+        .update({ settings: updatedSettings })
+        .eq('id', store.id);
+
+      if (error) throw error;
       toast.success('Shipping settings saved');
-      setStore({ ...store, settings });
+      setStore({ ...store, settings: updatedSettings });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to save shipping settings');
     }
     setSaving(false);
   };
 
-  const handleTestShiprocket = async () => {
-    if (!store?.id) return;
-    if (!srEmail || !srPassword) {
-      toast.error('Enter Shiprocket API-User email & password first');
+  const handleTestConnection = async () => {
+    if (!srEmail.trim() || !srPassword.trim()) {
+      toast.error('Please enter both Shiprocket API Email and Password first.');
       return;
     }
     setSrTesting(true);
     setSrTestResult(null);
     setSrTestError(null);
     try {
-      const { error: secErr } = await supabase
-        .from('store_secrets' as any)
-        .upsert({
-          store_id: store.id,
-          shiprocket_email: srEmail,
-          shiprocket_password: srPassword,
-          preferred_courier: 'shiprocket',
-        }, { onConflict: 'store_id' });
-      if (secErr) {
+      // 1) Test credentials validity by calling auth token proxy
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'auth',
+          email: srEmail.trim(),
+          password: srPassword.trim(),
+        },
+      });
+
+      if (tokenError || !tokenData || !tokenData.token) {
+        const msg = tokenError?.message || tokenData?.error || 'Invalid credentials';
         setSrTestResult('error');
-        setSrTestError(secErr.message);
-        toast.error('Could not save credentials: ' + secErr.message);
+        setSrTestError(msg);
+        toast.error(msg);
         setSrTesting(false);
         return;
       }
@@ -129,7 +129,7 @@ const ShippingSettings = () => {
       const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
         body: {
           action: 'serviceability',
-          store_id: store.id,
+          store_id: store?.id,
           pickup_pincode: pickup.pincode || '110001',
           delivery_pincode: '560001',
           weight: 0.5,
@@ -154,6 +154,8 @@ const ShippingSettings = () => {
     setSrTesting(false);
   };
 
+  const isConfigured = !!srEmail && !!srPassword && !!pickup.pincode;
+
   const updatePickup = (key: keyof PickupAddress, value: string) =>
     setPickup((c) => ({ ...c, [key]: value }));
 
@@ -166,25 +168,26 @@ const ShippingSettings = () => {
         </p>
       </div>
 
-      {/* Status banner */}
-      <Card data-tour="ship-credentials">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Package className="h-5 w-5 text-primary" />
+      <PremiumGate feature="shipping" fallbackMessage="Upgrade your plan to unlock automated shipping calculations and Shiprocket carrier integrations.">
+        {/* Status banner */}
+        <Card data-tour="ship-credentials">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <Package className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Shiprocket Integration</CardTitle>
+                  <CardDescription>Compare rates across Delhivery, Ekart, Bluedart, DTDC, Xpressbees & more — automatically</CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-base">Shiprocket Integration</CardTitle>
-                <CardDescription>Compare rates across Delhivery, Ekart, Bluedart, DTDC, Xpressbees & more — automatically</CardDescription>
-              </div>
+              <Badge variant={isConfigured ? 'default' : 'secondary'}>
+                {isConfigured ? 'Configured' : 'Not Set Up'}
+              </Badge>
             </div>
-            <Badge variant={isConfigured ? 'default' : 'secondary'}>
-              {isConfigured ? 'Configured' : 'Not Set Up'}
-            </Badge>
-          </div>
-        </CardHeader>
-      </Card>
+          </CardHeader>
+        </Card>
 
       {/* Step-by-step setup guide — collapsible carousel */}
       {(() => {
@@ -589,6 +592,7 @@ const ShippingSettings = () => {
           Save Shipping Settings
         </Button>
       </div>
+      </PremiumGate>
     </div>
   );
 };

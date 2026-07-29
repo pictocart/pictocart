@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { THEME_TEMPLATES } from '@/lib/themes';
 import { ThemeUpdateBanner } from '@/components/ThemeUpdateBanner';
 import { getStoreThemeId } from '@/lib/storefrontManifest';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface ThemeMaster {
   id: string;
@@ -140,15 +141,66 @@ const Themes = () => {
 
   const purchasedIds = new Set(purchases);
 
+  const { plan } = useSubscription();
+
   const executeInstallTheme = async (theme: ThemeMaster) => {
     if (!store) return;
     try {
+      // 1) Fetch current store settings to get usage_stats
+      const { data: storeData, error: fetchErr } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('id', store.id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const settings = (storeData?.settings as any) || {};
+      const stats = settings.usage_stats || {};
+
+      // Only check and count switches if they are switching to a new theme
+      if (activeThemeId && activeThemeId !== theme.theme_id) {
+        // 2) Check limits based on plan
+        if (plan === 'free') {
+          const switches = stats.theme_switches || 0;
+          if (switches >= 2) {
+            toast.error("Free plan allows only 2 theme switches. Upgrade your plan to switch again.");
+            return;
+          }
+        } else if (plan === 'starter') {
+          const lastChanged = stats.theme_switches_last_changed;
+          const todayDate = new Date().toDateString();
+          const lastDate = lastChanged ? new Date(lastChanged).toDateString() : null;
+          
+          let dailyCount = stats.theme_switches_today || 0;
+          if (lastDate !== todayDate) {
+            dailyCount = 0;
+          }
+
+          if (dailyCount >= 5) {
+            toast.error("Starter plan allows only 5 theme switches per day. Upgrade your plan to switch again.");
+            return;
+          }
+        }
+      }
+
+      // If checks pass, perform save
+      const todayDateStr = new Date().toDateString();
+      const lastDateStr = stats.theme_switches_last_changed ? new Date(stats.theme_switches_last_changed).toDateString() : null;
+      const newStats = activeThemeId && activeThemeId !== theme.theme_id ? {
+        ...stats,
+        theme_switches: (stats.theme_switches || 0) + 1,
+        theme_switches_today: lastDateStr === todayDateStr ? (stats.theme_switches_today || 0) + 1 : 1,
+        theme_switches_last_changed: new Date().toISOString(),
+      } : stats;
+
+      const baseSettings = { ...settings, usage_stats: newStats };
+
       if (theme.theme_id.startsWith('theme-') || theme.theme_id.startsWith('layout1-')) {
         const { applyMasterTheme } = await import('@/lib/applyMasterTheme');
         const { theme: newTheme, settings: newSettings } = await applyMasterTheme(
           store.id,
           theme.theme_id,
-          store.settings || {}
+          baseSettings
         );
         setStore({ ...store, theme: newTheme as any, theme_id: theme.theme_id, theme_tokens: newTheme as any, settings: newSettings as any });
       } else {
@@ -162,10 +214,16 @@ const Themes = () => {
         } as any);
         const { error } = await supabase
           .from('stores')
-          .update({ theme: newTheme as any, theme_id: theme.theme_id, theme_tokens: newTheme as any, resolved_storefront_manifest: resolved_storefront_manifest as any })
+          .update({ 
+            theme: newTheme as any, 
+            theme_id: theme.theme_id, 
+            theme_tokens: newTheme as any, 
+            resolved_storefront_manifest: resolved_storefront_manifest as any,
+            settings: baseSettings
+          })
           .eq('id', store.id);
         if (error) throw error;
-        setStore({ ...store, theme: newTheme as any, theme_id: theme.theme_id, theme_tokens: newTheme as any, resolved_storefront_manifest });
+        setStore({ ...store, theme: newTheme as any, theme_id: theme.theme_id, theme_tokens: newTheme as any, resolved_storefront_manifest, settings: baseSettings });
       }
 
       // Check if this is a custom partner theme and trigger reward RPC

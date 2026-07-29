@@ -9,9 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import SiteOfferBanner from '@/components/storefront/SiteOfferBanner';
-
-
-
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface OfferRow {
   enabled: boolean;
@@ -23,7 +21,6 @@ interface OfferRow {
   banner_bg_color: string | null;
   banner_text_color: string | null;
   show_banner: boolean;
-  
 }
 
 const DEFAULTS: OfferRow = {
@@ -47,6 +44,7 @@ const SiteOffer = () => {
   const [form, setForm] = useState<OfferRow>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { plan } = useSubscription();
 
   useEffect(() => {
     if (!store?.id) return;
@@ -67,24 +65,78 @@ const SiteOffer = () => {
   const save = async () => {
     if (!store?.id) return;
     setSaving(true);
-    const payload = {
-      store_id: store.id,
-      enabled: form.enabled,
-      percent_off: Math.min(90, Math.max(0, Number(form.percent_off) || 0)),
-      starts_at: form.starts_at,
-      ends_at: form.ends_at,
-      label: form.label,
-      banner_text: form.banner_text,
-      banner_bg_color: form.banner_bg_color,
-      banner_text_color: form.banner_text_color,
-      show_banner: form.show_banner,
-    };
-    const { error } = await supabase
-      .from('store_site_offers' as any)
-      .upsert(payload, { onConflict: 'store_id' });
-    setSaving(false);
-    if (error) toast.error(error.message);
-    else toast.success('Site-wide offer saved');
+    try {
+      // 1) Fetch current store settings to get usage_stats
+      const { data: storeData, error: fetchErr } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('id', store.id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const settings = (storeData?.settings as any) || {};
+      const stats = settings.usage_stats || {};
+
+      // 2) Check limits based on plan
+      if (plan === 'free') {
+        const changesCount = stats.sidewide_offer_changes || 0;
+        if (changesCount >= 1) {
+          toast.error("Free plan allows only 1 side-wide offer change. Upgrade your plan to edit.");
+          setSaving(false);
+          return;
+        }
+      } else if (plan === 'starter') {
+        const lastChanged = stats.sidewide_offer_last_changed;
+        if (lastChanged) {
+          const lastDate = new Date(lastChanged).toDateString();
+          const todayDate = new Date().toDateString();
+          if (lastDate === todayDate) {
+            toast.error("Starter plan allows only 1 side-wide offer change per day. Upgrade your plan to edit again today.");
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
+      // If checks pass, perform save
+      const payload = {
+        store_id: store.id,
+        enabled: form.enabled,
+        percent_off: Math.min(90, Math.max(0, Number(form.percent_off) || 0)),
+        starts_at: form.starts_at,
+        ends_at: form.ends_at,
+        label: form.label,
+        banner_text: form.banner_text,
+        banner_bg_color: form.banner_bg_color,
+        banner_text_color: form.banner_text_color,
+        show_banner: form.show_banner,
+      };
+
+      const { error: upsertErr } = await supabase
+        .from('store_site_offers' as any)
+        .upsert(payload, { onConflict: 'store_id' });
+      if (upsertErr) throw upsertErr;
+
+      // 3) Update usage_stats inside store settings
+      const newStats = {
+        ...stats,
+        sidewide_offer_changes: (stats.sidewide_offer_changes || 0) + 1,
+        sidewide_offer_last_changed: new Date().toISOString(),
+      };
+      
+      const { error: updateErr } = await supabase
+        .from('stores')
+        .update({ settings: { ...settings, usage_stats: newStats } })
+        .eq('id', store.id);
+      
+      if (updateErr) throw updateErr;
+
+      toast.success('Site-wide offer saved');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {

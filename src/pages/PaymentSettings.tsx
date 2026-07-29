@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import PremiumGate from '@/components/PremiumGate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -334,9 +335,9 @@ const PaymentSettings = () => {
 
         {/* ============= ONLINE TAB ============= */}
         <TabsContent value="online" className="space-y-6">
-
-          {/* Status banner */}
-          <Card className={
+          <PremiumGate feature="razorpay" fallbackMessage="Upgrade your plan to unlock automated online payments processing and Razorpay gateway integrations.">
+            {/* Status banner */}
+            <Card className={
             onlinePaymentsActive
               ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20'
               : 'border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20'
@@ -549,6 +550,7 @@ const PaymentSettings = () => {
               </div>
             </CardContent>
           </Card>
+          </PremiumGate>
         </TabsContent>
 
         {/* ============= OFFLINE TAB ============= */}

@@ -13,70 +13,48 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface ReviewRow {
   id: string;
   product_id: string;
   rating: number;
-  title: string | null;
-  body: string | null;
-  is_verified_purchase: boolean | null;
+  author: string;
+  comment: string;
+  status: 'pending' | 'approved' | 'rejected';
   created_at: string;
-  moderation_status: string;
-  user_id: string;
-}
-
-const TABS = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'order_feedback', label: 'Order Feedback' },
-];
-
-interface OrderFeedbackRow {
-  id: string;
-  order_id: string;
-  rating: number;
-  comment: string | null;
-  created_at: string;
+  products?: {
+    name: string;
+  };
 }
 
 const ReviewsModeration = () => {
   const { store } = useStore();
-  const [tab, setTab] = useState('pending');
-  const [rows, setRows] = useState<ReviewRow[]>([]);
-  const [feedback, setFeedback] = useState<OrderFeedbackRow[]>([]);
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
-
-  // AI Review Generator states
-  const [products, setProducts] = useState<{ id: string; title: string; images?: string[] | any }[]>([]);
   const [genOpen, setGenOpen] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [reviewCount, setReviewCount] = useState('3');
   const [sentiment, setSentiment] = useState('positive');
   const [generating, setGenerating] = useState(false);
+  const { plan } = useSubscription();
 
   useEffect(() => {
-    if (!store?.id) return;
+    load();
+  }, [store?.id, activeTab]);
+
+  useEffect(() => {
     const fetchProducts = async () => {
-      const { data, error } = await supabase
+      if (!store?.id) return;
+      const { data } = await supabase
         .from('products')
-        .select('id, title, images')
-        .eq('store_id', store.id)
-        .order('title');
-      if (!error && data) {
+        .select('id, name')
+        .eq('store_id', store.id);
+      if (data) {
         setProducts(data);
-        
-        // Handle auto-open via query param
-        const params = new URLSearchParams(window.location.search);
-        const urlProductId = params.get('product_id');
-        if (urlProductId && data.some(p => p.id === urlProductId)) {
-          setSelectedProduct(urlProductId);
-          setGenOpen(true);
-        } else if (data.length > 0) {
-          setSelectedProduct(data[0].id);
-        }
+        if (data.length > 0) setSelectedProduct(data[0].id);
       }
     };
     fetchProducts();
@@ -89,6 +67,42 @@ const ReviewsModeration = () => {
     }
     setGenerating(true);
     try {
+      // 1) Fetch current store settings to get usage_stats
+      const { data: storeData, error: fetchErr } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('id', store.id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const settings = (storeData?.settings as any) || {};
+      const stats = settings.usage_stats || {};
+
+      // 2) Check limits based on plan
+      if (plan === 'free') {
+        const revCount = stats.reviews_generated || 0;
+        if (revCount >= 2) {
+          toast.error("Free plan allows only 2 AI reviews generated. Upgrade your plan to generate more.");
+          setGenerating(false);
+          return;
+        }
+      } else if (plan === 'starter') {
+        const lastChanged = stats.reviews_last_generated;
+        const todayDate = new Date().toDateString();
+        const lastDate = lastChanged ? new Date(lastChanged).toDateString() : null;
+        
+        let dailyCount = stats.reviews_today_generated || 0;
+        if (lastDate !== todayDate) {
+          dailyCount = 0;
+        }
+
+        if (dailyCount >= 10) {
+          toast.error("Starter plan allows only 10 AI reviews generated per day. Upgrade your plan to generate more.");
+          setGenerating(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-reviews', {
         body: {
           store_id: store.id,
@@ -99,6 +113,23 @@ const ReviewsModeration = () => {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
+
+      // 3) Update stats
+      const todayDateStr = new Date().toDateString();
+      const lastDateStr = stats.reviews_last_generated ? new Date(stats.reviews_last_generated).toDateString() : null;
+      const newStats = {
+        ...stats,
+        reviews_generated: (stats.reviews_generated || 0) + 1,
+        reviews_today_generated: lastDateStr === todayDateStr ? (stats.reviews_today_generated || 0) + 1 : 1,
+        reviews_last_generated: new Date().toISOString(),
+      };
+
+      const { error: updateErr } = await supabase
+        .from('stores')
+        .update({ settings: { ...settings, usage_stats: newStats } })
+        .eq('id', store.id);
+
+      if (updateErr) throw updateErr;
 
       toast.success(`Successfully generated ${data.count || count} reviews!`);
       setGenOpen(false);

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, Sparkles, Copy, Check, Send, AlertCircle, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const CAMPAIGNS = [
   { value: 'abandoned_cart', label: 'Abandoned Cart Recovery', desc: 'Remind users who left products in their checkout cart.' },
@@ -33,6 +34,7 @@ const MarketingCopywriter = () => {
   const [whatsappCopy, setWhatsappCopy] = useState('');
   const [smsCopy, setSmsCopy] = useState('');
   const [copiedType, setCopiedType] = useState<string | null>(null);
+  const { plan } = useSubscription();
 
   const handleGenerate = async () => {
     if (!store?.id) return;
@@ -41,6 +43,42 @@ const MarketingCopywriter = () => {
     setSmsCopy('');
 
     try {
+      // 1) Fetch current store settings to get usage_stats
+      const { data: storeData, error: fetchErr } = await supabase
+        .from('stores')
+        .select('settings')
+        .eq('id', store.id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const settings = (storeData?.settings as any) || {};
+      const stats = settings.usage_stats || {};
+
+      // 2) Check limits based on plan
+      if (plan === 'free') {
+        const genCount = stats.ai_copywriter_generations || 0;
+        if (genCount >= 3) {
+          toast.error("Free plan allows only 3 AI copy generations. Upgrade your plan to generate more.");
+          setGenerating(false);
+          return;
+        }
+      } else if (plan === 'starter') {
+        const lastChanged = stats.ai_copywriter_last_used;
+        const todayDate = new Date().toDateString();
+        const lastDate = lastChanged ? new Date(lastChanged).toDateString() : null;
+        
+        let dailyCount = stats.ai_copywriter_today_generations || 0;
+        if (lastDate !== todayDate) {
+          dailyCount = 0;
+        }
+
+        if (dailyCount >= 10) {
+          toast.error("Starter plan allows only 10 AI copy generations per day. Upgrade your plan to generate more.");
+          setGenerating(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-marketing-copy', {
         body: {
           store_id: store.id,
@@ -54,6 +92,23 @@ const MarketingCopywriter = () => {
 
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
+
+      // 3) Update stats
+      const todayDateStr = new Date().toDateString();
+      const lastDateStr = stats.ai_copywriter_last_used ? new Date(stats.ai_copywriter_last_used).toDateString() : null;
+      const newStats = {
+        ...stats,
+        ai_copywriter_generations: (stats.ai_copywriter_generations || 0) + 1,
+        ai_copywriter_today_generations: lastDateStr === todayDateStr ? (stats.ai_copywriter_today_generations || 0) + 1 : 1,
+        ai_copywriter_last_used: new Date().toISOString(),
+      };
+
+      const { error: updateErr } = await supabase
+        .from('stores')
+        .update({ settings: { ...settings, usage_stats: newStats } })
+        .eq('id', store.id);
+
+      if (updateErr) throw updateErr;
 
       setWhatsappCopy(data.whatsapp || '');
       setSmsCopy(data.sms || '');

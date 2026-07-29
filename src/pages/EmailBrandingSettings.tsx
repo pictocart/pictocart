@@ -1,6 +1,7 @@
 import { useStore } from '@/hooks/useStore';
 import StepEmailBranding from '@/components/onboarding/StepEmailBranding';
 import { Card, CardContent } from '@/components/ui/card';
+import PremiumGate from '@/components/PremiumGate';
 
 const EmailBrandingSettings = () => {
   const { store } = useStore();
@@ -12,30 +13,32 @@ const EmailBrandingSettings = () => {
           Customise the order, shipping and welcome emails customers receive from {store?.name || 'your store'}.
         </p>
       </div>
-      <Card>
-        <CardContent className="pt-6">
-          {/* Re-using onboarding step component as the standalone settings page */}
-          <StepEmailBranding
-            data={{
-              storeName: store?.name || '',
-              slug: store?.slug || '',
-              description: '',
-              category: store?.category || '',
-              logoUrl: store?.logo_url || '',
-              selectedThemeId: '',
-              productImageUrl: '',
-              productImageFile: null,
-              aiProduct: null,
-              storeInfo: { phone: '', city: '', gst: '' },
-              paymentSettings: { cod: true, upi: false, razorpay: false },
-              emailTemplatesGenerated: false,
-              slugAvailable: true,
-            }}
-            setData={() => {}}
-            storeId={store?.id}
-          />
-        </CardContent>
-      </Card>
+      <PremiumGate feature="emailBranding" fallbackMessage="Upgrade your plan to remove PicToCart watermark and customize customer welcome/invoice emails.">
+        <Card>
+          <CardContent className="pt-6">
+            {/* Re-using onboarding step component as the standalone settings page */}
+            <StepEmailBranding
+              data={{
+                storeName: store?.name || '',
+                slug: store?.slug || '',
+                description: '',
+                category: store?.category || '',
+                logoUrl: store?.logo_url || '',
+                selectedThemeId: '',
+                productImageUrl: '',
+                productImageFile: null,
+                aiProduct: null,
+                storeInfo: { phone: '', city: '', gst: '' },
+                paymentSettings: { cod: true, upi: false, razorpay: false },
+                emailTemplatesGenerated: false,
+                slugAvailable: true,
+              }}
+              setData={() => {}}
+              storeId={store?.id}
+            />
+          </CardContent>
+        </Card>
+      </PremiumGate>
     </div>
   );
 };

@@ -16,6 +16,7 @@ import remarkGfm from 'remark-gfm';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImage } from '@/lib/imageCompression';
 import { cn } from '@/lib/utils';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const BlogPostForm = () => {
   const { id } = useParams();
@@ -179,6 +180,16 @@ const BlogPostForm = () => {
         { onSuccess: () => { toast.success('Post updated!'); navigate('/blog-posts'); }, onError: () => toast.error('Failed to save') }
       );
     } else {
+      if (plan === 'starter') {
+        const { count, error: countErr } = await supabase
+          .from('blog_posts')
+          .select('id', { count: 'exact', head: true })
+          .eq('store_id', store.id);
+        if (!countErr && count !== null && count >= 5) {
+          toast.error('Starter plan allows only 5 blog posts. Upgrade your plan to Growth/Scale for unlimited.');
+          return;
+        }
+      }
       createMutation.mutate(
         { store_id: store.id, ...payload },
         { onSuccess: () => { toast.success('Post created!'); navigate('/blog-posts'); }, onError: () => toast.error('Failed to create') }
