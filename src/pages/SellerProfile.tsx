@@ -48,11 +48,11 @@ const SellerProfile = () => {
     }
     setLinkingReferral(true);
     try {
-      // Find partner by referral code
+      // Find partner by referral code using the secure RPC function to bypass RLS restrictions
       const { data: partner, error: pErr } = await supabase
-        .from('partners')
-        .select('id, name')
-        .eq('referral_code', referralCode.trim().toUpperCase())
+        .rpc('resolve_partner_by_referral_code', {
+          _referral_code: referralCode.trim().toUpperCase()
+        })
         .maybeSingle();
 
       if (pErr) throw pErr;
