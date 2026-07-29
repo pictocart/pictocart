@@ -715,18 +715,24 @@ const PartnerDashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {/* Summary row */}
-                    <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-slate-950 border border-slate-800 text-sm">
+                    <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-300">
                       <div className="flex items-center gap-2">
                         <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20">Starter</Badge>
-                        <span>{(licensesQ.data ?? []).filter((l: any) => (l.license_type === "basic" || l.license_type === "starter") && l.status === "available").length} Available</span>
+                        <span className="font-medium">
+                          <strong className="text-orange-400 font-semibold mr-1">{(licensesQ.data ?? []).filter((l: any) => (l.license_type === "basic" || l.license_type === "starter") && l.status === "available").length}</strong> Available
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">Growth</Badge>
-                        <span>{(licensesQ.data ?? []).filter((l: any) => (l.license_type === "premium" || l.license_type === "growth") && l.status === "available").length} Available</span>
+                        <span className="font-medium">
+                          <strong className="text-purple-400 font-semibold mr-1">{(licensesQ.data ?? []).filter((l: any) => (l.license_type === "premium" || l.license_type === "growth") && l.status === "available").length}</strong> Available
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className="bg-rose-500/10 text-rose-400 border-rose-500/20">Scale</Badge>
-                        <span>{(licensesQ.data ?? []).filter((l: any) => l.license_type === "scale" && l.status === "available").length} Available</span>
+                        <span className="font-medium">
+                          <strong className="text-rose-400 font-semibold mr-1">{(licensesQ.data ?? []).filter((l: any) => l.license_type === "scale" && l.status === "available").length}</strong> Available
+                        </span>
                       </div>
                     </div>
 
