@@ -98,7 +98,6 @@ const PartnerDashboard = () => {
     enabled: !!partner?.id,
     queryKey: ["partner-wallet", partner?.id],
     queryFn: async () => {
-      await supabase.from("partner_wallet").upsert({ partner_id: partner!.id }, { onConflict: "partner_id", ignoreDuplicates: true });
       const { data } = await supabase
         .from("partner_wallet")
         .select("*")
