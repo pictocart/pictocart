@@ -1613,10 +1613,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       </span>
     );
 
-    const Brand = storeSlug
-      ? <Link to={`/store/${storeSlug}`}>{BrandInner}</Link>
-      : onNavigate
-        ? <button onClick={() => onNavigate("home")} style={{ background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>{BrandInner}</button>
+    const Brand = onNavigate
+      ? <button onClick={() => onNavigate("home")} style={{ background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>{BrandInner}</button>
+      : storeSlug
+        ? <Link to={`/store/${storeSlug}`}>{BrandInner}</Link>
         : <div>{BrandInner}</div>;
 
     const AccountBtnIcon = storeSlug ? (
@@ -1708,10 +1708,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
                 const isActive = l.page === "home" || l.page === "";
                 return (
                   <span key={l.label}>
-                    {storeSlug
-                      ? <Link to={l.to} className={`transition duration-300 font-medium ${isActive ? "text-[#8c2d19] font-bold" : "text-stone-800 hover:text-[#8c2d19]"}`}>{l.label}</Link>
-                      : onNavigate
-                        ? <button onClick={() => onNavigate(l.page)} className={`transition duration-300 font-medium ${isActive ? "text-[#8c2d19] font-bold" : "text-stone-800 hover:text-[#8c2d19]"}`} style={{ background: "transparent", border: 0, cursor: "pointer" }}>{l.label}</button>
+                    {onNavigate
+                      ? <button onClick={() => onNavigate(l.page)} className={`transition duration-300 font-medium ${isActive ? "text-[#8c2d19] font-bold" : "text-stone-800 hover:text-[#8c2d19]"}`} style={{ background: "transparent", border: 0, cursor: "pointer" }}>{l.label}</button>
+                      : storeSlug
+                        ? <Link to={l.to} className={`transition duration-300 font-medium ${isActive ? "text-[#8c2d19] font-bold" : "text-stone-800 hover:text-[#8c2d19]"}`}>{l.label}</Link>
                         : <span className={`font-medium ${isActive ? "text-[#8c2d19] font-bold" : "text-stone-800"}`}>{l.label}</span>
                     }
                   </span>
@@ -1768,15 +1768,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
                     const isActive = l.page === "home" || l.page === "";
                     return (
                       <span key={l.label}>
-                        {storeSlug ? (
-                          <Link 
-                            to={l.to} 
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={`block py-2 text-base transition duration-300 font-semibold ${isActive ? "text-[#8c2d19] border-l-2 border-[#8c2d19] pl-3" : "text-stone-700 hover:text-[#8c2d19]"}`}
-                          >
-                            {l.label}
-                          </Link>
-                        ) : onNavigate ? (
+                        {onNavigate ? (
                           <button 
                             onClick={() => {
                               onNavigate(l.page);
@@ -1787,6 +1779,14 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
                           >
                             {l.label}
                           </button>
+                        ) : storeSlug ? (
+                          <Link 
+                            to={l.to} 
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`block py-2 text-base transition duration-300 font-semibold ${isActive ? "text-[#8c2d19] border-l-2 border-[#8c2d19] pl-3" : "text-stone-700 hover:text-[#8c2d19]"}`}
+                          >
+                            {l.label}
+                          </Link>
                         ) : (
                           <span className={`block py-2 text-base font-semibold ${isActive ? "text-[#8c2d19]" : "text-stone-500"}`}>
                             {l.label}
