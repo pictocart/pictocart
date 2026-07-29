@@ -26,6 +26,7 @@ const BlogPostForm = () => {
   const { data: existing } = useBlogPostById(isEdit ? id : undefined);
   const createMutation = useCreateBlogPost();
   const updateMutation = useUpdateBlogPost();
+  const { plan } = useSubscription();
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
