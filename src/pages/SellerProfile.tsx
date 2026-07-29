@@ -91,9 +91,9 @@ const SellerProfile = () => {
     queryKey: ['linked-partner-details', store?.owned_by_partner_id],
     queryFn: async () => {
       const { data } = await supabase
-        .from('partners')
-        .select('name, partner_id_code')
-        .eq('id', store.owned_by_partner_id)
+        .rpc('get_partner_identity', {
+          _partner_id: store.owned_by_partner_id
+        })
         .maybeSingle();
       return data;
     }
