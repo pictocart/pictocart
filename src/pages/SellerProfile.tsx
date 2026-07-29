@@ -525,6 +525,7 @@ const SellerProfile = () => {
                       value={referralCode}
                       onChange={(e) => setReferralCode(e.target.value.toUpperCase().trim())}
                       className="font-mono uppercase"
+                      autoComplete="new-password"
                     />
                     <Button
                       onClick={handleApplyReferral}
@@ -553,6 +554,7 @@ const SellerProfile = () => {
                     value={licenseKey}
                     onChange={(e) => setLicenseKey(e.target.value.toUpperCase().trim())}
                     className="font-mono"
+                    autoComplete="new-password"
                   />
                   <Button
                     onClick={handleApplyLicense}
