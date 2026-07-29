@@ -2728,13 +2728,60 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
             <span style={{ color: "var(--p)" }}>₹{Math.round(finalPrice).toLocaleString("en-IN")}</span>
           </div>
         </div>
-        <Link 
-          to={storeSlug ? `/store/${storeSlug}/checkout` : "#"} 
-          className="block text-center w-full px-5 py-3 text-sm font-bold shadow-md hover:opacity-95 transition-opacity" 
-          style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}
-        >
-          {p.cta || "Proceed to Checkout"}
-        </Link>
+        {/* Proceed to Checkout button */}
+        {(() => {
+          const btnBg = p.checkout_btn_bg || "var(--p)";
+          const btnColor = p.checkout_btn_color || "var(--pf)";
+          const btnRadius = p.checkout_btn_radius != null ? `${p.checkout_btn_radius}px` : "var(--r)";
+          const btnFont = p.checkout_btn_font === "body" ? "var(--bf)" : "var(--hf)";
+          
+          let sizeClass = "py-3 px-5 text-sm";
+          if (p.checkout_btn_size === "sm") sizeClass = "py-2 px-4 text-xs";
+          else if (p.checkout_btn_size === "lg") sizeClass = "py-3.5 px-6 text-base";
+          else if (p.checkout_btn_size === "xl") sizeClass = "py-4 px-8 text-lg";
+
+          let weightClass = "font-bold";
+          if (p.checkout_btn_font_weight === "normal") weightClass = "font-normal";
+          else if (p.checkout_btn_font_weight === "medium") weightClass = "font-medium";
+          else if (p.checkout_btn_font_weight === "semibold") weightClass = "font-semibold";
+          else if (p.checkout_btn_font_weight === "extrabold") weightClass = "font-extrabold";
+
+          let animClass = "";
+          if (p.checkout_btn_animation === "pulse") animClass = "animate-pulse";
+          else if (p.checkout_btn_animation === "bounce") animClass = "animate-bounce";
+          else if (p.checkout_btn_animation === "float") animClass = "hover:-translate-y-1 hover:shadow-lg transition-all duration-300";
+
+          return (
+            <Link 
+              to={storeSlug ? `/store/${storeSlug}/checkout` : "#"} 
+              className={`block text-center w-full shadow-md hover:opacity-95 transition-opacity relative overflow-hidden ${sizeClass} ${weightClass} ${animClass}`} 
+              style={{ 
+                background: btnBg, 
+                color: btnColor, 
+                borderRadius: btnRadius,
+                fontFamily: btnFont 
+              }}
+            >
+              {p.checkout_btn_animation === "shimmer" && (
+                <>
+                  <style dangerouslySetInnerHTML={{ __html: `
+                    @keyframes btn-shimmer-swipe {
+                      0% { transform: translateX(-150%) skewX(-25deg); }
+                      100% { transform: translateX(150%) skewX(-25deg); }
+                    }
+                    .btn-shimmer-effect {
+                      animation: btn-shimmer-swipe 3.5s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
+                    }
+                  `}} />
+                  <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-0">
+                    <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent btn-shimmer-effect" />
+                  </div>
+                </>
+              )}
+              <span className="relative z-10">{p.cta || "Proceed to Checkout"}</span>
+            </Link>
+          );
+        })()}
       </div>
     </section>
   );

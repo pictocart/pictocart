@@ -361,6 +361,102 @@ const InsightsTab = () => {
   );
 };
 
+const GrantCreditsTab = () => {
+  const { data: stores = [] } = useQuery({
+    queryKey: ['admin-stores-short'],
+    queryFn: async () => {
+      const { data } = await supabase.from('stores').select('id, name, slug').order('name');
+      return data || [];
+    }
+  });
+
+  const [selectedStoreId, setSelectedStoreId] = useState('');
+  const [credits, setCredits] = useState('');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStoreId) return toast.error('Select a store');
+    const amount = Number(credits);
+    if (!amount || amount <= 0) return toast.error('Enter valid credits');
+
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('wallet-grant-credits', {
+        body: { store_id: selectedStoreId, credits: amount, reason: reason.trim() || undefined }
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || 'Failed to grant credits');
+      toast.success(`Successfully granted ${amount.toLocaleString()} credits!`);
+      setCredits('');
+      setReason('');
+      setSelectedStoreId('');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" /> Grant AI Credits
+        </CardTitle>
+        <CardDescription>
+          Directly add credits to a seller's AI wallet without a purchase.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+          <div className="space-y-1.5">
+            <Label>Select Store</Label>
+            <select
+              value={selectedStoreId}
+              onChange={(e) => setSelectedStoreId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">-- Choose Store --</option>
+              {stores.map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.slug})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Credits Amount</Label>
+            <Input
+              type="number"
+              value={credits}
+              onChange={(e) => setCredits(e.target.value)}
+              placeholder="e.g. 500"
+              min="1"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Reason / Note</Label>
+            <Input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Support resolution / Promo gift"
+            />
+          </div>
+
+          <Button type="submit" disabled={submitting} className="w-full gap-2">
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Grant Credits
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+
 const Stat = ({ label, value, highlight }: { label: string; value: any; highlight?: boolean }) => (
   <div className={`rounded-xl border p-3 ${highlight ? 'bg-primary/5 border-primary/20' : 'bg-secondary/30'}`}>
     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
@@ -376,18 +472,20 @@ const AdminCreditsEconomy = () => {
         <p className="text-muted-foreground text-sm">Set pricing, packs, promotions, and watch the AI economy in real time.</p>
       </div>
       <Tabs defaultValue="pricing">
-        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-6 w-full max-w-3xl">
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
           <TabsTrigger value="actions">AI Actions</TabsTrigger>
           <TabsTrigger value="packs">Packs</TabsTrigger>
           <TabsTrigger value="promos">Promos</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="grant">Grant Credits</TabsTrigger>
         </TabsList>
         <TabsContent value="pricing" className="mt-4"><PricingTab /></TabsContent>
         <TabsContent value="actions" className="mt-4"><ActionsTab /></TabsContent>
         <TabsContent value="packs" className="mt-4"><PacksTab /></TabsContent>
         <TabsContent value="promos" className="mt-4"><PromosTab /></TabsContent>
         <TabsContent value="insights" className="mt-4"><InsightsTab /></TabsContent>
+        <TabsContent value="grant" className="mt-4"><GrantCreditsTab /></TabsContent>
       </Tabs>
     </div>
   );

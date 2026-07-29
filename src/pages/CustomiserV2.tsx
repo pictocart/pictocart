@@ -2162,6 +2162,138 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         </div>
       )}
 
+      {section?.type === "cart_summary" && (
+        <div className="border-t pt-4 space-y-3">
+          <Label className="text-[11px] font-semibold">Checkout Button Styles</Label>
+          
+          {/* Button Background Color */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground font-medium">Button BG:</span>
+            <div className="flex items-center gap-1.5">
+              <input 
+                type="color" 
+                value={merged.checkout_btn_bg || activePalette.primary || "#000000"} 
+                onChange={(e) => onUpdate(idx, "checkout_btn_bg", e.target.value)} 
+                className="w-5 h-5 rounded cursor-pointer border p-0 shrink-0" 
+              />
+              <Input 
+                value={merged.checkout_btn_bg || ""} 
+                onChange={(e) => onUpdate(idx, "checkout_btn_bg", e.target.value)} 
+                placeholder={`Default (${activePalette.primary || "#000000"})`} 
+                className="h-5 text-[9px] w-28 px-1 font-mono" 
+              />
+              {merged.checkout_btn_bg && (
+                <button type="button" onClick={() => onUpdate(idx, "checkout_btn_bg", null)} className="text-[9px] text-destructive hover:underline ml-1 font-semibold">Clear</button>
+              )}
+            </div>
+          </div>
+
+          {/* Button Text Color */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground font-medium">Text Color:</span>
+            <div className="flex items-center gap-1.5">
+              <input 
+                type="color" 
+                value={merged.checkout_btn_color || activePalette.primary_fg || "#ffffff"} 
+                onChange={(e) => onUpdate(idx, "checkout_btn_color", e.target.value)} 
+                className="w-5 h-5 rounded cursor-pointer border p-0 shrink-0" 
+              />
+              <Input 
+                value={merged.checkout_btn_color || ""} 
+                onChange={(e) => onUpdate(idx, "checkout_btn_color", e.target.value)} 
+                placeholder={`Default (${activePalette.primary_fg || "#ffffff"})`} 
+                className="h-5 text-[9px] w-28 px-1 font-mono" 
+              />
+              {merged.checkout_btn_color && (
+                <button type="button" onClick={() => onUpdate(idx, "checkout_btn_color", null)} className="text-[9px] text-destructive hover:underline ml-1 font-semibold">Clear</button>
+              )}
+            </div>
+          </div>
+
+          {/* Button Size */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground font-medium">Button Size:</span>
+            <select 
+              value={merged.checkout_btn_size || "md"} 
+              onChange={(e) => onUpdate(idx, "checkout_btn_size", e.target.value)} 
+              className="rounded border border-input h-6 text-[10px] bg-background w-24 px-1"
+            >
+              <option value="sm">Small</option>
+              <option value="md">Medium</option>
+              <option value="lg">Large</option>
+              <option value="xl">X-Large</option>
+            </select>
+          </div>
+
+          {/* Button Radius */}
+          <div className="space-y-1 p-1.5 border rounded bg-background/50">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span className="font-medium">Corner Radius:</span>
+              <span className="font-mono font-bold">{merged.checkout_btn_radius != null ? `${merged.checkout_btn_radius}px` : "Default (var(--r))"}</span>
+            </div>
+            <div className="flex gap-2 items-center">
+              <input 
+                type="range" 
+                min={0} 
+                max={30} 
+                step={2} 
+                value={merged.checkout_btn_radius != null ? merged.checkout_btn_radius : 12} 
+                onChange={(e) => onUpdate(idx, "checkout_btn_radius", Number(e.target.value))} 
+                className="flex-1 h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+              />
+              {merged.checkout_btn_radius != null && (
+                <button type="button" onClick={() => onUpdate(idx, "checkout_btn_radius", null)} className="text-[9px] text-destructive hover:underline shrink-0 font-semibold">Reset</button>
+              )}
+            </div>
+          </div>
+
+          {/* Button Animation */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground font-medium">Animation:</span>
+            <select 
+              value={merged.checkout_btn_animation || "none"} 
+              onChange={(e) => onUpdate(idx, "checkout_btn_animation", e.target.value)} 
+              className="rounded border border-input h-6 text-[10px] bg-background w-28 px-1"
+            >
+              <option value="none">None</option>
+              <option value="pulse">Pulse (Glow)</option>
+              <option value="bounce">Bounce</option>
+              <option value="float">Float on Hover</option>
+              <option value="shimmer">Shimmer Effect</option>
+            </select>
+          </div>
+
+          {/* Button Font Weight */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground font-medium">Font Weight:</span>
+            <select 
+              value={merged.checkout_btn_font_weight || "bold"} 
+              onChange={(e) => onUpdate(idx, "checkout_btn_font_weight", e.target.value)} 
+              className="rounded border border-input h-6 text-[10px] bg-background w-28 px-1"
+            >
+              <option value="normal">Normal</option>
+              <option value="medium">Medium</option>
+              <option value="semibold">Semibold</option>
+              <option value="bold">Bold</option>
+              <option value="extrabold">Extrabold</option>
+            </select>
+          </div>
+
+          {/* Button Font Family */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground font-medium">Font Family:</span>
+            <select 
+              value={merged.checkout_btn_font || "heading"} 
+              onChange={(e) => onUpdate(idx, "checkout_btn_font", e.target.value)} 
+              className="rounded border border-input h-6 text-[10px] bg-background w-28 px-1"
+            >
+              <option value="heading">Heading Font</option>
+              <option value="body">Body Font</option>
+            </select>
+          </div>
+        </div>
+      )}
+
 
       {hasItems && itemShape === "usp" && (
         <ItemsEditor

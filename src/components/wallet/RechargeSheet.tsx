@@ -40,9 +40,6 @@ const RechargeSheet = ({ open, onOpenChange, onSuccess }: Props) => {
     if (!store?.id || !selected) return;
     setLoading(true);
     try {
-      const ready = await loadRzp();
-      if (!ready) throw new Error('Failed to load Razorpay');
-
       const body: any = { store_id: store.id, promo_code: promoCode.trim() || undefined };
       if (selected === 'custom') {
         const inr = Number(customInr);
@@ -56,6 +53,9 @@ const RechargeSheet = ({ open, onOpenChange, onSuccess }: Props) => {
 
       const { data, error } = await supabase.functions.invoke('wallet-create-recharge', { body });
       if (error || data?.error) throw new Error(data?.error || error?.message || 'Recharge failed');
+
+      const ready = await loadRzp();
+      if (!ready) throw new Error('Failed to load Razorpay');
 
       const rzp = new window.Razorpay({
         key: data.razorpay_key_id,
@@ -75,7 +75,7 @@ const RechargeSheet = ({ open, onOpenChange, onSuccess }: Props) => {
             },
           });
           if (ve || vd?.error) {
-            toast.error(vd?.error || 've.message');
+            toast.error(vd?.error || ve?.message || 'Verification failed');
             return;
           }
           toast.success(`✨ ${data.total_credits.toLocaleString()} credits added`);
