@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { Link, useSearchParams, useParams, useNavigate, useLocation } from "react-router-dom";
-import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X, ChefHat, GripVertical } from "lucide-react";
+import { Truck, Shield, RefreshCw, Headphones, Lock, Tag, Gift, Sparkles, Star, ShoppingBag, User, Search, Mail, MapPin, Clock, Phone, Trash2, Minus, Plus, Loader2, X, ChefHat, GripVertical, Menu } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import confetti from "canvas-confetti";
@@ -1440,6 +1440,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   const [searchVal, setSearchVal] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const suggestions = useMemo(() => {
     if (!searchVal.trim() || !products || products.length === 0) return [];
@@ -1593,7 +1594,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
     const BrandInner = (
       <span className="inline-flex items-center gap-2.5">
         {logoUrl ? <img data-logo-element="true" src={logoUrl} alt={effectiveBrand} style={logoStyle} /> : FoodLogoIcon}
-        <span style={brandStyle}>{effectiveBrand}</span>
+        <span className="text-sm sm:text-base md:text-lg lg:text-xl font-bold truncate max-w-[100px] sm:max-w-[180px] md:max-w-none" style={{ ...brandStyle, fontSize: undefined }}>{effectiveBrand}</span>
       </span>
     );
 
@@ -1625,6 +1626,37 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       )
     ) : null;
 
+    const CartBtnMobile = storeSlug ? (
+      <Link 
+        to={`/store/${storeSlug}/cart`} 
+        onClick={() => setMobileMenuOpen(false)}
+        className="w-full py-3 inline-flex items-center justify-center gap-2 transition-all duration-300 font-bold hover:scale-[1.02] shadow-sm rounded-xl text-base" 
+        style={{ 
+          background: "var(--p)", 
+          color: "var(--pf)", 
+        }}
+      >
+        <ShoppingBag className="h-4.5 w-4.5" /> 
+        <span>Order Now</span>
+        {totalItems > 0 && <span className="inline-block animate-badge-pop" key={totalItems}>({totalItems})</span>}
+      </Link>
+    ) : (
+      <button
+        onClick={() => {
+          onNavigate?.("cart");
+          setMobileMenuOpen(false);
+        }}
+        className="w-full py-3 inline-flex items-center justify-center gap-2 transition-all duration-300 font-bold hover:scale-[1.02] shadow-sm rounded-xl text-base" 
+        style={{ 
+          background: "var(--p)", 
+          color: "var(--pf)", 
+        }}
+      >
+        <ShoppingBag className="h-4.5 w-4.5" /> 
+        <span>Order Now</span>
+      </button>
+    );
+
     return (
       <>
         <style dangerouslySetInnerHTML={{ __html: `
@@ -1655,7 +1687,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
               {Brand}
             </div>
             
-            {/* Nav Links (centered absolute) */}
+            {/* Nav Links (centered absolute - Desktop only) */}
             <nav className="hidden md:flex items-center justify-center gap-8 text-sm absolute left-1/2 -translate-x-1/2 z-10" style={{ fontFamily: 'var(--hf)' }}>
               {links.map(l => {
                 const isActive = l.page === "home" || l.page === "";
@@ -1672,13 +1704,129 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
               })}
             </nav>
             
-            {/* Cart/CTA button (right) */}
-            <div className="flex items-center gap-2.5 pr-2 relative z-10">
+            {/* Cart/CTA button (right - Desktop only) */}
+            <div className="hidden md:flex items-center gap-2.5 pr-2 relative z-10">
               {AccountBtnIcon}
               {!isMenuPage && CartBtn}
             </div>
+
+            {/* Hamburger Menu button (Mobile only) */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 rounded-full border transition-all duration-300 hover:scale-[1.05] flex items-center justify-center relative z-10"
+              style={{ borderColor: 'rgba(140, 45, 25, 0.2)', backgroundColor: 'rgba(140, 45, 25, 0.05)', color: '#8c2d19' }}
+              aria-label="Open Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
           </header>
         </div>
+
+        {/* Mobile Sidebar Drawer */}
+        {mobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[90] transition-opacity duration-300"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            {/* Drawer Container */}
+            <div 
+              className="fixed inset-y-0 right-0 w-72 bg-[#faf6f0] border-l border-stone-200/80 shadow-2xl z-[100] p-6 flex flex-col justify-between transition-transform duration-300 transform translate-x-0"
+              style={{ fontFamily: 'var(--hf)' }}
+            >
+              <div>
+                {/* Header */}
+                <div className="flex items-center justify-between pb-6 border-b border-stone-205">
+                  <span className="font-bold text-[#8c2d19] text-base max-w-[180px] truncate">{effectiveBrand}</span>
+                  <button 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-1.5 rounded-full hover:bg-stone-200/50 transition-colors text-stone-500 hover:text-stone-850"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Nav Links */}
+                <nav className="flex flex-col gap-4 py-8">
+                  {links.map(l => {
+                    const isActive = l.page === "home" || l.page === "";
+                    return (
+                      <span key={l.label}>
+                        {storeSlug ? (
+                          <Link 
+                            to={l.to} 
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`block py-2 text-base transition duration-300 font-semibold ${isActive ? "text-[#8c2d19] border-l-2 border-[#8c2d19] pl-3" : "text-stone-700 hover:text-[#8c2d19]"}`}
+                          >
+                            {l.label}
+                          </Link>
+                        ) : onNavigate ? (
+                          <button 
+                            onClick={() => {
+                              onNavigate(l.page);
+                              setMobileMenuOpen(false);
+                            }}
+                            className={`block w-full text-left py-2 text-base transition duration-300 font-semibold ${isActive ? "text-[#8c2d19] border-l-2 border-[#8c2d19] pl-3" : "text-stone-700 hover:text-[#8c2d19]"}`}
+                            style={{ background: "transparent", border: 0, cursor: "pointer" }}
+                          >
+                            {l.label}
+                          </button>
+                        ) : (
+                          <span className={`block py-2 text-base font-semibold ${isActive ? "text-[#8c2d19]" : "text-stone-500"}`}>
+                            {l.label}
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* Bottom Actions (Account & Cart) */}
+              <div className="pt-6 border-t border-stone-200 space-y-4">
+                {/* Account Section */}
+                {storeSlug && (
+                  user ? (
+                    <Link 
+                      to={`/store/${storeSlug}/account`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors w-full"
+                    >
+                      <div className="h-9 w-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 border">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-stone-400 font-medium leading-none">Signed In as</p>
+                        <p className="text-sm font-semibold text-stone-850 truncate mt-1">{customerName}</p>
+                      </div>
+                    </Link>
+                  ) : (
+                    <button 
+                      onClick={() => {
+                        setAuthOpen(true);
+                        setMobileMenuOpen(false);
+                      }}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors w-full text-left"
+                    >
+                      <div className="h-9 w-9 rounded-full bg-[#8c2d19]/10 text-[#8c2d19] flex items-center justify-center border border-[#8c2d19]/20">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#8c2d19]">Sign In</p>
+                        <p className="text-[10px] text-stone-400 font-medium mt-0.5">To view your orders</p>
+                      </div>
+                    </button>
+                  )
+                )}
+
+                {/* Cart Button */}
+                {!isMenuPage && CartBtnMobile}
+              </div>
+            </div>
+          </>
+        )}
+
         {authOpen && storeSlug && (
           <CustomerAuthModal
             storeSlug={storeSlug}
