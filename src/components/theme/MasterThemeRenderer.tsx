@@ -3762,49 +3762,49 @@ function HeroFood({ p, dna, storeSlug }: any) {
           animation: float-subtle 6s ease-in-out infinite;
         }
       `}} />
-      <section data-hero-section="true" className="relative py-20 md:py-28 overflow-hidden" style={{ background: '#faf6f0' }}>
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+      <section data-hero-section="true" className="relative py-10 sm:py-20 md:py-28 overflow-hidden" style={{ background: '#faf6f0' }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           <div className="text-left flex flex-col items-start z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 text-xs font-semibold" style={{ background: 'rgba(140, 45, 25, 0.06)', color: '#8c2d19' }}>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 sm:mb-6 text-[10px] sm:text-xs font-semibold" style={{ background: 'rgba(140, 45, 25, 0.06)', color: '#8c2d19' }}>
               <div className="flex -space-x-1.5">
-                <img className="w-5 h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=60" />
-                <img className="w-5 h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=60" />
-                <img className="w-5 h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=60" />
+                <img className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=60" />
+                <img className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=60" />
+                <img className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-white object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=60" />
               </div>
               <span>Rated 4.9/5 by food lovers nationwide.</span>
             </div>
 
-            <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight text-stone-900 mb-2" style={{ fontFamily: "var(--hf)" }}>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-stone-900 mb-2" style={{ fontFamily: "var(--hf)" }}>
               {renderFormattedTitle(title)}
             </h1>
 
-            <div className="text-2xl md:text-3xl font-extrabold text-stone-800 mb-5 leading-snug">
+            <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-extrabold text-stone-800 mb-4 sm:mb-5 leading-snug">
               {sub}
             </div>
 
-            <p className="text-sm md:text-base text-stone-600 mb-8 max-w-xl leading-relaxed">
+            <p className="text-xs sm:text-sm md:text-base text-stone-600 mb-6 sm:mb-8 max-w-xl leading-relaxed">
               {desc}
             </p>
 
-            <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex flex-wrap gap-3 sm:gap-4 items-center w-full sm:w-auto">
               <a 
                 href={p.cta_href || shopHref} 
-                className="px-8 py-3.5 rounded-full font-bold text-white bg-[#8c2d19] hover:bg-[#722314] transition-all flex items-center gap-2 hover:scale-[1.03]"
+                className="px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-full font-bold text-white bg-[#8c2d19] hover:bg-[#722314] transition-all flex items-center justify-center gap-2 hover:scale-[1.03] text-sm flex-1 sm:flex-initial"
               >
                 <span>Order Now</span>
                 <ShoppingBag className="w-4 h-4" />
               </a>
               <a 
                 href={p.cta_secondary_href || shopHref} 
-                className="px-8 py-3.5 rounded-full font-bold bg-transparent border-2 border-stone-300 hover:border-stone-400 text-stone-800 transition-all hover:scale-[1.03]"
+                className="px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-full font-bold bg-transparent border-2 border-stone-300 hover:border-stone-400 text-stone-800 transition-all hover:scale-[1.03] text-sm flex-1 sm:flex-initial text-center"
               >
                 <span>View Menu &gt;</span>
               </a>
             </div>
           </div>
 
-          <div className="relative w-full aspect-[4/3] max-w-lg mx-auto flex items-center justify-center">
-            <div className="absolute inset-0 rounded-[32px] overflow-hidden flex shadow-lg">
+          <div className="relative w-full aspect-square sm:aspect-[4/3] max-w-[280px] sm:max-w-md md:max-w-lg mx-auto flex items-center justify-center mt-8 md:mt-0">
+            <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] overflow-hidden flex shadow-lg">
               <div className="w-1/2 h-full bg-[#fde9cd]" />
               <div className="w-1/2 h-full bg-[#8c2d19]" />
             </div>
@@ -3812,12 +3812,12 @@ function HeroFood({ p, dna, storeSlug }: any) {
             <img 
               src={image} 
               alt={title} 
-              className="absolute w-3/4 aspect-square object-cover rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.35)] border-[6px] border-white z-10 hover:scale-105 transition-transform duration-700" 
+              className="absolute w-3/4 aspect-square object-cover rounded-[24px] sm:rounded-[32px] shadow-[0_15px_40px_rgba(0,0,0,0.3)] border-[4px] sm:border-[6px] border-white z-10 hover:scale-105 transition-transform duration-700" 
             />
 
-            <span className="float-chili absolute -left-6 top-1/4 text-5xl z-20 pointer-events-none select-none">🌶️</span>
-            <span className="float-leaf-1 absolute -right-6 bottom-1/4 text-3xl z-20 pointer-events-none select-none">🍃</span>
-            <span className="float-leaf-2 absolute left-1/4 bottom-[-10px] text-2xl z-20 pointer-events-none select-none">🌿</span>
+            <span className="float-chili absolute -left-4 top-1/4 text-3xl sm:text-5xl z-20 pointer-events-none select-none">🌶️</span>
+            <span className="float-leaf-1 absolute -right-4 bottom-1/4 text-2xl sm:text-3xl z-20 pointer-events-none select-none">🍃</span>
+            <span className="float-leaf-2 absolute left-1/4 bottom-[-10px] text-xl sm:text-2xl z-20 pointer-events-none select-none">🌿</span>
           </div>
         </div>
       </section>
@@ -4476,7 +4476,7 @@ function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
   const sectionId = p.id || "sec-prod-food";
 
   return (
-    <section id="products" className="max-w-6xl mx-auto px-6 py-20 text-center">
+    <section id="products" className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-20 text-center">
       <style dangerouslySetInnerHTML={{ __html: `
         @media (min-width: 768px) {
           .dynamic-grid-${sectionId} {
@@ -4487,17 +4487,17 @@ function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
       `}} />
 
       {/* Cartoonish Sticker Badge */}
-      <div className="w-20 h-20 mx-auto mb-5 relative flex items-center justify-center rounded-full bg-amber-400 border-4 border-white shadow-md transform rotate-3 hover:rotate-6 transition-transform">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-5 relative flex items-center justify-center rounded-full bg-amber-400 border-4 border-white shadow-md transform rotate-3 hover:rotate-6 transition-transform">
         <div className="absolute inset-0.5 rounded-full border-2 border-white/40 border-dashed animate-spin-slow" />
-        <span className="text-2xl filter drop-shadow">👌</span>
-        <span className="absolute -top-3 -right-3 text-sm">✨</span>
-        <span className="absolute -bottom-2 -left-2 text-sm">✨</span>
+        <span className="text-xl sm:text-2xl filter drop-shadow">👌</span>
+        <span className="absolute -top-2.5 -right-2.5 text-xs sm:text-sm">✨</span>
+        <span className="absolute -bottom-1.5 -left-1.5 text-xs sm:text-sm">✨</span>
       </div>
 
-      <h2 className="text-4xl font-bold mb-3 text-stone-900" style={{ fontFamily: "var(--hf)", fontWeight: 800 }}>
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 text-stone-900" style={{ fontFamily: "var(--hf)", fontWeight: 800 }}>
         {titleText}
       </h2>
-      <p className="text-sm text-stone-500 max-w-2xl mx-auto mb-12 leading-relaxed">
+      <p className="text-xs sm:text-sm text-stone-500 max-w-2xl mx-auto mb-6 sm:mb-12 leading-relaxed">
         {subText}
       </p>
 
@@ -4505,10 +4505,10 @@ function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
 
       <div 
         className={p.scroll_horizontal
-          ? "flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin"
+          ? "flex gap-4 sm:gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin"
           : cardWidth 
-            ? "flex flex-wrap gap-6 justify-center" 
-            : `grid grid-cols-1 sm:grid-cols-2 dynamic-grid-${sectionId} gap-8`
+            ? "flex flex-wrap gap-4 sm:gap-6 justify-center" 
+            : `grid grid-cols-2 dynamic-grid-${sectionId} gap-3 sm:gap-8`
         }
       >
         {items.map((pr: any, i: number) => {
@@ -4543,21 +4543,19 @@ function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
           return (
             <div 
               key={i} 
-              className={`group flex flex-col rounded-[24px] overflow-hidden border p-4 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 animate-reveal ${p.scroll_horizontal ? "snap-start shrink-0" : ""}`}
+              className={`group flex flex-col rounded-[16px] sm:rounded-[24px] overflow-hidden border p-2.5 sm:p-4 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 animate-reveal ${p.scroll_horizontal ? "snap-start shrink-0 w-[165px] sm:w-[280px]" : ""}`}
               style={{ 
                 backgroundColor: style.bg, 
                 borderColor: style.border,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
-                ...(p.scroll_horizontal
-                  ? { width: cardWidth ? `${cardWidth}px` : "280px" }
-                  : cardWidth 
-                    ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } 
-                    : {}
+                ...(!p.scroll_horizontal && cardWidth 
+                  ? { width: `${cardWidth}px`, minWidth: `${cardWidth}px` } 
+                  : {}
                 )
               }}
             >
               {/* Image Container */}
-              <Link to={linkFor(pr)} className="block relative aspect-[4/3] rounded-[18px] overflow-hidden mb-4 bg-stone-100">
+              <Link to={linkFor(pr)} className="block relative aspect-square sm:aspect-[4/3] rounded-[12px] sm:rounded-[18px] overflow-hidden mb-3 sm:mb-4 bg-stone-100 shrink-0">
                 {pr.image ? (
                   <img 
                     src={pr.image} 
@@ -4565,20 +4563,20 @@ function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-stone-400">No Image</div>
+                  <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs">No Image</div>
                 )}
                 
                 {/* Floating circular basket badge */}
                 <button 
                   onClick={handleAddToCart}
-                  className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md border border-stone-100 transition-transform active:scale-90 hover:scale-105"
+                  className="absolute top-2 right-2 w-7.5 h-7.5 sm:w-9 sm:h-9 bg-white rounded-full flex items-center justify-center shadow-md border border-stone-100 transition-transform active:scale-90 hover:scale-105"
                 >
-                  <ShoppingBag className="w-4 h-4 text-stone-800" />
+                  <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-800" />
                 </button>
 
                 {isOutOfStock && (
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                    <span className="bg-stone-800 text-white font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider">
+                    <span className="bg-stone-800 text-white font-bold text-[9px] sm:text-xs px-2 py-0.5 sm:px-3 sm:py-1 rounded-full uppercase tracking-wider">
                       Out of Stock
                     </span>
                   </div>
@@ -4586,13 +4584,13 @@ function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
               </Link>
 
               {/* Details Container */}
-              <div className="flex-1 flex flex-col text-left px-1">
-                <div className="flex justify-between items-baseline gap-2 mb-2">
-                  <Link to={linkFor(pr)} className="font-bold text-lg text-stone-900 hover:underline truncate flex-1">{pr.name}</Link>
-                  <span className="font-bold text-lg text-stone-900 shrink-0">₹{pr.price}</span>
+              <div className="flex-1 flex flex-col text-left px-0.5">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-baseline gap-0.5 sm:gap-2 mb-2">
+                  <Link to={linkFor(pr)} className="font-bold text-xs sm:text-base md:text-lg text-stone-900 hover:underline truncate w-full sm:flex-1">{pr.name}</Link>
+                  <span className="font-bold text-xs sm:text-base md:text-lg text-stone-900 shrink-0">₹{pr.price}</span>
                 </div>
                 
-                <p className="text-xs text-stone-500 leading-relaxed mb-5 line-clamp-2 h-8">
+                <p className="hidden sm:block text-xs text-stone-500 leading-relaxed mb-5 line-clamp-2 h-8">
                   {desc}
                 </p>
 
@@ -4600,28 +4598,28 @@ function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
                 <button
                   onClick={handleBuyNow}
                   disabled={isOutOfStock}
-                  className="w-full py-3 text-sm font-bold text-white flex items-center justify-center gap-2 transition-all active:translate-y-[2px]"
+                  className="w-full py-2 sm:py-3 text-[10px] sm:text-sm font-bold text-white flex items-center justify-center gap-1.5 sm:gap-2 transition-all active:translate-y-[2px]"
                   style={{
                     backgroundColor: style.accent,
                     borderRadius: '9999px',
-                    boxShadow: `0 4px 0 ${style.shadow}`,
+                    boxShadow: `0 3px 0 ${style.shadow}`,
                     borderBottom: `2px solid rgba(0,0,0,0.1)`
                   }}
                   onMouseDown={(e) => {
                     e.currentTarget.style.boxShadow = `0 1px 0 ${style.shadow}`;
-                    e.currentTarget.style.transform = 'translateY(3px)';
+                    e.currentTarget.style.transform = 'translateY(2px)';
                   }}
                   onMouseUp={(e) => {
-                    e.currentTarget.style.boxShadow = `0 4px 0 ${style.shadow}`;
+                    e.currentTarget.style.boxShadow = `0 3px 0 ${style.shadow}`;
                     e.currentTarget.style.transform = 'none';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = `0 4px 0 ${style.shadow}`;
+                    e.currentTarget.style.boxShadow = `0 3px 0 ${style.shadow}`;
                     e.currentTarget.style.transform = 'none';
                   }}
                 >
                   <span>Order Now</span>
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>
