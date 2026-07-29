@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   User, Mail, Phone, Store, Calendar, Camera, Lock, Eye, EyeOff,
-  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket, Loader2, BadgePercent
+  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket, Loader2, BadgePercent, XCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -554,8 +554,7 @@ const SellerProfile = () => {
                         <span className="text-2xl font-black text-slate-900 dark:text-white">₹{config.price_inr}</span>
                         <span className="text-xs text-muted-foreground font-medium ml-1">/ month</span>
                       </div>
-                      
-                      {/* Mini features list */}
+                                 {/* Mini features list */}
                       <ul className="text-xs space-y-2 text-slate-600 dark:text-slate-400 border-t pt-3 border-slate-100 dark:border-slate-800">
                         <li className="flex items-center gap-1.5">
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -565,24 +564,76 @@ const SellerProfile = () => {
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                           <span>Themes Limit: <strong>{config.theme_limit}</strong></span>
                         </li>
-                        {config.custom_domain && (
+                        {config.custom_domain ? (
                           <li className="flex items-center gap-1.5">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                             <span>Custom Domain Support</span>
                           </li>
+                        ) : (
+                          <li className="flex items-center gap-1.5 opacity-55">
+                            <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                            <span className="line-through">Custom Domain Support</span>
+                          </li>
                         )}
-                        {config.razorpay_payments && (
+                        {config.razorpay_payments ? (
                           <li className="flex items-center gap-1.5">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                             <span>Razorpay Payments</span>
                           </li>
+                        ) : (
+                          <li className="flex items-center gap-1.5 opacity-55">
+                            <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                            <span className="line-through">Razorpay Payments</span>
+                          </li>
                         )}
-                        {config.shipping && (
+                        {config.shipping ? (
                           <li className="flex items-center gap-1.5">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                             <span>Shipping Integrations</span>
                           </li>
+                        ) : (
+                          <li className="flex items-center gap-1.5 opacity-55">
+                            <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                            <span className="line-through">Shipping Integrations</span>
+                          </li>
                         )}
+                        
+                        {/* Limits distributions */}
+                        <li className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>AI Copywriter: <strong>{
+                            config.plan === "free" ? "3 generations max" :
+                            config.plan === "starter" ? "10 generations / day" : "Unlimited"
+                          }</strong></span>
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>AI Reviews: <strong>{
+                            config.plan === "free" ? "2 reviews max" :
+                            config.plan === "starter" ? "10 reviews / day" : "Unlimited"
+                          }</strong></span>
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>Theme Switch: <strong>{
+                            config.plan === "free" ? "2 switches max" :
+                            config.plan === "starter" ? "5 switches / day" : "Unlimited"
+                          }</strong></span>
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>Blog Posts: <strong>{
+                            config.plan === "free" ? "No Access" :
+                            config.plan === "starter" ? "5 posts max" : "Unlimited"
+                          }</strong></span>
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>Offers & Ticker: <strong>{
+                            config.plan === "free" ? "1 change max" :
+                            config.plan === "starter" ? "1 change / day" : "Unlimited"
+                          }</strong></span>
+                        </li>
                       </ul>
                     </div>
 

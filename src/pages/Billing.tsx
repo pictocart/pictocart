@@ -422,6 +422,36 @@ const Billing = () => {
                   {p.premium_themes && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Premium themes</li>}
                   {p.multi_domain && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Multi-domain</li>}
                   {p.early_access && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />Early access</li>}
+                  <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />
+                    AI Copywriter: {
+                      p.plan === "free" ? "3 generations max" :
+                      p.plan === "starter" ? "10 generations / day" : "Unlimited"
+                    }
+                  </li>
+                  <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />
+                    AI Reviews: {
+                      p.plan === "free" ? "2 reviews max" :
+                      p.plan === "starter" ? "10 reviews / day" : "Unlimited"
+                    }
+                  </li>
+                  <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />
+                    Theme Switches: {
+                      p.plan === "free" ? "2 switches max" :
+                      p.plan === "starter" ? "5 switches / day" : "Unlimited"
+                    }
+                  </li>
+                  <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />
+                    Blog Posts: {
+                      p.plan === "free" ? "No Access" :
+                      p.plan === "starter" ? "5 posts max" : "Unlimited"
+                    }
+                  </li>
+                  <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-green-600" />
+                    Offers & Ticker: {
+                      p.plan === "free" ? "1 change max" :
+                      p.plan === "starter" ? "1 change / day" : "Unlimited"
+                    }
+                  </li>
                 </ul>
                 {isCurrent ? (
                   <Button variant="outline" disabled className="w-full">Current Plan</Button>
