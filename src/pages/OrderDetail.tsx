@@ -212,20 +212,14 @@ const OrderDetail = () => {
     }
     setTrackingLoading(true);
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/shiprocket-proxy`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'track',
-            store_id: store.id,
-            waybill: order.tracking_number,
-          }),
-        }
-      );
-      const data = await res.json();
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'track',
+          store_id: store.id,
+          waybill: order.tracking_number,
+        },
+      });
+      if (error) throw error;
       setTrackingData(data);
     } catch {
       toast.error('Failed to fetch tracking info');

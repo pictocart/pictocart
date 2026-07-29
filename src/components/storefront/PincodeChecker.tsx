@@ -27,21 +27,20 @@ const PincodeChecker = ({
     setResult(null);
 
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/shiprocket-proxy`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'check-serviceability',
-            store_id: storeId,
-            destination_pincode: pincode,
-          }),
-        }
-      );
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'check-serviceability',
+          store_id: storeId,
+          destination_pincode: pincode,
+        },
+      });
 
-      const data = await res.json();
+      if (error || !data) {
+        setResult({ serviceable: false, estimated_days: null });
+        return;
+      }
+
       const info = {
         serviceable: data.serviceable ?? false,
         estimated_days: data.estimated_days ?? null,

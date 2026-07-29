@@ -1732,7 +1732,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
             />
             {/* Drawer Container */}
             <div 
-              className="fixed inset-y-0 right-0 w-72 bg-[#faf6f0] border-l border-stone-200/80 shadow-2xl z-[100] p-6 flex flex-col justify-between transition-transform duration-300 transform translate-x-0"
+              className="fixed inset-y-0 right-0 w-72 bg-[#faf6f0] border-l border-stone-200/80 shadow-2xl z-[100] p-6 flex flex-col justify-between transition-transform duration-300 transform translate-x-0 overflow-y-auto"
               style={{ fontFamily: 'var(--hf)' }}
             >
               <div>
@@ -1786,38 +1786,36 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
               {/* Bottom Actions (Account & Cart) */}
               <div className="pt-6 border-t border-stone-200 space-y-4">
                 {/* Account Section */}
-                {storeSlug && (
-                  user ? (
-                    <Link 
-                      to={`/store/${storeSlug}/account`}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors w-full"
-                    >
-                      <div className="h-9 w-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 border">
-                        <User className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-stone-400 font-medium leading-none">Signed In as</p>
-                        <p className="text-sm font-semibold text-stone-850 truncate mt-1">{customerName}</p>
-                      </div>
-                    </Link>
-                  ) : (
-                    <button 
-                      onClick={() => {
-                        setAuthOpen(true);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors w-full text-left"
-                    >
-                      <div className="h-9 w-9 rounded-full bg-[#8c2d19]/10 text-[#8c2d19] flex items-center justify-center border border-[#8c2d19]/20">
-                        <User className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#8c2d19]">Sign In</p>
-                        <p className="text-[10px] text-stone-400 font-medium mt-0.5">To view your orders</p>
-                      </div>
-                    </button>
-                  )
+                {user ? (
+                  <Link 
+                    to={`${base}/account`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors w-full"
+                  >
+                    <div className="h-9 w-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 border">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-stone-400 font-medium leading-none">Signed In as</p>
+                      <p className="text-sm font-semibold text-stone-850 truncate mt-1">{customerName}</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      setAuthOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors w-full text-left"
+                  >
+                    <div className="h-9 w-9 rounded-full bg-[#8c2d19]/10 text-[#8c2d19] flex items-center justify-center border border-[#8c2d19]/20">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#8c2d19]">Sign In</p>
+                      <p className="text-[10px] text-stone-400 font-medium mt-0.5">To view your orders</p>
+                    </div>
+                  </button>
                 )}
 
                 {/* Cart Button */}

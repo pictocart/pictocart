@@ -126,33 +126,22 @@ const ShippingSettings = () => {
         return;
       }
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/shiprocket-proxy`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          },
-          body: JSON.stringify({
-            action: 'serviceability',
-            store_id: store.id,
-            pickup_pincode: pickup.pincode || '110001',
-            delivery_pincode: '560001',
-            weight: 0.5,
-            cod: 0,
-          }),
-        }
-      );
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && !data.error) {
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'serviceability',
+          store_id: store.id,
+          pickup_pincode: pickup.pincode || '110001',
+          delivery_pincode: '560001',
+          weight: 0.5,
+          cod: 0,
+        },
+      });
+
+      if (!error && data && data.ok) {
         setSrTestResult('success');
         toast.success('Shiprocket connected successfully!');
       } else {
-        const msg = data?.error || `HTTP ${res.status}`;
+        const msg = error?.message || data?.error || 'Test failed';
         setSrTestResult('error');
         setSrTestError(msg);
         toast.error(msg);
