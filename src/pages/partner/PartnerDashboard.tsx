@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Store, Ticket, Loader2, LogOut, Send, Wallet as WalletIcon, Palette, Users, Sparkles, BookOpen, Key, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Plus, Store, Ticket, Loader2, LogOut, Send, Wallet as WalletIcon, Palette, Users, Sparkles, BookOpen, Key, CheckCircle2, AlertTriangle, ShieldCheck, Sun, Moon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -17,6 +17,7 @@ const PartnerDashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState("stores");
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("partner-theme") !== "light");
 
   // Email verification state
   const [verificationOtp, setVerificationOtp] = useState("");
@@ -347,7 +348,88 @@ const PartnerDashboard = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
+    <div className={isDarkMode ? "dark-theme" : "light-theme"}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .light-theme {
+          background-color: #f8fafc !important;
+          color: #0f172a !important;
+        }
+        .light-theme .min-h-screen {
+          background-color: #f8fafc !important;
+          color: #0f172a !important;
+        }
+        .light-theme .bg-slate-950 {
+          background-color: #f8fafc !important;
+        }
+        .light-theme .bg-slate-900 {
+          background-color: #ffffff !important;
+        }
+        .light-theme .bg-slate-900\\/40,
+        .light-theme .bg-slate-900\\/50,
+        .light-theme .bg-slate-900\\/60,
+        .light-theme .bg-slate-900\\/80 {
+          background-color: #ffffff !important;
+        }
+        .light-theme .bg-slate-950\\/50,
+        .light-theme .bg-slate-950\\/60 {
+          background-color: #f1f5f9 !important;
+        }
+        .light-theme .bg-slate-800 {
+          background-color: #f1f5f9 !important;
+          color: #0f172a !important;
+        }
+        .light-theme .bg-slate-800\\/20 {
+          background-color: rgba(226, 232, 240, 0.4) !important;
+        }
+        .light-theme .border-slate-800,
+        .light-theme .border-slate-750,
+        .light-theme .border-slate-700,
+        .light-theme .border-slate-800\\/50 {
+          border-color: #e2e8f0 !important;
+        }
+        .light-theme .text-slate-100,
+        .light-theme .text-slate-200,
+        .light-theme .text-slate-300,
+        .light-theme .text-white {
+          color: #0f172a !important;
+        }
+        .light-theme .text-slate-400,
+        .light-theme .text-slate-500 {
+          color: #64748b !important;
+        }
+        .light-theme .hover\\:text-white:hover {
+          color: #0f172a !important;
+        }
+        .light-theme .hover\\:bg-slate-800:hover {
+          background-color: #f1f5f9 !important;
+        }
+        .light-theme .hover\\:bg-slate-750:hover,
+        .light-theme .hover\\:bg-slate-700:hover {
+          background-color: #e2e8f0 !important;
+        }
+        .light-theme input, 
+        .light-theme select, 
+        .light-theme textarea {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        .light-theme input::placeholder {
+          color: #94a3b8 !important;
+        }
+        .light-theme .data-\\[state\\=active\\]\\:bg-slate-800[data-state=active] {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+        }
+        .light-theme .border-orange-500\\/30 {
+          border-color: rgba(249, 115, 22, 0.3) !important;
+        }
+        .light-theme .bg-orange-500\\/5 {
+          background-color: rgba(249, 115, 22, 0.05) !important;
+        }
+      `}} />
+      <div className="min-h-screen bg-slate-950 text-slate-100 pb-16 transition-colors duration-200">
       {/* Premium Header */}
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
@@ -370,6 +452,19 @@ const PartnerDashboard = () => {
               <div className="font-semibold text-sm text-slate-200">{partner.name}</div>
               <div className="text-xs text-slate-400 capitalize">{partner.partner_type} partner</div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                const newMode = !isDarkMode;
+                setIsDarkMode(newMode);
+                localStorage.setItem("partner-theme", newMode ? "dark" : "light");
+              }}
+              className="text-slate-400 hover:text-white hover:bg-slate-800"
+              title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}
+            >
+              {isDarkMode ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-slate-400 hover:text-white hover:bg-slate-800">
               <LogOut className="w-4 h-4" />
             </Button>
@@ -522,7 +617,7 @@ const PartnerDashboard = () => {
                               </td>
                               <td className="px-4 py-4 text-xs text-slate-400">{format(new Date(store.created_at), "dd MMM yyyy")}</td>
                               <td className="px-4 py-4 text-right">
-                                <Button size="sm" variant="outline" className="border-slate-800 hover:bg-slate-800" asChild>
+                                <Button size="sm" variant="outline" className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white" asChild>
                                   <Link to={`/dashboard?store=${store.id}`}>Manage</Link>
                                 </Button>
                               </td>
@@ -821,6 +916,7 @@ const PartnerDashboard = () => {
         </Tabs>
       </main>
     </div>
+  </div>
   );
 };
 
@@ -848,66 +944,70 @@ const CustomizeThemeButton = ({ themeId, themeName }: { themeId: string; themeNa
     window.location.href = url;
   };
 
+  const isDarkMode = localStorage.getItem("partner-theme") !== "light";
+
   return (
-    <div className="w-full">
-      <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium" onClick={() => setOpen(true)}>
-        Customize Layout
-      </Button>
-      
-      {open && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <Card className="max-w-md w-full border-slate-800 bg-slate-900 text-slate-100 shadow-2xl animate-in zoom-in duration-200">
-            <CardHeader>
-              <CardTitle>Configure Theme Design</CardTitle>
-              <CardDescription className="text-slate-400">Give your custom version of "{themeName}" a name and key to publish it.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="t_name">Theme Name</Label>
-                <Input 
-                  id="t_name" 
-                  placeholder="e.g. Minimalist Royal Orange" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600"
-                />
-              </div>
+    <div className={isDarkMode ? "dark-theme" : "light-theme"}>
+      <div className="w-full">
+        <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium" onClick={() => setOpen(true)}>
+          Customize Layout
+        </Button>
+        
+        {open && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <Card className="max-w-md w-full border-slate-800 bg-slate-900 text-slate-100 shadow-2xl animate-in zoom-in duration-200">
+              <CardHeader>
+                <CardTitle>Configure Theme Design</CardTitle>
+                <CardDescription className="text-slate-400">Give your custom version of "{themeName}" a name and key to publish it.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="t_name">Theme Name</Label>
+                  <Input 
+                    id="t_name" 
+                    placeholder="e.g. Minimalist Royal Orange" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="t_desc">Description (Optional)</Label>
-                <Input 
-                  id="t_desc" 
-                  placeholder="e.g. Sleek design for jewelry and high fashion" 
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="t_desc">Description (Optional)</Label>
+                  <Input 
+                    id="t_desc" 
+                    placeholder="e.g. Sleek design for jewelry and high fashion" 
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
+                    className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="t_key">Unique Theme Key (Special Key)</Label>
-                <Input 
-                  id="t_key" 
-                  placeholder="e.g. orange-luxe" 
-                  value={customKey}
-                  onChange={(e) => setCustomKey(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                  className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600 font-mono"
-                />
-                <p className="text-[10px] text-slate-500">Merchants will search this key to find your theme. Format: letters, numbers, hyphens only.</p>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="t_key">Unique Theme Key (Special Key)</Label>
+                  <Input 
+                    id="t_key" 
+                    placeholder="e.g. orange-luxe" 
+                    value={customKey}
+                    onChange={(e) => setCustomKey(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600 font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500">Merchants will search this key to find your theme. Format: letters, numbers, hyphens only.</p>
+                </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 border-slate-800 text-slate-300 hover:bg-slate-800">
-                  Cancel
-                </Button>
-                <Button onClick={handleStart} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
-                  Start Designing
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 border-slate-800 text-slate-300 hover:bg-slate-800">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleStart} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
+                    Start Designing
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

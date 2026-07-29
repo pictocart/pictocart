@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStore } from '@/hooks/useStore';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   User, Mail, Phone, Store, Calendar, Camera, Lock, Eye, EyeOff,
-  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket, Loader2
+  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket, Loader2, BadgePercent
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -34,6 +35,7 @@ const SellerProfile = () => {
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const qc = useQueryClient();
+  const { plan: currentPlan, allPlans = [] } = useSubscription();
 
   // License Key fields
   const [licenseKey, setLicenseKey] = useState('');
@@ -489,6 +491,105 @@ const SellerProfile = () => {
         </Card>
       )}
 
+      {/* Subscription Plans Section */}
+      {store && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BadgePercent className="h-4 w-4 text-emerald-500" />
+              Subscription Plans
+            </CardTitle>
+            <CardDescription>
+              View your active subscription tier and compare features across other available premium plans.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Active Plan Detail */}
+            <div className="rounded-xl border bg-slate-50 dark:bg-slate-900/30 p-4 border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Active Plan</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xl font-bold capitalize text-slate-800 dark:text-slate-100">{currentPlan} Plan</span>
+                  <Badge className={
+                    currentPlan === "growth" ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" :
+                    currentPlan === "starter" ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" :
+                    "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20"
+                  } variant="outline">
+                    {currentPlan === "free" ? "Default" : "Premium"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground sm:text-right">
+                <p>Status: <span className="font-semibold text-emerald-600">Active</span></p>
+                <p className="text-xs mt-0.5">Linked under Partner: <span className="font-medium text-slate-700 dark:text-slate-300">{linkedPartner?.name || "None"}</span></p>
+              </div>
+            </div>
+
+            {/* Plans List Grid */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              {allPlans.map((config) => {
+                const isCurrent = config.plan === currentPlan;
+                return (
+                  <div 
+                    key={config.id} 
+                    className={`rounded-xl border p-4 flex flex-col justify-between transition-all relative ${
+                      isCurrent 
+                        ? "border-emerald-500 bg-emerald-50/10 dark:bg-emerald-500/5 shadow-sm" 
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/10"
+                    }`}
+                  >
+                    {isCurrent && (
+                      <span className="absolute -top-2.5 left-4 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        Current Plan
+                      </span>
+                    )}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-sm capitalize text-slate-800 dark:text-slate-100">{config.display_name}</span>
+                      </div>
+                      <div className="mt-2 mb-4">
+                        <span className="text-2xl font-black text-slate-900 dark:text-white">₹{config.price_inr}</span>
+                        <span className="text-xs text-muted-foreground font-medium ml-1">/ month</span>
+                      </div>
+                      
+                      {/* Mini features list */}
+                      <ul className="text-xs space-y-2 text-slate-600 dark:text-slate-400 border-t pt-3 border-slate-100 dark:border-slate-800">
+                        <li className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>Max Products: <strong>{config.product_limit === 999999 ? "Unlimited" : config.product_limit}</strong></span>
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>Themes Limit: <strong>{config.theme_limit}</strong></span>
+                        </li>
+                        {config.custom_domain && (
+                          <li className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            <span>Custom Domain Support</span>
+                          </li>
+                        )}
+                        {config.razorpay_payments && (
+                          <li className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            <span>Razorpay Payments</span>
+                          </li>
+                        )}
+                        {config.shipping && (
+                          <li className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            <span>Shipping Integrations</span>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Partner Connection & Upgrade section */}
       {store && (
         <Card>
@@ -583,6 +684,9 @@ const SellerProfile = () => {
           <CardDescription>Change your password</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Dummy inputs to satisfy Chrome's autofill heuristics and prevent auto-populating partner license key */}
+          <input type="text" name="email" style={{ display: 'none' }} autoComplete="username" />
+          <input type="password" name="password" style={{ display: 'none' }} autoComplete="new-password" />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs">New Password</Label>
