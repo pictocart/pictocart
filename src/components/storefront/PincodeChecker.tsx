@@ -8,6 +8,50 @@ interface PincodeCheckerProps {
   onDeliveryInfo?: (info: { serviceable: boolean; estimated_days: number | null }) => void;
 }
 
+const formatETD = (etdStr: string) => {
+  if (!etdStr) return null;
+  try {
+    const normalized = etdStr.replace(' ', 'T');
+    const date = new Date(normalized);
+    if (isNaN(date.getTime())) return null;
+
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    const dayName = daysOfWeek[date.getDay()];
+    const dayOfMonth = date.getDate();
+    const monthName = months[date.getMonth()];
+    
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+    
+    const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
+    const timeFormatted = hasTime ? ` (before ${hours}:${minutesStr} ${ampm})` : '';
+    
+    return `${dayName}, ${dayOfMonth} ${monthName}${timeFormatted}`;
+  } catch {
+    return null;
+  }
+};
+
+const getFallbackETD = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  
+  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const dayName = daysOfWeek[date.getDay()];
+  const dayOfMonth = date.getDate();
+  const monthName = months[date.getMonth()];
+  
+  return `${dayName}, ${dayOfMonth} ${monthName}`;
+};
+
 const PincodeChecker = ({
   storeId,
   colors,
@@ -19,6 +63,8 @@ const PincodeChecker = ({
   const [result, setResult] = useState<{
     serviceable: boolean;
     estimated_days: number | null;
+    etd?: string | null;
+    courier?: string | null;
   } | null>(null);
 
   const handleCheck = async () => {
@@ -44,6 +90,8 @@ const PincodeChecker = ({
       const info = {
         serviceable: data.serviceable ?? false,
         estimated_days: data.estimated_days ?? null,
+        etd: data.etd || null,
+        courier: data.courier || null,
       };
       setResult(info);
       onDeliveryInfo?.(info);
@@ -92,20 +140,37 @@ const PincodeChecker = ({
       </div>
 
       {result && (
-        <div className="flex items-center gap-2 text-sm pt-1">
+        <div className="space-y-1 pt-1">
           {result.serviceable ? (
             <>
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <span>
-                Delivery available
-                {result.estimated_days ? ` — Est. ${result.estimated_days} days` : ''}
-              </span>
+              <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>Delivery available</span>
+              </div>
+              <div className="text-xs opacity-80 pl-6 space-y-0.5">
+                <p>
+                  Estimated delivery:{' '}
+                  <span className="font-semibold text-foreground">
+                    {result.etd ? formatETD(result.etd) : (result.estimated_days ? getFallbackETD(result.estimated_days) : '')}
+                  </span>
+                  {result.estimated_days && (
+                    <span className="text-[10px] opacity-70 block sm:inline sm:ml-1">
+                      (Approx. {result.estimated_days} {result.estimated_days === 1 ? 'day' : 'days'})
+                    </span>
+                  )}
+                </p>
+                {result.courier && (
+                  <p className="text-[10px] opacity-60">
+                    Delivery partner: <span className="capitalize">{result.courier.toLowerCase()}</span>
+                  </p>
+                )}
+              </div>
             </>
           ) : (
-            <>
-              <XCircle className="h-4 w-4 text-red-500" />
+            <div className="flex items-center gap-2 text-sm text-red-500 font-medium">
+              <XCircle className="h-4 w-4 shrink-0" />
               <span>Delivery not available for this pincode</span>
-            </>
+            </div>
           )}
         </div>
       )}
