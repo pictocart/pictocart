@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,254 +8,909 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Store, Ticket, Loader2, LogOut, Send } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Store, Ticket, Loader2, LogOut, Send, Wallet as WalletIcon, Palette, Users, Sparkles, BookOpen, Key, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 const PartnerDashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
+  const qc = useQueryClient();
+  const [activeTab, setActiveTab] = useState("stores");
+
+  // Email verification state
+  const [verificationOtp, setVerificationOtp] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
+  // Wallet redemption state
+  const [oneTimeCode, setOneTimeCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+
+  // Store plan filter state
+  const [planFilter, setPlanFilter] = useState("all");
 
   const partnerQ = useQuery({
     enabled: !!user,
     queryKey: ["my-partner", user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("partners")
         .select("*")
         .eq("user_id", user!.id)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
   });
 
-  const summaryQ = useQuery({
-    enabled: !!partnerQ.data?.id,
-    queryKey: ["partner-license-summary", partnerQ.data?.id],
-    queryFn: async () => {
-      const { data } = await supabase.rpc("partner_license_summary", { _partner_id: partnerQ.data!.id });
-      return Array.isArray(data) ? data[0] : data;
-    },
-  });
+  const partner = partnerQ.data;
 
+  // 1. Stores Query
   const storesQ = useQuery({
-    enabled: !!partnerQ.data?.id,
-    queryKey: ["partner-stores", partnerQ.data?.id],
+    enabled: !!partner?.id,
+    queryKey: ["partner-stores", partner?.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("stores")
-        .select("id, name, slug, is_published, partner_handover_status, created_at, user_id")
-        .eq("owned_by_partner_id", partnerQ.data!.id)
+        .select(`
+          id, name, slug, is_published, partner_handover_status, created_at, user_id,
+          subscriptions ( plan, status )
+        `)
+        .eq("owned_by_partner_id", partner!.id)
         .order("created_at", { ascending: false });
       return data ?? [];
     },
   });
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  // 2. Demo Shops Query
+  const demoShopsQ = useQuery({
+    enabled: !!partner?.id,
+    queryKey: ["partner-demo-shops"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partner_demo_shops")
+        .select("*")
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  // 3. Licenses Query
+  const licensesQ = useQuery({
+    enabled: !!partner?.id,
+    queryKey: ["partner-licenses-list", partner?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partner_licenses")
+        .select(`
+          id, status, license_type, license_key, consumed_by_store_id, consumed_at,
+          stores ( name, slug )
+        `)
+        .eq("partner_id", partner!.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  // 4. Partner Wallet Query
+  const walletQ = useQuery({
+    enabled: !!partner?.id,
+    queryKey: ["partner-wallet", partner?.id],
+    queryFn: async () => {
+      await supabase.from("partner_wallet").upsert({ partner_id: partner!.id }, { onConflict: "partner_id", ignoreDuplicates: true });
+      const { data } = await supabase
+        .from("partner_wallet")
+        .select("*")
+        .eq("partner_id", partner!.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  // 5. Wallet Transactions Query
+  const txQ = useQuery({
+    enabled: !!partner?.id,
+    queryKey: ["partner-wallet-tx", partner?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partner_wallet_transaction")
+        .select("*")
+        .eq("partner_id", partner!.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  // 6. Base Themes Query
+  const baseThemesQ = useQuery({
+    enabled: !!partner?.id,
+    queryKey: ["partner-base-themes"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("theme_master_projects")
+        .select("*")
+        .is("created_by", null)
+        .eq("is_active", true)
+        .order("name");
+      return data ?? [];
+    },
+  });
+
+  const sendOtpMutation = useMutation({
+    mutationFn: async () => {
+      setSendingOtp(true);
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+      const { error } = await supabase
+        .from("partners")
+        .update({
+          email_verification_otp: code,
+          otp_expires_at: expires
+        })
+        .eq("id", partner!.id);
+
+      if (error) throw error;
+
+      // Log to console for dev validation (hidden from user screen)
+      console.log("Verification Code:", code);
+
+      // Invoke transactional email if setup
+      try {
+        await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "customer-otp",
+            recipientEmail: partner!.email,
+            idempotencyKey: `partner-otp-${partner!.id}-${Date.now()}`,
+            templateData: {
+              storeName: "PicToCart Partner Program",
+              otp: code,
+              purpose: "verification",
+            },
+          },
+        });
+      } catch (e) {
+        console.warn("Transactional email invoke failed:", e);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Verification code sent to " + partner!.email);
+      setSendingOtp(false);
+    },
+    onError: (e: any) => {
+      toast.error(e.message || "Failed to send code");
+      setSendingOtp(false);
+    }
+  });
+
+  const verifyOtpMutation = useMutation({
+    mutationFn: async () => {
+      setVerifyingOtp(true);
+      if (!partner?.email_verification_otp || partner.email_verification_otp !== verificationOtp.trim()) {
+        throw new Error("Invalid verification code. Please check and try again.");
+      }
+      if (partner.otp_expires_at && new Date() > new Date(partner.otp_expires_at)) {
+        throw new Error("Verification code has expired. Please request a new one.");
+      }
+
+      const { error } = await supabase
+        .from("partners")
+        .update({
+          email_verified: true,
+          email_verification_otp: null,
+          otp_expires_at: null
+        })
+        .eq("id", partner.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Email verified successfully! Welcome to PicToCart Partner Dashboard.");
+      setVerifyingOtp(false);
+      qc.invalidateQueries({ queryKey: ["my-partner"] });
+    },
+    onError: (e: any) => {
+      toast.error(e.message || "Verification failed");
+      setVerifyingOtp(false);
+    }
+  });
+
+  const redeemCode = async () => {
+    if (!oneTimeCode.trim()) {
+      toast.error("Please enter a one time code");
+      return;
+    }
+    setRedeeming(true);
+    try {
+      const { data, error } = await supabase.rpc("redeem_partner_one_time_code", {
+        _partner_id: partner!.id,
+        _code: oneTimeCode.trim()
+      });
+      if (error) throw error;
+
+      toast.success(`Successfully redeemed ${data} AI credits!`);
+      setOneTimeCode("");
+      qc.invalidateQueries({ queryKey: ["partner-wallet"] });
+      qc.invalidateQueries({ queryKey: ["partner-wallet-tx"] });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to redeem code");
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>;
   if (!user) return <Navigate to="/auth" replace />;
-  if (partnerQ.isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>;
-  if (!partnerQ.data) {
+  if (partnerQ.isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>;
+  
+  if (!partner) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <Card className="max-w-md w-full">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+        <Card className="max-w-md w-full border-slate-800 bg-slate-900 text-slate-100 shadow-2xl">
           <CardHeader>
-            <CardTitle>Not a partner account</CardTitle>
-            <CardDescription>
-              This area is only available to invited Pic To Cart partners. If you should have access, contact us at partners@pictocart.in.
+            <CardTitle className="text-xl text-orange-500 font-bold">Not a partner account</CardTitle>
+            <CardDescription className="text-slate-400">
+              This area is only available to registered Pic To Cart partners. If you should have access, contact your administrator.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => signOut()}>Sign out</Button>
+            <Button className="w-full bg-orange-600 hover:bg-orange-700" onClick={() => signOut()}>Sign out</Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const s = summaryQ.data ?? { total: 0, available: 0, consumed: 0, revoked: 0 };
-  const partner = partnerQ.data;
+  // --- Email Verification Overlay ---
+  if (!partner.email_verified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 py-12 relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <Card className="max-w-md w-full border-slate-800 bg-slate-900/60 backdrop-blur-xl text-slate-100 shadow-2xl z-10 animate-in fade-in zoom-in duration-300">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center mb-4">
+              <ShieldCheck className="w-6 h-6 text-orange-500" />
+            </div>
+            <CardTitle className="text-2xl font-bold tracking-tight text-white">Email Verification Required</CardTitle>
+            <CardDescription className="text-slate-400 mt-2">
+              Hello <span className="font-semibold text-orange-400">{partner.name}</span>. You need to verify your email <span className="text-slate-200 underline">{partner.email}</span> before accessing your Partner Dashboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800 text-sm text-slate-300 space-y-2">
+              <p className="font-semibold text-slate-200">Instructions:</p>
+              <p>1. Click "Send Verification Code" below.</p>
+              <p>2. Check your email (or dev toast) for the 6-digit code.</p>
+              <p>3. Enter the code and click "Verify".</p>
+            </div>
+
+            <div className="space-y-4">
+              {!partner.email_verification_otp ? (
+                <Button 
+                  onClick={() => sendOtpMutation.mutate()} 
+                  disabled={sendingOtp}
+                  className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-medium shadow-lg"
+                >
+                  {sendingOtp ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                  Send Verification Code
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="otp">Enter 6-Digit Code</Label>
+                    <Input 
+                      id="otp" 
+                      placeholder="e.g. 123456" 
+                      value={verificationOtp} 
+                      onChange={(e) => setVerificationOtp(e.target.value)}
+                      className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600 tracking-widest text-center text-lg font-bold h-12 focus-visible:ring-orange-500"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => sendOtpMutation.mutate()} 
+                      disabled={sendingOtp}
+                      className="flex-1 bg-slate-950 border border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white"
+                    >
+                      Resend Code
+                    </Button>
+                    <Button 
+                      onClick={() => verifyOtpMutation.mutate()} 
+                      disabled={verifyingOtp || verificationOtp.length !== 6}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {verifyingOtp ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Verify Code"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="text-center pt-2">
+              <Button variant="ghost" onClick={() => signOut()} className="text-slate-400 hover:text-white hover:bg-slate-800/50">
+                <LogOut className="w-4 h-4 mr-2" /> Sign Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Filter stores based on plan filter
+  const filteredStores = (storesQ.data ?? []).filter((store: any) => {
+    const activePlan = store.subscriptions?.plan || "free";
+    if (planFilter === "all") return true;
+    return activePlan === planFilter;
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/40 to-amber-50/40">
-      <header className="border-b bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-orange-600 tracking-widest">PIC TO CART</div>
-            <h1 className="text-xl font-bold">Partner Dashboard</h1>
-          </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
+      {/* Premium Header */}
+      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {(partner.tier === "state_head" || partner.tier === "regional_head") && (
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/partner/hierarchy">Hierarchy</Link>
-              </Button>
-            )}
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/partner/payouts">My Payouts</Link>
-            </Button>
-            <div className="text-right text-sm">
-              <div className="font-semibold">{partner.name}</div>
-              <div className="text-muted-foreground capitalize">
-                {partner.tier && partner.tier !== "partner" ? String(partner.tier).replace("_", " ") : partner.partner_type}
-              </div>
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <Button variant="ghost" size="icon" onClick={() => signOut()}><LogOut className="w-4 h-4" /></Button>
+            <div>
+              <div className="text-[10px] font-bold text-orange-500 tracking-widest uppercase">PicToCart</div>
+              <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                Partner Dashboard 
+                <Badge variant="outline" className="border-orange-500/30 text-orange-400 bg-orange-500/5 text-[10px]">
+                  ID: {partner.partner_id_code || "N/A"}
+                </Badge>
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden md:block">
+              <div className="font-semibold text-sm text-slate-200">{partner.name}</div>
+              <div className="text-xs text-slate-400 capitalize">{partner.partner_type} partner</div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-slate-400 hover:text-white hover:bg-slate-800">
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard label="Available licenses" value={s.available} icon={<Ticket className="w-5 h-5 text-orange-600" />} accent />
-          <StatCard label="Stores built" value={s.consumed} icon={<Store className="w-5 h-5" />} />
-          <StatCard label="Total purchased" value={s.total} />
-          <StatCard label="Revoked" value={s.revoked} />
+      <main className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="border-slate-800 bg-slate-900/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">AI Wallet Balance</span>
+                <WalletIcon className="w-5 h-5 text-orange-500" />
+              </div>
+              <div className="text-3xl font-extrabold text-white flex items-baseline gap-1">
+                {(walletQ.data?.balance ?? 0).toLocaleString()}
+                <span className="text-xs text-slate-400 font-normal">credits</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-slate-900/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Merchants Onboarded</span>
+                <Store className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="text-3xl font-extrabold text-white">
+                {storesQ.data?.length ?? 0}
+                <span className="text-xs text-slate-400 font-normal ml-1">stores</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-slate-900/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Allocated Licenses</span>
+                <Ticket className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div className="text-3xl font-extrabold text-white">
+                {licensesQ.data?.filter((l: any) => l.status === "available").length ?? 0}
+                <span className="text-xs text-slate-400 font-normal ml-1">available</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-slate-900/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Referral Code</span>
+                <Key className="w-5 h-5 text-indigo-500" />
+              </div>
+              <div className="text-2xl font-mono font-extrabold text-indigo-400">
+                {partner.referral_code}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Your client stores</CardTitle>
-              <CardDescription>Build a store using one license, then hand it over to your client.</CardDescription>
-            </div>
-            <Button asChild className="bg-orange-600 hover:bg-orange-700" disabled={s.available <= 0}>
-              <Link to="/partner/stores/new">
-                <Plus className="w-4 h-4 mr-1" /> New client store
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {storesQ.isLoading ? (
-              <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
-            ) : storesQ.data?.length === 0 ? (
-              <div className="text-center text-muted-foreground py-10">
-                No client stores yet. Click "New client store" to spend a license and start building.
-              </div>
-            ) : (
-              <div className="divide-y">
-                {storesQ.data!.map((store: any) => (
-                  <div key={store.id} className="py-3 flex items-center justify-between gap-3 flex-wrap">
-                    <div>
-                      <div className="font-medium">{store.name || store.slug}</div>
-                      <div className="text-xs text-muted-foreground">/{store.slug}</div>
+        {/* Tabbed Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="bg-slate-900 border border-slate-800 p-1 w-full justify-start overflow-x-auto flex-nowrap">
+            <TabsTrigger value="stores" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
+              <Store className="w-4 h-4" /> Stores
+            </TabsTrigger>
+            <TabsTrigger value="demo-shops" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
+              <BookOpen className="w-4 h-4" /> Demo Shops
+            </TabsTrigger>
+            <TabsTrigger value="licenses" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
+              <Ticket className="w-4 h-4" /> Licenses
+            </TabsTrigger>
+            <TabsTrigger value="wallet" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
+              <WalletIcon className="w-4 h-4" /> AI Wallet
+            </TabsTrigger>
+            <TabsTrigger value="themes" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
+              <Palette className="w-4 h-4" /> Themes
+            </TabsTrigger>
+          </TabsList>
+
+          {/* 1. Stores Tab */}
+          <TabsContent value="stores">
+            <Card className="border-slate-800 bg-slate-900/40">
+              <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Onboarded Stores</CardTitle>
+                  <CardDescription className="text-slate-400">Stores created by you or connected via your partner license.</CardDescription>
+                </div>
+                
+                {/* Plan filters */}
+                <div className="flex flex-wrap gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                  {["all", "free", "starter", "growth"].map((plan) => (
+                    <Button 
+                      key={plan}
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setPlanFilter(plan)}
+                      className={`capitalize text-xs px-3 py-1.5 h-8 ${planFilter === plan ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`}
+                    >
+                      {plan}
+                    </Button>
+                  ))}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {storesQ.isLoading ? (
+                  <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
+                ) : filteredStores.length === 0 ? (
+                  <div className="text-center py-16 text-slate-400">
+                    <Store className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    No stores found matching the filter.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-300">
+                      <thead className="bg-slate-950 text-slate-400 text-xs uppercase font-semibold">
+                        <tr>
+                          <th className="px-4 py-3 rounded-l-lg">Store Name</th>
+                          <th className="px-4 py-3">Slug</th>
+                          <th className="px-4 py-3">Plan</th>
+                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3">Created</th>
+                          <th className="px-4 py-3 rounded-r-lg text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/50">
+                        {filteredStores.map((store: any) => {
+                          const storePlan = store.subscriptions?.plan || "free";
+                          return (
+                            <tr key={store.id} className="hover:bg-slate-800/20">
+                              <td className="px-4 py-4 font-medium text-white">{store.name}</td>
+                              <td className="px-4 py-4 font-mono text-xs text-slate-400">/{store.slug}</td>
+                              <td className="px-4 py-4">
+                                <Badge variant="outline" className={`capitalize ${
+                                  storePlan === "growth" ? "border-purple-500/30 text-purple-400 bg-purple-500/5" :
+                                  storePlan === "starter" ? "border-orange-500/30 text-orange-400 bg-orange-500/5" :
+                                  "border-slate-500/30 text-slate-400"
+                                }`}>
+                                  {storePlan}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-4">
+                                {store.is_published ? (
+                                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30" variant="outline">Published</Badge>
+                                ) : (
+                                  <Badge className="bg-slate-800 text-slate-400 border-slate-700" variant="outline">Draft</Badge>
+                                )}
+                              </td>
+                              <td className="px-4 py-4 text-xs text-slate-400">{format(new Date(store.created_at), "dd MMM yyyy")}</td>
+                              <td className="px-4 py-4 text-right">
+                                <Button size="sm" variant="outline" className="border-slate-800 hover:bg-slate-800" asChild>
+                                  <Link to={`/dashboard?store=${store.id}`}>Manage</Link>
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 2. Demo Shops Tab */}
+          <TabsContent value="demo-shops">
+            <Card className="border-slate-800 bg-slate-900/40">
+              <CardHeader>
+                <CardTitle>Demo Shops & Test Users</CardTitle>
+                <CardDescription className="text-slate-400">Pre-built demo stores categorized for immediate merchant demonstrations.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {demoShopsQ.isLoading ? (
+                  <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
+                ) : (demoShopsQ.data ?? []).length === 0 ? (
+                  <div className="text-center py-16 text-slate-400">
+                    <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    No demo shops configured. Contact Super Admin to add demo stores.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {(demoShopsQ.data ?? []).map((shop) => (
+                      <Card key={shop.id} className="border-slate-800 bg-slate-950/60 overflow-hidden group">
+                        <div className="p-5 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 capitalize">
+                              {shop.category}
+                            </Badge>
+                            <span className="text-[10px] text-slate-500 font-mono">Demo</span>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-bold text-white text-base group-hover:text-orange-400 transition-colors">{shop.shop_name}</h3>
+                            <p className="text-xs text-slate-400 mt-1 font-mono">ID: {shop.shop_id}</p>
+                          </div>
+
+                          {shop.extra_message && (
+                            <div className="bg-slate-900/80 p-3 rounded text-xs text-slate-400 italic border border-slate-800/50">
+                              "{shop.extra_message}"
+                            </div>
+                          )}
+
+                          <div className="bg-slate-900 p-3 rounded-lg border border-slate-800/50 text-xs space-y-1.5 font-mono">
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Username:</span>
+                              <span className="text-slate-300 select-all">{shop.shop_id}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Password:</span>
+                              <span className="text-slate-300 select-all">{shop.password}</span>
+                            </div>
+                          </div>
+
+                          {shop.direct_access_url && (
+                            <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white gap-2" asChild>
+                              <a href={shop.direct_access_url} target="_blank" rel="noopener noreferrer">
+                                Open Demo Shop
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 3. Licenses Tab */}
+          <TabsContent value="licenses">
+            <Card className="border-slate-800 bg-slate-900/40">
+              <CardHeader>
+                <CardTitle>License Inventory</CardTitle>
+                <CardDescription className="text-slate-400">Share these special referral keys with merchants during setup. Basic installs Starter plan, Premium installs Growth plan.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {licensesQ.isLoading ? (
+                  <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
+                ) : (licensesQ.data ?? []).length === 0 ? (
+                  <div className="text-center py-16 text-slate-400">
+                    <Ticket className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    You don't have any licenses allocated. Contact Super Admin to request license keys.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Summary row */}
+                    <div className="flex gap-4 p-4 rounded-lg bg-slate-950 border border-slate-800 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20">Basic</Badge>
+                        <span>{(licensesQ.data ?? []).filter((l: any) => l.license_type === "basic" && l.status === "available").length} Available</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">Premium</Badge>
+                        <span>{(licensesQ.data ?? []).filter((l: any) => l.license_type === "premium" && l.status === "available").length} Available</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge store={store} />
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to={`/dashboard?store=${store.id}`}>Manage</Link>
-                      </Button>
-                      {!store.partner_handover_status && (
-                        <HandoverButton storeId={store.id} storeName={store.name || store.slug} />
-                      )}
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm text-slate-300">
+                        <thead className="bg-slate-950 text-slate-400 text-xs uppercase font-semibold">
+                          <tr>
+                            <th className="px-4 py-3 rounded-l-lg">License Key</th>
+                            <th className="px-4 py-3">Type</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Consumed By Store</th>
+                            <th className="px-4 py-3 rounded-r-lg">Consumed At</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/50">
+                          {(licensesQ.data ?? []).map((lic: any) => (
+                            <tr key={lic.id} className="hover:bg-slate-800/20">
+                              <td className="px-4 py-4 font-mono font-bold text-slate-100 select-all">{lic.license_key || "Generating..."}</td>
+                              <td className="px-4 py-4">
+                                <Badge className={lic.license_type === "premium" ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : "bg-orange-500/10 text-orange-400 border-orange-500/30"} variant="outline">
+                                  {lic.license_type === "premium" ? "Premium Pack" : "Basic"}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-4">
+                                {lic.status === "available" ? (
+                                  <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30" variant="outline">Available</Badge>
+                                ) : lic.status === "consumed" ? (
+                                  <Badge className="bg-slate-800 text-slate-500 border-slate-700" variant="outline">Consumed</Badge>
+                                ) : (
+                                  <Badge className="bg-red-500/10 text-red-400 border-red-500/30" variant="outline">Revoked</Badge>
+                                )}
+                              </td>
+                              <td className="px-4 py-4 text-slate-300 font-medium">
+                                {lic.stores?.name ? (
+                                  <Link to={`/dashboard?store=${lic.consumed_by_store_id}`} className="hover:underline text-orange-400">
+                                    {lic.stores.name}
+                                  </Link>
+                                ) : lic.consumed_by_store_id ? (
+                                  <span className="text-slate-500 font-mono text-xs">{lic.consumed_by_store_id.slice(0, 8)}</span>
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
+                              <td className="px-4 py-4 text-xs text-slate-400">
+                                {lic.consumed_at ? format(new Date(lic.consumed_at), "dd MMM yyyy, HH:mm") : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>How licenses work</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>• Each license you spend creates one client store you can build and customise completely.</p>
-            <p>• When ready, hand over the store to your client by entering their email and selecting a plan (Starter ₹5,500 / Growth ₹16,500 / Scale ₹55,000 per year).</p>
-            <p>• Your client pays Pic To Cart for the yearly plan directly. You charge them separately for your build & customisation work.</p>
-          </CardContent>
-        </Card>
+          {/* 4. AI Wallet Tab */}
+          <TabsContent value="wallet">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Wallet actions */}
+              <div className="lg:col-span-1 space-y-6">
+                <Card className="border-slate-800 bg-slate-900/40">
+                  <CardHeader>
+                    <CardTitle>Recharge Wallet</CardTitle>
+                    <CardDescription className="text-slate-400">Enter a One-Time Code generated by Super Admin to redeem credits.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="otc">One Time Code</Label>
+                      <Input 
+                        id="otc" 
+                        placeholder="OTC-XXXX-XXXX" 
+                        value={oneTimeCode}
+                        onChange={(e) => setOneTimeCode(e.target.value.toUpperCase())}
+                        className="bg-slate-950 border-slate-800 text-slate-100 font-mono placeholder-slate-700"
+                      />
+                    </div>
+                    <Button 
+                      onClick={redeemCode} 
+                      disabled={redeeming || !oneTimeCode.trim()} 
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium"
+                    >
+                      {redeeming ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                      Redeem Code
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-800 bg-slate-900/40 text-sm text-slate-300">
+                  <CardContent className="pt-6 space-y-3">
+                    <p className="font-semibold text-white flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-orange-500" /> Wallet Policy</p>
+                    <p>• Credits are used to customize merchant stores, design theme components, or test AI generators.</p>
+                    <p>• Super Admin can generate recharging codes for specific credit amounts (e.g. 5,000, 10,000 credits).</p>
+                    <p>• You earn AI credits every time a merchant applies a custom theme published by you!</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Transactions List */}
+              <div className="lg:col-span-2">
+                <Card className="border-slate-800 bg-slate-900/40">
+                  <CardHeader>
+                    <CardTitle>Wallet Activity</CardTitle>
+                    <CardDescription className="text-slate-400">Chronological history of credit adjustments.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {txQ.isLoading ? (
+                      <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
+                    ) : (txQ.data ?? []).length === 0 ? (
+                      <div className="text-center py-16 text-slate-400">
+                        <WalletIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        No activity recorded yet.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-800/50 max-h-[450px] overflow-y-auto pr-2">
+                        {(txQ.data ?? []).map((t) => {
+                          const isCredit = t.type === "credit";
+                          return (
+                            <div key={t.id} className="py-3 flex items-center justify-between">
+                              <div className="space-y-1">
+                                <div className="text-sm font-medium text-slate-200">{t.reason}</div>
+                                <div className="text-xs text-slate-500">{format(new Date(t.created_at), "dd MMM yyyy, HH:mm")}</div>
+                              </div>
+                              <div className={`text-sm font-bold font-mono ${isCredit ? "text-emerald-500" : "text-red-500"}`}>
+                                {isCredit ? "+" : "-"}{t.credits.toLocaleString()}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* 5. Themes Tab */}
+          <TabsContent value="themes">
+            <Card className="border-slate-800 bg-slate-900/40">
+              <CardHeader>
+                <CardTitle>Store Theme Templates</CardTitle>
+                <CardDescription className="text-slate-400">Select any layout template to customize. Once saved and published, merchants can install your custom design and you will earn AI Credits!</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {baseThemesQ.isLoading ? (
+                  <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
+                ) : (baseThemesQ.data ?? []).length === 0 ? (
+                  <div className="text-center py-16 text-slate-400">
+                    <Palette className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    No default themes available to customize.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {(baseThemesQ.data ?? []).map((theme) => (
+                      <Card key={theme.id} className="border-slate-800 bg-slate-950/60 overflow-hidden flex flex-col group">
+                        {theme.preview_image ? (
+                          <div className="aspect-video relative overflow-hidden bg-slate-900 border-b border-slate-800">
+                            <img 
+                              src={theme.preview_image} 
+                              alt={theme.name} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            {theme.is_premium && (
+                              <div className="absolute top-2 right-2">
+                                <Badge className="bg-amber-500 text-slate-950 font-semibold border-amber-600">Premium</Badge>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="aspect-video bg-gradient-to-br from-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-center text-slate-600">
+                            <Palette className="w-12 h-12" />
+                          </div>
+                        )}
+                        <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                          <div>
+                            <h3 className="font-bold text-white text-base group-hover:text-orange-400 transition-colors">{theme.name}</h3>
+                            <p className="text-xs text-slate-400 mt-1 line-clamp-2">{theme.description || "No description provided."}</p>
+                          </div>
+
+                          <CustomizeThemeButton themeId={theme.theme_id} themeName={theme.name} />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
 };
 
-const HandoverButton = ({ storeId, storeName }: { storeId: string; storeName: string }) => {
-  const qc = useQueryClient();
+// Helper button to open Customize dialog
+const CustomizeThemeButton = ({ themeId, themeName }: { themeId: string; themeName: string }) => {
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [plan, setPlan] = useState("starter");
-  const [submitting, setSubmitting] = useState(false);
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+  const [customKey, setCustomKey] = useState("");
 
-  const send = async () => {
-    if (!email.includes("@")) { toast.error("Enter a valid client email"); return; }
-    setSubmitting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("partner-handover-invite", {
-        body: { store_id: storeId, client_email: email, plan },
-      });
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "Failed");
-      toast.success(`Invite sent to ${email}`);
-      qc.invalidateQueries({ queryKey: ["partner-stores"] });
-      setOpen(false);
-      setEmail("");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to send invite");
-    } finally {
-      setSubmitting(false);
+  const handleStart = () => {
+    if (!name.trim()) {
+      toast.error("Please enter a theme name");
+      return;
     }
+    if (!customKey.trim()) {
+      toast.error("Please enter a unique key");
+      return;
+    }
+
+    const cleanKey = customKey.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+    
+    // Redirect to customizer with partner flags
+    const url = `/customise?partner_edit=true&base_theme_id=${themeId}&theme_name=${encodeURIComponent(name.trim())}&theme_desc=${encodeURIComponent(desc.trim())}&theme_key=${encodeURIComponent(cleanKey)}`;
+    window.location.href = url;
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
-          <Send className="w-3.5 h-3.5 mr-1" /> Send to client
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Hand over "{storeName}"</DialogTitle>
-          <DialogDescription>
-            Your client will get an email to set a password and take ownership of the store.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Client email</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="client@example.com" />
-          </div>
-          <div>
-            <Label>Plan</Label>
-            <Select value={plan} onValueChange={setPlan}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="starter">Starter — ₹5,500 / year</SelectItem>
-                <SelectItem value="growth">Growth — ₹16,500 / year</SelectItem>
-                <SelectItem value="scale">Scale — ₹55,000 / year</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="w-full">
+      <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium" onClick={() => setOpen(true)}>
+        Customize Layout
+      </Button>
+      
+      {open && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <Card className="max-w-md w-full border-slate-800 bg-slate-900 text-slate-100 shadow-2xl animate-in zoom-in duration-200">
+            <CardHeader>
+              <CardTitle>Configure Theme Design</CardTitle>
+              <CardDescription className="text-slate-400">Give your custom version of "{themeName}" a name and key to publish it.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="t_name">Theme Name</Label>
+                <Input 
+                  id="t_name" 
+                  placeholder="e.g. Minimalist Royal Orange" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="t_desc">Description (Optional)</Label>
+                <Input 
+                  id="t_desc" 
+                  placeholder="e.g. Sleek design for jewelry and high fashion" 
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="t_key">Unique Theme Key (Special Key)</Label>
+                <Input 
+                  id="t_key" 
+                  placeholder="e.g. orange-luxe" 
+                  value={customKey}
+                  onChange={(e) => setCustomKey(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  className="bg-slate-950 border-slate-800 text-slate-100 placeholder-slate-600 font-mono"
+                />
+                <p className="text-[10px] text-slate-500">Merchants will search this key to find your theme. Format: letters, numbers, hyphens only.</p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 border-slate-800 text-slate-300 hover:bg-slate-800">
+                  Cancel
+                </Button>
+                <Button onClick={handleStart} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
+                  Start Designing
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={send} disabled={submitting} className="bg-orange-600 hover:bg-orange-700">
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send invite"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+    </div>
   );
-};
-
-
-const StatCard = ({ label, value, icon, accent }: { label: string; value: number; icon?: React.ReactNode; accent?: boolean }) => (
-  <Card className={accent ? "border-orange-200 bg-orange-50/50" : ""}>
-    <CardContent className="pt-5">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-        {icon}
-      </div>
-      <div className="text-3xl font-bold">{value ?? 0}</div>
-    </CardContent>
-  </Card>
-);
-
-const StatusBadge = ({ store }: { store: any }) => {
-  if (store.partner_handover_status === "paid") return <Badge className="bg-green-500">Live</Badge>;
-  if (store.partner_handover_status === "accepted") return <Badge className="bg-blue-500">Awaiting payment</Badge>;
-  if (store.partner_handover_status === "pending") return <Badge variant="secondary">Invited client</Badge>;
-  return <Badge variant="outline">Building</Badge>;
 };
 
 export default PartnerDashboard;

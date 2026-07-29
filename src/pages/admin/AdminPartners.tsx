@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,14 +10,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Eye, IndianRupee, Mail, Loader2, Copy, Ban, Trash2 } from "lucide-react";
+import { Plus, Eye, IndianRupee, Mail, Loader2, Copy, Ban, Trash2, Key, Users, BookOpen, Sparkles, CheckCircle2, X, AlertCircle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const AdminPartners = () => {
   const qc = useQueryClient();
   const [selected, setSelected] = useState<any>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
 
   // Invite form state
   const [form, setForm] = useState({
@@ -32,6 +35,49 @@ const AdminPartners = () => {
   });
   const [lastAcceptUrl, setLastAcceptUrl] = useState<string | null>(null);
 
+  // Direct Creation form state
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company_name: "pictocart",
+    partner_type: "intern" as "agency" | "freelancer" | "intern",
+    partner_id_code: "",
+    password: "",
+  });
+
+  const [createOpenEffect, setCreateOpenEffect] = useState(false);
+  // Auto-generate Partner ID and temporary password when modal opens
+  useEffect(() => {
+    if (createOpen) {
+      const randomId = "pcc" + Math.floor(100 + Math.random() * 900);
+      const randomPassword = "temp" + Math.floor(1000 + Math.random() * 9000);
+      setCreateForm({
+        name: "",
+        email: "",
+        phone: "",
+        company_name: "pictocart",
+        partner_type: "intern",
+        partner_id_code: randomId,
+        password: randomPassword,
+      });
+      setCreateError(null);
+    }
+  }, [createOpen]);
+
+  // Demo Shop form state
+  const [demoForm, setDemoForm] = useState({
+    category: "Grocery",
+    shop_name: "",
+    shop_id: "",
+    password: "",
+    direct_access_url: "",
+    extra_message: "",
+  });
+
+  // One time code form state
+  const [otcCredits, setOtcCredits] = useState<number>(5000);
+
   const [addBatchOpen, setAddBatchOpen] = useState(false);
   const [batchForm, setBatchForm] = useState({ qty: 1, unit_price: 0, notes: "" });
   const [promoteOpen, setPromoteOpen] = useState(false);
@@ -39,6 +85,7 @@ const AdminPartners = () => {
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignParentId, setAssignParentId] = useState<string>("");
 
+  // 1. Partners Query
   const partnersQ = useQuery({
     queryKey: ["admin-partners"],
     queryFn: async () => {
@@ -49,6 +96,32 @@ const AdminPartners = () => {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  // 2. Demo Shops Query
+  const demoShopsQ = useQuery({
+    queryKey: ["admin-demo-shops"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_demo_shops")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    }
+  });
+
+  // 3. One Time Codes Query
+  const otcQ = useQuery({
+    queryKey: ["admin-one-time-codes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_one_time_codes")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    }
   });
 
   const summaryQ = useQuery({
@@ -86,6 +159,7 @@ const AdminPartners = () => {
     },
   });
 
+  // Mutate: Invite
   const invite = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -102,6 +176,107 @@ const AdminPartners = () => {
       setLastAcceptUrl(data.accept_url);
       qc.invalidateQueries({ queryKey: ["admin-partners"] });
       setForm({ ...form, name: "", email: "", phone: "", company_name: "", notes: "" });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Mutate: Direct Create
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const directCreate = useMutation({
+    mutationFn: async () => {
+      setCreateError(null);
+      if (createForm.password.length < 6) {
+        throw new Error("Password must be at least 6 characters");
+      }
+      if (!createForm.partner_id_code.startsWith("pcc")) {
+        throw new Error("Partner ID Code must start with 'pcc'");
+      }
+
+      const { data, error } = await supabase.functions.invoke("admin-manage-user", {
+        body: {
+          action: "create_partner",
+          email: createForm.email,
+          password: createForm.password,
+          partnerIdCode: createForm.partner_id_code,
+          name: createForm.name,
+          companyName: createForm.company_name,
+          phone: createForm.phone,
+          partnerType: createForm.partner_type,
+        }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success(`Partner ${createForm.name} created successfully with Partner ID ${createForm.partner_id_code}!`);
+      setCreateOpen(false);
+      qc.invalidateQueries({ queryKey: ["admin-partners"] });
+    },
+    onError: (e: any) => {
+      toast.error(e.message);
+      setCreateError(e.message);
+    },
+  });
+
+  // Mutate: Add Demo Shop
+  const addDemoShop = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("partner_demo_shops")
+        .insert(demoForm);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Demo shop added!");
+      setDemoOpen(false);
+      setDemoForm({
+        category: "Grocery",
+        shop_name: "",
+        shop_id: "",
+        password: "",
+        direct_access_url: "",
+        extra_message: "",
+      });
+      qc.invalidateQueries({ queryKey: ["admin-demo-shops"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Mutate: Delete Demo Shop
+  const deleteDemoShop = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("partner_demo_shops")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Demo shop deleted");
+      qc.invalidateQueries({ queryKey: ["admin-demo-shops"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Mutate: Generate One Time Code
+  const generateOneTimeCode = useMutation({
+    mutationFn: async () => {
+      const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const code = `OTC-${randomPart}`;
+      
+      const { error } = await supabase
+        .from("partner_one_time_codes")
+        .insert({
+          code,
+          credits: otcCredits,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("One time credit code generated!");
+      qc.invalidateQueries({ queryKey: ["admin-one-time-codes"] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -152,7 +327,7 @@ const AdminPartners = () => {
       return count ?? 0;
     },
     onSuccess: (count) => {
-      toast.success(`Revoked ${count} available license${count === 1 ? "" : "s"}`);
+      toast.success(`Revoked ${count} available licenses`);
       qc.invalidateQueries({ queryKey: ["partner-batches", selected.id] });
       qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
     },
@@ -161,12 +336,10 @@ const AdminPartners = () => {
 
   const deletePartner = useMutation({
     mutationFn: async (id: string) => {
-      // Block delete if partner already has consumed licenses / stores
       const { data: stores } = await supabase.from("stores").select("id").eq("owned_by_partner_id", id).limit(1);
       if (stores && stores.length > 0) {
         throw new Error("Cannot delete: partner has client stores. Reassign or remove them first.");
       }
-      // Remove dependents that may not cascade
       await supabase.from("partner_licenses").delete().eq("partner_id", id);
       await supabase.from("partner_license_batches").delete().eq("partner_id", id);
       await supabase.from("partner_invites").delete().eq("partner_id", id);
@@ -203,16 +376,17 @@ const AdminPartners = () => {
 
   const assignParent = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc("admin_assign_partner_parent", {
-        _partner_id: selected.id,
-        _parent_id: assignParentId || null,
-      });
+      const { error } = await supabase
+        .from("partners")
+        .update({ parent_partner_id: assignParentId || null })
+        .eq("id", selected.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Parent updated");
+      toast.success("Parent partner updated");
       setAssignOpen(false);
       qc.invalidateQueries({ queryKey: ["admin-partners"] });
+      setSelected({ ...selected, parent_partner_id: assignParentId });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -221,159 +395,440 @@ const AdminPartners = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Partner Program</h1>
-          <p className="text-muted-foreground">Agencies, freelancers and interns building stores for clients.</p>
-        </div>
-        <Dialog open={inviteOpen} onOpenChange={(o) => { setInviteOpen(o); if (!o) setLastAcceptUrl(null); }}>
-          <DialogTrigger asChild>
-            <Button className="bg-orange-600 hover:bg-orange-700">
-              <Plus className="w-4 h-4 mr-1" /> Invite partner
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Invite a new partner</DialogTitle>
-              <DialogDescription>
-                Allocate licenses at a custom price. Interns are free (₹0). An invite email branded as Pic To Cart will be sent.
-              </DialogDescription>
-            </DialogHeader>
-            {lastAcceptUrl ? (
-              <div className="space-y-3">
-                <p className="text-sm">Invite created. Share this link if email is delayed:</p>
-                <div className="flex gap-2">
-                  <Input value={lastAcceptUrl} readOnly />
-                  <Button size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(lastAcceptUrl); toast.success("Copied"); }}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-                <Button variant="outline" className="w-full" onClick={() => { setLastAcceptUrl(null); setInviteOpen(false); }}>Done</Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Full name *</Label>
-                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Super Admin Panel</h1>
+        <p className="text-muted-foreground text-sm mt-1">Manage PicToCart partners, issue licensing, configure demo stores, and generate wallet credit codes.</p>
+      </div>
+
+      <Tabs defaultValue="partners" className="space-y-6">
+        <TabsList className="bg-muted p-1 rounded-lg border">
+          <TabsTrigger value="partners" className="gap-2"><Users className="w-4 h-4" /> Partners</TabsTrigger>
+          <TabsTrigger value="demo-shops" className="gap-2"><BookOpen className="w-4 h-4" /> Demo Shops</TabsTrigger>
+          <TabsTrigger value="one-time-codes" className="gap-2"><Key className="w-4 h-4" /> One-Time Codes</TabsTrigger>
+        </TabsList>
+
+        {/* TAB 1: Partners */}
+        <TabsContent value="partners" className="space-y-6">
+          <div className="flex items-center justify-end gap-2">
+            {/* 1. Invite Partner */}
+            <Dialog open={inviteOpen} onOpenChange={(o) => { setInviteOpen(o); if (!o) setLastAcceptUrl(null); }}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-slate-300">
+                  <Mail className="w-4 h-4 mr-2 text-slate-500" /> Invite Partner
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Invite a new partner</DialogTitle>
+                  <DialogDescription>
+                    Sends an invitation email. Partner signs up and links their account.
+                  </DialogDescription>
+                </DialogHeader>
+                {lastAcceptUrl ? (
+                  <div className="space-y-3">
+                    <p className="text-sm">Invite created. Share this link:</p>
+                    <div className="flex gap-2">
+                      <Input value={lastAcceptUrl} readOnly />
+                      <Button size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(lastAcceptUrl); toast.success("Copied"); }}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Button variant="outline" className="w-full" onClick={() => { setLastAcceptUrl(null); setInviteOpen(false); }}>Done</Button>
                   </div>
-                  <div>
-                    <Label>Email *</Label>
-                    <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Full name *</Label>
+                        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label>Email *</Label>
+                        <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Phone number</Label>
+                        <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label>Company name</Label>
+                        <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Partner type</Label>
+                        <Select value={form.partner_type} onValueChange={(v: any) => setForm({ ...form, partner_type: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="agency">Agency</SelectItem>
+                            <SelectItem value="freelancer">Freelancer</SelectItem>
+                            <SelectItem value="intern">Intern</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {form.partner_type !== "intern" && (
+                        <div>
+                          <Label>Unit Price (INR)</Label>
+                          <Input type="number" value={form.license_unit_price} onChange={(e) => setForm({ ...form, license_unit_price: parseInt(e.target.value) || 0 })} />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Label>License quantity</Label>
+                      <Input type="number" value={form.license_qty} onChange={(e) => setForm({ ...form, license_qty: parseInt(e.target.value) || 0 })} />
+                    </div>
+                    <div>
+                      <Label>Internal notes</Label>
+                      <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={() => invite.mutate()} disabled={invite.isPending || !form.name || !form.email} className="bg-orange-600 hover:bg-orange-700">
+                        {invite.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                        Send Invite
+                      </Button>
+                    </DialogFooter>
                   </div>
-                  <div>
-                    <Label>Phone</Label>
-                    <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* 2. Create Partner Directly */}
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-orange-600 hover:bg-orange-700">
+                  <Plus className="w-4 h-4 mr-1" /> Create Partner Directly
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create Partner Directly</DialogTitle>
+                  <DialogDescription>
+                    Instantly creates a partner account, user credentials, and provisions default basic/premium packages.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {createError && (
+                    <div className="bg-red-50 text-red-600 border border-red-200 text-xs p-3 rounded-lg flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{createError}</span>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="c_name">Full Name *</Label>
+                      <Input id="c_name" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="c_id">Partner ID (pcc...) *</Label>
+                      <Input id="c_id" placeholder="e.g. pcc123" value={createForm.partner_id_code} onChange={(e) => setCreateForm({ ...createForm, partner_id_code: e.target.value.toLowerCase().trim() })} />
+                    </div>
                   </div>
-                  <div>
-                    <Label>Company</Label>
-                    <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="c_email">Email *</Label>
+                      <Input id="c_email" type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value.trim() })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="c_pass">Password *</Label>
+                      <Input id="c_pass" type="text" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} />
+                    </div>
                   </div>
-                  <div>
-                    <Label>Partner type *</Label>
-                    <Select value={form.partner_type} onValueChange={(v: any) => setForm({ ...form, partner_type: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="c_phone">Phone</Label>
+                      <Input id="c_phone" value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="c_company">Company</Label>
+                      <Input id="c_company" value={createForm.company_name} disabled className="bg-slate-100 cursor-not-allowed" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="c_type">Partner Type</Label>
+                    <Select value={createForm.partner_type} onValueChange={(v: any) => setCreateForm({ ...createForm, partner_type: v })}>
+                      <SelectTrigger id="c_type"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="agency">Agency</SelectItem>
                         <SelectItem value="freelancer">Freelancer</SelectItem>
-                        <SelectItem value="intern">Intern / Employee</SelectItem>
+                        <SelectItem value="agency">Agency</SelectItem>
+                        <SelectItem value="intern">Intern</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label># of licenses *</Label>
-                    <Input type="number" min={1} value={form.license_qty} onChange={(e) => setForm({ ...form, license_qty: parseInt(e.target.value) || 1 })} />
-                  </div>
-                  <div className="col-span-2">
-                    <Label>Price per license (₹)</Label>
-                    <Input
-                      type="number" min={0}
-                      disabled={form.partner_type === "intern"}
-                      value={form.partner_type === "intern" ? 0 : form.license_unit_price}
-                      onChange={(e) => setForm({ ...form, license_unit_price: parseFloat(e.target.value) || 0 })}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Total: ₹{((form.partner_type === "intern" ? 0 : form.license_unit_price) * form.license_qty).toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label>Internal notes</Label>
-                    <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-                  </div>
+                  <DialogFooter className="pt-2">
+                    <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                    <Button onClick={() => directCreate.mutate()} disabled={directCreate.isPending || !createForm.name || !createForm.email || !createForm.partner_id_code || !createForm.password} className="bg-orange-600 hover:bg-orange-700">
+                      {directCreate.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Create Partner
+                    </Button>
+                  </DialogFooter>
                 </div>
-                <DialogFooter>
-                  <Button onClick={() => invite.mutate()} disabled={invite.isPending || !form.name || !form.email} className="bg-orange-600 hover:bg-orange-700">
-                    {invite.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Send invite
-                  </Button>
-                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>All partners ({partnersQ.data?.length ?? 0})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {partnersQ.isLoading ? (
+                <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
+              ) : partnersQ.data?.length === 0 ? (
+                <div className="text-center text-muted-foreground py-10">No partners yet. Click "Create Partner Directly" to add one.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="py-2">Partner</th>
+                        <th>Partner ID</th>
+                        <th>Tier</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Licenses</th>
+                        <th>Total paid</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {partnersQ.data!.map((p: any) => (
+                        <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
+                          <td className="py-3">
+                            <div className="font-medium text-slate-800">{p.name || "—"}</div>
+                            <div className="text-xs text-muted-foreground">{p.email}</div>
+                          </td>
+                          <td className="font-mono text-xs">{p.partner_id_code || "—"}</td>
+                          <td>
+                            {p.tier && p.tier !== "partner" ? (
+                              <Badge className={p.tier === "regional_head" ? "bg-purple-600" : "bg-blue-600"}>
+                                {String(p.tier).replace("_", " ")} • {p.override_commission_pct}%
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">Partner</span>
+                            )}
+                          </td>
+                          <td className="capitalize">{p.partner_type}</td>
+                          <td>
+                            <Badge variant={p.invite_status === "active" ? "default" : p.invite_status === "suspended" ? "destructive" : "secondary"}>
+                              {p.invite_status}
+                            </Badge>
+                          </td>
+                          <td>{p.total_licenses_purchased}</td>
+                          <td>₹{Number(p.total_amount_paid || 0).toLocaleString("en-IN")}</td>
+                          <td className="text-right">
+                            <Button size="sm" variant="ghost" onClick={() => setSelected(p)}>
+                              <Eye className="w-4 h-4 mr-1" /> View
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB 2: Demo Shops */}
+        <TabsContent value="demo-shops" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Demo Store Catalog</h2>
+            
+            <Dialog open={demoOpen} onOpenChange={setDemoOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-orange-600 hover:bg-orange-700">
+                  <Plus className="w-4 h-4 mr-1" /> Add Demo Shop
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Demo Store</DialogTitle>
+                  <DialogDescription>
+                    Create a sandbox store reference details that partners can access instantly for demonstrations.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="d_cat">Category *</Label>
+                      <Select value={demoForm.category} onValueChange={(v) => setDemoForm({ ...demoForm, category: v })}>
+                        <SelectTrigger id="d_cat"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Grocery">Grocery</SelectItem>
+                          <SelectItem value="Clothing">Clothing</SelectItem>
+                          <SelectItem value="Restaurant">Restaurant</SelectItem>
+                          <SelectItem value="Electronics">Electronics</SelectItem>
+                          <SelectItem value="Jewellery">Jewellery</SelectItem>
+                          <SelectItem value="Pharmacy">Pharmacy</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="d_name">Shop Name *</Label>
+                      <Input id="d_name" value={demoForm.shop_name} onChange={(e) => setDemoForm({ ...demoForm, shop_name: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="d_id">Shop / User ID *</Label>
+                      <Input id="d_id" value={demoForm.shop_id} onChange={(e) => setDemoForm({ ...demoForm, shop_id: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="d_pass">Password *</Label>
+                      <Input id="d_pass" value={demoForm.password} onChange={(e) => setDemoForm({ ...demoForm, password: e.target.value })} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="d_url">Direct Access URL</Label>
+                    <Input id="d_url" placeholder="https://..." value={demoForm.direct_access_url} onChange={(e) => setDemoForm({ ...demoForm, direct_access_url: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="d_msg">Extra Notes/Message</Label>
+                    <Textarea id="d_msg" rows={2} placeholder="e.g. Try applying custom orange template" value={demoForm.extra_message} onChange={(e) => setDemoForm({ ...demoForm, extra_message: e.target.value })} />
+                  </div>
+                  <DialogFooter className="pt-2">
+                    <Button variant="outline" onClick={() => setDemoOpen(false)}>Cancel</Button>
+                    <Button onClick={() => addDemoShop.mutate()} disabled={addDemoShop.isPending || !demoForm.shop_name || !demoForm.shop_id || !demoForm.password} className="bg-orange-600 hover:bg-orange-700">
+                      {addDemoShop.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Save Shop
+                    </Button>
+                  </DialogFooter>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              {demoShopsQ.isLoading ? (
+                <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
+              ) : demoShopsQ.data?.length === 0 ? (
+                <div className="text-center text-muted-foreground py-10">No demo shops configured. Click "Add Demo Shop" to add one.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="py-2">Category</th>
+                        <th>Shop Name</th>
+                        <th>Shop ID</th>
+                        <th>Password</th>
+                        <th>URL</th>
+                        <th className="text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {demoShopsQ.data!.map((shop: any) => (
+                        <tr key={shop.id} className="border-b last:border-0 hover:bg-muted/30">
+                          <td className="py-3 font-semibold text-orange-600">{shop.category}</td>
+                          <td className="font-medium text-slate-800">{shop.shop_name}</td>
+                          <td className="font-mono text-xs">{shop.shop_id}</td>
+                          <td className="font-mono text-xs text-slate-500">{shop.password}</td>
+                          <td className="max-w-[200px] truncate font-mono text-xs text-slate-400">
+                            {shop.direct_access_url ? (
+                              <a href={shop.direct_access_url} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-orange-500">
+                                {shop.direct_access_url}
+                              </a>
+                            ) : "—"}
+                          </td>
+                          <td className="text-right">
+                            <Button size="sm" variant="ghost" className="text-destructive hover:bg-red-50 hover:text-destructive" onClick={() => deleteDemoShop.mutate(shop.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB 3: One-Time Credit Codes */}
+        <TabsContent value="one-time-codes" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate Credit Codes</CardTitle>
+              <CardDescription>Codes created here can be shared with partners to recharge their AI wallets.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-end gap-4 max-w-md bg-slate-50 p-4 rounded-lg border">
+                <div className="space-y-1.5 flex-1">
+                  <Label htmlFor="code_credits">Credit Value</Label>
+                  <Input 
+                    id="code_credits" 
+                    type="number" 
+                    value={otcCredits} 
+                    onChange={(e) => setOtcCredits(parseInt(e.target.value) || 0)} 
+                    className="bg-white"
+                  />
+                </div>
+                <Button onClick={() => generateOneTimeCode.mutate()} disabled={generateOneTimeCode.isPending} className="bg-orange-600 hover:bg-orange-700">
+                  {generateOneTimeCode.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  Generate Code
+                </Button>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All partners ({partnersQ.data?.length ?? 0})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {partnersQ.isLoading ? (
-            <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
-          ) : partnersQ.data?.length === 0 ? (
-            <div className="text-center text-muted-foreground py-10">No partners yet. Click "Invite partner" to add one.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase text-muted-foreground border-b">
-                  <tr>
-                    <th className="py-2">Partner</th>
-                    <th>Tier</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Licenses</th>
-                    <th>Total paid</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {partnersQ.data!.map((p: any) => (
-                    <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="py-3">
-                        <div className="font-medium">{p.name || "—"}</div>
-                        <div className="text-xs text-muted-foreground">{p.email}</div>
-                      </td>
-                      <td>
-                        {p.tier && p.tier !== "partner" ? (
-                          <Badge className={p.tier === "regional_head" ? "bg-purple-600" : "bg-blue-600"}>
-                            {String(p.tier).replace("_", " ")} • {p.override_commission_pct}%
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">Partner</span>
-                        )}
-                      </td>
-                      <td className="capitalize">{p.partner_type}</td>
-                      <td>
-                        <Badge variant={p.invite_status === "active" ? "default" : p.invite_status === "suspended" ? "destructive" : "secondary"}>
-                          {p.invite_status}
-                        </Badge>
-                      </td>
-                      <td>{p.total_licenses_purchased}</td>
-                      <td>₹{Number(p.total_amount_paid || 0).toLocaleString("en-IN")}</td>
-                      <td className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => setSelected(p)}>
-                          <Eye className="w-4 h-4 mr-1" /> View
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              {/* Codes list */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Generated Recharge Codes</h3>
+                {otcQ.isLoading ? (
+                  <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
+                ) : otcQ.data?.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-10 border border-dashed rounded-lg bg-slate-50/50">No codes generated yet.</div>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted text-left text-xs uppercase text-muted-foreground border-b">
+                        <tr>
+                          <th className="px-4 py-3">Code</th>
+                          <th className="px-4 py-3">Credits</th>
+                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3">Used By</th>
+                          <th className="px-4 py-3">Created</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {otcQ.data!.map((code: any) => (
+                          <tr key={code.id} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="px-4 py-3 font-mono font-bold text-slate-800 flex items-center gap-2 select-all">
+                              {code.code}
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-slate-400 hover:text-slate-600" onClick={() => { navigator.clipboard.writeText(code.code); toast.success("Copied!"); }}>
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-slate-700">{code.credits.toLocaleString()}</td>
+                            <td className="px-4 py-3">
+                              {code.is_used ? (
+                                <Badge className="bg-slate-100 text-slate-500 border-slate-200" variant="outline">Redeemed</Badge>
+                              ) : (
+                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100" variant="outline">Unused</Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                              {code.is_used ? (partnersQ.data?.find((p: any) => p.id === code.used_by_partner_id)?.name || code.used_by_partner_id || "N/A") : "—"}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-slate-400">
+                              {new Date(code.created_at).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
+      {/* Side Sheet details remain intact for Partner list */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           {selected && (
@@ -522,7 +977,6 @@ const AdminPartners = () => {
                     </span></div>
                   </div>
                 </div>
-
 
                 <div className="flex gap-2 pt-4 border-t">
                   {selected.invite_status === "active" ? (

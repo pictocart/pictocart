@@ -27,7 +27,76 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await adminClient.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdmin) throw new Error("Forbidden");
 
-    const { action, userId, role, newPassword } = await req.json();
+    const body = await req.json();
+    const { action, userId, role, newPassword } = body;
+
+    if (action === "create_partner") {
+      const { email, password, partnerIdCode, name, companyName, phone, partnerType } = body;
+      
+      if (!email || !password || !partnerIdCode || !name) {
+        throw new Error("Missing required fields: email, password, partnerIdCode, and name are required");
+      }
+      
+      // 1. Create auth user with email_confirm = true so they can login immediately
+      const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true
+      });
+      if (authError) throw authError;
+      if (!authData?.user) throw new Error("Failed to create auth user");
+      
+      const newUserId = authData.user.id;
+      
+      // 2. Generate referral code
+      let referral_code: string;
+      try {
+        const { data: code } = await adminClient.rpc("generate_referral_code");
+        referral_code = code as string;
+      } catch {
+        referral_code = "PT" + Math.random().toString(36).slice(2, 9).toUpperCase();
+      }
+      
+      // 3. Create partner record
+      const { data: partnerData, error: partnerError } = await adminClient.from("partners").insert({
+        user_id: newUserId,
+        partner_id_code: partnerIdCode,
+        name,
+        email,
+        company_name: companyName,
+        phone,
+        partner_type: partnerType || "freelancer",
+        referral_code,
+        email_verified: false,
+        invite_status: "active"
+      }).select("id").single();
+      
+      if (partnerError) {
+        // Rollback auth user
+        await adminClient.auth.admin.deleteUser(newUserId);
+        throw partnerError;
+      }
+      
+      // 4. Create user role 'partner'
+      const { error: roleError } = await adminClient.from("user_roles").insert({
+        user_id: newUserId,
+        role: "partner"
+      });
+      if (roleError) console.error("Failed to add partner role:", roleError);
+      
+      // 5. Allocate licenses: 2 basic, 3 premium
+      try {
+        await adminClient.rpc("allocate_partner_licenses", {
+          _partner_id: partnerData.id,
+          _qty_basic: 2,
+          _qty_premium: 3
+        });
+      } catch (licError) {
+        console.error("Failed to allocate default licenses:", licError);
+      }
+      
+      return new Response(JSON.stringify({ success: true, partner_id: partnerData.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     if (action === "delete_user") {
       const { error } = await adminClient.auth.admin.deleteUser(userId);

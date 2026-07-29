@@ -106,6 +106,13 @@ const COLOR_KEYS: Array<{ key: string; label: string }> = [
 ];
 
 export default function CustomiserV2() {
+  const [searchParams] = useSearchParams();
+  const partnerEdit = searchParams.get("partner_edit") === "true";
+  const partnerBaseThemeId = searchParams.get("base_theme_id") || "";
+  const partnerThemeName = searchParams.get("theme_name") || "";
+  const partnerThemeDesc = searchParams.get("theme_desc") || "";
+  const partnerThemeKey = searchParams.get("theme_key") || "";
+
   const { store, setStore } = useStore();
   const { categories, updateCategory, deleteCategory } = useCategories();
   const queryClient = useQueryClient();
@@ -153,7 +160,7 @@ export default function CustomiserV2() {
       isFirstMount.current = false;
       return;
     }
-    if (!autoSave || !store) return;
+    if (!autoSave || !store || partnerEdit) return;
 
     setSaveStatus("saving");
     const handler = setTimeout(async () => {
@@ -212,7 +219,6 @@ export default function CustomiserV2() {
     return () => resizeObserver.disconnect();
   }, []);
 
-  const [searchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
 
   // Resizable side panels — persist widths per user across sessions.
@@ -776,6 +782,87 @@ export default function CustomiserV2() {
     setSaving(false);
   };
 
+  const [publishingTheme, setPublishingTheme] = useState(false);
+
+  const publishPartnerTheme = async () => {
+    if (!partnerThemeKey) {
+      toast.error("Theme key is missing. Please restart from the partner dashboard.");
+      return;
+    }
+    setPublishingTheme(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User session not found");
+
+      // 1. Fetch base theme files_manifest
+      const { data: baseVersion, error: baseError } = await supabase
+        .from("theme_master_versions")
+        .select("files_manifest")
+        .eq("theme_id", partnerBaseThemeId)
+        .order("version", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (baseError) throw baseError;
+      const baseManifest = baseVersion?.files_manifest || {};
+
+      // 2. Build final manifest by merging overrides
+      const finalManifest = {
+        ...baseManifest,
+        version: 2,
+        palette: {
+          ...baseManifest.palette,
+          ...overrides.palette,
+          ...overrides
+        },
+        settings: {
+          ...baseManifest.settings,
+          ...overrides.settings,
+          theme_overrides: overrides,
+          promo_ticker: promoTicker
+        }
+      };
+
+      const themeId = `custom-theme-${partnerThemeKey}`;
+
+      // 3. Upsert theme master project record
+      const { error: projError } = await supabase
+        .from("theme_master_projects")
+        .upsert({
+          theme_id: themeId,
+          name: partnerThemeName,
+          description: partnerThemeDesc,
+          created_by: user.id,
+          is_active: true,
+          is_premium: false,
+          category: "Custom"
+        }, { onConflict: "theme_id" });
+
+      if (projError) throw projError;
+
+      // 4. Upsert version record
+      const { error: verError } = await supabase
+        .from("theme_master_versions")
+        .upsert({
+          theme_id: themeId,
+          version: 1,
+          files_manifest: finalManifest
+        }, { onConflict: "theme_id,version" });
+
+      if (verError) throw verError;
+
+      toast.success(`Theme "${partnerThemeName}" published successfully!`);
+      setTimeout(() => {
+        window.location.href = "/partner";
+      }, 1500);
+
+    } catch (e: any) {
+      toast.error(e.message || "Failed to publish theme");
+    } finally {
+      setPublishingTheme(false);
+    }
+  };
+
   if (!isMaster) {
     return (
       <div className="p-8 text-center space-y-3">
@@ -798,8 +885,16 @@ export default function CustomiserV2() {
     <div className={`flex flex-col bg-background ${isFullscreen ? "fixed inset-0 z-[9999] h-screen w-screen" : "-m-4 md:-m-6 h-[calc(100vh-4rem)]"}`}>
       <div className="border-b px-4 h-12 flex items-center justify-between gap-3 bg-card shrink-0">
         <div className="flex items-center gap-3">
-          <h1 className="font-semibold text-sm">Customise</h1>
-          <Badge variant="outline" className="text-[10px]">{activeThemeId}</Badge>
+          <h1 className="font-semibold text-sm">
+            {partnerEdit ? (
+              <span className="text-orange-500 flex items-center gap-1.5">
+                <Palette className="h-4 w-4" /> Partner Theme Designer
+              </span>
+            ) : "Customise"}
+          </h1>
+          <Badge variant="outline" className="text-[10px]">
+            {partnerEdit ? partnerThemeName : activeThemeId}
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex border rounded-md overflow-hidden bg-background">
@@ -841,8 +936,17 @@ export default function CustomiserV2() {
               </span>
             )}
           </div>
-          <Button size="sm" variant="outline" className="bg-background" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset to Factory Default</Button>
-          <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}</Button>
+          {partnerEdit ? (
+            <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white gap-1.5" onClick={publishPartnerTheme} disabled={publishingTheme}>
+              {publishingTheme ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {publishingTheme ? "Publishing..." : "Publish Custom Theme"}
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" className="bg-background" onClick={resetPage}><RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset to Factory Default</Button>
+              <Button size="sm" onClick={save} disabled={saving}><Save className="mr-1 h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}</Button>
+            </>
+          )}
         </div>
       </div>
 

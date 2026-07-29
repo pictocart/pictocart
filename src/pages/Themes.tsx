@@ -5,7 +5,8 @@ import { useStore } from '@/hooks/useStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Check, Sparkles, Loader2, Crown, Lock } from 'lucide-react';
+import { ExternalLink, Check, Sparkles, Loader2, Crown, Lock, Search, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { THEME_TEMPLATES } from '@/lib/themes';
 import { ThemeUpdateBanner } from '@/components/ThemeUpdateBanner';
@@ -36,6 +37,60 @@ const swatchFor = (theme_id: string) => {
 const Themes = () => {
   const { store, setStore } = useStore();
   const activeThemeId = getStoreThemeId(store);
+
+  // Search states for custom themes
+  const [searchKey, setSearchKey] = useState('');
+  const [searchResult, setSearchResult] = useState<any>(null);
+  const [searching, setSearching] = useState(false);
+
+  const handleSearchTheme = async () => {
+    if (!searchKey.trim()) {
+      toast.error("Please enter a theme key to search");
+      return;
+    }
+    setSearching(true);
+    setSearchResult(null);
+    try {
+      const cleanKey = searchKey.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+      const themeId = `custom-theme-${cleanKey}`;
+
+      const { data: themeProj, error: projErr } = await supabase
+        .from('theme_master_projects')
+        .select('*')
+        .eq('theme_id', themeId)
+        .maybeSingle();
+
+      if (projErr) throw projErr;
+      if (!themeProj) {
+        toast.error("Custom theme key not found. Check key and try again.");
+        setSearching(false);
+        return;
+      }
+
+      // Fetch creator partner name
+      let partnerName = 'Partner';
+      if (themeProj.created_by) {
+        const { data: partData } = await supabase
+          .from('partners')
+          .select('name')
+          .eq('user_id', themeProj.created_by)
+          .maybeSingle();
+        if (partData) {
+          partnerName = partData.name;
+        }
+      }
+
+      setSearchResult({
+        ...themeProj,
+        partnerName
+      });
+      toast.success("Theme found!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to search theme");
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const [confirmSwitch, setConfirmSwitch] = useState<{
     targetTheme: ThemeMaster;
@@ -112,6 +167,19 @@ const Themes = () => {
         if (error) throw error;
         setStore({ ...store, theme: newTheme as any, theme_id: theme.theme_id, theme_tokens: newTheme as any, resolved_storefront_manifest });
       }
+
+      // Check if this is a custom partner theme and trigger reward RPC
+      if (theme.theme_id.startsWith('custom-theme-')) {
+        try {
+          await supabase.rpc('reward_partner_theme_usage', {
+            _theme_id: theme.theme_id,
+            _store_id: store.id
+          });
+        } catch (rewardErr) {
+          console.warn("Could not credit partner rewards:", rewardErr);
+        }
+      }
+
       toast.success(`"${theme.name}" is now your active theme.`);
     } catch (e: any) {
       toast.error(e.message || 'Could not switch theme');
@@ -301,13 +369,55 @@ const Themes = () => {
       )}
 
       {/* ── All Themes ── */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
             All Themes
           </h2>
           <div className="h-px flex-1 bg-border" />
         </div>
+
+        {/* Theme Search Bar */}
+        <div className="flex flex-col sm:flex-row gap-2 max-w-md bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border">
+          <Input 
+            placeholder="Search custom partner theme key..." 
+            value={searchKey}
+            onChange={(e) => setSearchKey(e.target.value)}
+            className="bg-white dark:bg-slate-950"
+            onKeyDown={(e) => e.key === 'Enter' && handleSearchTheme()}
+          />
+          <Button onClick={handleSearchTheme} disabled={searching} className="bg-orange-600 hover:bg-orange-700 text-white gap-1.5 shrink-0">
+            {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+            Search Key
+          </Button>
+        </div>
+
+        {/* Search Result display */}
+        {searchResult && (
+          <div className="p-4 border border-orange-200 bg-orange-50/20 dark:bg-orange-950/10 rounded-xl space-y-4 animate-in fade-in duration-200">
+            <div className="flex items-start justify-between">
+              <div>
+                <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 mb-2">
+                  Partner Theme: {searchResult.partnerName}
+                </Badge>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{searchResult.name}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5 font-mono">Key: {searchResult.theme_id.replace("custom-theme-", "")}</p>
+                {searchResult.description && (
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{searchResult.description}</p>
+                )}
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSearchResult(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => handleThemeSelection(searchResult)} className="bg-orange-600 hover:bg-orange-700 text-white">
+                Apply Theme
+              </Button>
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-20">

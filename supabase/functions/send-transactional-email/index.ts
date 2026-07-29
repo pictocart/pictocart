@@ -332,21 +332,64 @@ Deno.serve(async (req) => {
   })
 
   if (enqueueError) {
-    console.error('Failed to enqueue email', {
+    console.warn('Failed to enqueue email, attempting direct send via Resend API as fallback...', {
       error: enqueueError,
       templateName,
       effectiveRecipient,
     })
+
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    if (resendApiKey) {
+      try {
+        const fromHeader = `${senderName || SITE_NAME} <noreply@${FROM_DOMAIN}>`
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`,
+          },
+          body: JSON.stringify({
+            from: fromHeader,
+            to: effectiveRecipient,
+            subject: resolvedSubject,
+            html: html,
+          }),
+        })
+
+        if (res.ok) {
+          console.log('Transactional email sent directly via Resend API fallback')
+          await supabase.from('email_send_log').insert({
+            message_id: messageId,
+            template_name: templateName,
+            recipient_email: effectiveRecipient,
+            status: 'sent',
+            metadata: { direct_send: true },
+          })
+          return new Response(
+            JSON.stringify({ success: true, sent_directly: true }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        } else {
+          const errText = await res.text()
+          console.error('Direct Resend send failed:', errText)
+        }
+      } catch (directErr) {
+        console.error('Error during direct send fallback:', directErr)
+      }
+    }
 
     await supabase.from('email_send_log').insert({
       message_id: messageId,
       template_name: templateName,
       recipient_email: effectiveRecipient,
       status: 'failed',
-      error_message: 'Failed to enqueue email',
+      error_message: 'Failed to enqueue email and direct send fallback failed',
     })
 
-    return new Response(JSON.stringify({ error: 'Failed to enqueue email' }), {
+    return new Response(JSON.stringify({ error: 'Failed to enqueue email and direct send failed' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

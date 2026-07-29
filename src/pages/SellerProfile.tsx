@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStore } from '@/hooks/useStore';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   User, Mail, Phone, Store, Calendar, Camera, Lock, Eye, EyeOff,
-  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History,
+  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -32,6 +33,54 @@ const SellerProfile = () => {
   const { store, setStore } = useStore();
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const qc = useQueryClient();
+
+  // License Key fields
+  const [licenseKey, setLicenseKey] = useState('');
+  const [applyingLicense, setApplyingLicense] = useState(false);
+
+  const { data: linkedPartner } = useQuery({
+    enabled: !!store?.owned_by_partner_id,
+    queryKey: ['linked-partner-details', store?.owned_by_partner_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('partners')
+        .select('name, partner_id_code')
+        .eq('id', store.owned_by_partner_id)
+        .maybeSingle();
+      return data;
+    }
+  });
+
+  const handleApplyLicense = async () => {
+    if (!licenseKey.trim()) {
+      toast.error('Please enter a license key');
+      return;
+    }
+    setApplyingLicense(true);
+    try {
+      const { error } = await supabase.rpc('apply_partner_license_key', {
+        _store_id: store.id,
+        _key: licenseKey.trim()
+      });
+
+      if (error) throw error;
+
+      toast.success('License key applied successfully! Your plan has been upgraded.');
+      setLicenseKey('');
+      
+      qc.invalidateQueries({ queryKey: ['store'] });
+      qc.invalidateQueries({ queryKey: ['store-subscription'] });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to apply license key. Please check and try again.');
+    } finally {
+      setApplyingLicense(false);
+    }
+  };
 
   // Profile fields
   const [fullName, setFullName] = useState('');
@@ -388,6 +437,59 @@ const SellerProfile = () => {
                   </p>
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Partner License Key section */}
+      {store && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Ticket className="h-4 w-4 text-orange-500" />
+              Partner Connection & License Key
+            </CardTitle>
+            <CardDescription>
+              Link your store to a PicToCart Partner using a License Key to upgrade your subscription plan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {store.owned_by_partner_id ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 text-sm flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-emerald-800">Partner Managed Store</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">
+                    Your store is linked to Partner <span className="font-medium">{linkedPartner?.name || "..."}</span> ({linkedPartner?.partner_id_code || "N/A"}).
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="license_key" className="text-xs">Partner License Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="license_key"
+                      placeholder="e.g. PCC123-BASE-A1B2"
+                      value={licenseKey}
+                      onChange={(e) => setLicenseKey(e.target.value.toUpperCase().trim())}
+                      className="font-mono"
+                    />
+                    <Button
+                      onClick={handleApplyLicense}
+                      disabled={applyingLicense || !licenseKey}
+                      className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                    >
+                      {applyingLicense ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply Key"}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Note: Applying a valid license key will immediately assign your store to the partner and activate the associated Starter/Growth premium features.
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

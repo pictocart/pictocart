@@ -46,11 +46,45 @@ const Auth = () => {
     setLoading(true);
 
     if (isLogin) {
-      const { error } = await signIn(email, password);
+      let loginEmail = email.trim();
+      if (!loginEmail.includes('@')) {
+        try {
+          const { data: partnerRec, error: partnerErr } = await supabase
+            .from('partners')
+            .select('email')
+            .eq('partner_id_code', loginEmail)
+            .maybeSingle();
+
+          if (partnerErr) throw partnerErr;
+          if (!partnerRec) {
+            toast.error("Partner ID not found. Please verify your ID or contact support.");
+            setLoading(false);
+            return;
+          }
+          loginEmail = partnerRec.email;
+        } catch (err: any) {
+          toast.error("Error verifying Partner ID: " + err.message);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const { error } = await signIn(loginEmail, password);
       if (error) {
         toast.error(error.message);
       } else {
-        navigate('/dashboard');
+        // Check if user is a partner, navigate to /partner instead of /dashboard
+        const { data: isPartner } = await supabase
+          .from('partners')
+          .select('id')
+          .eq('email', loginEmail)
+          .maybeSingle();
+
+        if (isPartner) {
+          navigate('/partner');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } else {
       const { error } = await signUp(email, password, fullName);
@@ -209,14 +243,14 @@ const Auth = () => {
                     />
                   </div>
                 )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                 <div className="space-y-2">
+                  <Label htmlFor="email">{isLogin ? 'Email address or Partner ID' : 'Email'}</Label>
                   <Input
                     id="email"
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder={isLogin ? 'you@example.com or pcc234' : 'you@example.com'}
                     required
                   />
                 </div>
