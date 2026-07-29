@@ -79,7 +79,7 @@ const AdminPartners = () => {
   const [otcCredits, setOtcCredits] = useState<number>(5000);
 
   const [addBatchOpen, setAddBatchOpen] = useState(false);
-  const [batchForm, setBatchForm] = useState({ qty: 1, unit_price: 0, notes: "" });
+  const [batchForm, setBatchForm] = useState({ qty: 1, unit_price: 0, notes: "", license_type: "starter" });
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [promoteForm, setPromoteForm] = useState({ tier: "state_head", override_pct: 5, region_name: "", state_name: "" });
   const [assignOpen, setAssignOpen] = useState(false);
@@ -290,13 +290,14 @@ const AdminPartners = () => {
         unit_price_inr: batchForm.unit_price,
         total_inr: total,
         notes: batchForm.notes,
+        license_type: batchForm.license_type,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Licenses added");
       setAddBatchOpen(false);
-      setBatchForm({ qty: 1, unit_price: 0, notes: "" });
+      setBatchForm({ qty: 1, unit_price: 0, notes: "", license_type: "starter" });
       qc.invalidateQueries({ queryKey: ["partner-batches", selected.id] });
       qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
       qc.invalidateQueries({ queryKey: ["admin-partners"] });
@@ -870,6 +871,22 @@ const AdminPartners = () => {
                         </DialogHeader>
                         <div className="space-y-3">
                           <div>
+                            <Label>License Type</Label>
+                            <Select 
+                              value={batchForm.license_type} 
+                              onValueChange={(val) => setBatchForm({ ...batchForm, license_type: val })}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select license type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="starter">Starter</SelectItem>
+                                <SelectItem value="growth">Growth</SelectItem>
+                                <SelectItem value="scale">Scale</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
                             <Label>Quantity</Label>
                             <Input type="number" min={1} value={batchForm.qty} onChange={(e) => setBatchForm({ ...batchForm, qty: parseInt(e.target.value) || 1 })} />
                           </div>
@@ -899,7 +916,9 @@ const AdminPartners = () => {
                     ) : batchesQ.data?.map((b: any) => (
                       <div key={b.id} className="p-3 flex justify-between items-center gap-3">
                         <div>
-                          <div className="font-medium">{b.qty} licenses @ ₹{Number(b.unit_price_inr).toLocaleString("en-IN")}</div>
+                          <div className="font-medium">
+                            {b.qty} x <span className="capitalize font-semibold">{b.license_type || "starter"}</span> @ ₹{Number(b.unit_price_inr).toLocaleString("en-IN")}
+                          </div>
                           <div className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString()}</div>
                         </div>
                         <div className="text-right flex items-center gap-3">

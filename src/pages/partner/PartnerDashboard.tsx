@@ -702,7 +702,7 @@ const PartnerDashboard = () => {
             <Card className="border-slate-800 bg-slate-900/40">
               <CardHeader>
                 <CardTitle>License Inventory</CardTitle>
-                <CardDescription className="text-slate-400">Share these special referral keys with merchants during setup. Basic installs Starter plan, Premium installs Growth plan.</CardDescription>
+                <CardDescription className="text-slate-400">Share these special referral keys with merchants during setup. Starter installs Starter plan, Growth installs Growth plan.</CardDescription>
               </CardHeader>
               <CardContent>
                 {licensesQ.isLoading ? (
@@ -715,14 +715,18 @@ const PartnerDashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {/* Summary row */}
-                    <div className="flex gap-4 p-4 rounded-lg bg-slate-950 border border-slate-800 text-sm">
+                    <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-slate-950 border border-slate-800 text-sm">
                       <div className="flex items-center gap-2">
-                        <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20">Basic</Badge>
-                        <span>{(licensesQ.data ?? []).filter((l: any) => l.license_type === "basic" && l.status === "available").length} Available</span>
+                        <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20">Starter</Badge>
+                        <span>{(licensesQ.data ?? []).filter((l: any) => (l.license_type === "basic" || l.license_type === "starter") && l.status === "available").length} Available</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">Premium</Badge>
-                        <span>{(licensesQ.data ?? []).filter((l: any) => l.license_type === "premium" && l.status === "available").length} Available</span>
+                        <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">Growth</Badge>
+                        <span>{(licensesQ.data ?? []).filter((l: any) => (l.license_type === "premium" || l.license_type === "growth") && l.status === "available").length} Available</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-rose-500/10 text-rose-400 border-rose-500/20">Scale</Badge>
+                        <span>{(licensesQ.data ?? []).filter((l: any) => l.license_type === "scale" && l.status === "available").length} Available</span>
                       </div>
                     </div>
 
@@ -742,8 +746,16 @@ const PartnerDashboard = () => {
                             <tr key={lic.id} className="hover:bg-slate-800/20">
                               <td className="px-4 py-4 font-mono font-bold text-slate-100 select-all">{lic.license_key || "Generating..."}</td>
                               <td className="px-4 py-4">
-                                <Badge className={lic.license_type === "premium" ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : "bg-orange-500/10 text-orange-400 border-orange-500/30"} variant="outline">
-                                  {lic.license_type === "premium" ? "Premium Pack" : "Basic"}
+                                <Badge className={
+                                  (lic.license_type === "scale") ? "bg-rose-500/10 text-rose-400 border-rose-500/30" :
+                                  (lic.license_type === "premium" || lic.license_type === "growth") ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : 
+                                  "bg-orange-500/10 text-orange-400 border-orange-500/30"
+                                } variant="outline">
+                                  {
+                                    (lic.license_type === "scale") ? "Scale" :
+                                    (lic.license_type === "premium" || lic.license_type === "growth") ? "Growth" : 
+                                    "Starter"
+                                  }
                                 </Badge>
                               </td>
                               <td className="px-4 py-4">
