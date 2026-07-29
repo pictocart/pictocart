@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   User, Mail, Phone, Store, Calendar, Camera, Lock, Eye, EyeOff,
-  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket, Loader2, BadgePercent, XCircle
+  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket, Loader2, BadgePercent, XCircle, Clock
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -37,9 +37,40 @@ const SellerProfile = () => {
   const { store, setStore } = useStore();
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const qc = useQueryClient();
-  const { plan: currentPlan, allPlans = [] } = useSubscription();
+  const { plan: currentPlan, allPlans = [], subscription } = useSubscription();
   const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  // Expiry countdown timer state
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+
+  useEffect(() => {
+    if (!subscription?.current_period_end) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const difference = +new Date(subscription.current_period_end!) - +new Date();
+      if (difference <= 0) {
+        return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+      }
+      return {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      };
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [subscription?.current_period_end]);
 
   // License Key fields
   const [licenseKey, setLicenseKey] = useState('');
@@ -528,6 +559,30 @@ const SellerProfile = () => {
                 <p className="text-xs mt-0.5">Linked under Partner: <span className="font-medium text-slate-700 dark:text-slate-300">{linkedPartner?.name || "None"}</span></p>
               </div>
             </div>
+
+            {/* Plan Expiry Countdown Timer */}
+            {timeLeft && (
+              <div className="rounded-xl border border-orange-200 dark:border-orange-900/30 bg-orange-50/20 dark:bg-orange-950/10 p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-orange-500 animate-pulse shrink-0" />
+                  <div>
+                    <h5 className="text-xs font-semibold text-orange-800 dark:text-orange-400 uppercase tracking-wider">Plan Expiry Countdown</h5>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                      Expires in: <span className="font-bold text-orange-600 dark:text-orange-400">{timeLeft.days} days</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 font-mono text-base font-black bg-orange-600 text-white px-3 py-1.5 rounded-md shadow-sm select-all">
+                  <span>{String(timeLeft.days).padStart(2, '0')}d</span>
+                  <span>:</span>
+                  <span>{String(timeLeft.hours).padStart(2, '0')}h</span>
+                  <span>:</span>
+                  <span>{String(timeLeft.minutes).padStart(2, '0')}m</span>
+                  <span>:</span>
+                  <span>{String(timeLeft.seconds).padStart(2, '0')}s</span>
+                </div>
+              </div>
+            )}
 
             {/* Plans List Grid */}
             <div className="grid gap-4 sm:grid-cols-3">
