@@ -68,11 +68,17 @@ const SellerProfile = () => {
 
       if (sErr) throw sErr;
 
+      if (store) {
+        setStore({ ...store, owned_by_partner_id: partner.id } as any);
+      }
       toast.success(`Store successfully linked to Partner "${partner.name}"!`);
       setReferralCode('');
       
       qc.invalidateQueries({ queryKey: ['store'] });
       qc.invalidateQueries({ queryKey: ['linked-partner-details'] });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (e: any) {
       toast.error(e.message || 'Failed to link referral code.');
     } finally {
