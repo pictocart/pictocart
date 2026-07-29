@@ -20,6 +20,7 @@ export interface Store {
   is_published: boolean;
   onboarding_step: number;
   owned_by_partner_id?: string | null;
+  is_partner_build?: boolean | null;
   created_at: string;
   updated_at: string;
 }
