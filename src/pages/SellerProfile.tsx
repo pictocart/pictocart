@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   User, Mail, Phone, Store, Calendar, Camera, Lock, Eye, EyeOff,
-  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket
+  ExternalLink, CheckCircle2, AlertCircle, Receipt, Trash2, Plus, History, Ticket, Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -38,6 +38,47 @@ const SellerProfile = () => {
   // License Key fields
   const [licenseKey, setLicenseKey] = useState('');
   const [applyingLicense, setApplyingLicense] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [linkingReferral, setLinkingReferral] = useState(false);
+
+  const handleApplyReferral = async () => {
+    if (!referralCode.trim()) {
+      toast.error('Please enter a referral code');
+      return;
+    }
+    setLinkingReferral(true);
+    try {
+      // Find partner by referral code
+      const { data: partner, error: pErr } = await supabase
+        .from('partners')
+        .select('id, name')
+        .eq('referral_code', referralCode.trim().toUpperCase())
+        .maybeSingle();
+
+      if (pErr) throw pErr;
+      if (!partner) {
+        throw new Error('Invalid referral code. Please check and try again.');
+      }
+
+      // Update store to link to partner (plan remains unchanged)
+      const { error: sErr } = await supabase
+        .from('stores')
+        .update({ owned_by_partner_id: partner.id })
+        .eq('id', store.id);
+
+      if (sErr) throw sErr;
+
+      toast.success(`Store successfully linked to Partner "${partner.name}"!`);
+      setReferralCode('');
+      
+      qc.invalidateQueries({ queryKey: ['store'] });
+      qc.invalidateQueries({ queryKey: ['linked-partner-details'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to link referral code.');
+    } finally {
+      setLinkingReferral(false);
+    }
+  };
 
   const { data: linkedPartner } = useQuery({
     enabled: !!store?.owned_by_partner_id,
@@ -442,55 +483,84 @@ const SellerProfile = () => {
         </Card>
       )}
 
-      {/* Partner License Key section */}
+      {/* Partner Connection & Upgrade section */}
       {store && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Ticket className="h-4 w-4 text-orange-500" />
-              Partner Connection & License Key
+              Partner Connection & Upgrades
             </CardTitle>
             <CardDescription>
-              Link your store to a PicToCart Partner using a License Key to upgrade your subscription plan.
+              Link your store to a partner using their Referral Code, or enter an optional License Key to upgrade your subscription plan.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {store.owned_by_partner_id ? (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 text-sm flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                <div>
-                  <p className="font-semibold text-emerald-800">Partner Managed Store</p>
-                  <p className="text-xs text-emerald-700 mt-0.5">
-                    Your store is linked to Partner <span className="font-medium">{linkedPartner?.name || "..."}</span> ({linkedPartner?.partner_id_code || "N/A"}).
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="license_key" className="text-xs">Partner License Key</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="license_key"
-                      placeholder="e.g. PCC123-BASE-A1B2"
-                      value={licenseKey}
-                      onChange={(e) => setLicenseKey(e.target.value.toUpperCase().trim())}
-                      className="font-mono"
-                    />
-                    <Button
-                      onClick={handleApplyLicense}
-                      disabled={applyingLicense || !licenseKey}
-                      className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
-                    >
-                      {applyingLicense ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply Key"}
-                    </Button>
+          <CardContent className="space-y-6">
+            {/* 1. Referral Code Linkage */}
+            <div className="space-y-3 border-b pb-4 border-slate-100">
+              <h4 className="text-sm font-semibold text-slate-800">1. Partner Linkage (Referral Code)</h4>
+              {store.owned_by_partner_id ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 text-sm flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-emerald-800">Linked Partner</p>
+                    <p className="text-xs text-emerald-700 mt-0.5">
+                      Your store is linked to Partner <span className="font-medium">{linkedPartner?.name || "..."}</span> ({linkedPartner?.partner_id_code || "N/A"}).
+                    </p>
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="referral_code" className="text-xs">Partner Referral Code</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="referral_code"
+                      placeholder="e.g. AFB36A1"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.toUpperCase().trim())}
+                      className="font-mono uppercase"
+                    />
+                    <Button
+                      onClick={handleApplyReferral}
+                      disabled={linkingReferral || !referralCode}
+                      className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                    >
+                      {linkingReferral ? <Loader2 className="h-4 w-4 animate-spin" /> : "Link Partner"}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Linking with a referral code tags your store under a partner for connection tracking (your current subscription plan remains unchanged).
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 2. License Key Upgrade (Optional) */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-slate-800">2. Subscription Plan Upgrade (License Key - Optional)</h4>
+              <div className="space-y-2">
+                <Label htmlFor="license_key" className="text-xs">Partner License Key</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="license_key"
+                    placeholder="e.g. PCC123-BASE-A1B2"
+                    value={licenseKey}
+                    onChange={(e) => setLicenseKey(e.target.value.toUpperCase().trim())}
+                    className="font-mono"
+                  />
+                  <Button
+                    onClick={handleApplyLicense}
+                    disabled={applyingLicense || !licenseKey}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                  >
+                    {applyingLicense ? <Loader2 className="h-4 w-4 animate-spin" /> : "Upgrade Plan"}
+                  </Button>
+                </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Note: Applying a valid license key will immediately assign your store to the partner and activate the associated Starter/Growth premium features.
+                  Applying a license key will instantly link your store (if not linked already) and upgrade your store subscription plan to Starter (Basic Key) or Growth (Premium Key).
                 </p>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       )}

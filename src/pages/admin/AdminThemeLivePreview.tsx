@@ -524,6 +524,7 @@ export default function AdminThemeLivePreview(){
   const[products,setProducts]=useState<any[]>([]);
   const[sellerCategories,setSellerCategories]=useState<any[]>([]);
   const[storeCategory,setStoreCategory]=useState<string>("");
+  const[storeInfo,setStoreInfo]=useState<any>(null);
 
   // 1. Load theme manifest file
   useEffect(()=>{
@@ -579,11 +580,12 @@ export default function AdminThemeLivePreview(){
       try {
         const { data: storeData, error: storeError } = await supabase
           .from("stores")
-          .select("id, category, resolved_storefront_manifest")
+          .select("id, name, slug, category, resolved_storefront_manifest")
           .eq("slug", storeSlug)
           .maybeSingle();
         if (storeError || !storeData) return;
 
+        setStoreInfo(storeData);
         if (storeData.category) {
           setStoreCategory(storeData.category);
         }
@@ -629,5 +631,5 @@ export default function AdminThemeLivePreview(){
     description: "This is a premium quality sample product designed to demonstrate your theme's product detail page layout."
   };
 
-  return <MasterThemeRenderer manifest={manifest} page={page} overrides={overrides} storeSlug={storeSlug} onNavigate={setPage} products={products} sellerCategories={sellerCategories} product={activeProduct} store={{ category: storeCategory }} />;
+  return <MasterThemeRenderer manifest={manifest} page={page} overrides={overrides} storeSlug={storeSlug} onNavigate={setPage} products={products} sellerCategories={sellerCategories} product={activeProduct} store={storeInfo || { category: storeCategory }} />;
 }

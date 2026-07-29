@@ -19,6 +19,7 @@ export interface Store {
   resolved_storefront_manifest?: any;
   is_published: boolean;
   onboarding_step: number;
+  owned_by_partner_id?: string | null;
   created_at: string;
   updated_at: string;
 }

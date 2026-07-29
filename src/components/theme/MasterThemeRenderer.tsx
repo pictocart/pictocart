@@ -350,7 +350,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const dna = { ...baseDna, palette, fonts };
   const radius = globalOv.radius != null ? `${globalOv.radius}px` : (dna.radius ?? "8px");
   const headerStyle = manifest?.header_style ?? dna.layout?.header_style ?? "classic";
-  const brandName = overrides?.brand_name || dna.name;
+  const brandName = overrides?.brand_name || store?.name || dna.name;
   const headerOv = {
     logo_url: (overrides as any)?.logo_url || "",
     brand_name: (overrides as any)?.brand_name || "",
@@ -1529,12 +1529,27 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       {!showName && !logoUrl && <span style={brandStyle}>{effectiveBrand}</span>}
     </span>
   );
-  const Brand = storeSlug
-    ? <Link to={`/store/${storeSlug}`}>{BrandInner}</Link>
-    : onNavigate
-      ? <button onClick={() => onNavigate("home")} style={{ background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>{BrandInner}</button>
+  const Brand = onNavigate
+    ? <button onClick={() => onNavigate("home")} style={{ background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>{BrandInner}</button>
+    : storeSlug
+      ? <Link to={`/store/${storeSlug}`}>{BrandInner}</Link>
       : <div>{BrandInner}</div>;
-  const CartBtn = storeSlug ? (
+  const CartBtn = onNavigate ? (
+    <button
+      id="header-cart-btn"
+      onClick={() => onNavigate("cart")}
+      className="text-sm px-5 py-2.5 inline-flex items-center gap-2 transition-all duration-300 font-bold hover:scale-[1.03]"
+      style={{ 
+        background: "var(--p)", 
+        color: "var(--pf)", 
+        borderRadius: storeCategory === "food" ? "9999px" : "var(--r)" 
+      }}
+    >
+      <span>{storeCategory === "food" ? 'Order Now' : 'Cart'}</span>
+      <ShoppingBag className="h-4 w-4" /> 
+      <span className="inline-block animate-badge-pop" key={0}>· 0</span>
+    </button>
+  ) : storeSlug ? (
     <Link 
       id="header-cart-btn" 
       to={`/store/${storeSlug}/cart`} 
@@ -1577,10 +1592,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
     )
   ) : null;
   const renderLink = (l: { label: string; to: string; page: string }, cls: string) =>
-    storeSlug
-      ? <Link key={l.label} to={l.to} className={cls} style={{ opacity: 0.85 }}>{l.label}</Link>
-      : onNavigate
-        ? <button key={l.label} onClick={() => onNavigate(l.page)} className={cls} style={{ opacity: 0.85, background: "transparent", border: 0, cursor: "pointer", color: "inherit" }}>{l.label}</button>
+    onNavigate
+      ? <button key={l.label} onClick={() => onNavigate(l.page)} className={cls} style={{ opacity: 0.85, background: "transparent", border: 0, cursor: "pointer", color: "inherit" }}>{l.label}</button>
+      : storeSlug
+        ? <Link key={l.label} to={l.to} className={cls} style={{ opacity: 0.85 }}>{l.label}</Link>
         : <span key={l.label} className={cls} style={{ opacity: 0.85 }}>{l.label}</span>;
 
 
@@ -4872,8 +4887,8 @@ function Footer({ footer, dna, brandName, storeSlug, onNavigate, footerOv }: any
     const to = l.href || (l.page ? `${base}${pageToPath[l.page] ?? `/${l.page}`}` : "");
     const cls = "hover:opacity-100 transition";
     const style = { opacity: 0.75 } as React.CSSProperties;
-    if (storeSlug && to) return <Link key={idx} to={to} className={cls} style={style}>{l.label}</Link>;
     if (onNavigate && l.page) return <button key={idx} onClick={() => onNavigate!(l.page!)} className={cls} style={{ ...style, background: "transparent", border: 0, padding: 0, cursor: "pointer", color: "inherit", textAlign: "left" }}>{l.label}</button>;
+    if (storeSlug && to) return <Link key={idx} to={to} className={cls} style={style}>{l.label}</Link>;
     return <span key={idx} className={cls} style={style}>{l.label}</span>;
   };
 
