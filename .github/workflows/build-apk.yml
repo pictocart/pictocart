@@ -94,15 +94,22 @@ jobs:
 
             const download = (url, dest, cb) => {
               const file = fs.createWriteStream(dest);
-              https.get(url, (response) => {
-                response.pipe(file);
-                file.on("finish", () => {
-                  file.close(cb);
+              const request = (targetUrl) => {
+                https.get(targetUrl, (response) => {
+                  if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                    request(response.headers.location);
+                    return;
+                  }
+                  response.pipe(file);
+                  file.on("finish", () => {
+                    file.close(cb);
+                  });
+                }).on("error", (err) => {
+                  fs.unlink(dest, () => {});
+                  cb(err);
                 });
-              }).on("error", (err) => {
-                fs.unlink(dest, () => {});
-                cb(err);
-              });
+              };
+              request(url);
             };
 
             const resizeAndCopy = async () => {
@@ -127,6 +134,7 @@ jobs:
                   if (fs.existsSync(dir)) {
                     await resized.writeAsync(`${dir}/ic_launcher.png`);
                     await resized.writeAsync(`${dir}/ic_launcher_round.png`);
+                    await resized.writeAsync(`${dir}/ic_launcher_foreground.png`);
                   }
                 }
                 console.log("Successfully generated app launcher icons!");
