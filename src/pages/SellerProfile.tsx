@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { PrivacyControls } from '@/components/profile/PrivacyControls';
 import { useFssaiHistory } from '@/hooks/useFssaiHistory';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -656,84 +657,102 @@ const SellerProfile = () => {
 
       {/* Partner Connection & Upgrade section */}
       {store && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Ticket className="h-4 w-4 text-orange-500" />
-              Partner Connection & Upgrades
-            </CardTitle>
-            <CardDescription>
-              Link your store to a partner using their Referral Code, or enter an optional License Key to upgrade your subscription plan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* 1. Referral Code Linkage */}
-            <div className="space-y-3 border-b pb-4 border-slate-100">
-              <h4 className="text-sm font-semibold text-slate-800">1. Partner Linkage (Referral Code)</h4>
-              {store.owned_by_partner_id ? (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 text-sm flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                  <div>
-                    <p className="font-semibold text-emerald-800">Linked Partner</p>
-                    <p className="text-xs text-emerald-700 mt-0.5">
-                      Your store is linked to Partner <span className="font-medium">{linkedPartner?.name || "..."}</span> ({linkedPartner?.partner_id_code || "N/A"}).
-                    </p>
+        <Card className="border border-slate-200 dark:border-slate-800">
+          <CardContent className="p-0">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="partner-connection" className="border-none">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-900/50 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-left">
+                    <Ticket className="h-4 w-4 text-orange-500 shrink-0" />
+                    <div>
+                      <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">Partner Connection & Upgrades</h3>
+                      <p className="text-xs text-muted-foreground font-normal">Link store referral code or upgrade via license key</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="referral_code" className="text-xs">Partner Referral Code</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="referral_code"
-                      placeholder="e.g. AFB36A1"
-                      value={referralCode}
-                      onChange={(e) => setReferralCode(e.target.value.toUpperCase().trim())}
-                      className="font-mono uppercase"
-                      autoComplete="new-password"
-                    />
-                    <Button
-                      onClick={handleApplyReferral}
-                      disabled={linkingReferral || !referralCode}
-                      className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
-                    >
-                      {linkingReferral ? <Loader2 className="h-4 w-4 animate-spin" /> : "Link Partner"}
-                    </Button>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-6">
+                  {/* 1. Referral Code Linkage */}
+                  <div className="space-y-3 border-b pb-4 border-slate-100 dark:border-slate-800">
+                    <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">1. Partner Linkage (Referral Code)</h4>
+                    {store.owned_by_partner_id ? (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 text-sm flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                        <div>
+                          <p className="font-semibold text-emerald-800 dark:text-emerald-300">Linked Partner</p>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                            Your store is linked to Partner <span className="font-medium">{linkedPartner?.name || "..."}</span> ({linkedPartner?.partner_id_code || "N/A"}).
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="referral_code" className="text-xs">Partner Referral Code</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="referral_code"
+                            placeholder="e.g. AFB36A1"
+                            value={referralCode}
+                            onChange={(e) => setReferralCode(e.target.value.toUpperCase().trim())}
+                            className="font-mono uppercase"
+                            autoComplete="new-password"
+                          />
+                          <Button
+                            onClick={handleApplyReferral}
+                            disabled={linkingReferral || !referralCode}
+                            className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                          >
+                            {linkingReferral ? <Loader2 className="h-4 w-4 animate-spin" /> : "Link Partner"}
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Linking with a referral code tags your store under a partner for connection tracking (your current subscription plan remains unchanged).
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Linking with a referral code tags your store under a partner for connection tracking (your current subscription plan remains unchanged).
-                  </p>
-                </div>
-              )}
-            </div>
 
-            {/* 2. License Key Upgrade (Optional) */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-slate-800">2. Subscription Plan Upgrade (License Key - Optional)</h4>
-              <div className="space-y-2">
-                <Label htmlFor="license_key" className="text-xs">Partner License Key</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="license_key"
-                    placeholder="e.g. PCC123-BASE-A1B2"
-                    value={licenseKey}
-                    onChange={(e) => setLicenseKey(e.target.value.toUpperCase().trim())}
-                    className="font-mono"
-                    autoComplete="new-password"
-                  />
-                  <Button
-                    onClick={handleApplyLicense}
-                    disabled={applyingLicense || !licenseKey}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-                  >
-                    {applyingLicense ? <Loader2 className="h-4 w-4 animate-spin" /> : "Upgrade Plan"}
-                  </Button>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Applying a license key will instantly link your store (if not linked already) and upgrade your store subscription plan to Starter (Basic Key) or Growth (Premium Key).
-                </p>
-              </div>
-            </div>
+                  {/* 2. License Key Upgrade */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">2. Subscription Plan Upgrade (License Key - Optional)</h4>
+                    {store.is_partner_build ? (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 text-sm flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                        <div>
+                          <p className="font-semibold text-emerald-800 dark:text-emerald-300">License Already Redeemed</p>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                            Your store has been successfully upgraded using a Partner License Key. This option is now disabled.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="license_key" className="text-xs">Partner License Key</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="license_key"
+                            placeholder="e.g. PCC123-START-A1B2"
+                            value={licenseKey}
+                            onChange={(e) => setLicenseKey(e.target.value.toUpperCase().trim())}
+                            className="font-mono"
+                            autoComplete="new-password"
+                          />
+                          <Button
+                            onClick={handleApplyLicense}
+                            disabled={applyingLicense || !licenseKey}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                          >
+                            {applyingLicense ? <Loader2 className="h-4 w-4 animate-spin" /> : "Upgrade Plan"}
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Applying a license key will instantly link your store (if not linked already) and upgrade your store subscription plan to Starter, Growth, or Scale.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </CardContent>
         </Card>
       )}
