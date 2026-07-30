@@ -1,25 +1,51 @@
 -- Migration: Update default partner license allocation to 10 Starter licenses costing 600 INR each
+-- Backwards compatible signature support (handles all historical 1-arg, 3-arg, and 4-arg calls from edge functions)
 
 -- 1. Drop old signatures of allocate_partner_licenses
 DROP FUNCTION IF EXISTS public.allocate_partner_licenses(UUID, INT, INT, INT);
 DROP FUNCTION IF EXISTS public.allocate_partner_licenses(UUID, INT, INT);
 DROP FUNCTION IF EXISTS public.allocate_partner_licenses(UUID);
 
--- 2. Define allocate_partner_licenses with only _partner_id
+-- 2. Define the new 1-parameter signature
 CREATE OR REPLACE FUNCTION public.allocate_partner_licenses(
   _partner_id UUID
 )
 RETURNS void AS $$
 BEGIN
-  -- Insert default starter batch of 10 licenses costing ₹600 each (total ₹6000)
-  -- The trigger trg_generate_licenses_for_batch will automatically run generate_licenses_for_batch()
-  -- which will insert the licenses and update the partner statistics (total_licenses_purchased, total_amount_paid, license_price_per_unit)
   INSERT INTO public.partner_license_batches (partner_id, qty, license_type, unit_price_inr, total_inr, notes)
   VALUES (_partner_id, 10, 'starter', 600.00, 6000.00, 'Default signup package');
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Reset and re-allocate default licenses to all existing partners
+-- 3. Define the 3-parameter signature matching the deployed cloud Edge Function (_qty_basic, _qty_premium)
+CREATE OR REPLACE FUNCTION public.allocate_partner_licenses(
+  _partner_id UUID,
+  _qty_basic INT,
+  _qty_premium INT
+)
+RETURNS void AS $$
+BEGIN
+  -- We ignore the inputs for qty and force the new default: 10 starter licenses @ 600 INR each
+  INSERT INTO public.partner_license_batches (partner_id, qty, license_type, unit_price_inr, total_inr, notes)
+  VALUES (_partner_id, 10, 'starter', 600.00, 6000.00, 'Default signup package');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 4. Define the 4-parameter signature (Starter, Growth, Scale)
+CREATE OR REPLACE FUNCTION public.allocate_partner_licenses(
+  _partner_id UUID,
+  _qty_starter INT,
+  _qty_growth INT,
+  _qty_scale INT
+)
+RETURNS void AS $$
+BEGIN
+  INSERT INTO public.partner_license_batches (partner_id, qty, license_type, unit_price_inr, total_inr, notes)
+  VALUES (_partner_id, 10, 'starter', 600.00, 6000.00, 'Default signup package');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 5. Reset and re-allocate default licenses to all existing partners
 DO $$
 DECLARE
   p RECORD;

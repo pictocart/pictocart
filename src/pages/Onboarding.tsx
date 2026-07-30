@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, SkipForward, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, SkipForward, Check, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { THEME_TEMPLATES } from '@/lib/themes';
@@ -82,7 +82,7 @@ const defaultData: OnboardingData = {
 };
 
 const Onboarding = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { store, setStore } = useStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -511,10 +511,22 @@ const Onboarding = () => {
           </span>
           <span className="text-xs text-muted-foreground">Step {currentStep} of {TOTAL_STEPS}</span>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
           <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">
             {stepLabels[currentStep - 1]}
           </span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={async () => {
+              await signOut();
+              navigate('/auth');
+            }}
+            className="text-muted-foreground hover:text-foreground gap-1.5"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </Button>
         </div>
       </header>
 
