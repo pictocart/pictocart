@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/hooks/useStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, SkipForward, Check, LogOut } from 'lucide-react';
+import { ArrowLeft, ArrowRight, SkipForward, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { THEME_TEMPLATES } from '@/lib/themes';
 import { getReferralCode, clearReferralCookie } from '@/lib/referralCookie';
@@ -81,7 +81,7 @@ const defaultData: OnboardingData = {
 };
 
 const Onboarding = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { store, setStore } = useStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -141,7 +141,7 @@ const Onboarding = () => {
             category: data.category || null,
             description: data.description || null,
             logo_url: data.logoUrl || null,
-            theme: themeData as any,
+            theme: themeData,
             onboarding_step: step,
             referred_by_code: refCode,
             settings: {
@@ -491,30 +491,17 @@ const Onboarding = () => {
     )}>
       {/* Header */}
       <header className="border-b border-border/50 px-6 py-3 flex items-center gap-3 backdrop-blur-sm bg-background/80 sticky top-0 z-10">
-        <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-          <PicToCartLogo size={36} />
-        </Link>
+        <PicToCartLogo size={36} />
         <div>
           <span className="font-semibold text-sm text-foreground block leading-tight">
             {data.storeName || 'Set up your store'}
           </span>
           <span className="text-xs text-muted-foreground">Step {currentStep} of {TOTAL_STEPS}</span>
         </div>
-        <div className="ml-auto flex items-center gap-3.5">
+        <div className="ml-auto">
           <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">
             {stepLabels[currentStep - 1]}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              await signOut();
-              navigate('/', { replace: true });
-            }}
-            className="text-xs font-bold text-slate-500 hover:text-red-600 gap-1 hover:bg-slate-100/50"
-          >
-            <LogOut className="h-3.5 w-3.5" /> Logout
-          </Button>
         </div>
       </header>
 
