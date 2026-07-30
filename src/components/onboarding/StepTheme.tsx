@@ -251,16 +251,16 @@ const StepTheme = ({ data, setData }: Props) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [themes, data.selectedThemeId, data.category]);
 
-  // Sync selected theme ID to localStorage for real-time storefront preview tabs
+  // Sync selected theme ID to sessionStorage for real-time storefront preview tabs
   useEffect(() => {
     if (data.selectedThemeId) {
-      localStorage.setItem('storefront_preview_theme', data.selectedThemeId);
+      sessionStorage.setItem('storefront_preview_theme', data.selectedThemeId);
     }
   }, [data.selectedThemeId]);
 
-  // Check localStorage for prior generation
+  // Check sessionStorage for prior generation
   useEffect(() => {
-    const stored = localStorage.getItem('ai_theme_gen_id');
+    const stored = sessionStorage.getItem('ai_theme_gen_id');
     if (stored) {
       // Try to find previously generated theme in list
       setGenState('used');
@@ -323,7 +323,7 @@ const StepTheme = ({ data, setData }: Props) => {
       setStepIdx(GEN_STEPS.length - 1);
 
       const themeId = fnData.theme_id;
-      localStorage.setItem('ai_theme_gen_id', themeId);
+      sessionStorage.setItem('ai_theme_gen_id', themeId);
 
       // Fetch the newly created theme_master_projects row so we can show it as a real card
       const { data: newThemeRow } = await supabase
@@ -1227,21 +1227,34 @@ const CustomThemeComponentPreview = ({ type, variant, imageUrl, colors }: { type
 };
 
 // ── Custom Theme Builder Modal ──────────────────────────────────────────────
-interface BuilderModalProps {
+export interface BuilderModalProps {
   onClose: () => void;
   data: OnboardingData;
   setData: React.Dispatch<React.SetStateAction<OnboardingData>>;
   themes: ThemeMaster[];
+  isPartnerEdit?: boolean;
+  partnerThemeKey?: string;
+  partnerThemeDesc?: string;
 }
 
-const CustomThemeBuilderModal = ({ onClose, data, setData, themes }: BuilderModalProps) => {
+export const CustomThemeBuilderModal = ({
+  onClose,
+  data,
+  setData,
+  themes,
+  isPartnerEdit = false,
+  partnerThemeKey = "",
+  partnerThemeDesc = ""
+}: BuilderModalProps) => {
   const queryClient = useQueryClient();
   const [activeSelector, setActiveSelector] = useState<'nav' | 'hero' | 'usp_strip' | 'category' | 'product' | 'new_arrivals' | 'promo' | 'footer' | null>(null);
   const [activePage, setActivePage] = useState<string>('home');
 
   const [navStyle, setNavStyle] = useState(data.customThemeConfig?.nav || 'classic');
   const [footerStyle, setFooterStyle] = useState(data.customThemeConfig?.footer || 'classic');
-  const [themeName, setThemeName] = useState(`Theme #${themes.length + 1} (Custom Remix)`);
+  const [themeName, setThemeName] = useState((data.customThemeConfig as any)?.name || `Theme #${themes.length + 1} (Custom Remix)`);
+  const [themeDesc, setThemeDesc] = useState(partnerThemeDesc);
+  const [themeKey, setThemeKey] = useState(partnerThemeKey);
   const [customPalette, setCustomPalette] = useState<Record<string, string> | null>(null);
   const [customFonts, setCustomFonts] = useState<Record<string, string> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -1696,13 +1709,19 @@ OUTPUT FORMAT:
 
   const handleApply = async () => {
     setIsSaving(true);
-    const customThemeId = `custom-theme-${Date.now()}`;
+    const cleanKey = themeKey.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (isPartnerEdit && !cleanKey) {
+      toast.error("Please provide a unique theme key");
+      setIsSaving(false);
+      return;
+    }
+    const customThemeId = isPartnerEdit ? `custom-theme-${cleanKey}` : `custom-theme-${Date.now()}`;
     
     try {
       const { data: ver } = await supabase
         .from('theme_master_versions')
         .select('files_manifest')
-        .eq('theme_id', 'theme-style-1')
+        .eq('theme_id', data.selectedThemeId || 'theme-style-1')
         .order('version', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -1801,16 +1820,16 @@ OUTPUT FORMAT:
       
       const { data: newProj, error: errProj } = await supabase
         .from('theme_master_projects')
-        .insert({
+        .upsert({
           theme_id: customThemeId,
           name: customThemeName,
-          description: `Custom layout designed using AI Theme Builder.`,
+          description: isPartnerEdit ? (themeDesc.trim() || 'Custom layout designed using Theme Builder.') : `Custom layout designed using AI Theme Builder.`,
           category: data.category || 'general',
           preview_image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&auto=format&fit=crop&q=60',
           is_active: true,
           is_default: false,
           created_by: user?.id || null
-        })
+        }, { onConflict: 'theme_id' })
         .select()
         .single();
 
@@ -1818,11 +1837,11 @@ OUTPUT FORMAT:
 
       const { error: errVer } = await supabase
         .from('theme_master_versions')
-        .insert({
+        .upsert({
           theme_id: customThemeId,
           version: 1,
           files_manifest: manifest
-        });
+        }, { onConflict: 'theme_id,version' });
 
       if (errVer) throw errVer;
 
@@ -2229,15 +2248,42 @@ OUTPUT FORMAT:
             <div className="space-y-3">
               
               {/* Naming block */}
-              <div className="space-y-1.5 p-3.5 rounded-xl border border-border/80 bg-slate-50/50">
-                <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-widest block">Theme Project Name</label>
-                <input
-                  type="text"
-                  value={themeName}
-                  onChange={(e) => setThemeName(e.target.value)}
-                  placeholder="e.g. Luxury Dark, Neon Remix"
-                  className="w-full bg-white border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground font-bold focus:outline-none focus:border-primary"
-                />
+              <div className="space-y-3 p-3.5 rounded-xl border border-border/80 bg-slate-50/50">
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-widest block font-bold">Theme Project Name</label>
+                  <input
+                    type="text"
+                    value={themeName}
+                    onChange={(e) => setThemeName(e.target.value)}
+                    placeholder="e.g. Luxury Dark, Neon Remix"
+                    className="w-full bg-white border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground font-bold focus:outline-none focus:border-primary"
+                  />
+                </div>
+                {isPartnerEdit && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-widest block font-bold">Description (Optional)</label>
+                      <input
+                        type="text"
+                        value={themeDesc}
+                        onChange={(e) => setThemeDesc(e.target.value)}
+                        placeholder="e.g. Sleek design for jewelry and high fashion"
+                        className="w-full bg-white border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-widest block font-bold">Unique Theme Key (Special Key)</label>
+                      <input
+                        type="text"
+                        value={themeKey}
+                        onChange={(e) => setThemeKey(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                        placeholder="e.g. orange-luxe"
+                        className="w-full bg-white border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground font-mono focus:outline-none focus:border-primary"
+                      />
+                      <p className="text-[9px] text-slate-500">Format: letters, numbers, hyphens only.</p>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Global header/footer — these are store-wide, not per-page */}

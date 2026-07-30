@@ -119,12 +119,12 @@ const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
   // Only set when param is present; only clear when we're on home page WITHOUT param
   // (navigating to /shop, /cart etc during preview should keep the theme active)
   if (previewThemeId) {
-    localStorage.setItem('storefront_preview_theme', previewThemeId);
+    sessionStorage.setItem('storefront_preview_theme', previewThemeId);
   } else if (!searchParams.get('preview_theme') && (page === 'home' || window.location.pathname === `/store/${slug}`)) {
     // Clear only when explicitly visiting home without preview param
-    localStorage.removeItem('storefront_preview_theme');
+    sessionStorage.removeItem('storefront_preview_theme');
   }
-  const sessionPreviewTheme = localStorage.getItem('storefront_preview_theme');
+  const sessionPreviewTheme = sessionStorage.getItem('storefront_preview_theme');
   const branding = getStoreBranding(store);
   const storefrontConfig = getStorefrontConfig(store);
   const homePage = getStoreHomePage(store);
@@ -908,7 +908,7 @@ const Layout1Nav2 = ({ theme, storeName }: any) => (
 const Layout1ProductCard = ({ product, theme, storeSlug }: any) => (
   <div 
     onClick={() => {
-      const pTheme = localStorage.getItem('storefront_preview_theme');
+      const pTheme = sessionStorage.getItem('storefront_preview_theme');
       window.location.href = `/store/${storeSlug}/product/${product.id}${pTheme ? `/${pTheme}` : ''}`;
     }}
     style={{ 

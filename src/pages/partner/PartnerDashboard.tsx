@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Store, Ticket, Loader2, LogOut, Send, Wallet as WalletIcon, Palette, Users, Sparkles, BookOpen, Key, CheckCircle2, AlertTriangle, ShieldCheck, Sun, Moon } from "lucide-react";
+import { Plus, Store, Ticket, Loader2, LogOut, Send, Wallet as WalletIcon, Palette, Users, Sparkles, BookOpen, Key, CheckCircle2, AlertTriangle, ShieldCheck, Sun, Moon, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { CustomThemeBuilderModal } from "@/components/onboarding/StepTheme";
 
 const PartnerDashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -30,6 +31,60 @@ const PartnerDashboard = () => {
 
   // Store plan filter state
   const [planFilter, setPlanFilter] = useState("all");
+
+  // Theme Builder states
+  const [designerOpen, setDesignerOpen] = useState(false);
+  const [designerThemeId, setDesignerThemeId] = useState("");
+  const [designerThemeCategory, setDesignerThemeCategory] = useState("fashion");
+  const [designName, setDesignName] = useState("");
+  const [designDesc, setDesignDesc] = useState("");
+  const [designKey, setDesignKey] = useState("");
+
+  const [builderData, setBuilderData] = useState<any>({
+    storeName: "Custom Design",
+    category: "fashion",
+    slug: "style-up-boutique",
+    selectedThemeId: "",
+    customThemeConfig: {
+      nav: "classic",
+      footer: "classic",
+      sections: [],
+      pages: {},
+      palette: {},
+      fonts: {},
+      name: "Custom Theme"
+    }
+  });
+
+  useEffect(() => {
+    if (designerOpen) {
+      const activeSlug = designerThemeCategory === 'food' 
+        ? 'vibrant-gourmet' 
+        : (designerThemeCategory === 'beauty' 
+          ? 'glow-co-skincare' 
+          : (designerThemeCategory === 'electronics' 
+            ? 'tech-quantum-gears' 
+            : (designerThemeCategory === 'other' 
+              ? 'apex-gym-supplements' 
+              : 'style-up-boutique')));
+      
+      setBuilderData({
+        storeName: designName || "Custom Design",
+        category: designerThemeCategory || "fashion",
+        slug: activeSlug,
+        selectedThemeId: designerThemeId,
+        customThemeConfig: {
+          nav: "classic",
+          footer: "classic",
+          sections: [],
+          pages: {},
+          palette: {},
+          fonts: {},
+          name: designName || "Custom Theme"
+        }
+      });
+    }
+  }, [designerOpen, designerThemeId, designerThemeCategory, designName]);
 
   const openInNewWindow = (url: string) => {
     const w = 1280;
@@ -915,6 +970,35 @@ const PartnerDashboard = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Custom Theme Builder Card Box */}
+                    <Card className="border-2 border-dashed border-orange-500/40 bg-slate-950/20 hover:border-orange-500 transition-all duration-300 overflow-hidden flex flex-col group justify-between p-5">
+                      <div className="flex items-start gap-3.5 text-left">
+                        <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500 shrink-0">
+                          <LayoutGrid className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <div>
+                          <h3 className="font-extrabold text-sm text-white group-hover:text-orange-400 transition-colors">Make your own custom theme layout</h3>
+                          <p className="text-xs text-slate-400 mt-1">Mix and match any of the headers, hero banners, product grids, and footers to create your own unique storefront brand identity.</p>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <CustomizeThemeButton 
+                          themeId="theme-styleup-classic" 
+                          themeName="Custom Theme" 
+                          themeCategory="fashion"
+                          isCustomCreator={true} 
+                          onStartDesigning={(name, desc, key) => {
+                            setDesignName(name);
+                            setDesignDesc(desc);
+                            setDesignKey(key);
+                            setDesignerThemeId("theme-styleup-classic");
+                            setDesignerThemeCategory("fashion");
+                            setDesignerOpen(true);
+                          }}
+                        />
+                      </div>
+                    </Card>
+
                     {(baseThemesQ.data ?? []).map((theme) => (
                       <Card key={theme.id} className="border-slate-800 bg-slate-950/60 overflow-hidden flex flex-col group">
                         {theme.preview_image ? (
@@ -941,7 +1025,19 @@ const PartnerDashboard = () => {
                             <p className="text-xs text-slate-400 mt-1 line-clamp-2">{theme.description || "No description provided."}</p>
                           </div>
 
-                          <CustomizeThemeButton themeId={theme.theme_id} themeName={theme.name} />
+                          <CustomizeThemeButton 
+                            themeId={theme.theme_id} 
+                            themeName={theme.name} 
+                            themeCategory={theme.category || "fashion"}
+                            onStartDesigning={(name, desc, key) => {
+                              setDesignName(name);
+                              setDesignDesc(desc);
+                              setDesignKey(key);
+                              setDesignerThemeId(theme.theme_id);
+                              setDesignerThemeCategory(theme.category || "fashion");
+                              setDesignerOpen(true);
+                            }}
+                          />
                         </div>
                       </Card>
                     ))}
@@ -952,13 +1048,37 @@ const PartnerDashboard = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {designerOpen && (
+        <CustomThemeBuilderModal
+          onClose={() => setDesignerOpen(false)}
+          data={builderData}
+          setData={setBuilderData}
+          themes={(baseThemesQ.data ?? []) as any}
+          isPartnerEdit={true}
+          partnerThemeKey={designKey}
+          partnerThemeDesc={designDesc}
+        />
+      )}
     </div>
   </div>
   );
 };
 
 // Helper button to open Customize dialog
-const CustomizeThemeButton = ({ themeId, themeName }: { themeId: string; themeName: string }) => {
+const CustomizeThemeButton = ({ 
+  themeId, 
+  themeName, 
+  themeCategory = "fashion",
+  isCustomCreator = false,
+  onStartDesigning
+}: { 
+  themeId: string; 
+  themeName: string; 
+  themeCategory?: string;
+  isCustomCreator?: boolean;
+  onStartDesigning: (name: string, desc: string, key: string) => void;
+}) => {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
@@ -975,10 +1095,8 @@ const CustomizeThemeButton = ({ themeId, themeName }: { themeId: string; themeNa
     }
 
     const cleanKey = customKey.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
-    
-    // Redirect to customizer with partner flags
-    const url = `/customise?partner_edit=true&base_theme_id=${themeId}&theme_name=${encodeURIComponent(name.trim())}&theme_desc=${encodeURIComponent(desc.trim())}&theme_key=${encodeURIComponent(cleanKey)}`;
-    window.location.href = url;
+    onStartDesigning(name.trim(), desc.trim(), cleanKey);
+    setOpen(false);
   };
 
   const isDarkMode = localStorage.getItem("partner-theme") !== "light";
@@ -986,16 +1104,26 @@ const CustomizeThemeButton = ({ themeId, themeName }: { themeId: string; themeNa
   return (
     <div className={isDarkMode ? "dark-theme" : "light-theme"}>
       <div className="w-full">
-        <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium" onClick={() => setOpen(true)}>
-          Customize Layout
-        </Button>
+        {isCustomCreator ? (
+          <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold" onClick={() => setOpen(true)}>
+            Build Custom Theme
+          </Button>
+        ) : (
+          <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium" onClick={() => setOpen(true)}>
+            Customize Layout
+          </Button>
+        )}
         
         {open && (
           <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <Card className="max-w-md w-full border-slate-800 bg-slate-900 text-slate-100 shadow-2xl animate-in zoom-in duration-200">
               <CardHeader>
-                <CardTitle>Configure Theme Design</CardTitle>
-                <CardDescription className="text-slate-400">Give your custom version of "{themeName}" a name and key to publish it.</CardDescription>
+                <CardTitle>{isCustomCreator ? "Build Custom Theme" : "Configure Theme Design"}</CardTitle>
+                <CardDescription className="text-slate-400">
+                  {isCustomCreator 
+                    ? "Give your brand new custom theme layout a name and key to publish it." 
+                    : `Give your custom version of "${themeName}" a name and key to publish it.`}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">

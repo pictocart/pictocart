@@ -804,7 +804,7 @@ export default function CustomiserV2() {
         .maybeSingle();
 
       if (baseError) throw baseError;
-      const baseManifest = baseVersion?.files_manifest || {};
+      const baseManifest = (baseVersion?.files_manifest || {}) as any;
 
       // 2. Build final manifest by merging overrides
       const finalManifest = {
