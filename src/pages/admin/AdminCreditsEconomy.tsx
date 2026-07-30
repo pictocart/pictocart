@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, Save, Sparkles, Coins, Tag, Trophy, Database, TrendingUp, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+
+
 const useSettings = () => useQuery({
   queryKey: ['admin-credit-settings'],
   queryFn: async () => {
