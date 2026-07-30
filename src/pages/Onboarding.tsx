@@ -132,8 +132,8 @@ const Onboarding = () => {
 
       if (!store) {
         const refCode = getReferralCode();
-        const { data: newStore, error } = await supabase
-          .from('stores')
+        const { data: newStore, error } = await (supabase
+          .from('stores') as any)
           .insert({
             user_id: user.id,
             name: data.storeName || 'My Store',
@@ -141,7 +141,7 @@ const Onboarding = () => {
             category: data.category || null,
             description: data.description || null,
             logo_url: data.logoUrl || null,
-            theme: themeData,
+            theme: themeData as any,
             onboarding_step: step,
             referred_by_code: refCode,
             settings: {
@@ -156,17 +156,17 @@ const Onboarding = () => {
           .single();
         if (!error && newStore) {
           setStore(newStore as any);
-          queryClient.invalidateQueries({ queryKey: ['storefront', newStore.slug] });
+          queryClient.invalidateQueries({ queryKey: ['storefront', (newStore as any).slug] });
           // Create referral record (best-effort, non-blocking)
           if (refCode) {
-            const { data: partner } = await supabase
-              .from('partners')
+            const { data: partner } = await (supabase
+              .from('partners') as any)
               .select('id')
               .eq('referral_code', refCode)
               .maybeSingle();
             if (partner) {
-              await supabase.from('partner_referrals').insert({
-                partner_id: partner.id,
+              await (supabase.from('partner_referrals') as any).insert({
+                partner_id: (partner as any).id,
                 store_id: (newStore as any).id,
                 referred_user_id: user.id,
                 status: 'signup',
@@ -191,15 +191,15 @@ const Onboarding = () => {
           fssai: data.fssaiNumber || ((store.settings as any)?.fssai ?? null),
         };
 
-        const { data: updated, error } = await supabase
-          .from('stores')
+        const { data: updated, error } = await (supabase
+          .from('stores') as any)
           .update(updates)
           .eq('id', store.id)
           .select()
           .single();
         if (!error && updated) {
           setStore(updated as any);
-          queryClient.invalidateQueries({ queryKey: ['storefront', updated.slug] });
+          queryClient.invalidateQueries({ queryKey: ['storefront', (updated as any).slug] });
         }
       }
     } catch (e) {
@@ -265,16 +265,16 @@ const Onboarding = () => {
           if (data.selectedThemeId?.startsWith('custom-theme-') && data.customThemeConfig) {
             try {
               const cfg = data.customThemeConfig;
-              const { data: ver } = await supabase
-                .from('theme_master_versions')
+              const { data: ver } = await (supabase
+                .from('theme_master_versions') as any)
                 .select('files_manifest, version')
                 .eq('theme_id', 'theme-style-1')
                 .order('version', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
-              if (ver?.files_manifest) {
-                const manifest = JSON.parse(JSON.stringify(ver.files_manifest));
+              if ((ver as any)?.files_manifest) {
+                const manifest = JSON.parse(JSON.stringify((ver as any).files_manifest));
                 const cleanUspStyle = (val: string) => {
                   if (val.includes("classic")) return "classic";
                   if (val.includes("minimal_center")) return "minimal_center";
@@ -361,7 +361,7 @@ const Onboarding = () => {
                   theme_id: data.selectedThemeId,
                   name: 'Custom Theme',
                   manifest_ref: data.selectedThemeId,
-                  version: ver.version,
+                  version: (ver as any).version,
                   primary_color: palette.primary,
                   colors: {
                     primary: palette.primary,
@@ -386,8 +386,8 @@ const Onboarding = () => {
                   theme_id: data.selectedThemeId,
                   theme_tokens: newTheme,
                 } as any, newConfig as any);
-                await supabase
-                  .from('stores')
+                await (supabase
+                  .from('stores') as any)
                   .update({ theme: newTheme as any, theme_id: data.selectedThemeId, theme_tokens: newTheme as any, resolved_storefront_manifest: resolved_storefront_manifest as any })
                   .eq('id', store.id);
               }
@@ -397,12 +397,12 @@ const Onboarding = () => {
           } else if (data.selectedThemeId?.startsWith('theme-') || data.selectedThemeId?.startsWith('layout1-')) {
             try {
               // Check if premium
-              const { data: meta } = await supabase
-                .from('theme_master_projects')
+              const { data: meta } = await (supabase
+                .from('theme_master_projects') as any)
                 .select('is_premium, price')
                 .eq('theme_id', data.selectedThemeId)
                 .maybeSingle();
-              isPremiumMaster = !!meta?.is_premium;
+              isPremiumMaster = !!(meta as any)?.is_premium;
 
               const { applyMasterTheme } = await import('@/lib/applyMasterTheme');
               await applyMasterTheme(store.id, data.selectedThemeId, (store.settings as any) || {});
@@ -412,7 +412,7 @@ const Onboarding = () => {
           }
           if (data.aiProduct && data.aiProduct.title) {
             try {
-              await supabase.from('products').insert({
+              await (supabase.from('products') as any).insert({
                 store_id: store.id,
                 title: data.aiProduct.title,
                 description: data.aiProduct.description || '',
@@ -433,8 +433,8 @@ const Onboarding = () => {
           // Re-fetch the full row (theme apply above may have just written
           // theme_id/theme_tokens/resolved_storefront_manifest) so we build the
           // final resolved snapshot from up-to-date data instead of stale state.
-          const { data: freshStore } = await supabase
-            .from('stores').select('*').eq('id', store.id).maybeSingle();
+          const { data: freshStore } = await (supabase
+            .from('stores') as any).select('*').eq('id', store.id).maybeSingle();
           const liveStore = (freshStore || store) as any;
           const currentSettings = { ...(liveStore.settings || {}) };
 
@@ -462,7 +462,7 @@ const Onboarding = () => {
           const newConfig = { ...existingConfig, homepage_sections: homepageSections };
           const resolved_storefront_manifest = await buildResolvedStorefrontManifest(liveStore, newConfig as any);
 
-          await supabase.from('stores').update({
+          await (supabase.from('stores') as any).update({
             is_published: true,
             onboarding_step: TOTAL_STEPS,
             settings: currentSettings,
