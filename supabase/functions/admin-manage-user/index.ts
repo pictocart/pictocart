@@ -37,17 +37,45 @@ Deno.serve(async (req) => {
         throw new Error("Missing required fields: email, password, partnerIdCode, and name are required");
       }
       
-      // 1. Create auth user with email_confirm = true so they can login immediately
-      const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true
-      });
-      if (authError) throw authError;
-      if (!authData?.user) throw new Error("Failed to create auth user");
+      // 1. Check if user already exists in auth.users by email
+      const { data: existingUserId } = await adminClient.rpc("get_user_id_by_email", { p_email: email });
       
-      const newUserId = authData.user.id;
-      
+      // Check if a partner record already exists with this email
+      const { data: existingPartner } = await adminClient
+        .from("partners")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      if (existingPartner) {
+        throw new Error("A partner with this email address has already been registered");
+      }
+
+      let newUserId = existingUserId;
+      let isNewUser = false;
+
+      if (!newUserId) {
+        // Create auth user with email_confirm = true so they can login immediately
+        const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true
+        });
+        if (authError) throw authError;
+        if (!authData?.user) throw new Error("Failed to create auth user");
+        newUserId = authData.user.id;
+        isNewUser = true;
+      } else {
+        // Double check they aren't registered by user_id
+        const { data: partnerByUserId } = await adminClient
+          .from("partners")
+          .select("id")
+          .eq("user_id", newUserId)
+          .maybeSingle();
+        if (partnerByUserId) {
+          throw new Error("A partner with this email address has already been registered");
+        }
+      }
+
       // 2. Generate referral code
       let referral_code: string;
       try {
@@ -56,7 +84,7 @@ Deno.serve(async (req) => {
       } catch {
         referral_code = "PT" + Math.random().toString(36).slice(2, 9).toUpperCase();
       }
-      
+
       // 3. Create partner record
       const { data: partnerData, error: partnerError } = await adminClient.from("partners").insert({
         user_id: newUserId,
@@ -70,18 +98,20 @@ Deno.serve(async (req) => {
         email_verified: false,
         invite_status: "active"
       }).select("id").single();
-      
+
       if (partnerError) {
-        // Rollback auth user
-        await adminClient.auth.admin.deleteUser(newUserId);
+        if (isNewUser && newUserId) {
+          // Rollback auth user
+          await adminClient.auth.admin.deleteUser(newUserId);
+        }
         throw partnerError;
       }
-      
+
       // 4. Create user role 'partner'
-      const { error: roleError } = await adminClient.from("user_roles").insert({
+      const { error: roleError } = await adminClient.from("user_roles").upsert({
         user_id: newUserId,
         role: "partner"
-      });
+      }, { onConflict: "user_id,role" });
       if (roleError) console.error("Failed to add partner role:", roleError);
       
       // 5. Allocate licenses: 2 basic, 3 premium
