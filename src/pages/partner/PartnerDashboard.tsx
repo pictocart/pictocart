@@ -223,18 +223,27 @@ const PartnerDashboard = () => {
 
       if (error) throw error;
 
-      // Send OTP via simple dedicated edge function
+      // Send OTP via transactional email edge function
       try {
-        const res = await supabase.functions.invoke("send-partner-otp", {
-          body: { email: partner!.email, otp: code },
+        const res = await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "customer-otp",
+            recipientEmail: partner!.email,
+            idempotencyKey: `partner-otp-${partner!.id}-${Date.now()}`,
+            templateData: {
+              storeName: "PicToCart Partner Program",
+              otp: code,
+              purpose: "verification",
+            },
+          },
         });
         if (res.error) {
-          console.warn("send-partner-otp failed:", res.error);
+          console.warn("send-transactional-email failed:", res.error);
         } else if (res.data?.success) {
           return true;
         }
       } catch (e) {
-        console.warn("send-partner-otp invoke error:", e);
+        console.warn("send-transactional-email invoke error:", e);
       }
 
       return false;
