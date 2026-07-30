@@ -47,13 +47,13 @@ const PartnersSignup = () => {
       // Prevent store owners (merchants) from becoming partners
       // Check by the form email — not just the logged-in user_id — so even
       // if someone types a different email, we verify that email has no store.
-      const { data: targetUserId } = await supabase
+      const { data: targetUserId } = await (supabase as any)
         .rpc('get_user_id_by_email', { p_email: email.trim() });
       if (targetUserId) {
         const { data: existingStore } = await supabase
           .from('stores')
           .select('id')
-          .eq('user_id', targetUserId)
+          .eq('user_id', targetUserId as string)
           .limit(1)
           .maybeSingle();
         if (existingStore) {

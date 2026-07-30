@@ -24,6 +24,8 @@ const PartnerDashboard = () => {
   const [verificationOtp, setVerificationOtp] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [fallbackOtp, setFallbackOtp] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
 
   // Wallet redemption state
   const [oneTimeCode, setOneTimeCode] = useState("");
@@ -208,6 +210,8 @@ const PartnerDashboard = () => {
   const sendOtpMutation = useMutation({
     mutationFn: async () => {
       setSendingOtp(true);
+      setFallbackOtp(null);
+      setOtpSent(false);
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -249,10 +253,12 @@ const PartnerDashboard = () => {
     },
     onSuccess: (result) => {
       if (!result.emailSent) {
-        toast.info("Verification code (email unavailable): " + result.code, { duration: 20000 });
+        setFallbackOtp(result.code);
+        toast.info("Could not send email. Your verification code is shown below.", { duration: 10000 });
       } else {
         toast.success("Verification code sent to " + partner!.email);
       }
+      setOtpSent(true);
       setSendingOtp(false);
     },
     onError: (e: any) => {
@@ -365,7 +371,7 @@ const PartnerDashboard = () => {
             </div>
 
             <div className="space-y-4">
-              {!partner.email_verification_otp ? (
+              {!partner.email_verification_otp && !otpSent ? (
                 <Button 
                   onClick={() => sendOtpMutation.mutate()} 
                   disabled={sendingOtp}
@@ -376,6 +382,21 @@ const PartnerDashboard = () => {
                 </Button>
               ) : (
                 <div className="space-y-4">
+                  {/* Fallback: show OTP code directly when email fails */}
+                  {fallbackOtp && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-center space-y-2">
+                      <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider">
+                        ⚠ Email service unavailable — use this code
+                      </p>
+                      <p className="text-3xl font-bold tracking-[0.3em] text-amber-300 font-mono">
+                        {fallbackOtp}
+                      </p>
+                      <p className="text-[10px] text-amber-500/70">
+                        This code will expire in 10 minutes
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="otp">Enter 6-Digit Code</Label>
                     <Input 

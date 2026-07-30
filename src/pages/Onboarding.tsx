@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, SkipForward, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { THEME_TEMPLATES } from '@/lib/themes';
 import { getReferralCode, clearReferralCookie } from '@/lib/referralCookie';
 import { getStoreThemeId, getStoreThemeTokens } from '@/lib/storefrontManifest';
