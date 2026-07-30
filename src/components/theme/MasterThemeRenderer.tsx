@@ -324,10 +324,19 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const baseDna = manifest?.dna ?? {};
   const overridesPalette = (overrides as any)?.palette ?? {};
   
+  const themeId = manifest?.theme_id || manifest?.name || "";
+  const isFoodLayout = storeCategory === "food" && (
+    themeId === "theme-70904877" || 
+    themeId === "theme-bee17452" || 
+    !!(manifest?.dna?.name?.toLowerCase().includes('gourmet') || 
+      manifest?.dna?.name?.toLowerCase().includes('food') || 
+      manifest?.dna?.name?.toLowerCase().includes('restaurant'))
+  );
+
   // Merge global palette overrides
   const palette = { ...(baseDna.palette ?? {}), ...overridesPalette };
 
-  if (storeCategory === "food" && (!baseDna.palette || Object.keys(baseDna.palette).length === 0)) {
+  if (isFoodLayout && (!baseDna.palette || Object.keys(baseDna.palette).length === 0)) {
     palette.primary = "#8c2d19";
     palette.primary_fg = "#ffffff";
     palette.accent = "#8c2d19";
@@ -1272,7 +1281,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             style={{ scrollMarginTop: 80, ...sectionStyle }}
             {...extraAttrs}
           >
-            <Section s={{ ...s, props: mergedProps }} dna={sectionDna} storeSlug={storeSlug} page={page} store={store} products={products} storeCategory={storeCategory} />
+            <Section s={{ ...s, props: mergedProps }} dna={sectionDna} storeSlug={storeSlug} page={page} store={store} products={products} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />
           </div>
         );
       })}
@@ -1488,14 +1497,14 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   const showName = ov.show_name !== false; // default true
   const logoUrl = ov.logo_url || "";
   const defaultLinks: Array<{ label: string; page: string }> = [
-    { label: storeCategory === "food" ? "Our Menu" : "Shop", page: "shop" },
+    { label: isFoodLayout ? "Our Menu" : "Shop", page: "shop" },
     { label: "Collections", page: "collections" },
     { label: "About", page: "about" },
     { label: "Journal", page: "journal" },
     { label: "Contact", page: "contact" },
   ];
   const pageToPath: Record<string, string> = {
-    home: "", shop: storeCategory === "food" ? "/menu" : "/shop", collections: "/collections", about: "/about", contact: "/contact",
+    home: "", shop: isFoodLayout ? "/menu" : "/shop", collections: "/collections", about: "/about", contact: "/contact",
     journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
   };
   const links = (ov.nav_links && ov.nav_links.length > 0 ? ov.nav_links : defaultLinks)
@@ -1506,7 +1515,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   const { user } = useCustomerAuth(storeSlug || "");
   const customerName = user?.user_metadata?.full_name || user?.user_metadata?.customer_email?.split("@")[0] || "Account";
   const wrap = "sticky top-0 z-50 border-b backdrop-blur transition-shadow hover:shadow-md";
-  const bg = { background: `${dna.palette?.bg}ee`, borderColor: storeCategory === "food" ? "transparent" : dna.palette?.border };
+  const bg = { background: `${dna.palette?.bg}ee`, borderColor: isFoodLayout ? "transparent" : dna.palette?.border };
   const brandSize = variant === "bold_serif" ? 32 : variant === "minimal_thin" ? 16 : 22;
   const brandStyle: React.CSSProperties = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700, fontSize: brandSize, color: dna.palette?.fg, cursor: (storeSlug || onNavigate) ? "pointer" : "default" };
   const logoSize = Math.max(20, Math.min(160, Number((ov as any).logo_size) || (brandSize + 8)));
@@ -1542,10 +1551,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       style={{ 
         background: "var(--p)", 
         color: "var(--pf)", 
-        borderRadius: storeCategory === "food" ? "9999px" : "var(--r)" 
+        borderRadius: isFoodLayout ? "9999px" : "var(--r)" 
       }}
     >
-      <span>{storeCategory === "food" ? 'Order Now' : 'Cart'}</span>
+      <span>{isFoodLayout ? 'Order Now' : 'Cart'}</span>
       <ShoppingBag className="h-4 w-4" /> 
       <span className="inline-block animate-badge-pop" key={0}>· 0</span>
     </button>
@@ -1557,10 +1566,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       style={{ 
         background: "var(--p)", 
         color: "var(--pf)", 
-        borderRadius: storeCategory === "food" ? "9999px" : "var(--r)" 
+        borderRadius: isFoodLayout ? "9999px" : "var(--r)" 
       }}
     >
-      <span>{storeCategory === "food" ? 'Order Now' : 'Cart'}</span>
+      <span>{isFoodLayout ? 'Order Now' : 'Cart'}</span>
       <ShoppingBag className="h-4 w-4" /> 
       {totalItems > 0 && <span className="inline-block animate-badge-pop" key={totalItems}>· {totalItems}</span>}
     </Link>
@@ -1572,10 +1581,10 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
       style={{ 
         background: "var(--p)", 
         color: "var(--pf)", 
-        borderRadius: storeCategory === "food" ? "9999px" : "var(--r)" 
+        borderRadius: isFoodLayout ? "9999px" : "var(--r)" 
       }}
     >
-      <span>{storeCategory === "food" ? 'Order Now' : 'Cart'}</span>
+      <span>{isFoodLayout ? 'Order Now' : 'Cart'}</span>
       <ShoppingBag className="h-4 w-4" /> 
       <span className="inline-block animate-badge-pop" key={0}>· 0</span>
     </button>
@@ -1599,7 +1608,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
         : <span key={l.label} className={cls} style={{ opacity: 0.85 }}>{l.label}</span>;
 
 
-  if (storeCategory === "food") {
+  if (isFoodLayout) {
     const FoodLogoIcon = (
       <div className="w-10 h-10 rounded-full bg-[#8c2d19] flex items-center justify-center shadow-sm shrink-0">
         <span className="text-xl filter drop-shadow" style={{ transform: 'translateY(-1px)' }}>🍲</span>
@@ -2023,13 +2032,13 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   );
 }
 
-function Section({ s, dna, storeSlug, page, store, products, storeCategory }: any) {
+function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFoodLayout }: any) {
   const p = s.props ?? {};
   // If image was explicitly cleared via override (image === ""), do not render image.
   switch (s.type) {
-    case "hero": return <Hero p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} />;
+    case "hero": return <Hero p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />;
     case "usp_strip": {
-      if (storeCategory === "food") {
+      if (isFoodLayout) {
         const foodItems = (p.items && p.items.length > 0) ? p.items : [
           { title: "Freshly Made", sub: "With the best local ingredients", icon: "sparkles" },
           { title: "Always Hot", sub: "Delivered sizzling and aromatic.", icon: "gift" },
@@ -2088,7 +2097,7 @@ function Section({ s, dna, storeSlug, page, store, products, storeCategory }: an
     case "trending":
     case "featured_products":
     case "new_arrivals":
-    case "product_grid": return <ProductBlock p={p} dna={dna} storeSlug={storeSlug} page={page} storeCategory={storeCategory} />;
+    case "product_grid": return <ProductBlock p={p} dna={dna} storeSlug={storeSlug} page={page} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />;
     case "promo_banner": {
       const promoStyle = p.style ?? "classic_split";
       if (promoStyle === "aurora_wave")     return <PromoAuroraWave   p={p} dna={dna} storeSlug={storeSlug} />;
@@ -3838,9 +3847,9 @@ function HeroFood({ p, dna, storeSlug }: any) {
   );
 }
 
-function Hero({ p, dna, storeSlug, storeCategory }: any) {
+function Hero({ p, dna, storeSlug, storeCategory, isFoodLayout }: any) {
   const v = p.style ?? "centered";
-  if (storeCategory === "food") {
+  if (isFoodLayout) {
     return <HeroFood p={p} dna={dna} storeSlug={storeSlug} />;
   }
   // ── 3D theme styles ───────────────────────────────────────────────────────
@@ -4643,9 +4652,9 @@ function ProductsFoodTheme({ p, dna, storeSlug, page }: any) {
   );
 }
 
-function ProductBlock({ p, dna, storeSlug, page, storeCategory }: any) {
+function ProductBlock({ p, dna, storeSlug, page, storeCategory, isFoodLayout }: any) {
   const v = p.style ?? "grid_clean";
-  if (storeCategory === "food") {
+  if (isFoodLayout) {
     return <ProductsFoodTheme p={p} dna={dna} storeSlug={storeSlug} page={page} />;
   }
   // ── 3D theme product styles ───────────────────────────────────────────────
