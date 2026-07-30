@@ -42,6 +42,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: storage,
     persistSession: true,
     autoRefreshToken: true,
+    storageKey: isDemo ? 'sb-demo-auth-token' : undefined,
     broadcastTabSync: !isDemo, // Disable cross-tab synchronization for demo session to prevent logging out other tabs (like partner dashboard)
   } as any
 });
