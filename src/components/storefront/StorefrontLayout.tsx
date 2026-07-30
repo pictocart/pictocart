@@ -455,6 +455,16 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
   const bodyFont = (baseDna.fonts?.body as string | undefined) || fonts.body;
   const headerStyle = (manifestData?.header_style || baseDna.layout?.header_style || 'classic') as string;
   const brandName = branding.name || (baseDna.name as string | undefined) || store.name;
+  
+  const storeCategory = store?.category || storefrontConfig?.theme_overrides?.category || manifestData?.store?.category || "";
+  const isFoodLayout = storeCategory === "food" || (
+    themeId === "theme-70904877" || 
+    themeId === "theme-bee17452" || 
+    !!(manifestData?.dna?.name?.toLowerCase().includes('gourmet') || 
+      manifestData?.dna?.name?.toLowerCase().includes('food') || 
+      manifestData?.dna?.name?.toLowerCase().includes('restaurant'))
+  );
+
   const headerOv: LooseRecord = {
     logo_url: branding.logo_url || '',
     brand_name: brandName,
@@ -616,7 +626,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
         headerManifest?.is_custom_html && headerManifest?.html ? (
           <div dangerouslySetInnerHTML={{ __html: String(headerManifest.html) }} />
         ) : (
-          <ThemeHeader dna={{ ...baseDna, palette: mergedPalette }} brandName={brandName} variant={headerStyle} storeSlug={store.slug} headerOv={headerOv} storeCategory={store.category} />
+          <ThemeHeader dna={{ ...baseDna, palette: mergedPalette }} brandName={brandName} variant={headerStyle} storeSlug={store.slug} headerOv={headerOv} storeCategory={store.category} isFoodLayout={isFoodLayout} />
         )
       ) : (
         <ThemeNavbar

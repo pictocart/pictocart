@@ -325,7 +325,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const overridesPalette = (overrides as any)?.palette ?? {};
   
   const themeId = manifest?.theme_id || manifest?.name || "";
-  const isFoodLayout = storeCategory === "food" && (
+  const isFoodLayout = storeCategory === "food" || (
     themeId === "theme-70904877" || 
     themeId === "theme-bee17452" || 
     !!(manifest?.dna?.name?.toLowerCase().includes('gourmet') || 
