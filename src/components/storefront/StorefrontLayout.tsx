@@ -103,7 +103,7 @@ export function resolveTheme(themeData: ThemeTokens | null | undefined, store?: 
     if (combinedPalette.fg) mergedColors.text = combinedPalette.fg;
   }
 
-  if (store?.category === 'food') {
+  if (store?.category === 'food' && !isThemeManifestTheme) {
     mergedColors.primary = '#8c2d19';
     mergedColors.secondary = '#faf6f0';
     mergedColors.accent = '#8c2d19';
@@ -438,7 +438,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
     border: typeof mergedPalette.border === 'string' ? mergedPalette.border : colors.secondary,
   };
 
-  if (store?.category === 'food') {
+  if (store?.category === 'food' && !isThemeManifestTheme) {
     extendedColors.primary = '#8c2d19';
     extendedColors.secondary = '#faf6f0';
     extendedColors.accent = '#8c2d19';
