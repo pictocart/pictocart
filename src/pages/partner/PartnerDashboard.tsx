@@ -221,12 +221,10 @@ const PartnerDashboard = () => {
 
       if (error) throw error;
 
-      // Log to console for dev validation (hidden from user screen)
-      console.log("Verification Code:", code);
-
       // Invoke transactional email if setup
+      let emailSent = false;
       try {
-        await supabase.functions.invoke("send-transactional-email", {
+        const res = await supabase.functions.invoke("send-transactional-email", {
           body: {
             templateName: "customer-otp",
             recipientEmail: partner!.email,
@@ -238,12 +236,23 @@ const PartnerDashboard = () => {
             },
           },
         });
+        if (res.error) {
+          console.warn("Transactional email invoke returned error:", res.error);
+        } else {
+          emailSent = true;
+        }
       } catch (e) {
         console.warn("Transactional email invoke failed:", e);
       }
+
+      return { emailSent, code };
     },
-    onSuccess: () => {
-      toast.success("Verification code sent to " + partner!.email);
+    onSuccess: (result) => {
+      if (!result.emailSent) {
+        toast.info("Verification code (email unavailable): " + result.code, { duration: 20000 });
+      } else {
+        toast.success("Verification code sent to " + partner!.email);
+      }
       setSendingOtp(false);
     },
     onError: (e: any) => {

@@ -131,6 +131,18 @@ const Onboarding = () => {
         : (getStoreThemeTokens(store) || THEME_TEMPLATES[0]);
 
       if (!store) {
+        // Prevent partners from creating their own store (merchant account)
+        const { data: existingPartner } = await (supabase
+          .from('partners') as any)
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (existingPartner) {
+          toast.error('You are already registered as a partner. A partner account cannot also own a store. Please use a different email to create a merchant account.');
+          setSaving(false);
+          return;
+        }
+
         const refCode = getReferralCode();
         const { data: newStore, error } = await (supabase
           .from('stores') as any)

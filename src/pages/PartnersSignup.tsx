@@ -44,6 +44,25 @@ const PartnersSignup = () => {
     }
     setLoading(true);
     try {
+      // Prevent store owners (merchants) from becoming partners
+      // Check by the form email — not just the logged-in user_id — so even
+      // if someone types a different email, we verify that email has no store.
+      const { data: targetUserId } = await supabase
+        .rpc('get_user_id_by_email', { p_email: email.trim() });
+      if (targetUserId) {
+        const { data: existingStore } = await supabase
+          .from('stores')
+          .select('id')
+          .eq('user_id', targetUserId)
+          .limit(1)
+          .maybeSingle();
+        if (existingStore) {
+          toast.error('This email already owns a store. A merchant account cannot also be a partner account. Please use a different email to register as a partner.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const { data: codeRow, error: codeErr } = await supabase.rpc('generate_referral_code');
       if (codeErr) throw codeErr;
       const referral_code = codeRow as unknown as string;

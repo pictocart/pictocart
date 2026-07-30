@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
       effectiveRecipient,
     })
     return new Response(
-      JSON.stringify({ error: 'Failed to verify suppression status' }),
+      JSON.stringify({ error: 'Suppression check failed', detail: suppressionError.message || String(suppressionError) }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
       error_message: 'Failed to look up unsubscribe token',
     })
     return new Response(
-      JSON.stringify({ error: 'Failed to prepare email' }),
+      JSON.stringify({ error: 'Failed to prepare email (token lookup)', detail: tokenLookupError.message || String(tokenLookupError) }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
         error_message: 'Failed to create unsubscribe token',
       })
       return new Response(
-        JSON.stringify({ error: 'Failed to prepare email' }),
+        JSON.stringify({ error: 'Failed to prepare email (token creation)', detail: tokenError.message || String(tokenError) }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -359,7 +359,10 @@ Deno.serve(async (req) => {
       error_message: 'Failed to enqueue email and direct send fallback failed',
     })
 
-    return new Response(JSON.stringify({ error: 'Failed to enqueue email and direct send failed' }), {
+    return new Response(JSON.stringify({
+      error: 'Failed to send email (enqueue + direct send both failed)',
+      enqueueError: enqueueError.message || String(enqueueError),
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
