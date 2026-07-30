@@ -15,6 +15,24 @@ import { toast } from "sonner";
 import { Plus, Eye, IndianRupee, Mail, Loader2, Copy, Ban, Trash2, Key, Users, BookOpen, Sparkles, CheckCircle2, X, AlertCircle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
+const parseEdgeFunctionError = async (error: any): Promise<Error> => {
+  let errMsg = error.message;
+  if (error.context) {
+    try {
+      const res = typeof error.context.clone === 'function' ? error.context.clone() : error.context;
+      if (typeof res.json === 'function') {
+        const body = await res.json();
+        if (body && body.error) {
+          errMsg = body.error;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse edge function error response body", e);
+    }
+  }
+  return new Error(errMsg);
+};
+
 const AdminPartners = () => {
   const qc = useQueryClient();
   const [selected, setSelected] = useState<any>(null);
@@ -202,7 +220,9 @@ const AdminPartners = () => {
         license_unit_price: form.partner_type === "intern" ? 0 : form.license_unit_price,
       };
       const { data, error } = await supabase.functions.invoke("partner-invite", { body: payload });
-      if (error) throw error;
+      if (error) {
+        throw await parseEdgeFunctionError(error);
+      }
       if (!data?.success) throw new Error(data?.error || "Failed");
       return data;
     },
@@ -240,7 +260,9 @@ const AdminPartners = () => {
           partnerType: createForm.partner_type,
         }
       });
-      if (error) throw error;
+      if (error) {
+        throw await parseEdgeFunctionError(error);
+      }
       if (data?.error) throw new Error(data.error);
       return data;
     },
