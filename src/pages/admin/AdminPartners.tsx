@@ -168,6 +168,19 @@ const AdminPartners = () => {
     },
   });
 
+  const hiddenDemoShopsQ = useQuery({
+    enabled: !!selected,
+    queryKey: ["partner-hidden-demo-shops", selected?.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("partner_hidden_demo_shops")
+        .select("demo_shop_id")
+        .eq("partner_id", selected.id);
+      if (error) throw error;
+      return (data || []).map((row: any) => row.demo_shop_id) as string[];
+    },
+  });
+
   const storesQ = useQuery({
     enabled: !!selected,
     queryKey: ["partner-stores-admin", selected?.id],
@@ -387,6 +400,36 @@ const AdminPartners = () => {
       qc.invalidateQueries({ queryKey: ["partner-licenses-admin", selected.id] });
       qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
       qc.invalidateQueries({ queryKey: ["admin-partners"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const hideDemoShopForPartner = useMutation({
+    mutationFn: async (demoShopId: string) => {
+      const { error } = await (supabase as any)
+        .from("partner_hidden_demo_shops")
+        .insert({ partner_id: selected.id, demo_shop_id: demoShopId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["partner-hidden-demo-shops", selected.id] });
+      toast.success("Demo shop hidden for this partner");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const showDemoShopForPartner = useMutation({
+    mutationFn: async (demoShopId: string) => {
+      const { error } = await (supabase as any)
+        .from("partner_hidden_demo_shops")
+        .delete()
+        .eq("partner_id", selected.id)
+        .eq("demo_shop_id", demoShopId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["partner-hidden-demo-shops", selected.id] });
+      toast.success("Demo shop visibility restored");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -1060,6 +1103,46 @@ const AdminPartners = () => {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <h3 className="font-semibold mb-2">Demo Store Visibility</h3>
+                  <div className="border rounded-lg divide-y text-sm max-h-60 overflow-y-auto">
+                    {demoShopsQ.isLoading || hiddenDemoShopsQ.isLoading ? (
+                      <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-orange-500" /></div>
+                    ) : (demoShopsQ.data || []).length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground">No demo stores configured</div>
+                    ) : (demoShopsQ.data || []).map((shop: any) => {
+                      const isHidden = (hiddenDemoShopsQ.data || []).includes(shop.id);
+                      return (
+                        <div key={shop.id} className="p-3 flex justify-between items-center gap-3 hover:bg-slate-50/50">
+                          <div>
+                            <div className="font-medium text-slate-800 dark:text-slate-200">{shop.shop_name}</div>
+                            <div className="flex gap-2 items-center text-xs text-slate-500 mt-0.5">
+                              <span className="capitalize">{shop.category}</span>
+                              <span>•</span>
+                              <span>ID: {shop.shop_id}</span>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={isHidden ? "destructive" : "outline"}
+                            onClick={() => {
+                              if (isHidden) {
+                                showDemoShopForPartner.mutate(shop.id);
+                              } else {
+                                hideDemoShopForPartner.mutate(shop.id);
+                              }
+                            }}
+                            disabled={hideDemoShopForPartner.isPending || showDemoShopForPartner.isPending}
+                            className="h-8 text-xs shrink-0"
+                          >
+                            {isHidden ? "Hidden (Show)" : "Visible (Hide)"}
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 

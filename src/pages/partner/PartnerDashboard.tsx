@@ -64,15 +64,16 @@ const PartnerDashboard = () => {
     },
   });
 
-  // 2. Demo Shops Query
+  // 2. Demo Shops Query (filtering out hidden ones)
   const demoShopsQ = useQuery({
     enabled: !!partner?.id,
-    queryKey: ["partner-demo-shops"],
+    queryKey: ["partner-demo-shops", partner?.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partner_demo_shops")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await (supabase as any)
+        .rpc("get_visible_demo_shops_for_partner", {
+          _partner_id: partner.id
+        });
+      if (error) throw error;
       return data ?? [];
     },
   });
@@ -508,8 +509,8 @@ const PartnerDashboard = () => {
                 <Ticket className="w-5 h-5 text-emerald-500" />
               </div>
               <div className="text-3xl font-extrabold text-white">
-                {licensesQ.data?.filter((l: any) => l.status === "available").length ?? 0}
-                <span className="text-xs text-slate-400 font-normal ml-1">available</span>
+                {licensesQ.data?.length ?? 0}
+                <span className="text-xs text-slate-400 font-normal ml-1">total</span>
               </div>
             </CardContent>
           </Card>
@@ -649,7 +650,7 @@ const PartnerDashboard = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(demoShopsQ.data ?? []).map((shop) => (
+                    {(demoShopsQ.data as any[] ?? []).map((shop: any) => (
                       <Card key={shop.id} className="border-slate-800 bg-slate-950/60 overflow-hidden group">
                         <div className="p-5 space-y-4">
                           <div className="flex items-center justify-between">
