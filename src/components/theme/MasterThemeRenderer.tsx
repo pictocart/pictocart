@@ -369,6 +369,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   useMemo(() => { loadFont(fonts.heading); loadFont(fonts.body); }, [fonts.heading, fonts.body]);
 
   useEffect(() => {
+    if (!isFoodLayout) return;
     // Select all sections and footers to observe
     const elements = document.querySelectorAll('[data-section-index], [data-section-anchor="footer"]');
     const observer = new IntersectionObserver((entries) => {
@@ -701,6 +702,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           animation: headingReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
+        ${isFoodLayout ? `
         /* Premium 3D Scroll Reveal Animations */
         [data-section-index], [data-section-anchor="footer"] {
           opacity: 0;
@@ -724,6 +726,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           border-color: rgba(140, 45, 25, 0.25) !important;
           transform: translateY(-6px) scale(1.005) !important;
         }
+        ` : ''}
 
         /* Hover Cards Lift, Zoom & Premium Shadow */
         .group, [data-section-index] a, [data-section-index] .rounded-xl, [data-section-index] .rounded-2xl {
