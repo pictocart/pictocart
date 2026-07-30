@@ -31,6 +31,18 @@ const PartnerDashboard = () => {
   // Store plan filter state
   const [planFilter, setPlanFilter] = useState("all");
 
+  const openInNewWindow = (url: string) => {
+    const w = 1280;
+    const h = 800;
+    const left = (window.screen.width - w) / 2;
+    const top = (window.screen.height - h) / 2;
+    window.open(
+      url,
+      '_blank',
+      `width=${w},height=${h},top=${top},left=${left},resizable=yes,scrollbars=yes`
+    );
+  };
+
   const partnerQ = useQuery({
     enabled: !!user,
     queryKey: ["my-partner", user?.id],
@@ -683,11 +695,17 @@ const PartnerDashboard = () => {
                           </div>
 
                           {shop.direct_access_url && (
-                            <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white gap-2" asChild>
-                              <a href={shop.direct_access_url} target="_blank" rel="noopener noreferrer">
+                            <div className="space-y-2">
+                              <Button 
+                                className="w-full bg-slate-800 hover:bg-slate-700 text-white gap-2" 
+                                onClick={() => openInNewWindow(`/auth?email=${encodeURIComponent(shop.shop_id)}&password=${encodeURIComponent(shop.password)}`)}
+                              >
                                 Open Demo Shop
-                              </a>
-                            </Button>
+                              </Button>
+                              <p className="text-[10px] text-slate-500 text-center">
+                                💡 Tip: Right-click & select "Open link in incognito" to keep partner session active.
+                              </p>
+                            </div>
                           )}
                         </div>
                       </Card>

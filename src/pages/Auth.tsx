@@ -36,8 +36,62 @@ const Auth = () => {
     };
   }, []);
 
+  // Handle automatic login via query parameters (Open Demo Shop)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const autoEmail = params.get('email');
+    const autoPassword = params.get('password');
+    if (autoEmail && autoPassword) {
+      const performAutoLogin = async () => {
+        setLoading(true);
+        // If user is already logged in with a different email, sign them out first
+        if (user) {
+          if (user.email !== autoEmail) {
+            await supabase.auth.signOut();
+          } else {
+            setLoading(false);
+            const { data: isPartner } = await supabase
+              .from('partners')
+              .select('id')
+              .eq('email', autoEmail)
+              .maybeSingle();
+
+            if (isPartner) {
+              navigate('/partner');
+            } else {
+              navigate('/dashboard');
+            }
+            return;
+          }
+        }
+
+        const { error } = await signIn(autoEmail, autoPassword);
+        if (error) {
+          toast.error("Auto-login failed: " + error.message);
+          setLoading(false);
+        } else {
+          const { data: isPartner } = await supabase
+            .from('partners')
+            .select('id')
+            .eq('email', autoEmail)
+            .maybeSingle();
+
+          if (isPartner) {
+            navigate('/partner');
+          } else {
+            navigate('/dashboard');
+          }
+        }
+      };
+      performAutoLogin();
+    }
+  }, [signIn, navigate, user]);
+
   // If user is logged in but came from a store page, don't redirect to seller dashboard
-  if (user) {
+  const params = new URLSearchParams(window.location.search);
+  const hasAutoLogin = params.get('email') && params.get('password');
+
+  if (user && !hasAutoLogin) {
     return <Navigate to="/dashboard" replace />;
   }
 
