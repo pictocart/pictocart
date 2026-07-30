@@ -45,13 +45,21 @@ const SellerProfile = () => {
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
   useEffect(() => {
-    if (!subscription?.current_period_end) {
+    let targetEndStr = subscription?.current_period_end;
+    
+    // If it's a paid plan but end date is not set, fallback to 30 days from created_at
+    if (currentPlan !== 'free' && !targetEndStr) {
+      const baseDate = subscription?.created_at ? new Date(subscription.created_at) : new Date();
+      targetEndStr = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    }
+
+    if (!targetEndStr) {
       setTimeLeft(null);
       return;
     }
 
     const calculateTimeLeft = () => {
-      const difference = +new Date(subscription.current_period_end!) - +new Date();
+      const difference = +new Date(targetEndStr!) - +new Date();
       if (difference <= 0) {
         return { days: 0, hours: 0, minutes: 0, seconds: 0 };
       }
@@ -70,7 +78,7 @@ const SellerProfile = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [subscription?.current_period_end]);
+  }, [subscription?.current_period_end, subscription?.created_at, currentPlan]);
 
   // License Key fields
   const [licenseKey, setLicenseKey] = useState('');
