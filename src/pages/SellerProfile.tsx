@@ -43,6 +43,7 @@ const SellerProfile = () => {
 
   // Expiry countdown timer state
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+  const [expiryDate, setExpiryDate] = useState<Date | null>(null);
 
   useEffect(() => {
     let targetEndStr = subscription?.current_period_end;
@@ -54,12 +55,16 @@ const SellerProfile = () => {
     }
 
     if (!targetEndStr) {
+      setExpiryDate(null);
       setTimeLeft(null);
       return;
     }
 
+    const end = new Date(targetEndStr);
+    setExpiryDate(end);
+
     const calculateTimeLeft = () => {
-      const difference = +new Date(targetEndStr!) - +new Date();
+      const difference = +end - +new Date();
       if (difference <= 0) {
         return { days: 0, hours: 0, minutes: 0, seconds: 0 };
       }
@@ -576,7 +581,7 @@ const SellerProfile = () => {
                   <div>
                     <h5 className="text-xs font-semibold text-orange-800 dark:text-orange-400 uppercase tracking-wider">Plan Expiry Countdown</h5>
                     <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
-                      Expires in: <span className="font-bold text-orange-600 dark:text-orange-400">{timeLeft.days} days</span>
+                      Expires on: <span className="font-bold text-orange-600 dark:text-orange-400">{expiryDate ? format(expiryDate, 'dd MMM yyyy') : '...'}</span>
                     </p>
                   </div>
                 </div>

@@ -146,6 +146,28 @@ const AdminPartners = () => {
     },
   });
 
+  const licensesQ = useQuery({
+    enabled: !!selected,
+    queryKey: ["partner-licenses-admin", selected?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_licenses")
+        .select(`
+          id,
+          license_type,
+          license_key,
+          status,
+          consumed_at,
+          consumed_by_store_id,
+          stores ( name, slug )
+        `)
+        .eq("partner_id", selected.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const storesQ = useQuery({
     enabled: !!selected,
     queryKey: ["partner-stores-admin", selected?.id],
@@ -331,6 +353,40 @@ const AdminPartners = () => {
       toast.success(`Revoked ${count} available licenses`);
       qc.invalidateQueries({ queryKey: ["partner-batches", selected.id] });
       qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const revokeLicense = useMutation({
+    mutationFn: async (licenseId: string) => {
+      const { error } = await supabase
+        .from("partner_licenses")
+        .update({ status: "revoked" })
+        .eq("id", licenseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("License revoked successfully");
+      qc.invalidateQueries({ queryKey: ["partner-licenses-admin", selected.id] });
+      qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
+      qc.invalidateQueries({ queryKey: ["admin-partners"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteLicense = useMutation({
+    mutationFn: async (licenseId: string) => {
+      const { error } = await supabase
+        .from("partner_licenses")
+        .delete()
+        .eq("id", licenseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("License deleted successfully");
+      qc.invalidateQueries({ queryKey: ["partner-licenses-admin", selected.id] });
+      qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
+      qc.invalidateQueries({ queryKey: ["admin-partners"] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -942,6 +998,65 @@ const AdminPartners = () => {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <h3 className="font-semibold mb-2">All License Keys ({licensesQ.data?.length ?? 0})</h3>
+                  <div className="border rounded-lg divide-y text-sm max-h-80 overflow-y-auto">
+                    {licensesQ.isLoading ? (
+                      <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-orange-500" /></div>
+                    ) : licensesQ.data?.length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground">No licenses found</div>
+                    ) : licensesQ.data?.map((l: any) => (
+                      <div key={l.id} className="p-3 flex justify-between items-center gap-3 hover:bg-slate-50/50">
+                        <div className="space-y-1">
+                          <div className="font-mono font-bold text-slate-800 dark:text-slate-200">{l.license_key || "No Key"}</div>
+                          <div className="flex gap-2 items-center text-xs">
+                            <span className="capitalize font-semibold text-slate-600 dark:text-slate-400">{l.license_type || "starter"}</span>
+                            <span>•</span>
+                            <span className={`capitalize ${
+                              l.status === 'available' ? 'text-emerald-600 font-medium' :
+                              l.status === 'consumed' ? 'text-slate-500' : 'text-red-500'
+                            }`}>{l.status}</span>
+                            {l.status === 'consumed' && l.stores?.name && (
+                              <>
+                                <span>•</span>
+                                <span className="text-slate-600 dark:text-slate-400 font-medium">Used by: {l.stores.name}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {l.status === 'available' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => revokeLicense.mutate(l.id)}
+                              disabled={revokeLicense.isPending}
+                              className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
+                              title="Revoke License"
+                            >
+                              Revoke
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => {
+                              if (confirm("Are you sure you want to permanently delete this license key?")) {
+                                deleteLicense.mutate(l.id);
+                              }
+                            }}
+                            disabled={deleteLicense.isPending}
+                            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-red-50"
+                            title="Delete License"
+                          >
+                            Delete
+                          </Button>
                         </div>
                       </div>
                     ))}
