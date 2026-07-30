@@ -327,7 +327,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   // Merge global palette overrides
   const palette = { ...(baseDna.palette ?? {}), ...overridesPalette };
 
-  if (storeCategory === "food") {
+  if (storeCategory === "food" && (!baseDna.palette || Object.keys(baseDna.palette).length === 0)) {
     palette.primary = "#8c2d19";
     palette.primary_fg = "#ffffff";
     palette.accent = "#8c2d19";
