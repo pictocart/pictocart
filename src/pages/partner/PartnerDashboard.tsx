@@ -622,9 +622,11 @@ const PartnerDashboard = () => {
             <TabsTrigger value="wallet" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
               <WalletIcon className="w-4 h-4" /> AI Wallet
             </TabsTrigger>
+            {/* 
             <TabsTrigger value="themes" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
               <Palette className="w-4 h-4" /> Themes
             </TabsTrigger>
+            */}
           </TabsList>
 
           {/* 1. Stores Tab */}
@@ -957,7 +959,7 @@ const PartnerDashboard = () => {
             </div>
           </TabsContent>
 
-          {/* 5. Themes Tab */}
+          {/* 5. Themes Tab (Commented Out)
           <TabsContent value="themes">
             <Card className="border-slate-800 bg-slate-900/40">
               <CardHeader>
@@ -974,7 +976,6 @@ const PartnerDashboard = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Custom Theme Builder Card Box */}
                     <Card className="border-2 border-dashed border-orange-500/40 bg-slate-950/20 hover:border-orange-500 transition-all duration-300 overflow-hidden flex flex-col group justify-between p-5">
                       <div className="flex items-start gap-3.5 text-left">
                         <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500 shrink-0">
@@ -1050,6 +1051,7 @@ const PartnerDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          */}
         </Tabs>
       </main>
 
