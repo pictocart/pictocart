@@ -230,12 +230,12 @@ const StorefrontCheckout = () => {
   };
 
   useEffect(() => {
-    if (!customerAuthLoading && !user && !isGuestMode && store) {
+    if (!customerAuthLoading && !user && store) {
       setShowLoginModal(true);
     } else if (user) {
       setShowLoginModal(false);
     }
-  }, [user, customerAuthLoading, isGuestMode, store]);
+  }, [user, customerAuthLoading, store]);
 
   // Load Saved Addresses
   useEffect(() => {
@@ -946,7 +946,7 @@ const StorefrontCheckout = () => {
         url={`${window.location.origin}/store/${slug}/checkout`}
       />
       
-      <div className="max-w-4xl mx-auto px-4 py-8 relative">
+      <div className={`max-w-4xl mx-auto px-4 py-8 relative transition-all duration-300 ${!user ? 'pointer-events-none select-none blur-[3px] opacity-45' : ''}`}>
         <Link
           to={`/store/${slug}/cart`}
           className="inline-flex items-center gap-1 text-sm opacity-60 hover:opacity-100 mb-6"
@@ -1517,13 +1517,12 @@ const StorefrontCheckout = () => {
                 {authMode === 'login' ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
               </button>
               <div className="border-t pt-2 my-2" style={{ borderColor: colors.secondary }} />
-              <button
-                type="button"
-                onClick={() => setShowLoginModal(false)}
-                className="text-xs font-medium opacity-50 hover:opacity-100"
+              <Link
+                to={`/store/${slug}/cart`}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 underline block pt-1"
               >
-                Continue as Guest
-              </button>
+                Cancel & Go Back to Cart
+              </Link>
             </div>
           </div>
         </div>
