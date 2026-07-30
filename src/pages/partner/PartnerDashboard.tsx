@@ -24,7 +24,6 @@ const PartnerDashboard = () => {
   const [verificationOtp, setVerificationOtp] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [fallbackOtp, setFallbackOtp] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
 
   // Wallet redemption state
@@ -210,7 +209,6 @@ const PartnerDashboard = () => {
   const sendOtpMutation = useMutation({
     mutationFn: async () => {
       setSendingOtp(true);
-      setFallbackOtp(null);
       setOtpSent(false);
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -225,40 +223,30 @@ const PartnerDashboard = () => {
 
       if (error) throw error;
 
-      // Invoke transactional email if setup
-      let emailSent = false;
+      // Send OTP via simple dedicated edge function
       try {
-        const res = await supabase.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "customer-otp",
-            recipientEmail: partner!.email,
-            idempotencyKey: `partner-otp-${partner!.id}-${Date.now()}`,
-            templateData: {
-              storeName: "PicToCart Partner Program",
-              otp: code,
-              purpose: "verification",
-            },
-          },
+        const res = await supabase.functions.invoke("send-partner-otp", {
+          body: { email: partner!.email, otp: code },
         });
         if (res.error) {
-          console.warn("Transactional email invoke returned error:", res.error);
-        } else {
-          emailSent = true;
+          console.warn("send-partner-otp failed:", res.error);
+        } else if (res.data?.success) {
+          return true;
         }
       } catch (e) {
-        console.warn("Transactional email invoke failed:", e);
+        console.warn("send-partner-otp invoke error:", e);
       }
 
-      return { emailSent, code };
+      return false;
     },
-    onSuccess: (result) => {
-      if (!result.emailSent) {
-        setFallbackOtp(result.code);
-        toast.info("Could not send email. Your verification code is shown below.", { duration: 10000 });
-      } else {
+    onSuccess: (sent) => {
+      qc.invalidateQueries({ queryKey: ["my-partner"] });
+      if (sent) {
         toast.success("Verification code sent to " + partner!.email);
+      } else {
+        toast.error("Could not send verification email. Please try again or contact support.");
       }
-      setOtpSent(true);
+      setOtpSent(sent); // only show OTP input if email was sent
       setSendingOtp(false);
     },
     onError: (e: any) => {
@@ -382,21 +370,6 @@ const PartnerDashboard = () => {
                 </Button>
               ) : (
                 <div className="space-y-4">
-                  {/* Fallback: show OTP code directly when email fails */}
-                  {fallbackOtp && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-center space-y-2">
-                      <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider">
-                        ⚠ Email service unavailable — use this code
-                      </p>
-                      <p className="text-3xl font-bold tracking-[0.3em] text-amber-300 font-mono">
-                        {fallbackOtp}
-                      </p>
-                      <p className="text-[10px] text-amber-500/70">
-                        This code will expire in 10 minutes
-                      </p>
-                    </div>
-                  )}
-
                   <div className="space-y-2">
                     <Label htmlFor="otp">Enter 6-Digit Code</Label>
                     <Input 
