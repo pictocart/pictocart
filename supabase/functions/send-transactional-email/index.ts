@@ -175,11 +175,12 @@ Deno.serve(async (req) => {
   let unsubscribeToken: string
 
   // Check for existing token for this email
-  const { data: existingToken, error: tokenLookupError } = await supabase
+  const { data: tokens, error: tokenLookupError } = await supabase
     .from('email_unsubscribe_tokens')
     .select('token, used_at')
     .eq('email', normalizedEmail)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
+    .limit(1)
 
   if (tokenLookupError) {
     console.error('Token lookup failed', {
@@ -202,18 +203,17 @@ Deno.serve(async (req) => {
     )
   }
 
+  const existingToken = tokens?.[0] || null
+
   if (existingToken && !existingToken.used_at) {
     // Reuse existing unused token
     unsubscribeToken = existingToken.token
   } else if (!existingToken) {
-    // Create new token — upsert handles concurrent inserts gracefully
+    // Create new token — standard insert is safe and doesn't require UNIQUE constraint on email
     unsubscribeToken = generateToken()
     const { error: tokenError } = await supabase
       .from('email_unsubscribe_tokens')
-      .upsert(
-        { token: unsubscribeToken, email: normalizedEmail },
-        { onConflict: 'email', ignoreDuplicates: true }
-      )
+      .insert({ token: unsubscribeToken, email: normalizedEmail })
 
     if (tokenError) {
       console.error('Failed to create unsubscribe token', {
@@ -234,36 +234,6 @@ Deno.serve(async (req) => {
         }
       )
     }
-
-    // If another request raced us, our upsert was silently ignored.
-    // Re-read to get the actual stored token.
-    const { data: storedToken, error: reReadError } = await supabase
-      .from('email_unsubscribe_tokens')
-      .select('token')
-      .eq('email', normalizedEmail)
-      .maybeSingle()
-
-    if (reReadError || !storedToken) {
-      console.error('Failed to read back unsubscribe token after upsert', {
-        error: reReadError,
-        email: normalizedEmail,
-      })
-      await supabase.from('email_send_log').insert({
-        message_id: messageId,
-        template_name: templateName,
-        recipient_email: effectiveRecipient,
-        status: 'failed',
-        error_message: 'Failed to confirm unsubscribe token storage',
-      })
-      return new Response(
-        JSON.stringify({ error: 'Failed to prepare email' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      )
-    }
-    unsubscribeToken = storedToken.token
   } else {
     // Token exists but is already used — email should have been caught by suppression check above.
     // This is a safety fallback; log and skip sending.
