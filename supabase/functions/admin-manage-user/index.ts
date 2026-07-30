@@ -114,12 +114,10 @@ Deno.serve(async (req) => {
       }, { onConflict: "user_id,role" });
       if (roleError) console.error("Failed to add partner role:", roleError);
       
-      // 5. Allocate licenses: 2 basic, 3 premium
+      // 5. Allocate default licenses: 10 starter licenses at ₹600 each
       try {
         await adminClient.rpc("allocate_partner_licenses", {
-          _partner_id: partnerData.id,
-          _qty_basic: 2,
-          _qty_premium: 3
+          _partner_id: partnerData.id
         });
       } catch (licError) {
         console.error("Failed to allocate default licenses:", licError);

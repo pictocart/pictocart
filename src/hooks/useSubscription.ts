@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from './useStore';
 
-export type PlanCode = 'free' | 'starter' | 'growth' | 'scale';
+export type PlanCode = 'free' | 'starter' | 'growth';
 
 export interface PlanConfig {
   id: string;

@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-    if (!['starter', 'growth', 'scale'].includes(plan)) {
+    if (!['starter', 'growth'].includes(plan)) {
       return new Response(JSON.stringify({ error: 'Invalid plan' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

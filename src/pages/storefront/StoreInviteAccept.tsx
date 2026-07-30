@@ -141,7 +141,7 @@ const StoreInviteAccept = () => {
     </div>
   );
 
-  const PLAN_PRICES: Record<string, number> = { starter: 5500, growth: 16500, scale: 55000 };
+  const PLAN_PRICES: Record<string, number> = { starter: 10989, growth: 21989 };
   const price = info?.plan ? PLAN_PRICES[info.plan] : undefined;
 
   return (

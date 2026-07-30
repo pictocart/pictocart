@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
 
     // Resolve which plan this subscription belongs to from notes (preferred) or razorpay_plan_id
     const planFromNotes = notes.plan;
-    let resolvedPlan: string | null = ['starter', 'growth', 'scale'].includes(planFromNotes)
+    let resolvedPlan: string | null = ['starter', 'growth'].includes(planFromNotes)
       ? planFromNotes
       : null;
     if (!resolvedPlan) {

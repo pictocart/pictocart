@@ -89,7 +89,7 @@ const PLAN: Section[] = [
     title: '6. Revenue Model',
     body: ['Seven compounding revenue streams that grow Average Revenue Per User (ARPU) over the seller lifetime:'],
     bullets: [
-      'Subscriptions: Free / Starter ₹499 / Growth ₹1,499 / Scale ₹4,999 per month.',
+      'Subscriptions: Free / Starter ₹999 / Growth ₹1,999 per month.',
       'Platform commission: 1–3% on Gross Merchandise Value (GMV) (tiered by plan).',
       'Premium themes: ₹500–2,000 one-time per AI-designed theme.',
       'AI Credits Wallet: pay-per-use for descriptions, images, blogs, theme generation.',

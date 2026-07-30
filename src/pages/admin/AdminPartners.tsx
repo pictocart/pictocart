@@ -1032,7 +1032,6 @@ const AdminPartners = () => {
                               <SelectContent>
                                 <SelectItem value="starter">Starter</SelectItem>
                                 <SelectItem value="growth">Growth</SelectItem>
-                                <SelectItem value="scale">Scale</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>

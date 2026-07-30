@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
     const { store_id, plan } = await req.json();
     if (!store_id || !plan) throw new Error("store_id and plan required");
-    if (!["starter", "growth", "scale"].includes(plan)) throw new Error("Invalid plan");
+    if (!["starter", "growth"].includes(plan)) throw new Error("Invalid plan");
 
     const admin = createClient(supabaseUrl, serviceKey);
     const { data: store } = await admin

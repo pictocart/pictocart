@@ -764,7 +764,7 @@ const LandingPage = () => {
               {
                 name: 'Starter',
                 tagline: 'For sellers ready to grow',
-                price: '₹499',
+                price: '₹999',
                 period: '/month',
                 commission: '2% convenience fee',
                 cta: 'Start with Starter',
@@ -785,7 +785,7 @@ const LandingPage = () => {
               {
                 name: 'Growth',
                 tagline: 'For serious brands scaling fast',
-                price: '₹1,499',
+                price: '₹1,999',
                 period: '/month',
                 commission: '1% convenience fee · 14-day trial',
                 cta: 'Try Growth Free',

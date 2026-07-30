@@ -28,7 +28,7 @@ const SEOSettings = () => {
   // Sync form with store data when store loads or updates
   useEffect(() => {
     if (!store) return;
-    const s = getStorefrontConfig(store).seo || {};
+    const s = (getStorefrontConfig(store).seo as any) || {};
     setForm({
       meta_title: s.meta_title || store.name || '',
       meta_description: s.meta_description || store.description || '',

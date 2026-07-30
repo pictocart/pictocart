@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
     const { store_id, client_email, plan = "starter" } = await req.json();
     if (!store_id || !client_email) throw new Error("store_id and client_email required");
-    if (!["starter", "growth", "scale"].includes(plan)) throw new Error("invalid plan");
+    if (!["starter", "growth"].includes(plan)) throw new Error("invalid plan");
 
     // Verify the caller is the partner that owns the store
     const { data: partner } = await admin.from("partners").select("id, name").eq("user_id", user.id).maybeSingle();

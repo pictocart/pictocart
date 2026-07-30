@@ -1,10 +1,10 @@
-import { useSubscription } from '@/hooks/useSubscription';
+import { FeatureKey, useSubscription } from '@/hooks/useSubscription';
 import { useNavigate } from 'react-router-dom';
 import { Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Props {
-  feature: keyof typeof import('@/hooks/useSubscription').PLAN_LIMITS['free'];
+  feature: FeatureKey;
   children: React.ReactNode;
   fallbackMessage?: string;
 }

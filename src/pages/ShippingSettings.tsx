@@ -472,7 +472,7 @@ const ShippingSettings = () => {
             />
           </div>
           <div className="flex gap-2 items-center">
-            <Button onClick={handleTestShiprocket} variant="outline" disabled={srTesting || !srEmail || !srPassword}>
+            <Button onClick={handleTestConnection} variant="outline" disabled={srTesting || !srEmail || !srPassword}>
               {srTesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Test Connection
             </Button>

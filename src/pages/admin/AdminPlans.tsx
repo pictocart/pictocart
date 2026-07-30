@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 interface PlanRow {
   id: string;
-  plan: 'free' | 'starter' | 'growth' | 'scale';
+  plan: 'free' | 'starter' | 'growth';
   display_name: string;
   price_inr: number;
   annual_price_inr: number;

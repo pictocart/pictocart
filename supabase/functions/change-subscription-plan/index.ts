@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     }
 
     const { store_id, new_plan } = await req.json()
-    if (!store_id || !['free', 'starter', 'growth', 'scale'].includes(new_plan)) {
+    if (!store_id || !['free', 'starter', 'growth'].includes(new_plan)) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

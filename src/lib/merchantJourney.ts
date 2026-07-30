@@ -66,7 +66,7 @@ export interface FAQ { q: string; a: string }
 export const topMerchantFAQs: FAQ[] = [
   {
     q: 'Is it really free? What\'s the catch?',
-    a: 'Yes. The Free plan lets you sell unlimited products, take orders, and use COD/UPI forever. We charge a small 3% convenience fee on Free, which drops to 2% on Starter (₹499) and 1% on Growth (₹1499). Premium themes, custom domains and advanced analytics are paid features — but you never need a credit card to start.',
+    a: 'Yes. The Free plan lets you sell unlimited products, take orders, and use COD/UPI forever. We charge a small 3% convenience fee on Free, which drops to 2% on Starter (₹999) and 1% on Growth (₹1999). Premium themes, custom domains and advanced analytics are paid features — but you never need a credit card to start.',
   },
   {
     q: 'How long does setup actually take?',
@@ -82,7 +82,7 @@ export const topMerchantFAQs: FAQ[] = [
   },
   {
     q: 'Can I use my own domain like mybrand.in?',
-    a: 'Yes — on Starter (₹499) and above. You point an A or CNAME record at our servers, and we issue an SSL certificate automatically. Multi-domain support comes on the Growth plan.',
+    a: 'Yes — on Starter (₹999) and above. You point an A or CNAME record at our servers, and we issue an SSL certificate automatically. Multi-domain support comes on the Growth plan.',
   },
 ];
 
@@ -102,8 +102,8 @@ export const merchantFAQs: FAQ[] = [
     a: 'Yes. You can bulk-import products via CSV, or just photograph them and let our AI rewrite the listings. Most sellers coming from Instagram/WhatsApp simply re-snap their best 10 products and go live the same day.',
   },
   {
-    q: 'What happens if I outgrow the platform?',
-    a: 'Scale plan (₹4999) unlocks unlimited everything with 0% commission. You also get early access to new features and a dedicated success manager. You can export your full product + order data anytime.',
+    q: 'Is there a limit to how much I can sell?',
+    a: 'None. Even on our Starter or Growth plans, you can process unlimited orders. We scale with your traffic automatically, and you can export your full product + order data anytime.',
   },
   {
     q: 'Is my store mobile-friendly?',

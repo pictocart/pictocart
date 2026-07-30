@@ -814,12 +814,6 @@ const PartnerDashboard = () => {
                           <strong className="text-purple-400 font-semibold mr-1">{(licensesQ.data ?? []).filter((l: any) => (l.license_type === "premium" || l.license_type === "growth") && l.status === "available").length}</strong> Available
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-rose-500/10 text-rose-400 border-rose-500/20">Scale</Badge>
-                        <span className="font-medium">
-                          <strong className="text-rose-400 font-semibold mr-1">{(licensesQ.data ?? []).filter((l: any) => l.license_type === "scale" && l.status === "available").length}</strong> Available
-                        </span>
-                      </div>
                     </div>
 
                     <div className="overflow-x-auto">
@@ -839,12 +833,10 @@ const PartnerDashboard = () => {
                               <td className="px-4 py-4 font-mono font-bold text-slate-100 select-all">{lic.license_key || "Generating..."}</td>
                               <td className="px-4 py-4">
                                 <Badge className={
-                                  (lic.license_type === "scale") ? "bg-rose-500/10 text-rose-400 border-rose-500/30" :
                                   (lic.license_type === "premium" || lic.license_type === "growth") ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : 
                                   "bg-orange-500/10 text-orange-400 border-orange-500/30"
                                 } variant="outline">
                                   {
-                                    (lic.license_type === "scale") ? "Scale" :
                                     (lic.license_type === "premium" || lic.license_type === "growth") ? "Growth" : 
                                     "Starter"
                                   }

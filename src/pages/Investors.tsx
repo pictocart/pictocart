@@ -209,7 +209,7 @@ const SlideRevenue = () => (
     <p className="text-xl text-white/70 mb-10">A SaaS base, marketplace economics, and AI credits — compounding ARPU.</p>
     <div className="grid md:grid-cols-2 gap-4">
       {[
-        { t: "Subscriptions", p: "Free / Starter ₹499 / Growth ₹1,499 / Scale ₹4,999 per month", v: "₹500 ARPU (Average Revenue Per User)" },
+        { t: "Subscriptions", p: "Free / Starter ₹999 / Growth ₹1,999 per month", v: "₹1,000 ARPU (Average Revenue Per User)" },
         { t: "Platform Commission", p: "1-3% on every GMV (Gross Merchandise Value) transaction (tiered by plan)", v: "₹150/seller/mo" },
         { t: "Premium Themes", p: "₹500-2,000 one-time per AI-designed theme", v: "₹300/seller LTV (Lifetime Value)" },
         { t: "AI Credits Wallet", p: "Pay-per-use generation (descriptions, images, blogs, themes)", v: "₹200/seller/mo" },
@@ -317,7 +317,7 @@ const SlideCustomer = () => (
     <div className="grid md:grid-cols-3 gap-5">
       {[
         { i: Clock, t: "5x Faster Setup", p: "Setup in minutes, not weeks. AI fills every field." },
-        { i: Coins, t: "10x Cheaper", p: "₹499/mo vs ₹2,500+ on Shopify. 0% commission on Scale plan." },
+        { i: Coins, t: "5x Cheaper", p: "₹999/mo vs ₹2,500+ on Shopify." },
         { i: Brain, t: "AI Co-Pilot", p: "Descriptions, blog, marketing copy, SEO (Search Engine Optimization) — written for you." },
         { i: Shield, t: "Made for Bharat", p: "GST (Goods & Services Tax) invoices, COD (Cash on Delivery), Shiprocket — out of the box." },
         { i: Crown, t: "Own Your Brand", p: "Custom domain. Branded emails. Full customer data." },

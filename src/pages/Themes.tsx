@@ -161,11 +161,8 @@ const Themes = () => {
       if (activeThemeId && activeThemeId !== theme.theme_id) {
         // 2) Check limits based on plan
         if (plan === 'free') {
-          const switches = stats.theme_switches || 0;
-          if (switches >= 2) {
-            toast.error("Free plan allows only 2 theme switches. Upgrade your plan to switch again.");
-            return;
-          }
+          toast.error("Theme switching is not allowed on the Free plan. Please upgrade your plan to switch themes.");
+          return;
         } else if (plan === 'starter') {
           const lastChanged = stats.theme_switches_last_changed;
           const todayDate = new Date().toDateString();
