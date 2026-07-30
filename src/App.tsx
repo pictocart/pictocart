@@ -37,11 +37,18 @@ const ScrollToTop = () => {
   return null;
 };
 
+import { useStore } from "@/hooks/useStore";
+
 const LandingPageWrapper = () => {
   const { user } = useAuth();
+  const { store, loading } = useStore();
+  
   // Don't redirect storefront customer accounts to the merchant dashboard
   if (user && user.user_metadata?.is_customer !== true) {
-    return <Navigate to="/dashboard" replace />;
+    if (loading) return null; // Wait for store data to resolve before deciding
+    if (store && (store.onboarding_step ?? 0) >= 4) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
   return <LandingPage />;
 };
