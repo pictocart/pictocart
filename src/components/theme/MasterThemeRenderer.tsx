@@ -1169,7 +1169,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         ` : ''}
       `}} />
       {/* Header is first child — sticky top-0 works against window scroll */}
-      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} storeCategory={storeCategory} />
+      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />
       {renderedSections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
@@ -1441,7 +1441,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   );
 }
 
-function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, headerOv, products, disabledPages = [], storeCategory }: any) {
+function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, headerOv, products, disabledPages = [], storeCategory, isFoodLayout }: any) {
   const base = storeSlug ? `/store/${storeSlug}` : "";
   const navigate = useNavigate();
   const location = useLocation();
