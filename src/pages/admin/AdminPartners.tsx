@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Eye, IndianRupee, Mail, Loader2, Copy, Ban, Trash2, Key, Users, BookOpen, Sparkles, CheckCircle2, X, AlertCircle } from "lucide-react";
+import { Plus, Eye, EyeOff, IndianRupee, Mail, Loader2, Copy, Ban, Trash2, Key, Users, BookOpen, Sparkles, CheckCircle2, X, AlertCircle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const parseEdgeFunctionError = async (error: any): Promise<Error> => {
@@ -39,6 +39,9 @@ const AdminPartners = () => {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [newPasswordVal, setNewPasswordVal] = useState("");
+  const [showNewPasswordPlain, setShowNewPasswordPlain] = useState(false);
 
   // Invite form state
   const [form, setForm] = useState({
@@ -275,6 +278,32 @@ const AdminPartners = () => {
       toast.error(e.message);
       setCreateError(e.message);
     },
+  });
+
+  const changePartnerPassword = useMutation({
+    mutationFn: async () => {
+      if (!selected?.user_id) throw new Error("No user ID associated with this partner");
+      if (newPasswordVal.length < 6) throw new Error("Password must be at least 6 characters");
+
+      const { data, error } = await supabase.functions.invoke("admin-manage-user", {
+        body: {
+          action: "reset_password",
+          userId: selected.user_id,
+          newPassword: newPasswordVal,
+        }
+      });
+      if (error) throw await parseEdgeFunctionError(error);
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success(`Password updated successfully for partner ${selected?.name}!`);
+      setChangePasswordOpen(false);
+      setNewPasswordVal("");
+    },
+    onError: (e: any) => {
+      toast.error(e.message || "Failed to update password");
+    }
   });
 
   // Mutate: Add Demo Shop
@@ -1217,7 +1246,7 @@ const AdminPartners = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-4 border-t">
+                <div className="flex gap-2 pt-4 border-t flex-wrap">
                   {selected.invite_status === "active" ? (
                     <Button variant="destructive" size="sm" onClick={() => updateStatus.mutate({ id: selected.id, status: "suspended" })}>
                       Suspend partner
@@ -1228,6 +1257,20 @@ const AdminPartners = () => {
                     </Button>
                   ) : (
                     <Button variant="outline" size="sm" disabled><Mail className="w-3.5 h-3.5 mr-1" /> Invite pending</Button>
+                  )}
+                  {selected.user_id && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        const randomPassword = "temp" + Math.floor(1000 + Math.random() * 9000);
+                        setNewPasswordVal(randomPassword);
+                        setShowNewPasswordPlain(true);
+                        setChangePasswordOpen(true);
+                      }}
+                    >
+                      <Key className="w-3.5 h-3.5 mr-1" /> Change Password
+                    </Button>
                   )}
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -1259,6 +1302,64 @@ const AdminPartners = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Password for {selected?.name}</DialogTitle>
+            <DialogDescription>
+              Set a new login password for this partner. For security reasons, the current password cannot be read from the database, but you can override it or generate a temporary one here.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="partner_new_pass">New Password *</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input 
+                    id="partner_new_pass"
+                    type={showNewPasswordPlain ? "text" : "password"} 
+                    placeholder="Enter at least 6 characters"
+                    value={newPasswordVal}
+                    onChange={(e) => setNewPasswordVal(e.target.value)}
+                    className="pr-10 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPasswordPlain(!showNewPasswordPlain)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800"
+                    title={showNewPasswordPlain ? "Hide password" : "Show password"}
+                  >
+                    {showNewPasswordPlain ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    const rand = "temp" + Math.floor(1000 + Math.random() * 9000);
+                    setNewPasswordVal(rand);
+                    setShowNewPasswordPlain(true);
+                  }}
+                  title="Generate random password"
+                >
+                  Generate
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangePasswordOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => changePartnerPassword.mutate()} 
+              disabled={changePartnerPassword.isPending || newPasswordVal.length < 6}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {changePartnerPassword.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Update Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
         <DialogContent>
