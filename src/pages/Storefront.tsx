@@ -91,9 +91,9 @@ const ProductRatingBadge = ({ productId }: { productId: string }) => {
 };
 
 const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
-  let page = pageProp;
+  const searchParams = new URLSearchParams(window.location.search);
+  let page = searchParams.get('page') || pageProp;
   const { slug } = useParams<{ slug: string }>();
-  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   const isOwnerPreview = searchParams.get('preview') === 'owner';
   const { store, products, loading, error } = useStorefront(slug || '', isOwnerPreview);
   const { user } = useCustomerAuth(slug || '');
@@ -889,17 +889,50 @@ const Layout1Nav1 = ({ theme, storeName }: any) => (
 );
 
 const Layout1Nav2 = ({ theme, storeName }: any) => (
-  <nav style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid " + theme.border, backgroundColor: theme.bg, position: "sticky", top: 0, zIndex: 50 }}>
-    <Menu size={20} color={theme.textPrimary} style={{ cursor: "pointer", flexShrink: 0 }} />
-    <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 999, border: "1px solid " + theme.border, backgroundColor: theme.bg === "#0f0f1a" ? "#ffffff0a" : "#00000008" }}>
-      <Search size={13} color={theme.textMuted} />
-      <span style={{ fontSize: 12, color: theme.textMuted }}>Search products...</span>
+  <nav 
+    className="flex items-center gap-4 px-6 py-4 sticky top-0 z-50 border-b backdrop-blur-md transition-shadow hover:shadow-md"
+    style={{ 
+      borderColor: theme.border, 
+      backgroundColor: `${theme.bg}ee`,
+    }}
+  >
+    <div className="flex items-center gap-3">
+      <div 
+        className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm tracking-tighter"
+        style={{ backgroundColor: theme.accent, color: '#000' }}
+      >
+        {storeName?.charAt(0)?.toUpperCase()}
+      </div>
+      <span 
+        className="font-black text-lg tracking-widest uppercase font-mono"
+        style={{ color: theme.textPrimary }}
+      >
+        {storeName}
+      </span>
     </div>
-    <div style={{ fontSize: 16, fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.02em", flexShrink: 0, color: theme.textPrimary }}>
-      {storeName}<span style={{ color: theme.accent }}>.</span>
+    
+    <div className="hidden md:flex flex-1 items-center justify-center gap-8 text-[10px] uppercase tracking-[0.2em] font-bold">
+      <span className="cursor-pointer hover:opacity-100 transition duration-300" style={{ color: theme.textPrimary, opacity: 0.8 }}>Shop</span>
+      <span className="cursor-pointer hover:opacity-100 transition duration-300" style={{ color: theme.textPrimary, opacity: 0.8 }}>Collections</span>
+      <span className="cursor-pointer hover:opacity-100 transition duration-300" style={{ color: theme.textPrimary, opacity: 0.8 }}>About</span>
     </div>
-    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 999, backgroundColor: theme.accent, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-      <ShoppingCart size={13} />Cart
+    
+    <div className="flex items-center gap-4 ml-auto">
+      <div 
+        className="flex items-center gap-2 px-4 py-2 border transition-all duration-300 rounded-full text-xs font-bold uppercase tracking-wider"
+        style={{ borderColor: `${theme.accent}50`, color: theme.accent, cursor: "pointer" }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = `0 0 15px ${theme.accent}40`;
+          e.currentTarget.style.borderColor = theme.accent;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = 'none';
+          e.currentTarget.style.borderColor = `${theme.accent}50`;
+        }}
+      >
+        <ShoppingCart size={14} />
+        <span>Cart</span>
+      </div>
     </div>
   </nav>
 );

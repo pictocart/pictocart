@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Store, Ticket, Loader2, LogOut, Send, Wallet as WalletIcon, Palette, Users, Sparkles, BookOpen, Key, CheckCircle2, AlertTriangle, ShieldCheck, Sun, Moon, LayoutGrid } from "lucide-react";
+import { Plus, Store, Ticket, Loader2, LogOut, Send, Wallet as WalletIcon, Palette, Users, Sparkles, BookOpen, Key, CheckCircle2, AlertTriangle, ShieldCheck, Sun, Moon, LayoutGrid, User, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { CustomThemeBuilderModal } from "@/components/onboarding/StepTheme";
@@ -19,6 +19,14 @@ const PartnerDashboard = () => {
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState("stores");
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("partner-theme") !== "light");
+
+  // Partner Profile states
+  const [partnerName, setPartnerName] = useState("");
+  const [profileUpdating, setProfileUpdating] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
 
   // Email verification state
   const [verificationOtp, setVerificationOtp] = useState("");
@@ -317,6 +325,57 @@ const PartnerDashboard = () => {
       toast.error(e.message || "Failed to redeem code");
     } finally {
       setRedeeming(false);
+    }
+  };
+
+  useEffect(() => {
+    if (partner?.name) {
+      setPartnerName(partner.name);
+    }
+  }, [partner?.name]);
+
+  const updateProfileName = async () => {
+    if (!partnerName.trim()) {
+      toast.error("Please enter a name");
+      return;
+    }
+    setProfileUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("partners")
+        .update({ name: partnerName.trim() })
+        .eq("id", partner!.id);
+
+      if (error) throw error;
+      toast.success("Profile details updated successfully!");
+      qc.invalidateQueries({ queryKey: ["my-partner", user?.id] });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update profile details");
+    } finally {
+      setProfileUpdating(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    setPasswordUpdating(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Password updated successfully!");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update password");
+    } finally {
+      setPasswordUpdating(false);
     }
   };
 
@@ -621,6 +680,9 @@ const PartnerDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="wallet" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
               <WalletIcon className="w-4 h-4" /> AI Wallet
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
+              <User className="w-4 h-4" /> Profile
             </TabsTrigger>
             {/* 
             <TabsTrigger value="themes" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 gap-2">
@@ -956,6 +1018,118 @@ const PartnerDashboard = () => {
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          </TabsContent>
+
+          {/* 5. Profile Tab */}
+          <TabsContent value="profile">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Partner Profile Settings */}
+              <Card className="border-slate-800 bg-slate-900/40">
+                <CardHeader>
+                  <CardTitle className="text-slate-100 dark:text-white flex items-center gap-2">
+                    <User className="w-5 h-5 text-orange-500" />
+                    Profile Details
+                  </CardTitle>
+                  <CardDescription className="text-slate-400">View and update your partner account details.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="partner-name">Full Name</Label>
+                    <Input 
+                      id="partner-name" 
+                      value={partnerName}
+                      onChange={(e) => setPartnerName(e.target.value)}
+                      className="bg-slate-950 border-slate-800 text-slate-100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="partner-email">Email Address</Label>
+                    <Input 
+                      id="partner-email" 
+                      value={partner.email}
+                      disabled
+                      className="bg-slate-950 border-slate-800 text-slate-400 opacity-60"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Partner Type</Label>
+                      <Input 
+                        value={partner.partner_type}
+                        disabled
+                        className="bg-slate-950 border-slate-800 text-slate-400 opacity-60 capitalize"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Referral Code</Label>
+                      <Input 
+                        value={partner.referral_code}
+                        disabled
+                        className="bg-slate-950 border-slate-800 text-slate-400 opacity-60 font-mono"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={updateProfileName} 
+                    disabled={profileUpdating || !partnerName.trim()} 
+                    className="bg-orange-600 hover:bg-orange-700 text-white font-medium"
+                  >
+                    {profileUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Save Details
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Password Settings */}
+              <Card className="border-slate-800 bg-slate-900/40">
+                <CardHeader>
+                  <CardTitle className="text-slate-100 dark:text-white flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-orange-500" />
+                    Change Password
+                  </CardTitle>
+                  <CardDescription className="text-slate-400">Update your account password. Must be at least 6 characters.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <div className="relative">
+                      <Input 
+                        id="new-password" 
+                        type={showPassword ? "text" : "password"} 
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="bg-slate-950 border-slate-800 text-slate-100 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                      >
+                        {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Input 
+                      id="confirm-password" 
+                      type={showPassword ? "text" : "password"} 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="bg-slate-950 border-slate-800 text-slate-100"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handlePasswordChange} 
+                    disabled={passwordUpdating || !newPassword || !confirmPassword} 
+                    className="bg-orange-600 hover:bg-orange-700 text-white font-medium"
+                  >
+                    {passwordUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Update Password
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 

@@ -296,6 +296,8 @@ const ProductForm = () => {
   const isEdit = !!id;
   const navigate = useNavigate();
   const { store, setStore } = useStore();
+  const FOOD_CATEGORIES = ['food', 'grocery', 'bakery', 'restaurant', 'cafe', 'cloud kitchen', 'beverage', 'organic', 'catering', 'dairy', 'snacks', 'sweets'];
+  const isFoodStore = !!(store?.category && FOOD_CATEGORIES.some((k) => store.category.toLowerCase().includes(k)));
   const { parentCategories, getSubcategories, createCategory, loading: loadingCategories } = useCategories();
   const { products, createProduct, updateProduct } = useProducts();
   const { plan, limits } = useSubscription();
@@ -1007,31 +1009,33 @@ const ProductForm = () => {
                 </Select>
                 {!category && <p className="text-xs text-destructive">Category is required</p>}
               </div>
-              <div className="space-y-1.5 pt-1">
-                <Label>Food / Meal Type (Multi-select)</Label>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  {(['breakfast', 'lunch', 'dinner', 'drink'] as const).map((type) => (
-                    <label
-                      key={type}
-                      className="flex items-center gap-2 text-xs font-medium cursor-pointer border rounded-lg p-2 hover:bg-stone-50 transition"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={mealTypes.includes(type)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setMealTypes([...mealTypes, type]);
-                          } else {
-                            setMealTypes(mealTypes.filter((t) => t !== type));
-                          }
-                        }}
-                        className="rounded border-stone-300 text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span className="capitalize">{type === 'drink' ? 'drink / beverage' : type}</span>
-                    </label>
-                  ))}
+              {isFoodStore && (
+                <div className="space-y-1.5 pt-1">
+                  <Label>Food / Meal Type (Multi-select)</Label>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {(['breakfast', 'lunch', 'dinner', 'drink'] as const).map((type) => (
+                      <label
+                        key={type}
+                        className="flex items-center gap-2 text-xs font-medium cursor-pointer border rounded-lg p-2 hover:bg-stone-50 transition"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={mealTypes.includes(type)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setMealTypes([...mealTypes, type]);
+                            } else {
+                              setMealTypes(mealTypes.filter((t) => t !== type));
+                            }
+                          }}
+                          className="rounded border-stone-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                        />
+                        <span className="capitalize">{type === 'drink' ? 'drink / beverage' : type}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="sku">SKU <span className="text-destructive">*</span></Label>
                 <Input

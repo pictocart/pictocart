@@ -110,18 +110,30 @@ const ProductList = () => {
           throw new Error("CSV file must contain a header row and at least one product row");
         }
 
-        const headers = parsed[0].map(h => h.toLowerCase().trim().replace(/['"']/g, ''));
+        const headers = parsed[0].map(h => h.toLowerCase().trim().replace(/['"]/g, ''));
         const rows = parsed.slice(1);
 
-        // Required headers validation
-        const titleIndex = headers.indexOf('title');
-        const priceIndex = headers.indexOf('price');
+        // Required headers mapping
+        const titleIndex = headers.findIndex(h => h === 'title' || h === '*title');
+        const shortDescIndex = headers.findIndex(h => h === 'short description' || h === 'short_description');
+        const descIndex = headers.findIndex(h => h === 'description');
+        const categoryIndex = headers.findIndex(h => h === 'category' || h === '*category');
+        const skuIndex = headers.findIndex(h => h === 'sku' || h === '*sku' || h.includes('sku'));
+        const mrpIndex = headers.findIndex(h => h === 'mrp' || h === 'compare_at_price');
+        const discountIndex = headers.findIndex(h => h.includes('discount'));
+        const sellingPriceIndex = headers.findIndex(h => h === 'selling price' || h === 'selling_price' || h === 'price');
+        const costPriceIndex = headers.findIndex(h => h === 'cost price' || h === 'cost_price');
+        const gstIndex = headers.findIndex(h => h === 'gst %' || h === 'gst' || h === 'tax_rate' || h.includes('gst'));
+        const returnableIndex = headers.findIndex(h => h.includes('returnable'));
+        const returnDaysIndex = headers.findIndex(h => h.includes('no of days under which return'));
+        const exchangeableIndex = headers.findIndex(h => h === 'exchangeable' || h.includes('exchangeable'));
+        const exchangeDaysIndex = headers.findIndex(h => h.includes('exchange is allowed'));
 
         if (titleIndex === -1) {
-          throw new Error("CSV must contain a 'title' column");
+          throw new Error("CSV must contain a '*TITLE' column");
         }
-        if (priceIndex === -1) {
-          throw new Error("CSV must contain a 'price' column");
+        if (sellingPriceIndex === -1) {
+          throw new Error("CSV must contain a 'Selling Price' column");
         }
 
         // Check subscription limits
@@ -137,30 +149,74 @@ const ProductList = () => {
             is_exchangeable: true,
             return_window_days: 7,
             exchange_window_days: 7,
+            price: 0,
+            compare_at_price: null,
+            cost_price: 0,
+            tax_rate: 0,
           };
 
-          headers.forEach((header, colIdx) => {
-            const val = row[colIdx];
-            if (header === 'title') item.title = val?.trim();
-            else if (header === 'description') item.description = val?.trim() || null;
-            else if (header === 'short_description') item.short_description = val?.trim() || null;
-            else if (header === 'price') item.price = Number(val) || 0;
-            else if (header === 'compare_at_price') item.compare_at_price = val ? Number(val) : null;
-            else if (header === 'category') item.category = val?.trim() || null;
-            else if (header === 'sku') item.sku = val?.trim() || null;
-            else if (header === 'inventory_count') item.inventory_count = val ? Number(val) : 0;
-            else if (header === 'cost_price') item.cost_price = val ? Number(val) : 0;
-            else if (header === 'tax_rate') item.tax_rate = val ? Number(val) : 0;
-            else if (header === 'tags') item.tags = val ? val.split(';').flatMap(t => t.split(',')).map(t => t.trim()).filter(Boolean) : [];
-          });
+          if (titleIndex !== -1 && row[titleIndex]) {
+            item.title = row[titleIndex].trim();
+          }
+          if (shortDescIndex !== -1 && row[shortDescIndex]) {
+            item.short_description = row[shortDescIndex].trim() || null;
+          }
+          if (descIndex !== -1 && row[descIndex]) {
+            item.description = row[descIndex].trim() || null;
+          }
+          if (categoryIndex !== -1 && row[categoryIndex]) {
+            item.category = row[categoryIndex].trim() || null;
+          }
+          if (skuIndex !== -1 && row[skuIndex]) {
+            item.sku = row[skuIndex].trim() || null;
+          }
+
+          let mrpVal: number | null = null;
+          if (mrpIndex !== -1 && row[mrpIndex]) {
+            mrpVal = Number(row[mrpIndex].replace(/[^0-9.]/g, '')) || null;
+            item.compare_at_price = mrpVal;
+          }
+
+          let discountVal = 0;
+          if (discountIndex !== -1 && row[discountIndex]) {
+            discountVal = Number(row[discountIndex].replace(/[^0-9.]/g, '')) || 0;
+          }
+
+          if (sellingPriceIndex !== -1 && row[sellingPriceIndex]) {
+            item.price = Number(row[sellingPriceIndex].replace(/[^0-9.]/g, '')) || 0;
+          } else if (mrpVal !== null && discountVal > 0) {
+            item.price = Math.round(mrpVal * (1 - discountVal / 100));
+          }
+
+          if (costPriceIndex !== -1 && row[costPriceIndex]) {
+            item.cost_price = Number(row[costPriceIndex].replace(/[^0-9.]/g, '')) || 0;
+          }
+          if (gstIndex !== -1 && row[gstIndex]) {
+            item.tax_rate = Number(row[gstIndex].replace(/[^0-9.]/g, '')) || 0;
+          }
+
+          if (returnableIndex !== -1 && row[returnableIndex]) {
+            const val = row[returnableIndex].trim().toLowerCase();
+            item.is_returnable = (val === 'y' || val === 'yes' || val === 'true' || val === '1');
+          }
+          if (returnDaysIndex !== -1 && row[returnDaysIndex]) {
+            item.return_window_days = parseInt(row[returnDaysIndex].replace(/[^0-9]/g, ''), 10) || 7;
+          }
+
+          if (exchangeableIndex !== -1 && row[exchangeableIndex]) {
+            const val = row[exchangeableIndex].trim().toLowerCase();
+            item.is_exchangeable = (val === 'y' || val === 'yes' || val === 'true' || val === '1');
+          }
+          if (exchangeDaysIndex !== -1 && row[exchangeDaysIndex]) {
+            item.exchange_window_days = parseInt(row[exchangeDaysIndex].replace(/[^0-9]/g, ''), 10) || 7;
+          }
 
           if (!item.title) {
             throw new Error(`Row ${idx + 2}: Title is required`);
           }
           if (isNaN(item.price) || item.price <= 0) {
-            throw new Error(`Row ${idx + 2}: Price must be a valid positive number`);
+            throw new Error(`Row ${idx + 2}: Selling Price must be a valid positive number`);
           }
-
           if (!item.sku) {
             item.sku = 'SKU-' + Math.random().toString(36).substring(2, 11).toUpperCase();
           }
@@ -192,10 +248,11 @@ const ProductList = () => {
   };
 
   const downloadSampleCSV = () => {
-    const csvContent = "title,description,price,compare_at_price,category,sku,inventory_count,tags,cost_price,tax_rate\n" +
-      '"Sample T-Shirt","A comfortable cotton t-shirt",599,799,"Clothing","TSHIRT-001",100,"clothing,tshirt,summer",250,5\n' +
-      '"Running Shoes","Lightweight running shoes for athletes",2499,2999,"Footwear","SHOES-001",50,"shoes,running,sports",1200,12\n' +
-      '"Water Bottle","Stainless steel insulated water bottle",799,999,"Accessories","BOTTLE-001",200,"accessories,bottle",300,18\n';
+    const headers = "*TITLE,SHORT DESCRIPTION,DESCRIPTION,*CATEGORY,*SKU (unique item codes),MRP,Discount %,Selling Price,Cost Price,GST %,Returnable(Y/N),No of days under which Return is allowed,Exchangeable,number of days Exchange is allowed";
+    const row1 = '"Aero Smartwatch Pro","Telemetry logger","Heart monitoring & custom dials","Electronics","AERO-SMART-PRO",4999,50,2499,1200,18,"Y",7,"Y",7';
+    const row2 = '"Smart Digital Microwave","Auto cooking","Multi-stage auto cooking","Appliances","SMART-MICROWAVE",9999,35,6499,3500,12,"Y",7,"Y",7';
+    const row3 = '"Water Bottle","Insulated bottle","Stainless steel insulated water bottle","Accessories","BOTTLE-001",999,20,799,300,18,"N",0,"N",0';
+    const csvContent = headers + "\n" + row1 + "\n" + row2 + "\n" + row3 + "\n";
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -502,15 +559,20 @@ const ProductList = () => {
             <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-3 text-xs text-muted-foreground space-y-2">
               <p className="font-semibold text-slate-700">Supported columns in CSV:</p>
               <ul className="list-disc pl-4 space-y-1">
-                <li><span className="font-semibold text-slate-700">title</span> (required) — e.g. "Running Shoes"</li>
-                <li><span className="font-semibold text-slate-700">price</span> (required) — numeric, e.g. 1299</li>
-                <li><span className="font-semibold text-slate-700">compare_at_price</span> — numeric MRP, e.g. 1999</li>
-                <li><span className="font-semibold text-slate-700">description</span> — product details</li>
-                <li><span className="font-semibold text-slate-700">short_description</span> — short summary</li>
-                <li><span className="font-semibold text-slate-700">category</span> — product category</li>
-                <li><span className="font-semibold text-slate-700">sku</span> — unique identifier (auto-generated if empty)</li>
-                <li><span className="font-semibold text-slate-700">inventory_count</span> — initial stock, e.g. 50</li>
-                <li><span className="font-semibold text-slate-700">tags</span> — comma-separated tags, e.g. "shoes,sports"</li>
+                <li><span className="font-semibold text-slate-700">*TITLE</span> (required) — e.g. "Running Shoes"</li>
+                <li><span className="font-semibold text-slate-700">Selling Price</span> (required) — numeric, e.g. 1299</li>
+                <li><span className="font-semibold text-slate-700">MRP</span> — original retail price, e.g. 1999</li>
+                <li><span className="font-semibold text-slate-700">Discount %</span> — numeric discount percentage, e.g. 10</li>
+                <li><span className="font-semibold text-slate-700">DESCRIPTION</span> — product details</li>
+                <li><span className="font-semibold text-slate-700">SHORT DESCRIPTION</span> — short summary</li>
+                <li><span className="font-semibold text-slate-700">*CATEGORY</span> — product category</li>
+                <li><span className="font-semibold text-slate-700">*SKU (unique item codes)</span> — unique identifier</li>
+                <li><span className="font-semibold text-slate-700">Cost Price</span> — vendor purchase price</li>
+                <li><span className="font-semibold text-slate-700">GST %</span> — tax rate percentage, e.g. 18</li>
+                <li><span className="font-semibold text-slate-700">Returnable(Y/N)</span> — Y or N</li>
+                <li><span className="font-semibold text-slate-700">No of days under which Return is allowed</span> — e.g. 7</li>
+                <li><span className="font-semibold text-slate-700">Exchangeable</span> — Y or N</li>
+                <li><span className="font-semibold text-slate-700">number of days Exchange is allowed</span> — e.g. 7</li>
               </ul>
             </div>
 

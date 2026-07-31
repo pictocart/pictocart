@@ -366,10 +366,191 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
     ...((overrides as any)?.header || {}),
   };
 
+  const { totalItems, addItem } = useCart(storeSlug || "");
+
+  useEffect(() => {
+    // Keep custom HTML header cart count badge in sync
+    const badge = document.getElementById('header-cart-count');
+    if (badge) {
+      badge.innerText = String(totalItems);
+    }
+  }, [totalItems, page, manifest]);
+
   useMemo(() => { loadFont(fonts.heading); loadFont(fonts.body); }, [fonts.heading, fonts.body]);
 
   useEffect(() => {
-    if (!isFoodLayout) return;
+    // Initial theme sync
+    const savedMode = localStorage.getItem('theme-mode');
+    if (savedMode === 'light') {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // 1. Sidebar open button click
+      const openBtn = target.closest('#open-sidebar-btn');
+      if (openBtn) {
+        document.getElementById('sidebar-overlay')?.classList.add('open');
+        document.getElementById('sidebar-drawer')?.classList.add('open');
+        return;
+      }
+      
+      // 2. Sidebar close button click or overlay click
+      const closeBtn = target.closest('#close-sidebar-btn') || target.closest('#sidebar-overlay');
+      if (closeBtn) {
+        document.getElementById('sidebar-overlay')?.classList.remove('open');
+        document.getElementById('sidebar-drawer')?.classList.remove('open');
+        return;
+      }
+      
+      // 3. Theme mode toggle button click
+      const themeBtn = target.closest('#theme-toggle-btn');
+      if (themeBtn) {
+        const htmlEl = document.documentElement;
+        const isCurrentlyLight = htmlEl.classList.contains('light-mode');
+        if (isCurrentlyLight) {
+          htmlEl.classList.remove('light-mode');
+          localStorage.setItem('theme-mode', 'dark');
+        } else {
+          htmlEl.classList.add('light-mode');
+          localStorage.setItem('theme-mode', 'light');
+        }
+        return;
+      }
+      
+      // 4. Hero slider prev button click
+      const prevBtn = target.closest('#hero-prev-btn');
+      if (prevBtn) {
+        const track = document.getElementById('hero-slider-track');
+        if (track) {
+          let activeIdx = parseInt(track.getAttribute('data-active-index') || '1', 10);
+          activeIdx = activeIdx - 1;
+          if (activeIdx < 1) activeIdx = 4;
+          
+          const offset = (activeIdx - 1) * -25;
+          track.style.transform = `translateX(${offset}%)`;
+          track.setAttribute('data-active-index', String(activeIdx));
+        }
+        return;
+      }
+      
+      // 5. Hero slider next button click
+      const nextBtn = target.closest('#hero-next-btn');
+      if (nextBtn) {
+        const track = document.getElementById('hero-slider-track');
+        if (track) {
+          let activeIdx = parseInt(track.getAttribute('data-active-index') || '1', 10);
+          activeIdx = activeIdx + 1;
+          if (activeIdx > 4) activeIdx = 1;
+          
+          const offset = (activeIdx - 1) * -25;
+          track.style.transform = `translateX(${offset}%)`;
+          track.setAttribute('data-active-index', String(activeIdx));
+        }
+        return;
+      }
+
+      // 6. Custom HTML Cart Icon click on product card
+      const addToCartBtn = target.closest('button[title="Add to Cart"]') || target.closest('.custom-add-to-cart-btn');
+      if (addToCartBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const card = addToCartBtn.closest('.group') || addToCartBtn.closest('.rounded-2xl') || addToCartBtn.closest('.border') || addToCartBtn.closest('div');
+        if (card) {
+          const title = card.querySelector('h3')?.innerText?.trim() || 'Product';
+          const priceText = card.textContent?.match(/₹\s*([\d,]+)/)?.[1] || '0';
+          const price = parseInt(priceText.replace(/,/g, ''), 10) || 0;
+          const img = card.querySelector('img')?.src || '';
+          
+          const realProduct = products?.find((p: any) => p.title.toLowerCase().trim() === title.toLowerCase()) 
+            || products?.find((p: any) => title.toLowerCase().includes(p.title.toLowerCase())) 
+            || products?.[0];
+            
+          if (realProduct) {
+            addItem({
+              productId: realProduct.id,
+              title: realProduct.title,
+              price: realProduct.price,
+              image: realProduct.images?.[0] || img,
+            });
+          } else {
+            addItem({
+              productId: 'mock-' + title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+              title: title,
+              price: price,
+              image: img,
+            });
+          }
+          
+          const badge = document.getElementById('header-cart-count');
+          if (badge) {
+            badge.innerText = String(totalItems + 1);
+          }
+          
+          if (typeof (window as any).triggerParabolicFly === 'function') {
+            (window as any).triggerParabolicFly({ currentTarget: addToCartBtn }, 1);
+          }
+        }
+        return;
+      }
+
+      // 7. Custom HTML Buy Now button click
+      const isBuyNow = target.closest('button')?.innerText?.toLowerCase()?.includes('buy now');
+      if (isBuyNow) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const btnElement = target.closest('button');
+        const card = btnElement?.closest('.group') || btnElement?.closest('.rounded-2xl') || btnElement?.closest('.border') || btnElement?.closest('div');
+        if (card) {
+          const title = card.querySelector('h3')?.innerText?.trim() || 'Product';
+          const priceText = card.textContent?.match(/₹\s*([\d,]+)/)?.[1] || '0';
+          const price = parseInt(priceText.replace(/,/g, ''), 10) || 0;
+          const img = card.querySelector('img')?.src || '';
+          
+          const realProduct = products?.find((p: any) => p.title.toLowerCase().trim() === title.toLowerCase()) 
+            || products?.find((p: any) => title.toLowerCase().includes(p.title.toLowerCase())) 
+            || products?.[0];
+            
+          if (realProduct) {
+            addItem({
+              productId: realProduct.id,
+              title: realProduct.title,
+              price: realProduct.price,
+              image: realProduct.images?.[0] || img,
+            });
+          } else {
+            addItem({
+              productId: 'mock-' + title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+              title: title,
+              price: price,
+              image: img,
+            });
+          }
+          
+          if (typeof onNavigate === 'function') {
+            onNavigate('cart');
+          } else {
+            window.location.search = `?page=cart` + (window.location.search.includes('preview_theme') ? '&preview_theme=theme-streetwear-neon' : '');
+          }
+        }
+        return;
+      }
+    };
+    
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, [products, addItem, totalItems, onNavigate]);
+
+  useEffect(() => {
+    const runReveal = isFoodLayout || themeId === "theme-streetwear-neon";
+    if (!runReveal) return;
     // Select all sections and footers to observe
     const elements = document.querySelectorAll('[data-section-index], [data-section-anchor="footer"]');
     const observer = new IntersectionObserver((entries) => {
@@ -632,8 +813,9 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
       <div className="scroll-progress-indicator" />
       <style dangerouslySetInnerHTML={{ __html: `
         body {
-          background-color: hsl(${hslBg}) !important;
-          color: hsl(${hslFg}) !important;
+          background-color: var(--bg) !important;
+          color: var(--fg) !important;
+          transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* Floating Scroll Progress Bar */
@@ -659,12 +841,34 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           }
           to {
             opacity: 1;
-            filter: blur(0);
-            transform: translateY(0);
+            filter: none;
+            transform: none;
           }
         }
         .animate-page-enter {
           animation: pageFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Sticky Header for Streetwear Neon theme */
+        [data-master-theme] header {
+          position: sticky !important;
+          top: 0 !important;
+          z-index: 50 !important;
+        }
+
+        /* Prevent cart button overflow clipping the badge count */
+        [data-master-theme] #header-cart-btn {
+          overflow: visible !important;
+        }
+
+        /* Badge Pop Animation */
+        @keyframes badgePop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.4); }
+          100% { transform: scale(1); }
+        }
+        .animate-badge-pop {
+          animation: badgePop 0.3s ease-out;
         }
 
         /* Smooth Scrolling */
@@ -1172,7 +1376,11 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         ` : ''}
       `}} />
       {/* Header is first child — sticky top-0 works against window scroll */}
-      <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />
+      {manifest?.header?.is_custom_html && manifest?.header?.html ? (
+        <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: String(manifest.header.html).replace(/{STORE_NAME}/g, brandName || '') }} />
+      ) : (
+        <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />
+      )}
       {renderedSections.map((s: any, i: number) => {
         // Merge overrides on top of manifest props.
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
@@ -1293,7 +1501,11 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         style={{ scrollMarginTop: 80, ...footerStyle }}
         {...footerAttrs}
       >
-        <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
+        {manifest?.footer?.is_custom_html && manifest?.footer?.html ? (
+          <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: String(manifest.footer.html).replace(/{STORE_NAME}/g, brandName || '') }} />
+        ) : (
+          <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
+        )}
       </div>
 
       {activeOrders && activeOrders.length > 0 && (
@@ -2037,6 +2249,9 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
 
 function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFoodLayout }: any) {
   const p = s.props ?? {};
+  if (p.is_custom_html && p.html) {
+    return <div dangerouslySetInnerHTML={{ __html: String(p.html) }} />;
+  }
   // If image was explicitly cleared via override (image === ""), do not render image.
   switch (s.type) {
     case "hero": return <Hero p={p} dna={dna} storeSlug={storeSlug} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />;
@@ -2206,11 +2421,11 @@ function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFo
       }
 
       return (
-        <section className="py-20" style={{ background: dna.palette?.surface }}>
+        <section className="py-20 theme-surface-color" style={{ background: dna.palette?.surface }}>
           <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-4xl mb-6 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
-              <p className="leading-relaxed s-body" style={{ color: dna.palette?.muted }}>{p.body}</p>
+              <h2 className="text-4xl mb-6 s-title theme-fg-color" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
+              <p className="leading-relaxed s-body theme-muted-color" style={{ color: dna.palette?.muted }}>{p.body}</p>
             </div>
             {p.image && (
               <div className="flex justify-center w-full">
@@ -2247,11 +2462,11 @@ function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFo
           const title = isObj ? (v.title || v.name || "") : "";
           const body = isObj ? (v.body || v.description || "") : v;
           return (
-            <div key={i} className="p-6 border flex flex-col justify-between" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", borderColor: dna.palette?.border }}>
+            <div key={i} className="p-6 border flex flex-col justify-between theme-surface-color theme-border-color" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", borderColor: dna.palette?.border }}>
               <div>
                 <Sparkles className="h-5 w-5 mb-3" style={{ color: dna.palette?.accent }} />
-                {title && <h3 className="font-bold text-base mb-1" style={{ color: dna.palette?.fg }}>{title}</h3>}
-                <div className="text-sm leading-relaxed opacity-85" style={{ color: dna.palette?.fg }}>{body}</div>
+                {title && <h3 className="font-bold text-base mb-1 theme-fg-color" style={{ color: dna.palette?.fg }}>{title}</h3>}
+                <div className="text-sm leading-relaxed opacity-85 theme-fg-color" style={{ color: dna.palette?.fg }}>{body}</div>
               </div>
             </div>
           );
@@ -2275,16 +2490,16 @@ function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFo
       const phone = p.phone || "+91 98765 43210";
       return (
         <section className="max-w-6xl mx-auto px-6 py-12 animate-fade-in">
-          <div className="grid md:grid-cols-2 gap-8 items-stretch border rounded-2xl overflow-hidden shadow-sm" style={{ borderColor: dna.palette?.border, background: dna.palette?.surface }}>
+          <div className="grid md:grid-cols-2 gap-8 items-stretch border rounded-2xl overflow-hidden shadow-sm theme-border-color theme-surface-color" style={{ borderColor: dna.palette?.border, background: dna.palette?.surface }}>
             <div className="p-6 md:p-8 space-y-6 flex flex-col justify-center">
-              <h2 className="text-xl font-bold" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>{p.title || 'Visit Our Store'}</h2>
-              {p.subtitle && <p className="text-xs" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
+              <h2 className="text-xl font-bold theme-fg-color" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>{p.title || 'Visit Our Store'}</h2>
+              {p.subtitle && <p className="text-xs theme-muted-color" style={{ color: dna.palette?.muted }}>{p.subtitle}</p>}
               <div className="space-y-4 text-xs leading-relaxed">
                 <div className="flex gap-3 items-start">
                   <span className="text-sm">📍</span>
                   <div>
-                    <p className="font-semibold" style={{ color: dna.palette?.fg }}>Address</p>
-                    <p style={{ color: dna.palette?.muted }}>{address}</p>
+                    <p className="font-semibold theme-fg-color" style={{ color: dna.palette?.fg }}>Address</p>
+                    <p className="theme-muted-color" style={{ color: dna.palette?.muted }}>{address}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
@@ -4991,18 +5206,18 @@ function TestimonialsBlock({ p, dna, storeSlug }: any) {
 
   return (
     <section className="max-w-6xl mx-auto px-6 py-20">
-      {p.title && <h2 className="text-3xl mb-8 text-center" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>}
+      {p.title && <h2 className="text-3xl mb-8 text-center theme-fg-color" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>}
       <div className="grid md:grid-cols-3 gap-6">
         {items.map((t: any, i: number) => (
-          <div key={i} className="p-6" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", border: `1px solid ${dna.palette?.border}` }}>
+          <div key={i} className="p-6 theme-surface-color theme-border-color" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", border: `1px solid ${dna.palette?.border}` }}>
             <div className="flex gap-1 mb-3">
               {[...Array(t.rating || 5)].map((_, k) => <Star key={k} className="h-4 w-4 fill-current" style={{ color: dna.palette?.accent }} />)}
             </div>
-            <p className="text-sm mb-4 leading-relaxed">"{t.quote}"</p>
+            <p className="text-sm mb-4 leading-relaxed theme-fg-color">"{t.quote}"</p>
             <div className="flex items-center gap-3">
               {t.photo && <img src={t.photo} className="h-9 w-9 rounded-full object-cover" />}
-              <div className="text-xs" style={{ color: dna.palette?.muted }}>
-                <div className="font-medium" style={{ color: dna.palette?.fg }}>{t.author}</div>
+              <div className="text-xs theme-muted-color" style={{ color: dna.palette?.muted }}>
+                <div className="font-medium theme-fg-color" style={{ color: dna.palette?.fg }}>{t.author}</div>
                 {t.location && <div>{t.location}</div>}
               </div>
             </div>
@@ -5248,7 +5463,7 @@ function ProductsChrome({ p, dna, storeSlug, storeCategory }: any) {
   const { themeId } = useParams<{ themeId: string }>();
   const P = "#94a3b8", A = "#e2e8f0";
   const items: any[] = (p.items && p.items.length > 0) ? p.items : [
-    { id:"c1", name:"Steel Edge Watch",   price:4999, compare_at:7999, image:"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=60", badge:"New" },
+    { id:"c1", name:"Steel Edge Watch",   price:4999, compare_at:7999, image:"https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&auto=format&fit=crop&q=60", badge:"New" },
     { id:"c2", name:"Chrome Minimal Bag", price:3499, compare_at:4999, image:"https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&auto=format&fit=crop&q=60", badge:"Hot" },
     { id:"c3", name:"Brushed Steel Kicks",price:2999, compare_at:3999, image:"https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=600&auto=format&fit=crop&q=60", badge:"" },
     { id:"c4", name:"Silver Cuff Series", price:1999, compare_at:2999, image:"https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&auto=format&fit=crop&q=60", badge:"Sale" },

@@ -22,7 +22,7 @@ interface ThemeMaster {
   created_at: string;
 }
 
-const CATEGORIES = ['All', 'Fashion', 'Food', 'Electronics', 'Beauty', 'Handloom', 'Handcraft', 'Services', 'Books', 'Jewellery', 'Home', 'Hobby', 'Gifts', 'Luxury', 'Religious', 'Creative', 'General'];
+const CATEGORIES = ['All', 'Fashion', 'Food', 'Electronics', 'Beauty', 'Jewellery'];
 const PRICE_FILTERS = ['All', 'Free', 'Premium'] as const;
 const SORTS = ['Trending', 'Newest', 'Price ↑', 'Price ↓'] as const;
 
@@ -135,7 +135,7 @@ const ThemeMarketplace = () => {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-sky-400">built for Indian sellers.</span>
             </h1>
             <p className="text-white/70 text-lg mb-8 max-w-2xl mx-auto">
-              {themes.length}+ AI-crafted 5-page themes across fashion, food, electronics, beauty, services and more. Apply with one tap — go live in minutes.
+              {themes.length}+ AI-crafted 5-page themes across fashion, food, electronics, beauty and jewellery. Apply with one tap — go live in minutes.
             </p>
 
             {/* Category pills (search removed — categories cover discovery and avoid empty-state confusion) */}

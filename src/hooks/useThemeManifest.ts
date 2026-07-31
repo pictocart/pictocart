@@ -6,10 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
  * Returned object is the `files_manifest` JSONB.
  */
 export function useThemeManifest(themeId: string | null | undefined) {
+  const isPreview = typeof window !== 'undefined' && (
+    window.location.search.includes('preview_theme') || 
+    window.location.search.includes('preview_custom')
+  );
   return useQuery({
     queryKey: ["theme-manifest", themeId],
     enabled: !!themeId && (themeId.startsWith("theme-") || themeId.startsWith("custom-theme-") || themeId.startsWith("layout1-")),
-    staleTime: 5 * 60 * 1000,
+    staleTime: isPreview ? 0 : 5 * 60 * 1000,
+    gcTime: isPreview ? 0 : 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("theme_master_versions")

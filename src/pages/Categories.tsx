@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ChevronRight, Edit2, Check, X, FolderTree, ImagePlus, Loader2, FileText } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Edit2, Check, X, FolderTree, ImagePlus, Loader2, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useQueryClient } from '@tanstack/react-query';
 
 const CategoryImage = ({ cat }: { cat: Category }) => {
   const { store } = useStore();
@@ -133,6 +135,191 @@ const Categories = () => {
   const [editName, setEditName] = useState('');
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
+  const { store } = useStore();
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [csvUploading, setCsvUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const parseCSV = (text: string): string[][] => {
+    const result: string[][] = [];
+    let row: string[] = [];
+    let cell = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      const next = text[i + 1];
+      if (inQuotes) {
+        if (c === '"') {
+          if (next === '"') {
+            cell += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          cell += c;
+        }
+      } else {
+        if (c === '"') {
+          inQuotes = true;
+        } else if (c === ',') {
+          row.push(cell.trim());
+          cell = '';
+        } else if (c === '\n' || c === '\r') {
+          row.push(cell.trim());
+          if (row.length > 0 && row.some(x => x !== '')) {
+            result.push(row);
+          }
+          row = [];
+          cell = '';
+          if (c === '\r' && next === '\n') i++;
+        } else {
+          cell += c;
+        }
+      }
+    }
+    if (cell || row.length > 0) {
+      row.push(cell.trim());
+      if (row.length > 0 && row.some(x => x !== '')) result.push(row);
+    }
+    return result;
+  };
+
+  const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!store?.id) return toast.error("Store not loaded.");
+
+    setCsvUploading(true);
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (!text) throw new Error("CSV file is empty");
+
+        const parsed = parseCSV(text);
+        if (parsed.length <= 1) throw new Error("CSV must contain a header row and at least one category row");
+
+        const headers = parsed[0].map(h => h.toLowerCase().trim().replace(/['"]/g, ''));
+        const rows = parsed.slice(1);
+
+        const nameIndex = headers.findIndex(h => h === 'name' || h === 'category name');
+        const parentIndex = headers.findIndex(h => h === 'parent' || h === 'parent category' || h === 'parent_category');
+        const descIndex = headers.findIndex(h => h === 'description');
+        const imgIndex = headers.findIndex(h => h === 'image url' || h === 'image_url' || h === 'image');
+
+        if (nameIndex === -1) throw new Error("CSV must contain a 'Name' column");
+
+        const { data: existingCats, error: fetchErr } = await supabase
+          .from('categories')
+          .select('id, name, parent_id')
+          .eq('store_id', store.id);
+
+        if (fetchErr) throw fetchErr;
+
+        const nameToIdMap = new Map<string, string>();
+        existingCats?.forEach(c => {
+          nameToIdMap.set(c.name.toLowerCase().trim(), c.id);
+        });
+        
+        const categoryData = rows.map((row, idx) => {
+          const name = row[nameIndex]?.trim();
+          const parentName = parentIndex !== -1 ? row[parentIndex]?.trim() : '';
+          const description = descIndex !== -1 ? row[descIndex]?.trim() : '';
+          const imageUrl = imgIndex !== -1 ? row[imgIndex]?.trim() : '';
+          
+          if (!name) throw new Error(`Row ${idx + 2}: Name is required`);
+          
+          return { name, parentName, description, imageUrl };
+        });
+
+        for (const item of categoryData) {
+          if (item.parentName) {
+            const parentKey = item.parentName.toLowerCase().trim();
+            if (!nameToIdMap.has(parentKey)) {
+              const { data: newParent, error: pErr } = await supabase
+                .from('categories')
+                .insert({
+                  store_id: store.id,
+                  name: item.parentName,
+                  parent_id: null
+                })
+                .select()
+                .single();
+                
+              if (pErr) throw pErr;
+              nameToIdMap.set(parentKey, newParent.id);
+            }
+          }
+        }
+
+        const categoriesToInsert: any[] = [];
+        for (const item of categoryData) {
+          const key = item.name.toLowerCase().trim();
+          if (nameToIdMap.has(key)) {
+            continue;
+          }
+          
+          const parentId = item.parentName ? nameToIdMap.get(item.parentName.toLowerCase().trim()) || null : null;
+          
+          categoriesToInsert.push({
+            store_id: store.id,
+            name: item.name,
+            parent_id: parentId,
+            description: item.description || null,
+            image_url: item.imageUrl || null
+          });
+        }
+
+        if (categoriesToInsert.length > 0) {
+          const { error: insErr } = await supabase
+            .from('categories')
+            .insert(categoriesToInsert);
+            
+          if (insErr) throw insErr;
+          toast.success(`Successfully uploaded ${categoriesToInsert.length} new categories!`);
+        } else {
+          toast.info("All categories in the CSV already exist.");
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['categories', store.id] });
+        setBulkDialogOpen(false);
+      } catch (err: any) {
+        console.error("Categories bulk upload error:", err);
+        toast.error(err.message || "Failed to process CSV file");
+      } finally {
+        setCsvUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    reader.onerror = () => {
+      toast.error("Failed to read CSV file");
+      setCsvUploading(false);
+    };
+
+    reader.readAsText(file);
+  };
+
+  const downloadSampleCSV = () => {
+    const csvContent = "Name,Parent Category,Description,Image URL\n" +
+      '"Mobiles","Electronics","Vibrant high resolution display smartphones",""\n' +
+      '"Laptops","Electronics","Powerful laptops for creators and office use",""\n' +
+      '"Espresso","Coffee","Freshly brewed single origin coffee cups",""\n';
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "categories_sample.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const addParent = () => {
     const name = newParent.trim();
     if (!name) return toast.error('Enter a category name');
@@ -168,11 +355,16 @@ const Categories = () => {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">Categories</h1>
-        <p className="text-sm text-muted-foreground">
-          Create categories with photos. They appear in your store's "Shop by category" section and filter the shop page.
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-xl font-bold">Categories</h1>
+          <p className="text-sm text-muted-foreground">
+            Create categories with photos. They appear in your store's "Shop by category" section and filter the shop page.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setBulkDialogOpen(true)} className="gap-1">
+          <Download className="h-4 w-4" /> Bulk Upload
+        </Button>
       </div>
 
       <Card>
@@ -293,6 +485,75 @@ const Categories = () => {
           })}
         </div>
       )}
+
+      {/* Categories Bulk Upload Dialog */}
+      <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Upload Categories</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file containing multiple categories to import them in bulk.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-3 text-xs text-muted-foreground space-y-2">
+              <p className="font-semibold text-slate-700">Supported columns in CSV:</p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li><span className="font-semibold text-slate-700">Name</span> (required) — e.g. "Mobiles"</li>
+                <li><span className="font-semibold text-slate-700">Parent Category</span> — optional, e.g. "Electronics"</li>
+                <li><span className="font-semibold text-slate-700">Description</span> — optional, details about category</li>
+                <li><span className="font-semibold text-slate-700">Image URL</span> — optional, URL of the category banner photo</li>
+              </ul>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-slate-700">Step 1: Download Template</span>
+              <Button type="button" variant="outline" size="sm" onClick={downloadSampleCSV} className="gap-1 text-xs">
+                <Download className="h-3.5 w-3.5" /> Download Sample CSV
+              </Button>
+            </div>
+
+            <div className="border-t border-slate-100 pt-4 space-y-2">
+              <span className="text-sm font-medium text-slate-700 block">Step 2: Upload CSV File</span>
+              <label 
+                htmlFor="category-csv-file-upload"
+                className={`flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-lg p-6 cursor-pointer hover:bg-slate-50 transition-colors ${csvUploading ? 'pointer-events-none opacity-50' : ''}`}
+              >
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  {csvUploading ? (
+                    <>
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <span className="text-xs text-muted-foreground mt-1">Uploading categories...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-8 w-8 text-slate-400 mb-2" />
+                      <p className="text-sm text-slate-600"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                      <span className="text-xs text-muted-foreground mt-1">CSV files only, up to 10MB</span>
+                    </>
+                  )}
+                </div>
+                <input 
+                  ref={fileInputRef}
+                  type="file" 
+                  accept=".csv"
+                  onChange={handleCsvUpload}
+                  disabled={csvUploading}
+                  className="hidden" 
+                  id="category-csv-file-upload" 
+                />
+              </label>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setBulkDialogOpen(false)} disabled={csvUploading}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
