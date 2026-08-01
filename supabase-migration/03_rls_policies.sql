@@ -229,7 +229,10 @@ CREATE POLICY "Provider sees own appointments" ON public.appointments AS PERMISS
 CREATE POLICY "Provider updates own appointments" ON public.appointments AS PERMISSIVE FOR UPDATE TO public
   USING ((EXISTS (SELECT 1 FROM service_providers p WHERE ((p.id = appointments.provider_id) AND (p.user_id = auth.uid())))));
 CREATE POLICY "Public can create appointment for published store" ON public.appointments AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((EXISTS (SELECT 1 FROM stores s WHERE ((s.id = appointments.store_id) AND (s.is_published = true)))));
+  WITH CHECK (
+    (EXISTS (SELECT 1 FROM stores s WHERE ((s.id = appointments.store_id) AND (s.is_published = true))))
+    AND (customer_user_id IS NULL OR customer_user_id = auth.uid())
+  );
 
 -- blog_posts
 CREATE POLICY "Public can read published posts" ON public.blog_posts AS PERMISSIVE FOR SELECT TO public

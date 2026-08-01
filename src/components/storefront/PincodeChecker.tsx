@@ -6,6 +6,9 @@ interface PincodeCheckerProps {
   colors: { primary: string; text: string; card: string; secondary: string };
   borderRadius: number;
   onDeliveryInfo?: (info: { serviceable: boolean; estimated_days: number | null }) => void;
+  title?: string;
+  placeholder?: string;
+  cta?: string;
 }
 
 const formatETD = (etdStr: string) => {
@@ -57,6 +60,9 @@ const PincodeChecker = ({
   colors,
   borderRadius,
   onDeliveryInfo,
+  title,
+  placeholder,
+  cta
 }: PincodeCheckerProps) => {
   const [pincode, setPincode] = useState('');
   const [checking, setChecking] = useState(false);
@@ -104,14 +110,14 @@ const PincodeChecker = ({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1 text-xs font-medium opacity-70">
-        <MapPin className="h-3 w-3" /> Check Delivery Availability
+        <MapPin className="h-3 w-3" /> {title || "Check Delivery Availability"}
       </div>
       <div className="flex gap-2">
         <input
           type="text"
           inputMode="numeric"
           maxLength={6}
-          placeholder="Enter pincode"
+          placeholder={placeholder || "Enter pincode"}
           value={pincode}
           onChange={(e) => {
             setPincode(e.target.value.replace(/\D/g, '').slice(0, 6));
@@ -135,7 +141,7 @@ const PincodeChecker = ({
             borderRadius: `${borderRadius / 2}px`,
           }}
         >
-          {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Check'}
+          {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : (cta || 'Check')}
         </button>
       </div>
 

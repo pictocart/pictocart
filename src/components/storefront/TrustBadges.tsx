@@ -1,9 +1,10 @@
-import { Truck, ShieldCheck, RotateCcw, CreditCard, Headphones, Leaf } from 'lucide-react';
+import { Truck, ShieldCheck, RotateCcw, CreditCard, Headphones, Leaf, Sparkles, Phone, Shield } from 'lucide-react';
 
 interface Props {
   colors: any;
   borderRadius: number;
   category?: string | null;
+  items?: Array<{ title: string; sub?: string; icon?: string }>;
 }
 
 const BADGES = [
@@ -34,9 +35,33 @@ const CATEGORY_BADGES: Record<string, { icon: typeof Truck; label: string; sub: 
   ],
 };
 
-const TrustBadges = ({ colors, borderRadius, category }: Props) => {
+const iconMap: Record<string, any> = {
+  truck: Truck,
+  shield: ShieldCheck,
+  shieldcheck: ShieldCheck,
+  shield_check: ShieldCheck,
+  rotateccw: RotateCcw,
+  rotate_ccw: RotateCcw,
+  'rotate-ccw': RotateCcw,
+  creditcard: CreditCard,
+  credit_card: CreditCard,
+  'credit-card': CreditCard,
+  headphones: Headphones,
+  leaf: Leaf,
+  sparkles: Sparkles,
+  phone: Phone,
+  shield_icon: Shield
+};
+
+const TrustBadges = ({ colors, borderRadius, category, items }: Props) => {
   const cat = category?.toLowerCase() || '';
-  const badges = CATEGORY_BADGES[cat] || BADGES;
+  const badges = items && items.length > 0
+    ? items.map((item: any) => ({
+        icon: iconMap[String(item.icon).toLowerCase()] || ShieldCheck,
+        label: item.title || item.label || "",
+        sub: item.sub || ""
+      }))
+    : (CATEGORY_BADGES[cat] || BADGES);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

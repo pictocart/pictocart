@@ -10,6 +10,7 @@ CREATE OR REPLACE FUNCTION public.accrue_appointment_commission()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   pct numeric;
@@ -34,6 +35,7 @@ CREATE OR REPLACE FUNCTION public.accrue_hierarchy_commissions(_partner_id uuid,
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   parent_id uuid;
@@ -90,6 +92,7 @@ CREATE OR REPLACE FUNCTION public.accrue_order_commission()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   plan_name text;
@@ -141,6 +144,7 @@ CREATE OR REPLACE FUNCTION public.admin_assign_partner_parent(_partner_id uuid, 
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   IF NOT public.has_role(auth.uid(),'admin') THEN
@@ -154,6 +158,7 @@ CREATE OR REPLACE FUNCTION public.admin_mark_payout_paid(_payout_id uuid, _utr t
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   IF NOT public.has_role(auth.uid(),'admin') THEN
@@ -177,6 +182,7 @@ CREATE OR REPLACE FUNCTION public.admin_pending_payouts_summary(_period_month da
 RETURNS TABLE(partner_id uuid, partner_name text, partner_email text, upi_id text, bank_account_number text, bank_ifsc text, bank_account_holder text, pan text, tier partner_tier, commission_count integer, pending_amount numeric, direct_amount numeric, override_amount numeric)
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT
     p.id, p.name, p.email, p.upi_id, p.bank_account_number, p.bank_ifsc,
@@ -201,6 +207,7 @@ CREATE OR REPLACE FUNCTION public.admin_promote_partner(_partner_id uuid, _tier 
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   IF NOT public.has_role(auth.uid(),'admin') THEN
@@ -219,6 +226,7 @@ CREATE OR REPLACE FUNCTION public.admin_run_payout_batch(_period_month date, _me
 RETURNS TABLE(payouts_created integer, total_amount numeric)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   r record;
@@ -269,6 +277,7 @@ CREATE OR REPLACE FUNCTION public.apply_coupon_to_recent_order(_coupon_id uuid, 
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   coupon_store uuid;
@@ -295,6 +304,7 @@ CREATE OR REPLACE FUNCTION public.bump_ticket_last_message()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   UPDATE public.support_tickets
@@ -308,6 +318,7 @@ CREATE OR REPLACE FUNCTION public.cancel_pending_plan_change(_store_id uuid)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   IF NOT EXISTS(SELECT 1 FROM public.stores WHERE id = _store_id AND user_id = auth.uid())
@@ -324,6 +335,7 @@ CREATE OR REPLACE FUNCTION public.consume_credits(_store_id uuid, _action_key te
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   cost_row public.ai_action_costs%ROWTYPE;
@@ -373,6 +385,7 @@ CREATE OR REPLACE FUNCTION public.consume_partner_license(_partner_id uuid, _sto
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   lic_id uuid;
@@ -408,6 +421,7 @@ CREATE OR REPLACE FUNCTION public.credit_wallet(_store_id uuid, _credits integer
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   new_balance integer;
@@ -443,6 +457,7 @@ CREATE OR REPLACE FUNCTION public.deduct_inventory_on_order()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   item jsonb;
@@ -468,6 +483,7 @@ CREATE OR REPLACE FUNCTION public.delete_email(queue_name text, message_id bigin
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   RETURN pgmq.delete(queue_name, message_id);
@@ -482,6 +498,7 @@ CREATE OR REPLACE FUNCTION public.email_queue_dispatch()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pgmq.q_auth_emails)
@@ -522,6 +539,7 @@ CREATE OR REPLACE FUNCTION public.email_queue_wake()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   PERFORM pg_catalog.pg_advisory_xact_lock(7700000000000001);
@@ -559,6 +577,7 @@ CREATE OR REPLACE FUNCTION public.enqueue_email(queue_name text, payload jsonb)
 RETURNS bigint
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   RETURN pgmq.send(queue_name, payload);
@@ -572,6 +591,7 @@ CREATE OR REPLACE FUNCTION public.ensure_dine_in_enabled_for_qr()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   INSERT INTO public.store_fulfillment_settings (store_id, dine_in_enabled, takeaway_enabled, delivery_enabled, dine_in_requires_table)
@@ -587,6 +607,7 @@ CREATE OR REPLACE FUNCTION public.family_plan_slots_left(_plan_id uuid)
 RETURNS integer
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT GREATEST(COALESCE((SELECT max_families FROM public.family_plans WHERE id = _plan_id), 0)
          - COALESCE((SELECT COUNT(*) FROM public.family_groups WHERE plan_id = _plan_id), 0), 0)::integer;
@@ -596,6 +617,7 @@ CREATE OR REPLACE FUNCTION public.generate_licenses_for_batch()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   INSERT INTO public.partner_licenses(partner_id, batch_id, status)
@@ -636,6 +658,7 @@ CREATE OR REPLACE FUNCTION public.get_active_plan_offer_pct(_cycle text DEFAULT 
 RETURNS numeric
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT COALESCE((
     SELECT percent_off FROM public.platform_plan_offers
@@ -651,6 +674,7 @@ CREATE OR REPLACE FUNCTION public.get_active_store_offer_pct(_store_id uuid)
 RETURNS numeric
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT COALESCE((
     SELECT percent_off FROM public.store_site_offers
@@ -666,6 +690,7 @@ CREATE OR REPLACE FUNCTION public.get_order_by_tracking(tracking_code text)
 RETURNS TABLE(id uuid, order_number text, status text, prep_status text, fulfillment_mode text, table_label text, total numeric, items jsonb, created_at timestamp with time zone, store_id uuid, guest_tracking_code text)
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT
     o.id, o.order_number, o.status::text, o.prep_status, o.fulfillment_mode,
@@ -679,6 +704,7 @@ CREATE OR REPLACE FUNCTION public.get_order_eligibility(_order_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   o public.orders%ROWTYPE;
@@ -774,6 +800,7 @@ CREATE OR REPLACE FUNCTION public.get_public_credit_settings()
 RETURNS TABLE(low_balance_threshold integer, critical_balance_threshold integer, custom_recharge_rate numeric, custom_min_inr integer, custom_max_inr integer, welcome_grant_credits integer)
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT low_balance_threshold, critical_balance_threshold, custom_recharge_rate,
          custom_min_inr, custom_max_inr, welcome_grant_credits
@@ -784,6 +811,7 @@ CREATE OR REPLACE FUNCTION public.get_storefront_cod_rules(_store_id uuid)
 RETURNS TABLE(enabled boolean, min_order_value numeric, max_order_value numeric, require_phone_verification boolean, min_prior_orders integer, pincode_allowlist text[], pincode_blocklist text[])
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT cr.enabled, cr.min_order_value, cr.max_order_value, cr.require_phone_verification,
          cr.min_prior_orders, cr.pincode_allowlist, cr.pincode_blocklist
@@ -797,6 +825,7 @@ CREATE OR REPLACE FUNCTION public.grant_plan_signup_bonus(_store_id uuid, _plan 
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   bonus integer;
@@ -825,6 +854,7 @@ CREATE OR REPLACE FUNCTION public.guard_custom_page_slug()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   reserved text[] := ARRAY[
@@ -849,6 +879,7 @@ CREATE OR REPLACE FUNCTION public.guard_customer_tenant_email()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   is_store_customer boolean := COALESCE((NEW.raw_user_meta_data->>'is_customer')::boolean, false);
@@ -890,6 +921,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_store_subscription()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   bonus integer;
@@ -915,6 +947,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   is_store_customer boolean := COALESCE((NEW.raw_user_meta_data->>'is_customer')::boolean, false);
@@ -961,6 +994,7 @@ CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role
@@ -971,6 +1005,7 @@ CREATE OR REPLACE FUNCTION public.head_downline_partners(_head_partner_id uuid)
 RETURNS TABLE(id uuid, name text, email_masked text, tier partner_tier, partner_type text, invite_status text, total_licenses_purchased integer, total_amount_paid numeric, state_name text, region_name text, created_at timestamp with time zone)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   IF NOT (public.has_role(auth.uid(), 'admin')
@@ -998,6 +1033,7 @@ CREATE OR REPLACE FUNCTION public.head_downline_summary(_head_partner_id uuid)
 RETURNS TABLE(downline_count integer, licenses_sold integer, gmv numeric, override_lifetime numeric, override_this_month numeric)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.partners WHERE id = _head_partner_id AND user_id = auth.uid())
@@ -1023,6 +1059,7 @@ CREATE OR REPLACE FUNCTION public.increment_coupon_usage(coupon_id uuid)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   UPDATE public.coupons SET used_count = used_count + 1 WHERE id = coupon_id;
@@ -1033,6 +1070,7 @@ CREATE OR REPLACE FUNCTION public.inventory_on_purchase()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   item jsonb;
@@ -1058,6 +1096,7 @@ CREATE OR REPLACE FUNCTION public.is_partner_in_downline(_head_user_id uuid, _pa
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   WITH RECURSIVE chain AS (
     SELECT id, parent_partner_id FROM public.partners WHERE id = _partner_id
@@ -1073,6 +1112,7 @@ CREATE OR REPLACE FUNCTION public.is_phone_cod_blocked(_store_id uuid, _phone te
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT EXISTS (
     SELECT 1 FROM public.cod_rules cr
@@ -1084,6 +1124,7 @@ CREATE OR REPLACE FUNCTION public.is_store_access_blocked(_store_id uuid)
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT COALESCE((
     SELECT is_blocked AND plan::text <> 'free' FROM public.subscriptions WHERE store_id = _store_id
@@ -1094,6 +1135,7 @@ CREATE OR REPLACE FUNCTION public.log_order_status_change()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   v_actor text;
@@ -1126,6 +1168,7 @@ CREATE OR REPLACE FUNCTION public.move_to_dlq(source_queue text, dlq_name text, 
 RETURNS bigint
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE new_id BIGINT;
 BEGIN
@@ -1144,6 +1187,7 @@ CREATE OR REPLACE FUNCTION public.next_invoice_number(_store_id uuid, _prefix te
 RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   fy text;
@@ -1171,6 +1215,7 @@ CREATE OR REPLACE FUNCTION public.partner_leaderboard(_from date, _to date, _met
 RETURNS TABLE(partner_id uuid, partner_name text, tier partner_tier, state_name text, licenses integer, gmv numeric, commission numeric, rank integer)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   is_admin bool := public.has_role(auth.uid(),'admin');
@@ -1212,6 +1257,7 @@ CREATE OR REPLACE FUNCTION public.partner_license_summary(_partner_id uuid)
 RETURNS TABLE(total integer, available integer, consumed integer, revoked integer)
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
   SELECT COUNT(*)::int, COUNT(*) FILTER (WHERE status='available')::int,
          COUNT(*) FILTER (WHERE status='consumed')::int, COUNT(*) FILTER (WHERE status='revoked')::int
@@ -1222,6 +1268,7 @@ CREATE OR REPLACE FUNCTION public.partner_self_stats(_partner_id uuid)
 RETURNS TABLE(total_licenses integer, gmv numeric, lifetime_commission numeric, this_month_commission numeric, pending_payout numeric, paid_out numeric)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.partners WHERE id = _partner_id AND user_id = auth.uid())
@@ -1243,6 +1290,7 @@ CREATE OR REPLACE FUNCTION public.pnl_report(_store_id uuid, _from date, _to dat
 RETURNS TABLE(revenue numeric, cogs numeric, expenses_total numeric, tax_collected numeric, net_profit numeric)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   _rev numeric := 0; _cogs numeric := 0; _tax numeric := 0; _exp numeric := 0;
@@ -1276,6 +1324,7 @@ CREATE OR REPLACE FUNCTION public.read_email_batch(queue_name text, batch_size i
 RETURNS TABLE(msg_id bigint, read_ct integer, message jsonb)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 BEGIN
   RETURN QUERY SELECT r.msg_id, r.read_ct, r.message FROM pgmq.read(queue_name, vt, batch_size) r;
@@ -1289,6 +1338,7 @@ CREATE OR REPLACE FUNCTION public.recompute_customer_balance()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   cid uuid;
@@ -1309,6 +1359,7 @@ CREATE OR REPLACE FUNCTION public.schedule_plan_change(_store_id uuid, _new_plan
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   cur_plan public.subscription_plan; cur_period_end TIMESTAMPTZ;
@@ -1341,6 +1392,7 @@ CREATE OR REPLACE FUNCTION public.transfer_store_to_client(_store_id uuid, _clie
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   v_partner_id uuid; v_plan text; v_period_end timestamptz;
@@ -1373,6 +1425,7 @@ CREATE OR REPLACE FUNCTION public.transfer_store_to_client(_store_id uuid, _clie
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
   v_partner_id uuid;
@@ -1403,3 +1456,31 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+CREATE OR REPLACE FUNCTION public.protect_wallet_balance()
+RETURNS trigger AS $$
+BEGIN
+  IF (TG_OP = 'UPDATE') THEN
+    IF OLD.balance IS DISTINCT FROM NEW.balance OR
+       OLD.lifetime_purchased IS DISTINCT FROM NEW.lifetime_purchased OR
+       OLD.lifetime_used IS DISTINCT FROM NEW.lifetime_used OR
+       OLD.welcome_grant_given IS DISTINCT FROM NEW.welcome_grant_given THEN
+      
+      -- Only service_role or admin can update balance/purchased/used fields
+      IF NOT (has_role(auth.uid(), 'admin'::app_role)) AND (auth.role() <> 'service_role') THEN
+        NEW.balance := OLD.balance;
+        NEW.lifetime_purchased := OLD.lifetime_purchased;
+        NEW.lifetime_used := OLD.lifetime_used;
+        NEW.welcome_grant_given := OLD.welcome_grant_given;
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
+
+CREATE OR REPLACE TRIGGER protect_wallet_balance_trigger
+  BEFORE UPDATE ON public.ai_credit_wallets
+  FOR EACH ROW
+  EXECUTE FUNCTION public.protect_wallet_balance();
+

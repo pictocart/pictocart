@@ -4,13 +4,37 @@
  * Uses service_role key if available, else anon key.
  */
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const SUPABASE_URL = 'https://wuqznkpaldtvpfpdtllp.supabase.co';
-// Try service_role key from env, else fall back to anon key
-const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1cXpua3BhbGR0dnBmcGR0bGxwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDIwMzYzMywiZXhwIjoyMDk5Nzc5NjMzfQ.IlrtNrVbIEbcQCQxv1ZRFEb6Y3DNlykAR1-EjaxEaP0';
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1cXpua3BhbGR0dnBmcGR0bGxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDM2MzMsImV4cCI6MjA5OTc3OTYzM30.lxhNQMmXDF7_BNSyCLtg8uhgMqnUNvwU_8FRy-7lxkE';
+// Load environment variables from .env if running locally
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  try {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const envPath = path.resolve(__dirname, '.env');
+    if (existsSync(envPath)) {
+      readFileSync(envPath, 'utf8').split(/\r?\n/).forEach(line => {
+        const parts = line.split('=');
+        if (parts.length >= 2) {
+          const key = parts[0].trim();
+          let val = parts.slice(1).join('=').trim();
+          if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+          process.env[key] = val;
+        }
+      });
+    }
+  } catch (e) {}
+}
 
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://wuqznkpaldtvpfpdtllp.supabase.co';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ANON_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1cXpua3BhbGR0dnBmcGR0bGxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDM2MzMsImV4cCI6MjA5OTc3OTYzM30.lxhNQMmXDF7_BNSyCLtg8uhgMqnUNvwU_8FRy-7lxkE';
+
+if (!SERVICE_KEY) {
+  console.error("Error: SUPABASE_SERVICE_ROLE_KEY environment variable is not defined.");
+  process.exit(1);
+}
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
 async function ensureBucket() {

@@ -1191,6 +1191,7 @@ const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }:
         storeSlug={slug}
         products={products}
         sellerCategories={sellerCategories}
+        providers={providers}
       />
     </>
   );

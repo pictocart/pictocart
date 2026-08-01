@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react';
+import { useEffect, useState, useRef, useMemo, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChefHat, GripVertical, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -456,7 +456,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
   const headerStyle = (manifestData?.header_style || baseDna.layout?.header_style || 'classic') as string;
   const brandName = branding.name || (baseDna.name as string | undefined) || store.name;
   
-  const storeCategory = store?.category || storefrontConfig?.theme_overrides?.category || manifestData?.store?.category || "";
+  const storeCategory = store?.category || storefrontConfig?.theme_overrides?.category || (manifestData as any)?.store?.category || "";
   const isFoodLayout = storeCategory === "food" || (
     themeId === "theme-70904877" || 
     themeId === "theme-bee17452" || 
@@ -509,6 +509,96 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
   const customNavLinks = navCustomPages.map((p) => ({ label: p.title, href: `/p/${p.slug}` }));
   const baseNavLinks = Array.isArray(headerConfig?.nav_links) ? headerConfig.nav_links : [];
   const mergedNavLinks = [...baseNavLinks, ...customNavLinks];
+
+  const { data: sellerCategories = [] } = useQuery({
+    queryKey: ['storefront-layout-categories', store.id],
+    enabled: !!store.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, emoji, parent_id')
+        .eq('store_id', store.id)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const headerHtml = useMemo(() => {
+    if (!headerManifest?.is_custom_html || !headerManifest?.html) return '';
+    let html = String(headerManifest.html).replace(/{STORE_NAME}/g, brandName || '');
+
+    // A. Substitute Brand Name Suffix/Underscore
+    const suffix = headerOv.brand_suffix !== undefined ? headerOv.brand_suffix : "_";
+    html = html.replace(/(class="[^"]*?font-black[^"]*?">)_(<\/span>)/g, `$1${suffix}$2`);
+    html = html.replace(/font-black">_<\/span>/g, `font-black">${suffix}</span>`);
+
+    // A2. Toggle Brand name text display visibility
+    if (headerOv.show_name === false) {
+      html = html.replace(/<span class="font-extrabold text-xl[^>]*>[\s\S]*?<\/span>\s*<\/span>/g, '');
+    }
+
+    // B. Toggle Pincode Display Banner visibility
+    if (headerOv.show_pincode_banner === false) {
+      html = html.replace(/<!-- (Pincode Display Block|Pincode setup)[\s\S]*?<!-- Light \/ Dark Mode Toggle Button -->/, '<!-- Light / Dark Mode Toggle Button -->');
+    }
+
+    // C. Toggle Search Bar visibility (Desktop & Mobile)
+    if (headerOv.show_search_bar === false) {
+      html = html.replace(/<!-- (Desktop Search Bar Input|Search Bar)[\s\S]*?<!-- (Pincode Display Block|Pincode setup)[^>]*?-->/, (match, p1, p2) => {
+        return `<!-- ${p2} -->`;
+      });
+      html = html.replace(/<!-- Mobile Search Input inside drawer[\s\S]*?<!-- Sidebar Links[^>]*?-->/, '<!-- Sidebar Links -->');
+    }
+
+    // D. Toggle Light/Dark Mode button visibility
+    if (headerOv.show_theme_toggle === false) {
+      html = html.replace(/<!-- Light \/ Dark Mode Toggle Button -->[\s\S]*?<\/button>/, '');
+    }
+
+    // 1. Substitute Logo Image if uploaded
+    if (headerOv.logo_url) {
+      const logoShapeClass = headerOv.logo_shape === 'circle' ? 'rounded-full object-cover w-8 h-8 shrink-0' : 'rounded-none object-contain h-8 shrink-0';
+      const logoHtml = `<img src="${headerOv.logo_url}" alt="${brandName}" class="${logoShapeClass} mr-2" />`;
+      html = html.replace(/<span class="font-extrabold text-xl md:text-2xl tracking-wide font-sans lowercase">/g, `${logoHtml}<span class="font-extrabold text-xl md:text-2xl tracking-wide font-sans lowercase">`);
+      html = html.replace(/<span class="font-extrabold text-xl tracking-wide font-sans text-white lowercase">/g, `${logoHtml}<span class="font-extrabold text-xl tracking-wide font-sans text-white lowercase">`);
+    }
+
+    // 2. Substitute Navigation links dynamically
+    const navLinks = headerOv.nav_links || [
+      { label: isFoodLayout ? "Our Menu" : "Shop", page: "shop" },
+      { label: "Collections", page: "collections" },
+      { label: "About", page: "about" },
+      { label: "Journal", page: "journal" },
+      { label: "Contact", page: "contact" }
+    ];
+    const pageToQuery: Record<string, string> = {
+      home: "", shop: isFoodLayout ? "?page=menu" : "?page=shop", collections: "?page=collections", about: "?page=about", contact: "?page=contact",
+      journal: "?page=journal", blog: "?page=journal", account: "?page=account", cart: "?page=cart",
+    };
+    const linksHtml = navLinks.map((link: any) => {
+      const pageQuery = pageToQuery[link.page] ?? `?page=${link.page}`;
+      const onClickAttr = `window.location.search = '${pageQuery}'`;
+      return `<a class="hover:text-[#12daa8] py-1 transition-colors cursor-pointer" onclick="${onClickAttr}">${link.label}</a>`;
+    }).join('\n');
+    html = html.replace(/<nav class="flex flex-col gap-3 font-semibold text-sm">[\s\S]*?<\/nav>/, `<nav class="flex flex-col gap-3 font-semibold text-sm">${linksHtml}</nav>`);
+
+    // 3. Substitute Catalog Categories dynamically
+    if (sellerCategories && sellerCategories.length > 0) {
+      const categoriesHtml = sellerCategories.filter((c: any) => !c.parent_id).map((cat: any) => {
+        const emoji = cat.emoji || "📁";
+        return `<a class="hover:text-white transition-colors cursor-pointer" onclick="window.location.search = '?category=${cat.id}'">${emoji} ${cat.name}</a>`;
+      }).join('\n');
+      html = html.replace(/<nav class="flex flex-col gap-3 font-medium text-xs text-neutral-400">[\s\S]*?<\/nav>/, `<nav class="flex flex-col gap-3 font-medium text-xs text-neutral-400">${categoriesHtml}</nav>`);
+    }
+
+    return html;
+  }, [headerManifest, brandName, headerOv, isFoodLayout, sellerCategories]);
+
+  const footerHtml = useMemo(() => {
+    if (!footerManifest?.is_custom_html || !footerManifest?.html) return '';
+    return String(footerManifest.html).replace(/{STORE_NAME}/g, brandName || '');
+  }, [footerManifest, brandName]);
 
   useEffect(() => {
     [headingFont, bodyFont].forEach((font) => {
@@ -624,7 +714,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
 
       {isThemeManifestTheme && manifestData ? (
         headerManifest?.is_custom_html && headerManifest?.html ? (
-          <div dangerouslySetInnerHTML={{ __html: String(headerManifest.html) }} />
+          <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
         ) : (
           <ThemeHeader dna={{ ...baseDna, palette: mergedPalette }} brandName={brandName} variant={headerStyle} storeSlug={store.slug} headerOv={headerOv} storeCategory={store.category} isFoodLayout={isFoodLayout} />
         )
@@ -650,7 +740,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
 
       {isThemeManifestTheme && manifestData ? (
         footerManifest?.is_custom_html && footerManifest?.html ? (
-          <div dangerouslySetInnerHTML={{ __html: String(footerManifest.html) }} />
+          <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
         ) : (
           <div data-section-anchor="footer" style={{ scrollMarginTop: 80 }}>
             <ThemeFooter

@@ -18,6 +18,9 @@ interface Props {
   allowMockFallback?: boolean;
   productCols?: number;
   productCardWidth?: number;
+  title?: string;
+  scrollHorizontal?: boolean;
+  showScrollbar?: boolean;
 }
 
 const RelatedProducts = ({
@@ -26,6 +29,9 @@ const RelatedProducts = ({
   allowMockFallback = false,
   productCols,
   productCardWidth,
+  title,
+  scrollHorizontal,
+  showScrollbar,
 }: Props) => {
   const themeSuffixMatch = currentProductId?.match(/(theme-style-\d+)/);
   const themeSuffix = themeSuffixMatch ? themeSuffixMatch[1] : '';
@@ -119,16 +125,42 @@ const RelatedProducts = ({
             display: grid !important;
           }
         }
+        
+        .custom-neon-scrollbar::-webkit-scrollbar {
+          height: 6px;
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-track {
+          background: rgba(11, 14, 27, 0.4);
+          border-radius: 9999px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(90deg, #12daa8, #a855f7);
+          border-radius: 9999px;
+          box-shadow: 0 0 10px rgba(18, 218, 168, 0.5);
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(90deg, #10b981, #c084fc);
+        }
+        
+        .scrollbar-none::-webkit-scrollbar {
+          display: none !important;
+        }
+        .scrollbar-none {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
       `}} />
       <h2 className="text-lg md:text-xl font-bold mb-5" style={{ fontFamily: fonts.heading }}>
-        You May Also Like
+        {title || "You May Also Like"}
       </h2>
       <div 
-        className={cardWidth 
-          ? "flex flex-wrap gap-4 justify-center md:justify-start" 
-          : "flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scrollbar-hide related-dynamic-grid"
+        className={scrollHorizontal !== false
+          ? `flex gap-4 overflow-x-auto pt-4 pb-4 snap-x snap-mandatory scroll-smooth ${showScrollbar !== false ? "custom-neon-scrollbar" : "scrollbar-none"}`
+          : cardWidth 
+            ? "flex flex-wrap gap-4 justify-center md:justify-start pt-4" 
+            : `grid grid-cols-2 gap-4 related-dynamic-grid pt-4`
         } 
-        style={{ scrollbarWidth: 'none' }}
       >
         {listToRender.map((p) => {
           const discount = p.compare_at_price && p.compare_at_price > p.price
@@ -138,16 +170,13 @@ const RelatedProducts = ({
             <Link
               key={p.id}
               to={`/store/${storeSlug}/product/${p.id}${themeSuffix ? `/${themeSuffix}` : ''}`}
-              className={cardWidth 
-                ? "shrink-0 group overflow-hidden hover-lift"
-                : "min-w-[160px] md:min-w-[200px] shrink-0 snap-start group overflow-hidden hover-lift"
-              }
+              className={`group overflow-hidden hover-lift ${scrollHorizontal !== false ? "shrink-0 snap-start" : ""}`}
               style={{ 
                 backgroundColor: colors.card, 
                 borderRadius: `${borderRadius}px`, 
                 border: `1px solid ${colors.secondary}`,
-                width: cardWidth ? `${cardWidth}px` : undefined,
-                minWidth: cardWidth ? `${cardWidth}px` : undefined
+                width: cardWidth ? `${cardWidth}px` : (scrollHorizontal !== false ? "200px" : undefined),
+                minWidth: cardWidth ? `${cardWidth}px` : (scrollHorizontal !== false ? "200px" : undefined)
               }}
             >
               <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: colors.secondary }}>

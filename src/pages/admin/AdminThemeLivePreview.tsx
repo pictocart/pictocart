@@ -523,6 +523,7 @@ export default function AdminThemeLivePreview(){
   const[page,setPage]=useState<string>(params.get("page")??"home");
   const[products,setProducts]=useState<any[]>([]);
   const[sellerCategories,setSellerCategories]=useState<any[]>([]);
+  const[providers,setProviders]=useState<any[]>([]);
   const[storeCategory,setStoreCategory]=useState<string>("");
   const[storeInfo,setStoreInfo]=useState<any>(null);
 
@@ -611,6 +612,16 @@ export default function AdminThemeLivePreview(){
         if (!catsError && catsData) {
           setSellerCategories(catsData);
         }
+
+        const { data: provsData, error: provsError } = await supabase
+          .from("service_providers" as any)
+          .select("*")
+          .eq("store_id", storeData.id)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+        if (!provsError && provsData) {
+          setProviders(provsData);
+        }
       } catch (err) {
         console.error("Error loading live preview store details", err);
       }
@@ -631,5 +642,5 @@ export default function AdminThemeLivePreview(){
     description: "This is a premium quality sample product designed to demonstrate your theme's product detail page layout."
   };
 
-  return <MasterThemeRenderer manifest={manifest} page={page} overrides={overrides} storeSlug={storeSlug} onNavigate={setPage} products={products} sellerCategories={sellerCategories} product={activeProduct} store={storeInfo || { category: storeCategory }} />;
+  return <MasterThemeRenderer manifest={manifest} page={page} overrides={overrides} storeSlug={storeSlug} onNavigate={setPage} products={products} sellerCategories={sellerCategories} providers={providers} product={activeProduct} store={storeInfo || { category: storeCategory }} />;
 }

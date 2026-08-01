@@ -5,12 +5,36 @@
  *   layout-themes/hero/{themeId}.svg        — full-width hero banner
  *   layout-themes/products/{themeId}-{n}.svg — product card images (4 per theme)
  */
+// Load environment variables from .env if running locally
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  try {
+    const fsFile = require('fs');
+    const pathFile = require('path');
+    const envPath = pathFile.resolve(__dirname, '.env');
+    if (fsFile.existsSync(envPath)) {
+      fsFile.readFileSync(envPath, 'utf8').split(/\r?\n/).forEach(line => {
+        const parts = line.split('=');
+        if (parts.length >= 2) {
+          const key = parts[0].trim();
+          let val = parts.slice(1).join('=').trim();
+          if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+          process.env[key] = val;
+        }
+      });
+    }
+  } catch (e) {}
+}
+
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 
-const SUPABASE_URL = 'https://wuqznkpaldtvpfpdtllp.supabase.co';
-const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1cXpua3BhbGR0dnBmcGR0bGxwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDIwMzYzMywiZXhwIjoyMDk5Nzc5NjMzfQ.IlrtNrVbIEbcQCQxv1ZRFEb6Y3DNlykAR1-EjaxEaP0';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://wuqznkpaldtvpfpdtllp.supabase.co';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SERVICE_KEY) {
+  console.error("Error: SUPABASE_SERVICE_ROLE_KEY environment variable is not defined.");
+  process.exit(1);
+}
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
 const THEMES = {

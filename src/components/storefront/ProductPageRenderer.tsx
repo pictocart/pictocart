@@ -55,13 +55,13 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
   // Get product page sections from store config or use defaults
   const sections = getPageSections(store, 'product');
   const productSections = sections.length > 0 ? sections : getDefaultProductSections();
-  
+
   // Get page-specific theme overrides
   const pageOverrides = getPageThemeOverrides(store, 'product');
-  
+
   // Apply overrides to theme
   const pageTheme = pageOverrides ? { ...theme, ...pageOverrides } : theme;
- 
+
   // Selected Variants state
   const [selectedVariants, setSelectedVariants] = React.useState<Record<string, string>>({});
   const [quantity, setQuantity] = React.useState(1);
@@ -96,19 +96,19 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, []);
- 
+
   // Q&A state
   const [questions, setQuestions] = React.useState<any[]>([]);
   const [questionText, setQuestionText] = React.useState('');
   const [submittingQuestion, setSubmittingQuestion] = React.useState(false);
- 
+
   // Social proof state
   const [socialProof, setSocialProof] = React.useState<string | null>(null);
- 
+
   // Compare state
   const [compareList, setCompareList] = React.useState<string[]>([]);
   const [showCompareDrawer, setShowCompareDrawer] = React.useState(false);
- 
+
   // Compute variant-aware media
   const productImages = (product?.images as string[]) || [];
   const variants = (Array.isArray(product?.variants) ? product?.variants : []) as unknown as VariantOption[];
@@ -118,14 +118,14 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
   const variantVideos = pickVariantVideos(variants, selectedVariants);
   const images = variantImages.length > 0 ? variantImages : productImages;
   const videos = variantVideos.length > 0 ? variantVideos : productVideos;
-  
+
   const isOutOfStock = product.inventory_count !== null && product.inventory_count !== undefined && product.inventory_count <= 0;
   const highlights = aiData.highlights as string[] | undefined;
   const hasSizeVariant = variants.some(v => v.name.toLowerCase() === 'size' || v.name.toLowerCase() === 'মাপ');
- 
+
   // Reset selected thumbnail when gallery source changes
   React.useEffect(() => { setSelectedImage(0); }, [variantImages.join('|')]);
- 
+
   // Fetch coupons & questions & track view
   React.useEffect(() => {
     if (store?.id) {
@@ -175,12 +175,12 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
   React.useEffect(() => {
     const names = ['Rahul', 'Anjali', 'Vikram', 'Priya', 'Amit', 'Sneha', 'Rohan', 'Nehal'];
     const locations = ['Delhi', 'Mumbai', 'Bengaluru', 'Pune', 'Kolkata', 'Hyderabad', 'Chennai', 'Noida'];
-    
+
     const showToast = () => {
       const randomName = names[Math.floor(Math.random() * names.length)];
       const randomLoc = locations[Math.floor(Math.random() * locations.length)];
       setSocialProof(`${randomName} from ${randomLoc} recently purchased this product!`);
-      
+
       setTimeout(() => {
         setSocialProof(null);
       }, 5000);
@@ -188,7 +188,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
 
     const interval = setInterval(showToast, 25000); // every 25 seconds
     const firstTimeout = setTimeout(showToast, 5000); // first toast after 5s
-    
+
     return () => {
       clearInterval(interval);
       clearTimeout(firstTimeout);
@@ -237,11 +237,11 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
     const button = (e?.currentTarget as HTMLElement) || document.querySelector('button[onClick*="handleAddToCart"]');
     const imgEl = document.querySelector('[data-main-product-image="true"]') || document.querySelector('.aspect-[4/5] img') || document.querySelector('img');
     let startRect = imgEl ? imgEl.getBoundingClientRect() : null;
-    
+
     if (!startRect || startRect.top < 0 || startRect.bottom > window.innerHeight) {
       startRect = button ? button.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 24, height: 24 } as DOMRect;
     }
-    
+
     const getCartButton = () => {
       const mobileCart = document.getElementById('mobile-cart-btn');
       if (mobileCart) {
@@ -257,48 +257,48 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
           return headerCart;
         }
       }
-      return document.getElementById('header-cart-btn') || 
-             document.getElementById('mobile-cart-btn') || 
-             document.querySelector('.shopping-bag');
+      return document.getElementById('header-cart-btn') ||
+        document.getElementById('mobile-cart-btn') ||
+        document.querySelector('.shopping-bag');
     };
 
     const cartBtn = getCartButton();
     if (!cartBtn) return;
     const endRect = cartBtn.getBoundingClientRect();
-    
+
     // Starting coordinates (top right of the card image or center of button)
     const startX = startRect.left + startRect.width - 12;
     const startY = startRect.top - 12;
-    
+
     // Target coordinates (center of the cart icon)
     const endX = endRect.left + endRect.width / 2 - 11;
     const endY = endRect.top + endRect.height / 2 - 11;
-    
+
     const deltaX = endX - startX;
     const deltaY = endY - startY;
-    
+
     const flyEl = document.createElement('div');
     flyEl.className = 'dynamic-cart-flyer';
     flyEl.style.left = `${startX}px`;
     flyEl.style.top = `${startY}px`;
     flyEl.style.setProperty('--tx', `${deltaX}px`);
     flyEl.style.setProperty('--ty', `${deltaY}px`);
-    
+
     const flyInner = document.createElement('div');
     flyInner.className = 'dynamic-cart-flyer-inner';
     flyInner.innerText = String(qty);
     flyEl.appendChild(flyInner);
-    
+
     document.body.appendChild(flyEl);
-    
+
     setTimeout(() => {
       flyEl.remove();
-      
+
       // Apply shake animation on the cart button
       cartBtn.classList.remove('shake-cart');
       void cartBtn.offsetWidth; // trigger reflow
       cartBtn.classList.add('shake-cart');
-      
+
       // Wiggle badge if any
       const badge = cartBtn.querySelector('.animate-badge-pop');
       if (badge) {
@@ -306,7 +306,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
         void (badge as HTMLElement).offsetWidth;
         badge.classList.add('animate-badge-pop');
       }
-      
+
       setTimeout(() => {
         cartBtn.classList.remove('shake-cart');
       }, 500);
@@ -324,7 +324,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
 
     setIsAdding(true);
     triggerParabolicFly(e, quantity);
-    
+
     setTimeout(() => {
       addItem({
         productId: product.id,
@@ -345,7 +345,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
   const handleBuyNow = (e?: React.MouseEvent) => {
     if (isOutOfStock) { toast.error('This product is currently out of stock'); return; }
     triggerParabolicFly(e, quantity);
-    
+
     setTimeout(() => {
       addItem({
         productId: product.id,
@@ -387,7 +387,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
 
       toast.success('Question submitted! It will appear once answered.');
       setQuestionText('');
-      
+
       // Reload questions
       const { data } = await (supabase as any)
         .from('product_questions')
@@ -404,7 +404,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
   };
 
   const toggleCompare = (id: string) => {
-    setCompareList(prev => 
+    setCompareList(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id].slice(0, 3)
     );
   };
@@ -417,20 +417,20 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
       case 'product_images': {
         const merged = [...videos.map((url) => ({ type: 'video' as const, url })), ...images.map((url) => ({ type: 'image' as const, url }))];
         const current = merged[selectedImage] || merged[0];
-        
+
         return (
           <div key={index} className="md:col-span-1">
             {/* Mobile Swiper */}
             <div className="md:hidden">
-              <ProductImageSwiper 
-                images={images} 
-                videos={videos} 
-                title={product.title} 
-                colors={colors} 
-                borderRadius={borderRadius} 
+              <ProductImageSwiper
+                images={images}
+                videos={videos}
+                title={product.title}
+                colors={colors}
+                borderRadius={borderRadius}
               />
             </div>
-            
+
             {/* Desktop: Thumbnail rail + main media */}
             <div className="hidden md:flex gap-3">
               {merged.length > 1 && (
@@ -459,14 +459,14 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                   ))}
                 </div>
               )}
-              
+
               <div
                 className="flex-1 aspect-[4/5] overflow-hidden relative flex items-center justify-center bg-muted"
                 style={{ backgroundColor: colors.secondary, borderRadius: `${borderRadius}px` }}
                 onMouseEnter={(e) => {
                   setImageZoom(true);
                   const v = e.currentTarget.querySelector('video');
-                  if (v) { v.muted = false; v.play().catch(() => {}); }
+                  if (v) { v.muted = false; v.play().catch(() => { }); }
                 }}
                 onMouseLeave={(e) => {
                   setImageZoom(false);
@@ -532,11 +532,11 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                   {product.category}
                 </span>
               )}
-              
+
               <h1 className="text-2xl md:text-3xl font-bold mb-2 leading-tight" style={{ fontFamily: fonts.heading }}>
                 {product.title}
               </h1>
-              
+
               {/* Rating summary — scrolls to reviews */}
               {section.props?.showRating !== false && count > 0 && (
                 <button
@@ -551,7 +551,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                   </span>
                 </button>
               )}
-              
+
               {/* Price */}
               {section.props?.showPrice !== false && (
                 <div className="flex items-center gap-3 flex-wrap mb-4">
@@ -568,9 +568,9 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                       </span>
                     </>
                   )}
-                  
+
                   {/* COD Available Badge */}
-                  <span 
+                  <span
                     onClick={() => setShowCodModal(true)}
                     className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer transition-all hover:scale-105 active:scale-95"
                     style={{ backgroundColor: '#10b98115', color: '#10b981', border: '1px solid #10b98130' }}
@@ -611,7 +611,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                 {hasSizeVariant && (
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-medium opacity-60">Options</span>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setShowSizeModal(true)}
                       className="text-xs font-semibold underline hover:opacity-80 transition flex items-center gap-1"
@@ -666,7 +666,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                         ) : added ? (
                           <><Check className="h-4 w-4" /> Added!</>
                         ) : (
-                          <><ShoppingCart className="h-4 w-4" /> Add to Cart</>
+                          <><ShoppingCart className="h-4 w-4" /> {sectionOverrides?.add_to_cart_cta || "Add to Cart"}</>
                         )}
                       </button>
                     )}
@@ -679,7 +679,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                         borderRadius: `${borderRadius}px`,
                       }}
                     >
-                      <Zap className="h-4 w-4" /> {store?.category === 'food' ? 'Order Now' : 'Buy Now'}
+                      <Zap className="h-4 w-4" /> {sectionOverrides?.buy_now_cta || (store?.category === 'food' ? 'Order Now' : 'Buy Now')}
                     </button>
                   </div>
                 )}
@@ -709,11 +709,11 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
               <button
                 onClick={() => toggleCompare(product.id)}
                 className="px-4 py-2 border text-xs font-semibold hover:bg-black/5 transition"
-                style={{ 
-                  borderRadius: `${borderRadius}px`, 
-                  borderColor: colors.secondary, 
+                style={{
+                  borderRadius: `${borderRadius}px`,
+                  borderColor: colors.secondary,
                   color: colors.primary,
-                  backgroundColor: compareList.includes(product.id) ? colors.secondary : 'transparent' 
+                  backgroundColor: compareList.includes(product.id) ? colors.secondary : 'transparent'
                 }}
               >
                 {compareList.includes(product.id) ? 'Added to Compare' : 'Add to Compare'}
@@ -722,10 +722,13 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
 
             {/* Delivery Checker / PincodeChecker */}
             <div className="pt-2">
-              <PincodeChecker 
-                storeId={store.id} 
-                colors={colors} 
-                borderRadius={borderRadius} 
+              <PincodeChecker
+                storeId={store.id}
+                colors={colors}
+                borderRadius={borderRadius}
+                title={sectionOverrides?.pincode_title}
+                placeholder={sectionOverrides?.pincode_placeholder}
+                cta={sectionOverrides?.pincode_cta}
               />
             </div>
 
@@ -736,7 +739,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                 <div className="grid gap-2">
                   {coupons.map((coupon) => {
                     const discountPct = coupon.type === 'percentage' ? Number(coupon.value) : 0;
-                    const discountAmt = coupon.type === 'percentage' 
+                    const discountAmt = coupon.type === 'percentage'
                       ? (Number(product.price) * discountPct) / 100
                       : Number(coupon.value);
                     const effectivePrice = Math.max(0, Number(product.price) - discountAmt);
@@ -783,9 +786,9 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                   <p className="text-[10px] text-muted-foreground">Professional Merchant</p>
                 </div>
               </div>
-              <Link 
-                to={`/store/${slug}`} 
-                className="text-xs font-bold hover:underline" 
+              <Link
+                to={`/store/${slug}`}
+                className="text-xs font-bold hover:underline"
                 style={{ color: colors.primary }}
               >
                 Visit Store →
@@ -793,7 +796,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
             </div>
 
             {/* Trust Badges */}
-            <TrustBadges colors={colors} borderRadius={borderRadius} category={store.category} />
+            <TrustBadges colors={colors} borderRadius={borderRadius} category={store.category} items={sectionOverrides?.items} />
 
             {/* Product Accordion */}
             <ProductAccordion
@@ -835,7 +838,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
               <h3 className="text-lg font-bold mb-4 text-left" style={{ fontFamily: fonts.heading }}>
                 Questions & Answers
               </h3>
-              
+
               {/* Ask a question form */}
               <form onSubmit={handleAskQuestion} className="flex gap-2 max-w-xl mb-6">
                 <input
@@ -922,14 +925,14 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
               <h3 className="text-xl font-semibold mb-6" style={{ fontFamily: fonts.heading }}>
                 {section.props?.title || 'Recently Viewed'}
               </h3>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 {viewedProducts.map((p: any) => (
                   <Link
                     key={p.id}
                     to={`/store/${slug}/product/${p.id}`}
                     className="group border transition-shadow hover:shadow-lg text-left"
-                    style={{ 
+                    style={{
                       borderColor: colors.secondary,
                       borderRadius: `${borderRadius}px`,
                       backgroundColor: colors.card
@@ -1005,14 +1008,14 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
             <span className="font-bold">{compareList.length}</span> product{compareList.length > 1 ? 's' : ''} in comparison
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={() => setShowCompareDrawer(true)} 
+            <button
+              onClick={() => setShowCompareDrawer(true)}
               className="px-4 py-1.5 bg-white text-slate-900 text-xs font-bold rounded hover:bg-slate-100 transition"
             >
               Compare Now
             </button>
-            <button 
-              onClick={() => setCompareList([])} 
+            <button
+              onClick={() => setCompareList([])}
               className="px-3 py-1.5 bg-slate-800 text-slate-400 text-xs font-semibold rounded hover:bg-slate-700 transition"
             >
               Clear
@@ -1029,7 +1032,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
               <h3 className="text-xl font-bold" style={{ fontFamily: fonts.heading }}>Compare Products</h3>
               <button onClick={() => setShowCompareDrawer(false)} className="text-sm font-semibold hover:opacity-75">Close</button>
             </div>
-            
+
             <div className="grid grid-cols-3 gap-4">
               {/* Product 1 */}
               <div className="p-4 border rounded-xl" style={{ borderColor: colors.secondary }}>
@@ -1067,7 +1070,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
             <p className="text-sm opacity-80 leading-relaxed mb-4">
               Cash on Delivery is available for this product! You can inspect the package and pay with cash or UPI directly to the delivery executive when they arrive.
             </p>
-            <button 
+            <button
               onClick={() => setShowCodModal(false)}
               className="w-full py-2 text-white font-semibold text-sm transition hover:opacity-90 animate-pulse"
               style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius / 2}px` }}
@@ -1109,7 +1112,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                 </tbody>
               </table>
             </div>
-            <button 
+            <button
               onClick={() => setShowSizeModal(false)}
               className="mt-6 w-full py-2 text-white font-semibold text-sm transition hover:opacity-90"
               style={{ backgroundColor: colors.primary, borderRadius: `${borderRadius / 2}px` }}

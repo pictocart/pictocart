@@ -36,9 +36,15 @@ const ICONS: Record<string, any> = {
 type Manifest = any;
 type HeaderOv = {
   logo_url?: string;
+  logo_shape?: string;
   show_name?: boolean;
   brand_name?: string;
+  brand_suffix?: string;
+  show_pincode_banner?: boolean;
+  show_search_bar?: boolean;
+  show_theme_toggle?: boolean;
   nav_links?: Array<{ label: string; page: string }>;
+  links?: any;
 };
 type FooterOv = {
   tagline?: string;
@@ -77,12 +83,14 @@ interface Props {
   products?: Array<{ id: string; title: string; price: number; compare_at_price?: number | null; images?: string[] | null; category?: string | null }>;
   /** Seller-defined categories (with optional image / description / subs) to splice into category_grid and collections_grid sections. */
   sellerCategories?: Array<{ id?: string; name: string; image_url?: string | null; description?: string | null; subs?: Array<{ id?: string; name: string; image_url?: string | null }> }>;
+  /** Active service providers / doctors / chefs to render. */
+  providers?: any[];
   /** Active product for the product detail page — injected into product_detail sections. */
   product?: any;
   store?: any;
 }
 
-export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, onNavigate, products, sellerCategories, product, store }: Props) {
+export default function MasterThemeRenderer({ manifest, page = "home", overrides, storeSlug, onNavigate, products, sellerCategories, providers = [], product, store }: Props) {
   const navigate = useNavigate();
   // Floating Live Status Tracker States with Instant Cache Loading
   const [activeOrders, setActiveOrders] = useState<any[]>(() => {
@@ -359,12 +367,12 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const dna = { ...baseDna, palette, fonts };
   const radius = globalOv.radius != null ? `${globalOv.radius}px` : (dna.radius ?? "8px");
   const headerStyle = manifest?.header_style ?? dna.layout?.header_style ?? "classic";
-  const brandName = overrides?.brand_name || store?.name || dna.name;
   const headerOv = {
     logo_url: (overrides as any)?.logo_url || "",
     brand_name: (overrides as any)?.brand_name || "",
     ...((overrides as any)?.header || {}),
   };
+  const brandName = headerOv.brand_name || overrides?.brand_name || store?.name || dna.name;
 
   const { totalItems, addItem } = useCart(storeSlug || "");
 
@@ -540,11 +548,53 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         }
         return;
       }
+
+      // 8. Custom search submit button click
+      const searchSubmitBtn = target.closest('#header-search-submit-btn') || target.closest('#drawer-search-submit-btn');
+      if (searchSubmitBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const inputId = searchSubmitBtn.id === 'header-search-submit-btn' ? 'header-search-input' : 'drawer-search-input';
+        const input = document.getElementById(inputId) as HTMLInputElement | null;
+        if (input && input.value.trim()) {
+          const query = input.value.trim();
+          document.getElementById('sidebar-overlay')?.classList.remove('open');
+          document.getElementById('sidebar-drawer')?.classList.remove('open');
+          if (typeof onNavigate === 'function') {
+            onNavigate(`shop?search=${encodeURIComponent(query)}`);
+          } else {
+            window.location.search = `?page=shop&search=${encodeURIComponent(query)}`;
+          }
+        }
+        return;
+      }
+    };
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        const target = e.target as HTMLInputElement;
+        if (target && (target.id === 'header-search-input' || target.id === 'drawer-search-input')) {
+          const val = target.value.trim();
+          if (val) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('sidebar-overlay')?.classList.remove('open');
+            document.getElementById('sidebar-drawer')?.classList.remove('open');
+            if (typeof onNavigate === 'function') {
+              onNavigate(`shop?search=${encodeURIComponent(val)}`);
+            } else {
+              window.location.search = `?page=shop&search=${encodeURIComponent(val)}`;
+            }
+          }
+        }
+      }
     };
     
     document.addEventListener('click', handleDocumentClick);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [products, addItem, totalItems, onNavigate]);
 
@@ -859,6 +909,14 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         /* Prevent cart button overflow clipping the badge count */
         [data-master-theme] #header-cart-btn {
           overflow: visible !important;
+        }
+
+        /* Cart badge count colors on light mode (non-white count text) */
+        html.light-mode #header-cart-count,
+        .light-mode #header-cart-count {
+          background-color: #12daa8 !important;
+          color: #000000 !important;
+          border-color: #000000 !important;
         }
 
         /* Badge Pop Animation */
@@ -1377,7 +1435,79 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
       `}} />
       {/* Header is first child — sticky top-0 works against window scroll */}
       {manifest?.header?.is_custom_html && manifest?.header?.html ? (
-        <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: String(manifest.header.html).replace(/{STORE_NAME}/g, brandName || '') }} />
+        (() => {
+          let html = String(manifest.header.html).replace(/{STORE_NAME}/g, brandName || '');
+          
+          // A. Substitute Brand Name Suffix/Underscore
+          const suffix = headerOv.brand_suffix !== undefined ? headerOv.brand_suffix : "_";
+          html = html.replace(/(class="[^"]*?font-black[^"]*?">)_(<\/span>)/g, `$1${suffix}$2`);
+          html = html.replace(/font-black">_<\/span>/g, `font-black">${suffix}</span>`);
+
+          // A2. Toggle Brand name text display visibility
+          if (headerOv.show_name === false) {
+            html = html.replace(/<span class="font-extrabold text-xl[^>]*>[\s\S]*?<\/span>\s*<\/span>/g, '');
+          }
+
+          // B. Toggle Pincode Display Banner visibility
+          if (headerOv.show_pincode_banner === false) {
+            html = html.replace(/<!-- (Pincode Display Block|Pincode setup)[\s\S]*?<!-- Light \/ Dark Mode Toggle Button -->/, '<!-- Light / Dark Mode Toggle Button -->');
+          }
+
+          // C. Toggle Search Bar visibility (Desktop & Mobile)
+          if (headerOv.show_search_bar === false) {
+            html = html.replace(/<!-- (Desktop Search Bar Input|Search Bar)[\s\S]*?<!-- (Pincode Display Block|Pincode setup)[^>]*?-->/, (match, p1, p2) => {
+              return `<!-- ${p2} -->`;
+            });
+            html = html.replace(/<!-- Mobile Search Input inside drawer[\s\S]*?<!-- Sidebar Links[^>]*?-->/, '<!-- Sidebar Links -->');
+          }
+
+          // D. Toggle Light/Dark Mode button visibility
+          if (headerOv.show_theme_toggle === false) {
+            html = html.replace(/<!-- Light \/ Dark Mode Toggle Button -->[\s\S]*?<\/button>/, '');
+          }
+
+          // 1. Substitute Logo Image if uploaded
+          if (headerOv.logo_url) {
+            const logoShapeClass = headerOv.logo_shape === 'circle' ? 'rounded-full object-cover w-8 h-8 shrink-0' : 'rounded-none object-contain h-8 shrink-0';
+            const logoHtml = `<img src="${headerOv.logo_url}" alt="${brandName}" class="${logoShapeClass} mr-2" />`;
+            
+            // Prepend logo inside the desktop <a> tag before the span
+            html = html.replace(/<span class="font-extrabold text-xl md:text-2xl tracking-wide font-sans lowercase">/g, `${logoHtml}<span class="font-extrabold text-xl md:text-2xl tracking-wide font-sans lowercase">`);
+            
+            // Prepend logo inside the mobile drawer span before the store name text
+            html = html.replace(/<span class="font-extrabold text-xl tracking-wide font-sans text-white lowercase">/g, `${logoHtml}<span class="font-extrabold text-xl tracking-wide font-sans text-white lowercase">`);
+          }
+          
+          // 2. Substitute Navigation links dynamically
+          const navLinks = headerOv.nav_links || [
+            { label: isFoodLayout ? "Our Menu" : "Shop", page: "shop" },
+            { label: "Collections", page: "collections" },
+            { label: "About", page: "about" },
+            { label: "Journal", page: "journal" },
+            { label: "Contact", page: "contact" }
+          ];
+          const pageToQuery: Record<string, string> = {
+            home: "", shop: isFoodLayout ? "?page=menu" : "?page=shop", collections: "?page=collections", about: "?page=about", contact: "?page=contact",
+            journal: "?page=journal", blog: "?page=journal", account: "?page=account", cart: "?page=cart",
+          };
+          const linksHtml = navLinks.map((link: any) => {
+            const pageQuery = pageToQuery[link.page] ?? `?page=${link.page}`;
+            const onClickAttr = `window.location.search = '${pageQuery}'`;
+            return `<a class="hover:text-[#12daa8] py-1 transition-colors cursor-pointer" onclick="${onClickAttr}">${link.label}</a>`;
+          }).join('\n');
+          html = html.replace(/<nav class="flex flex-col gap-3 font-semibold text-sm">[\s\S]*?<\/nav>/, `<nav class="flex flex-col gap-3 font-semibold text-sm">${linksHtml}</nav>`);
+          
+          // 3. Substitute Catalog Categories dynamically
+          if (sellerCategories && sellerCategories.length > 0) {
+            const categoriesHtml = sellerCategories.filter((c: any) => !c.parent_id).map((cat: any) => {
+              const emoji = cat.emoji || "📁";
+              return `<a class="hover:text-white transition-colors cursor-pointer" onclick="window.location.search = '?category=${cat.id}'">${emoji} ${cat.name}</a>`;
+            }).join('\n');
+            html = html.replace(/<nav class="flex flex-col gap-3 font-medium text-xs text-neutral-400">[\s\S]*?<\/nav>/, `<nav class="flex flex-col gap-3 font-medium text-xs text-neutral-400">${categoriesHtml}</nav>`);
+          }
+          
+          return <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: html }} />;
+        })()
       ) : (
         <Header dna={dna} brandName={brandName} variant={headerStyle} storeSlug={storeSlug} onNavigate={onNavigate} headerOv={headerOv} products={products} disabledPages={overrides?.disabled_pages} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />
       )}
@@ -1386,13 +1516,14 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         const ov = sectionOverrides[i] ?? sectionOverrides[String(i)] ?? {};
         if (ov.hidden) return null;
         const mergedProps = { ...(s.props ?? {}), ...ov };
-        // Inject active product into product_detail sections
-        if (s.type === "product_detail" && product) {
+        // Inject active product into product page sections
+        const isProdPageSec = s.type === "product_detail" || s.type === "product_images" || s.type === "product_info" || s.type === "product_reviews" || s.type === "related_products";
+        if (isProdPageSec && product) {
           mergedProps.product = product;
           if (product.images?.[0]) mergedProps.image = product.images[0];
         }
-        // Also inject product from overrides if present (e.g. StorefrontProduct passes it via overrides.product)
-        if (s.type === "product_detail" && (overrides as any)?.product) {
+        // Also inject product from overrides if present
+        if (isProdPageSec && (overrides as any)?.product) {
           mergedProps.product = (overrides as any).product;
           if ((overrides as any).product?.images?.[0]) mergedProps.image = (overrides as any).product.images[0];
         }
@@ -1440,6 +1571,18 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           } else {
             mergedProps.items = sellerCategoryItems;
           }
+        }
+        // provider_team: replace items with seller's real providers/chefs if there are database providers and use_db_providers is true/default.
+        const useDbProviders = mergedProps.use_db_providers ?? (providers && providers.length > 0);
+        if (useDbProviders && providers && providers.length > 0 && s.type === "provider_team") {
+          mergedProps.items = providers.map((pr: any) => ({
+            name: pr.name,
+            role: pr.role || "Master Chef",
+            experience: pr.experience || "5+ Years",
+            qualifications: pr.qualifications || "Culinary Expert",
+            bio: pr.bio || "",
+            image: pr.image_url || pr.image || "",
+          }));
         }
         // collections: replace items with seller's real categories if they've defined any
         if (sellerCategoryItems && (s.type === "collections" || s.type === "collections_grid")) {
@@ -1492,7 +1635,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             style={{ scrollMarginTop: 80, ...sectionStyle }}
             {...extraAttrs}
           >
-            <Section s={{ ...s, props: mergedProps }} dna={sectionDna} storeSlug={storeSlug} page={page} store={store} products={products} storeCategory={storeCategory} isFoodLayout={isFoodLayout} />
+            <Section s={{ ...s, props: mergedProps }} dna={sectionDna} storeSlug={storeSlug} page={page} store={store} products={products} storeCategory={storeCategory} isFoodLayout={isFoodLayout} sectionOverrides={sectionOverrides} />
           </div>
         );
       })}
@@ -1502,7 +1645,88 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         {...footerAttrs}
       >
         {manifest?.footer?.is_custom_html && manifest?.footer?.html ? (
-          <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: String(manifest.footer.html).replace(/{STORE_NAME}/g, brandName || '') }} />
+          (() => {
+            let html = String(manifest.footer.html).replace(/{STORE_NAME}/g, brandName || '');
+            
+            const footerOv = overrides?.footer || {};
+            const taglineText = footerOv.tagline !== undefined ? footerOv.tagline : "Next-generation techwear, smart utilities, and high-frequency gadgets. Limited supply drops.";
+            
+            const columnsData = footerOv.columns && footerOv.columns.length > 0 ? footerOv.columns : [
+              { title: "Shop Drops", links: [
+                { label: "All products", page: "shop" },
+                { label: "Cart", page: "cart" },
+                { label: "My account", page: "account" }
+              ]},
+              { title: "Customer Support", links: [
+                { label: "About us", page: "about" },
+                { label: "Journal", page: "blog" },
+                { label: "Contact", page: "contact" }
+              ]},
+              { title: "Policies", links: [
+                { label: "Privacy Policy", page: "privacy" },
+                { label: "Terms of Service", page: "terms" },
+                { label: "Refund Policy", page: "refund" },
+                { label: "Shipping Policy", page: "shipping" }
+              ]}
+            ];
+
+            const pageToPath: Record<string, string> = {
+              home: "", shop: "/shop", collections: "/collections", about: "/about", contact: "/contact",
+              journal: "/blog", blog: "/blog", account: "/account", cart: "/cart",
+              privacy: "/privacy-policy", terms: "/terms", refund: "/refund-policy",
+              return: "/return-policy", shipping: "/shipping-policy"
+            };
+
+            const social = footerOv.social || {};
+            let socialHtml = "";
+            if (social.instagram || social.facebook || social.twitter || social.youtube) {
+              socialHtml = `<div class="mt-4 flex gap-3 text-xs" style="color: var(--theme-muted);">`;
+              if (social.instagram) socialHtml += `<a href="${social.instagram}" target="_blank" rel="noreferrer" class="hover:underline hover:text-white transition">Instagram</a>`;
+              if (social.facebook) socialHtml += `<a href="${social.facebook}" target="_blank" rel="noreferrer" class="hover:underline hover:text-white transition">Facebook</a>`;
+              if (social.twitter) socialHtml += `<a href="${social.twitter}" target="_blank" rel="noreferrer" class="hover:underline hover:text-white transition">Twitter</a>`;
+              if (social.youtube) socialHtml += `<a href="${social.youtube}" target="_blank" rel="noreferrer" class="hover:underline hover:text-white transition">YouTube</a>`;
+              socialHtml += `</div>`;
+            }
+
+            const col1Html = `
+              <div class="text-left space-y-4">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 font-extrabold text-lg uppercase tracking-widest font-mono">${brandName || 'HYPE CORP'}</span>
+                ${taglineText ? `<p class="text-[11px] theme-muted-color leading-relaxed font-mono font-medium">${taglineText}</p>` : ''}
+                ${socialHtml}
+              </div>
+            `;
+
+            const otherColsHtml = columnsData.map((col: any) => {
+              const linksHtml = (col.links ?? []).map((l: any) => {
+                const targetPath = l.href || (l.page ? (storeSlug ? `/store/${storeSlug}${pageToPath[l.page] ?? `/${l.page}`}` : `${pageToPath[l.page] ?? `/${l.page}`}`) : "");
+                let onclickAttr = "";
+                if (l.page) {
+                  onclickAttr = `onclick="window.location.search = '?page=${l.page}'"`;
+                } else if (l.href) {
+                  onclickAttr = `onclick="window.open('${l.href}', '_blank')"`;
+                }
+                return `<li><a class="hover:text-purple-400 transition-colors cursor-pointer text-slate-400 font-mono text-[11px] font-medium" ${onclickAttr} href="${targetPath || '#'}">${l.label}</a></li>`;
+              }).join('\n');
+
+              return `
+                <div class="text-left space-y-3">
+                  <h4 class="text-xs font-bold uppercase tracking-widest theme-fg-color font-mono">${col.title}</h4>
+                  <ul class="space-y-2 text-[11px] font-medium">
+                    ${linksHtml}
+                  </ul>
+                </div>
+              `;
+            }).join('\n');
+
+            const fullGridHtml = `<div class="grid grid-cols-1 md:grid-cols-4 gap-10">\n${col1Html}\n${otherColsHtml}\n</div>`;
+            html = html.replace(/<div class="grid grid-cols-1 md:grid-cols-4 gap-10">[\s\S]*?<\/div>\s*(?=<div class="mt-12 border-t)/, fullGridHtml);
+
+            if (footerOv.show_powered_by === false) {
+              html = html.replace(/<p>Powered by.*?<\/p>/, '<p></p>');
+            }
+            
+            return <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: html }} />;
+          })()
         ) : (
           <Footer footer={manifest?.footer} dna={dna} brandName={brandName} storeSlug={storeSlug} onNavigate={onNavigate} footerOv={overrides?.footer} hasPolicies={!!(overrides as any)?.has_policies} />
         )}
@@ -2087,7 +2311,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
           {Brand}
           <nav className="flex flex-wrap items-center justify-center gap-4 text-xs uppercase tracking-widest" style={{ color: dna.palette?.muted }}>
             {links.map(l => renderLink(l, "hover:opacity-100 transition"))}
-            {storeSlug && (
+            {storeSlug && headerOv.show_search_bar !== false && (
               <form 
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -2164,7 +2388,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
           {links.map(l => renderLink(l, "hover:opacity-100 transition"))}
         </nav>
         <div className="flex items-center gap-3 flex-1 justify-end">
-          {storeSlug && (
+          {storeSlug && headerOv.show_search_bar !== false && (
             <>
               {/* Desktop search */}
                <form 
@@ -2247,7 +2471,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
   );
 }
 
-function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFoodLayout }: any) {
+function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFoodLayout, sectionOverrides }: any) {
   const p = s.props ?? {};
   if (p.is_custom_html && p.html) {
     return <div dangerouslySetInnerHTML={{ __html: String(p.html) }} />;
@@ -2307,6 +2531,7 @@ function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFo
     case "category_grid": {
       const catStyle = p.style ?? "grid_4";
       if (catStyle === "floating_orbs") return <CategoryFloatingOrbs p={p} dna={dna} storeSlug={storeSlug} />;
+      if (catStyle === "circular_strip" || catStyle === "neon_orbs_strip") return <CategoryCircularStrip p={p} dna={dna} storeSlug={storeSlug} />;
       return <CategoryBlock p={p} dna={dna} storeSlug={storeSlug} />;
     }
     case "collections":
@@ -2533,7 +2758,13 @@ function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFo
         </section>
       );
     }
-    case "product_detail": return <ProductDetailStub p={p} dna={dna} storeSlug={storeSlug} store={store} products={products} />;
+    case "product_detail":
+    case "product_images":
+      return <ProductDetailStub p={p} dna={dna} storeSlug={storeSlug} store={store} products={products} sectionOverrides={sectionOverrides} />;
+    case "product_info":
+    case "product_reviews":
+    case "related_products":
+      return null;
     // --- Service industry (doctor / salon / clinic) sections -------------
     case "provider_team":      return <ProviderTeamBlock p={p} dna={dna} storeSlug={storeSlug} />;
     case "service_menu":       return <ServiceMenuBlock p={p} dna={dna} storeSlug={storeSlug} />;
@@ -3548,8 +3779,11 @@ function ContactForm({ p, dna, storeSlug }: any) {
   );
 }
 
-function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
-  const pr = p.product ?? {};
+function ProductDetailStub({ p, dna, storeSlug, store, products, sectionOverrides }: any) {
+  const infoOv = sectionOverrides?.[1] ?? sectionOverrides?.["1"] ?? {};
+  const relOv = sectionOverrides?.[3] ?? sectionOverrides?.["3"] ?? {};
+  const merged = { ...p, ...infoOv, ...relOv };
+  const pr = merged.product ?? {};
 
   if (store && pr.id) {
     const themeObj = {
@@ -3580,7 +3814,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
         theme={themeObj}
         slug={storeSlug || ''}
         products={products || []}
-        sectionOverrides={p}
+        sectionOverrides={merged}
       />
     );
   }
@@ -3592,7 +3826,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
   // Use title as primary, name as fallback (DB shape uses `title`, legacy manifests use `name`)
   const name = pr.title || pr.name || "";
 
-  const images: string[] = pr.images || (p.image ? [p.image] : []);
+  const images: string[] = pr.images || (merged.image ? [merged.image] : []);
   const [activeImg, setActiveImg] = useState(0);
   const price = pr.price ?? 0;
   const compareAt = pr.compare_at_price ?? pr.compare_at ?? 0;
@@ -3677,6 +3911,36 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
             <p className="text-sm leading-relaxed" style={{ color: dna.palette?.muted }}>{pr.description}</p>
           )}
 
+          {/* Mock Pincode Checker */}
+          <div className="pt-2 pb-2">
+            <div className="flex items-center gap-1 text-xs font-medium opacity-70">
+              <span style={{ color: dna.palette?.fg }}>📍 {p.pincode_title || "Check Delivery Availability"}</span>
+            </div>
+            <div className="flex gap-2 mt-1.5">
+              <input
+                disabled
+                placeholder={p.pincode_placeholder || "Enter pincode"}
+                className="flex-1 px-3 py-2 text-xs border bg-transparent"
+                style={{
+                  borderColor: dna.palette?.border || 'rgba(0,0,0,0.15)',
+                  borderRadius: "var(--r)",
+                  color: dna.palette?.fg,
+                }}
+              />
+              <button
+                disabled
+                className="px-4 py-2 text-xs font-medium"
+                style={{
+                  backgroundColor: dna.palette?.primary,
+                  color: dna.palette?.primary_fg,
+                  borderRadius: "var(--r)",
+                }}
+              >
+                {p.pincode_cta || 'Check'}
+              </button>
+            </div>
+          </div>
+
           {/* Qty + Add to Cart */}
           <div className="flex items-center gap-3 mt-2">
             <div className="flex items-center border rounded-xl overflow-hidden" style={{ borderColor: dna.palette?.border }}>
@@ -3687,7 +3951,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
             <button onClick={handleAdd} disabled={pr.inventory_count === 0}
               className="flex-1 py-3 px-6 font-bold text-sm rounded-xl transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
               style={{ background: dna.palette?.primary, color: dna.palette?.primary_fg, borderRadius: "var(--r)" }}>
-              {added ? "✓ Added!" : pr.inventory_count === 0 ? "Out of Stock" : "Add to Cart"}
+              {added ? "✓ Added!" : pr.inventory_count === 0 ? "Out of Stock" : (p.add_to_cart_cta || "Add to Cart")}
             </button>
           </div>
 
@@ -3695,19 +3959,33 @@ function ProductDetailStub({ p, dna, storeSlug, store, products }: any) {
             <a href={`/store/${storeSlug}/checkout`} onClick={() => handleAdd()}
               className="w-full py-3 text-center font-bold text-sm rounded-xl border-2 transition-all hover:opacity-80"
               style={{ borderColor: dna.palette?.primary, color: dna.palette?.primary, borderRadius: "var(--r)" }}>
-              {store?.category === 'food' ? "Order Now" : "Buy Now"}
+              {p.buy_now_cta || (store?.category === 'food' ? "Order Now" : "Buy Now")}
             </a>
           )}
 
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-3 mt-2 pt-4 border-t" style={{ borderColor: dna.palette?.border }}>
-            {[["🔒","Secure","Payment"],["↩","7 Day","Returns"],["🚚","Free","Shipping"]].map(([icon,t,s],i) => (
-              <div key={i} className="text-center p-2 rounded-lg" style={{ background: dna.palette?.surface }}>
-                <div className="text-lg mb-1">{icon}</div>
-                <div className="text-[10px] font-bold" style={{ color: dna.palette?.fg }}>{t}</div>
-                <div className="text-[10px]" style={{ color: dna.palette?.muted }}>{s}</div>
-              </div>
-            ))}
+            {p.items && p.items.length > 0 ? (
+              p.items.slice(0, 4).map((item: any, i: number) => {
+                const emojis: Record<string, string> = { truck: "🚚", shield: "🔒", shieldcheck: "🔒", shield_check: "🔒", rotateccw: "↩", rotate_ccw: "↩", 'rotate-ccw': "↩", creditcard: "💳", credit_card: "💳", 'credit-card': "💳", headphones: "🎧", phone: "📞", sparkles: "✨" };
+                const emoji = emojis[String(item.icon).toLowerCase()] || "🔒";
+                return (
+                  <div key={i} className="text-center p-2 rounded-lg" style={{ background: dna.palette?.surface }}>
+                    <div className="text-lg mb-1">{emoji}</div>
+                    <div className="text-[10px] font-bold" style={{ color: dna.palette?.fg }}>{item.title}</div>
+                    <div className="text-[10px]" style={{ color: dna.palette?.muted }}>{item.sub}</div>
+                  </div>
+                );
+              })
+            ) : (
+              [["🔒","Secure","Payment"],["↩","7 Day","Returns"],["🚚","Free","Shipping"]].map(([icon,t,s],i) => (
+                <div key={i} className="text-center p-2 rounded-lg" style={{ background: dna.palette?.surface }}>
+                  <div className="text-lg mb-1">{icon}</div>
+                  <div className="text-[10px] font-bold" style={{ color: dna.palette?.fg }}>{t}</div>
+                  <div className="text-[10px]" style={{ color: dna.palette?.muted }}>{s}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -4358,11 +4636,31 @@ function CategoryBlock({ p, dna, storeSlug }: any) {
     storeSlug ? `/store/${storeSlug}/shop?category=${encodeURIComponent(name || "")}` : "#products";
   const Title = <h2 className="text-3xl mb-10 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>;
 
+  const cols = p.product_cols ?? p.category_cols ?? 4;
+  const colsMap: Record<number, string> = {
+    2: "md:grid-cols-2",
+    3: "md:grid-cols-3",
+    4: "md:grid-cols-4",
+    5: "md:grid-cols-5",
+    6: "md:grid-cols-6",
+  };
+  const gridColsClass = colsMap[cols] || "md:grid-cols-4";
+  const showScrollbar = p.show_scrollbar !== false;
+
   if (p.scroll_horizontal) {
     return (
       <section className="max-w-6xl mx-auto px-6 py-20">
+        <style>{`
+          .scrollbar-none::-webkit-scrollbar {
+            display: none !important;
+          }
+          .scrollbar-none {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+          }
+        `}</style>
         {Title}
-        <div className="flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin">
+        <div className={`flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth ${showScrollbar ? "scrollbar-thin" : "scrollbar-none"}`}>
           {items.map((c: any, i: number) => (
             <Link 
               to={hrefFor(c.name)} 
@@ -4438,7 +4736,7 @@ function CategoryBlock({ p, dna, storeSlug }: any) {
     return (
       <section className="max-w-6xl mx-auto px-6 py-16">
         {Title}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className={`grid grid-cols-2 ${gridColsClass} gap-3`}>
           {items.map((c: any, i: number) => {
             const tall = v === "masonry" && i % 3 === 0;
             return (
@@ -4452,15 +4750,6 @@ function CategoryBlock({ p, dna, storeSlug }: any) {
       </section>
     );
   }
-  const cols = p.product_cols ?? p.category_cols ?? 4;
-  const colsMap: Record<number, string> = {
-    2: "md:grid-cols-2",
-    3: "md:grid-cols-3",
-    4: "md:grid-cols-4",
-    5: "md:grid-cols-5",
-    6: "md:grid-cols-6",
-  };
-  const gridColsClass = colsMap[cols] || "md:grid-cols-4";
 
   return (
     <section className="max-w-6xl mx-auto px-6 py-20">
@@ -4993,16 +5282,41 @@ function ProductBlock({ p, dna, storeSlug, page, storeCategory, isFoodLayout }: 
             display: grid !important;
           }
         }
+        
+        .custom-neon-scrollbar::-webkit-scrollbar {
+          height: 6px;
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-track {
+          background: rgba(11, 14, 27, 0.4);
+          border-radius: 9999px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(90deg, #12daa8, #a855f7);
+          border-radius: 9999px;
+          box-shadow: 0 0 10px rgba(18, 218, 168, 0.5);
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(90deg, #10b981, #c084fc);
+        }
+        
+        .scrollbar-none::-webkit-scrollbar {
+          display: none !important;
+        }
+        .scrollbar-none {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
       `}} />
       {Title}
       {Chips}
       {Empty}
       <div 
         className={p.scroll_horizontal
-          ? "flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin"
+          ? `flex gap-6 overflow-x-auto pt-4 pb-4 snap-x scroll-smooth ${p.show_scrollbar !== false ? "custom-neon-scrollbar" : "scrollbar-none"}`
           : cardWidth 
-            ? "flex flex-wrap gap-6 justify-center" 
-            : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId}`
+            ? "flex flex-wrap gap-6 justify-center pt-4" 
+            : `grid grid-cols-2 gap-6 dynamic-grid-${sectionId} pt-4`
         }
       >
         {items.map((pr: any, i: number) => {
@@ -6065,6 +6379,110 @@ function PromoAuroraWave({ p, dna, storeSlug }: any) {
         <h2 className="text-4xl md:text-6xl font-black mb-6 text-white leading-tight" style={{ fontFamily:"var(--hf)",textShadow:`0 0 40px ${primary}80` }}>{p.title || "Cosmic Sale"}</h2>
         <p className="text-lg text-white/60 max-w-xl mx-auto mb-10">{p.subtitle || "Limited-time offer across the entire store."}</p>
         <a href={ctaHref} className="inline-flex items-center gap-2 px-10 py-4 text-base font-black rounded-2xl text-white transition-all hover:scale-105" style={{ background:`linear-gradient(135deg,${primary},${accent})`,boxShadow:`0 8px 40px ${primary}50` }}>⚡ {p.cta || "Claim Discount"}</a>
+      </div>
+    </section>
+  );
+}
+
+function CategoryCircularStrip({ p, dna, storeSlug }: any) {
+  const items: any[] = p.items ?? [];
+  const scrollHorizontal = p.scroll_horizontal !== false;
+  const desktopCols = p.product_cols ? parseInt(String(p.product_cols), 10) : (p.columns ? parseInt(String(p.columns), 10) : 4);
+  
+  const gridColsClass = 
+    desktopCols === 2 ? "grid-cols-2 md:grid-cols-2" :
+    desktopCols === 3 ? "grid-cols-2 md:grid-cols-3" :
+    desktopCols === 4 ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4" :
+    desktopCols === 5 ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-5" :
+    desktopCols === 6 ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-6" :
+    desktopCols === 8 ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8" :
+    "grid-cols-2 sm:grid-cols-3 md:grid-cols-4";
+
+  const showScrollbar = p.show_scrollbar !== false;
+  const containerClass = scrollHorizontal
+    ? `flex items-center justify-start sm:justify-center gap-8 overflow-x-auto pt-6 pb-6 ${showScrollbar ? "custom-neon-scrollbar" : "scrollbar-none"}`
+    : `grid ${gridColsClass} gap-8 justify-center pt-6 pb-6`;
+
+  return (
+    <section className="theme-bg-color py-12 border-b theme-border-color font-sans transition-colors duration-300">
+      <style>{`
+        .custom-neon-scrollbar::-webkit-scrollbar {
+          height: 6px;
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-track {
+          background: rgba(11, 14, 27, 0.4);
+          border-radius: 9999px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(90deg, #12daa8, #a855f7);
+          border-radius: 9999px;
+          box-shadow: 0 0 10px rgba(18, 218, 168, 0.5);
+        }
+        .custom-neon-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(90deg, #10b981, #c084fc);
+        }
+        
+        .scrollbar-none::-webkit-scrollbar {
+          display: none !important;
+        }
+        .scrollbar-none {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}</style>
+      <div className="max-w-6xl mx-auto px-6">
+        {p.title && (
+          <h2 className="text-xl md:text-2xl font-black text-center mb-8 text-white uppercase tracking-widest" style={{ fontFamily: "var(--hf)" }}>
+            {p.title}
+          </h2>
+        )}
+        <div className={containerClass}>
+          {items.map((cat: any, i: number) => {
+            const name = cat.name || "";
+            const match = name.match(/^([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF])\s*(.*)$/) 
+              || [null, null, name];
+            const emoji = match[1] || "📁";
+            const cleanName = match[2] || name;
+            const href = storeSlug ? `/store/${storeSlug}/shop?category=${encodeURIComponent(cat.id)}` : "#";
+            
+            return (
+              <a key={i} href={href} className="flex flex-col items-center gap-3 cursor-pointer group shrink-0">
+                <div className="w-24 h-24 rounded-full theme-surface-color border theme-border-color group-hover:border-purple-500 group-hover:scale-105 transition-all duration-300 flex items-center justify-center text-4xl shadow-xl overflow-hidden">
+                  {cat.image ? (
+                    <img src={cat.image} alt={cleanName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{emoji}</span>
+                  )}
+                </div>
+                <span className="text-xs font-black theme-fg-color group-hover:text-purple-400 transition-colors uppercase tracking-widest mt-1">
+                  {cleanName}
+                </span>
+              </a>
+            );
+          })}
+        </div>
+        
+        {/* Payment strip */}
+        <div style={{ background: "var(--stripe-bg)", border: "1px solid var(--stripe-border)", backdropFilter: "blur(10px)" }} className="mt-8 py-4 px-6 rounded-2xl flex flex-wrap justify-between items-center gap-6 max-w-4xl mx-auto shadow-2xl transition-all duration-300">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] font-sans" style={{ color: "var(--stripe-text)" }}>
+            🛡️ 100% SECURED PAYMENT GATEWAYS:
+          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div style={{ background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--stripe-text)" }} className="px-4 py-1.5 rounded-full flex items-center gap-2 text-[10px] font-black tracking-wider uppercase">
+              <span className="text-blue-400">💳</span> <span>VISA</span>
+            </div>
+            <div style={{ background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--stripe-text)" }} className="px-4 py-1.5 rounded-full flex items-center gap-2 text-[10px] font-black tracking-wider uppercase">
+              <span className="text-amber-500">💳</span> <span>MASTERCARD</span>
+            </div>
+            <div style={{ background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--stripe-text)" }} className="px-4 py-1.5 rounded-full flex items-center gap-2 text-[10px] font-black tracking-wider uppercase">
+              <span className="text-teal-400">⚡</span> <span>UPI PAY</span>
+            </div>
+            <div style={{ background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--stripe-text)" }} className="px-4 py-1.5 rounded-full flex items-center gap-2 text-[10px] font-black tracking-wider uppercase">
+              <span className="text-emerald-500">💵</span> <span>COD AVAILABLE</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

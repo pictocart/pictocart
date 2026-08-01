@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useStore } from "@/hooks/useStore";
 import { useThemeManifest } from '@/hooks/useThemeManifest';
 import { buildResolvedStorefrontManifest, getStoreThemeId, getStorefrontConfig, getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories } from "@/hooks/useCategories";
+import { useProviders } from "@/hooks/useServiceIndustry";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import HomeSourcePicker from "@/components/store-design/HomeSourcePicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Sparkles, FileText as FileTextIcon, LayoutGrid } from "lucide-react";
 import Cropper, { Area } from "react-easy-crop";
+import "react-easy-crop/react-easy-crop.css";
 import RechargeSheet from "@/components/wallet/RechargeSheet";
 
 const PAGES = [
@@ -58,11 +60,13 @@ const SECTION_LABEL: Record<string, string> = {
   journal_list: "Blog list", account_panel: "Account panel",
   contact_form: "Contact form", product_detail: "Product detail",
   collections_grid: "Collections grid", collection_detail: "Collection detail",
+  product_images: "Product images", product_info: "Product info",
+  product_reviews: "Product reviews", related_products: "You May Also Like",
 };
 
 
 
-const TEXT_KEYS = ["title", "sub", "subtitle", "kicker", "cta", "cta_secondary", "body", "email", "phone", "address", "hours"];
+const TEXT_KEYS = ["title", "sub", "subtitle", "kicker", "cta", "cta_secondary", "body", "email", "phone", "address", "hours", "buy_now_cta", "add_to_cart_cta", "pincode_title", "pincode_placeholder", "pincode_cta"];
 const ICON_OPTIONS = ["truck", "shield", "refresh", "headphones", "lock", "tag", "gift", "sparkles"];
 
 const NAV_PAGE_OPTIONS = [
@@ -115,6 +119,7 @@ export default function CustomiserV2() {
 
   const { store, setStore } = useStore();
   const { categories, updateCategory, deleteCategory } = useCategories();
+  const { providers = [], save: saveProvider } = useProviders();
   const queryClient = useQueryClient();
   const { data: products = [] } = useQuery({
     queryKey: ['customiser-products', store?.id],
@@ -294,6 +299,14 @@ export default function CustomiserV2() {
 
   const isMaster = activeThemeId?.startsWith("theme-") || activeThemeId?.startsWith("layout1-") || activeThemeId?.startsWith("custom-theme-");
   const sections: any[] = useMemo(() => {
+    if (page === "product") {
+      return [
+        { type: "product_images", props: {} },
+        { type: "product_info", props: {} },
+        { type: "product_reviews", props: {} },
+        { type: "related_products", props: {} },
+      ];
+    }
     const manifestSections = (manifest as any)?.pages?.[page]?.sections ?? [];
     if (manifestSections.length > 0) return manifestSections;
     // Mirror MasterThemeRenderer's synthesized pages so the seller can edit them.
@@ -314,9 +327,11 @@ export default function CustomiserV2() {
     }
     return [];
   }, [manifest, page]);
-  const sectionOverrides: Record<string, any> =
-    overrides?.pages?.[page]?.sections ??
-    (page === "home" ? overrides?.sections ?? {} : {});
+  const sectionOverrides: Record<string, any> = useMemo(() => {
+    const pageSections = overrides?.pages?.[page]?.sections || {};
+    const legacySections = page === "home" ? overrides?.sections || {} : {};
+    return { ...legacySections, ...pageSections };
+  }, [overrides, page]);
 
   const updateField = (idx: number, key: string, value: any) => {
     setOverrides((prev: any) => {
@@ -474,90 +489,96 @@ export default function CustomiserV2() {
     isAiImage: boolean = false,
     promptText?: string
   ) => {
-    let targetAspect: number | undefined = undefined;
     try {
-      const iframe = iframeRef.current;
-      const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
-      
-      if (target === "logo_url") {
-        const shape = overrides?.logo_shape || overrides?.header?.logo_shape || "rectangle";
-        if (shape === "circle") {
-          targetAspect = 1;
-        } else {
-          const logoEl = doc?.querySelector('img[data-logo-element="true"], img[src*="logo"], header img');
-          if (logoEl) {
-            const rect = logoEl.getBoundingClientRect();
+      let targetAspect: number | undefined = undefined;
+      try {
+        const iframe = iframeRef.current;
+        const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+        
+        if (target === "logo_url") {
+          const shape = overrides?.logo_shape || overrides?.header?.logo_shape || "rectangle";
+          if (shape === "circle") {
+            targetAspect = 1;
+          } else {
+            const logoEl = doc?.querySelector('img[data-logo-element="true"], img[src*="logo"], header img');
+            if (logoEl) {
+              const rect = logoEl.getBoundingClientRect();
+              if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+            }
+            if (!targetAspect) targetAspect = 2.5;
+          }
+        } else if (sections[idx]?.type === "hero") {
+          const heroEl = doc?.querySelector('[data-hero-section="true"]');
+          if (heroEl) {
+            const rect = heroEl.getBoundingClientRect();
             if (rect.width && rect.height) targetAspect = rect.width / rect.height;
           }
-          if (!targetAspect) targetAspect = 2.5;
-        }
-      } else if (sections[idx]?.type === "hero") {
-        const heroEl = doc?.querySelector('[data-hero-section="true"]');
-        if (heroEl) {
-          const rect = heroEl.getBoundingClientRect();
-          if (rect.width && rect.height) targetAspect = rect.width / rect.height;
-        }
-        if (!targetAspect) {
-          const defaults = sections[idx]?.props ?? {};
-          const sectionOv = sectionOverrides[idx] ?? {};
-          const merged = { ...defaults, ...sectionOv };
-          const s = merged.style ?? "centered";
-          const h = merged.height ?? "auto";
-          if (s === "magazine" || s === "editorial_serif") targetAspect = 21 / 9;
-          else if (s === "split" || s === "half_banner" || s === "dual_image") targetAspect = 1.2;
-          else {
-            switch (h) {
-              case "short":  targetAspect = 2.2; break;
-              case "medium": targetAspect = 1.6; break;
-              case "tall":   targetAspect = 1.33; break;
-              case "full":   targetAspect = 1.2; break;
-              case "auto":
-              default:       targetAspect = 1.6; break;
+          if (!targetAspect) {
+            const defaults = sections[idx]?.props ?? {};
+            const sectionOv = sectionOverrides[idx] ?? {};
+            const merged = { ...defaults, ...sectionOv };
+            const s = merged.style ?? "centered";
+            const h = merged.height ?? "auto";
+            if (s === "magazine" || s === "editorial_serif") targetAspect = 21 / 9;
+            else if (s === "split" || s === "half_banner" || s === "dual_image") targetAspect = 1.2;
+            else {
+              switch (h) {
+                case "short":  targetAspect = 2.2; break;
+                case "medium": targetAspect = 1.6; break;
+                case "tall":   targetAspect = 1.33; break;
+                case "full":   targetAspect = 1.2; break;
+                case "auto":
+                default:       targetAspect = 1.6; break;
+              }
             }
           }
-        }
-      } else if (typeof target === "object" && "categoryId" in target) {
-        const categoryGridEl = doc?.querySelector(`[data-section-index="${idx}"]`);
-        if (categoryGridEl) {
-          const firstCardEl = categoryGridEl.querySelector("a, img");
-          if (firstCardEl) {
-            const rect = firstCardEl.getBoundingClientRect();
-            if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+        } else if (typeof target === "object" && target !== null && "categoryId" in target) {
+          const categoryGridEl = doc?.querySelector(`[data-section-index="${idx}"]`);
+          if (categoryGridEl) {
+            const firstCardEl = categoryGridEl.querySelector("a, img");
+            if (firstCardEl) {
+              const rect = firstCardEl.getBoundingClientRect();
+              if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+            }
           }
-        }
-        if (!targetAspect) targetAspect = 0.75;
-      } else {
-        const sectionEl = doc?.querySelector(`[data-section-index="${idx}"]`);
-        if (sectionEl) {
-          const img = sectionEl.querySelector("img");
-          if (img) {
-            const rect = img.parentElement?.getBoundingClientRect() || img.getBoundingClientRect();
-            if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+          if (!targetAspect) targetAspect = 0.75;
+        } else {
+          const sectionEl = doc?.querySelector(`[data-section-index="${idx}"]`);
+          if (sectionEl) {
+            const img = sectionEl.querySelector("img");
+            if (img) {
+              const rect = img.parentElement?.getBoundingClientRect() || img.getBoundingClientRect();
+              if (rect.width && rect.height) targetAspect = rect.width / rect.height;
+            }
           }
+          if (!targetAspect) targetAspect = 1.5;
         }
-        if (!targetAspect) targetAspect = 1.5;
+      } catch (e) {
+        console.warn("Failed to query preview iframe for aspect ratio:", e);
       }
-    } catch (e) {
-      console.warn("Failed to query preview iframe for aspect ratio:", e);
+      
+      setCropSrc(src);
+      setCropFileName(fileName);
+      setCropIdx(idx);
+      setCropTarget(target);
+      const aspect = targetAspect && !isNaN(targetAspect) && isFinite(targetAspect) ? targetAspect : 1.5;
+      setCropAspect(aspect);
+      setCropIsAi(isAiImage);
+      setCropAiPrompt(promptText || "");
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedArea(null);
+      setCropOpen(true);
+    } catch (err: any) {
+      console.error("Error starting crop window:", err);
+      toast.error("Failed to open cropper: " + err.message);
     }
-    
-    setCropSrc(src);
-    setCropFileName(fileName);
-    setCropIdx(idx);
-    setCropTarget(target);
-    setCropAspect(targetAspect || 1.5);
-    setCropIsAi(isAiImage);
-    setCropAiPrompt(promptText || "");
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
-    setCroppedArea(null);
-    setCropOpen(true);
   };
 
   const uploadImage = async (
     idx: number,
     file: File | string,
-    target: "image" | "logo_url" | { slideIndex: number; key?: string } | { videoKey: "poster" | "src" } | { categoryId: string } = "image",
+    target: "image" | "logo_url" | { slideIndex: number; key?: string } | { videoKey: "poster" | "src" } | { categoryId: string } | { itemIndex: number; key?: string } | { providerId: string } = "image",
     isCropped = false,
     promptText?: string,
   ) => {
@@ -571,7 +592,14 @@ export default function CustomiserV2() {
     if (!isCropped) {
       const reader = new FileReader();
       reader.onload = () => {
-        startCropForTarget(reader.result as string, file.name, idx, target, false);
+        try {
+          startCropForTarget(reader.result as string, file.name, idx, target, false);
+        } catch (err: any) {
+          toast.error("Failed to process file: " + err.message);
+        }
+      };
+      reader.onerror = () => {
+        toast.error("Failed to read image file");
       };
       reader.readAsDataURL(file);
       return;
@@ -596,6 +624,15 @@ export default function CustomiserV2() {
         const next = [...cur];
         next[target.slideIndex] = { ...(next[target.slideIndex] || {}), [target.key || "image"]: url };
         updateField(idx, "slides", next);
+      } else if (typeof target === "object" && "itemIndex" in target) {
+        const cur = (overrides?.pages?.[page]?.sections?.[idx]?.items
+          ?? sections[idx]?.props?.items ?? []) as any[];
+        const next = [...cur];
+        next[target.itemIndex] = { ...(next[target.itemIndex] || {}), [target.key || "image"]: url };
+        updateField(idx, "items", next);
+      } else if (typeof target === "object" && "providerId" in target) {
+        await saveProvider({ id: target.providerId, image_url: url });
+        queryClient.invalidateQueries({ queryKey: ["service-providers", store?.id] });
       } else if (typeof target === "object" && "videoKey" in target) {
         const cur = overrides?.pages?.[page]?.sections?.[idx]?.video ?? sections[idx]?.props?.video ?? {};
         updateField(idx, "video", { ...cur, [target.videoKey]: url, provider: "upload" });
@@ -881,8 +918,18 @@ export default function CustomiserV2() {
   const previewUrl = `/admin/themes/preview-live/${activeThemeId}?page=${page}&storeSlug=${store?.slug ?? ""}`;
   const iframeUrl = `/admin/themes/preview-live/${activeThemeId}?storeSlug=${store?.slug ?? ""}`;
 
+  const storeCategory = store?.category || manifest?.store?.category || "";
+  const themeId = manifest?.theme_id || manifest?.name || "";
+  const isFoodLayout = storeCategory === "food" || (
+    themeId === "theme-70904877" || 
+    themeId === "theme-bee17452" || 
+    !!(manifest?.dna?.name?.toLowerCase().includes('gourmet') || 
+      manifest?.dna?.name?.toLowerCase().includes('food') || 
+      manifest?.dna?.name?.toLowerCase().includes('restaurant'))
+  );
+
   return (
-    <div className={`flex flex-col bg-background ${isFullscreen ? "fixed inset-0 z-[9999] h-screen w-screen" : "-m-4 md:-m-6 h-[calc(100vh-4rem)]"}`}>
+    <div className={`flex flex-col bg-background ${isFullscreen ? "fixed inset-0 z-[60] h-screen w-screen" : "-m-4 md:-m-6 h-[calc(100vh-4rem)]"}`}>
       <div className="border-b px-4 h-12 flex items-center justify-between gap-3 bg-card shrink-0">
         <div className="flex items-center gap-3">
           <h1 className="font-semibold text-sm">
@@ -1001,7 +1048,14 @@ export default function CustomiserV2() {
                   <button
                     key={p.id}
                     disabled={!exists}
-                    onClick={() => { setPage(p.id); setSelected(null); }}
+                    onClick={() => {
+                      setPage(p.id);
+                      if (p.id === "home") {
+                        setSelected(null);
+                      } else {
+                        setSelected({ kind: "section", index: 0 });
+                      }
+                    }}
                     className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${page === p.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"} ${!exists ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
                     <span>{p.label}</span>
@@ -1182,6 +1236,7 @@ export default function CustomiserV2() {
                 storeName={store?.name || ""}
                 onChange={updateHeader}
                 onLogoUpload={uploadLogo}
+                isFoodLayout={isFoodLayout}
               />
             )}
 
@@ -1225,6 +1280,7 @@ export default function CustomiserV2() {
                 updateCategory={updateCategory}
                 deleteCategory={deleteCategory}
                 products={products}
+                providers={providers}
                 manifest={manifest}
                 paletteOv={paletteOv}
                 iframeRef={iframeRef}
@@ -1312,17 +1368,15 @@ export default function CustomiserV2() {
             </div>
           </div>
           <DialogFooter className="flex items-center gap-2 justify-between border-t pt-4">
-            {cropIsAi && (
-              <Button
-                variant="outline"
-                type="button"
-                onClick={handleApplyOriginal}
-                disabled={cropUploading}
-                className="mr-auto border-violet-200 text-violet-700 hover:bg-violet-50"
-              >
-                Apply Original
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              type="button"
+              onClick={handleApplyOriginal}
+              disabled={cropUploading}
+              className="mr-auto border-violet-200 text-violet-700 hover:bg-violet-50"
+            >
+              Apply Original
+            </Button>
             <div className="flex gap-2 ml-auto">
               <Button variant="outline" type="button" onClick={handleCloseCropper} disabled={cropUploading}>
                 Cancel
@@ -1430,7 +1484,7 @@ function InspectorHeader({ selected, headerOv, footerOv, sections, sectionOverri
   );
 }
 
-function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload }: { headerOv: any; storeName: string; onChange: (k: string, v: any) => void; onLogoUpload: (f: File) => void }) {
+function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload, isFoodLayout }: { headerOv: any; storeName: string; onChange: (k: string, v: any) => void; onLogoUpload: (f: File) => void; isFoodLayout?: boolean }) {
   const links: Array<{ label: string; page: string }> = headerOv.nav_links ?? [
     { label: "Shop", page: "shop" }, { label: "Collections", page: "collections" }, { label: "About", page: "about" }, { label: "Journal", page: "blog" }, { label: "Contact", page: "contact" },
   ];
@@ -1591,6 +1645,58 @@ function HeaderInspector({ headerOv, storeName, onChange, onLogoUpload }: { head
           <button onClick={() => updateLinks([...links, { label: "New link", page: "shop" }])} className="text-xs text-primary hover:underline inline-flex items-center gap-1"><Plus className="h-3 w-3" /> Add link</button>
         </div>
       </div>
+
+      {/* Cyber/Neon Custom Header Settings */}
+      {isFoodLayout && (
+        <div className="border-t pt-4 space-y-4">
+          <Label className="text-xs font-semibold text-primary uppercase tracking-wider">Cyber/Neon Header Options</Label>
+          
+          <div className="flex items-center justify-between pt-1">
+            <div>
+              <Label className="text-xs">Show Pincode Banner</Label>
+              <p className="text-[9px] text-muted-foreground">Display the pincode update strip.</p>
+            </div>
+            <Switch 
+              checked={headerOv.show_pincode_banner !== false} 
+              onCheckedChange={(v) => onChange("show_pincode_banner", v)} 
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <div>
+              <Label className="text-xs">Show Search Input</Label>
+              <p className="text-[9px] text-muted-foreground">Display search box on desktop and mobile.</p>
+            </div>
+            <Switch 
+              checked={headerOv.show_search_bar !== false} 
+              onCheckedChange={(v) => onChange("show_search_bar", v)} 
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <div>
+              <Label className="text-xs">Show Dark Mode Switcher</Label>
+              <p className="text-[9px] text-muted-foreground">Light/Dark mode toggle button in header.</p>
+            </div>
+            <Switch 
+              checked={headerOv.show_theme_toggle !== false} 
+              onCheckedChange={(v) => onChange("show_theme_toggle", v)} 
+            />
+          </div>
+
+          <div className="space-y-1 pt-1">
+            <Label className="text-xs">Brand Name Accent Suffix</Label>
+            <p className="text-[9px] text-muted-foreground">Accent character at end of store name.</p>
+            <Input 
+              value={headerOv.brand_suffix ?? "_"} 
+              onChange={(e) => onChange("brand_suffix", e.target.value)} 
+              placeholder="_" 
+              className="h-8 text-xs w-full mt-1" 
+              maxLength={3}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1666,7 +1772,7 @@ function FooterInspector({ footerOv, onChange }: { footerOv: any; onChange: (k: 
   );
 }
 
-function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, categories = [], updateCategory, deleteCategory, products = [], manifest, paletteOv, iframeRef, onInsufficientCredits }: any) {
+function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadImage, onColorChange, onResetColors, previewUrl, categories = [], updateCategory, deleteCategory, products = [], providers = [], manifest, paletteOv, iframeRef, onInsufficientCredits }: any) {
   const handleUploadCatImage = async (catId: string, file: File) => {
     const loadingToast = toast.loading("Uploading category image...");
     try {
@@ -1705,18 +1811,23 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
     values: ["title"],
     usp_strip: [],
     promo_banner: ["title", "subtitle", "cta", "promo_code"],
+    product_detail: ["buy_now_cta", "add_to_cart_cta", "pincode_title", "pincode_placeholder", "pincode_cta"],
+    product_info: ["buy_now_cta", "add_to_cart_cta", "pincode_title", "pincode_placeholder", "pincode_cta"],
+    cart_summary: ["cta"],
+    related_products: ["title"],
   };
   const forcedKeys = typeSpecificKeys[section?.type] ?? [];
   const textKeys = TEXT_KEYS.filter((k) => (k in defaults) || forcedKeys.includes(k));
 
   const hasImage = "image" in defaults || section?.type === "story" || section?.type === "hero" || section?.type === "promo_banner";
-  const hasItems = Array.isArray(defaults.items) || section?.type === "values" || section?.type === "usp_strip" || section?.type === "testimonials";
+  const hasItems = Array.isArray(defaults.items) || section?.type === "values" || section?.type === "usp_strip" || section?.type === "testimonials" || section?.type === "category_grid" || section?.type === "product_detail" || section?.type === "product_info" || section?.type === "provider_team";
 
-  const itemShape: "usp" | "testimonial" | "category" | "product" | "generic" | "value" =
-    section?.type === "usp_strip" ? "usp"
+  const itemShape: "usp" | "testimonial" | "category" | "product" | "generic" | "value" | "provider" =
+    section?.type === "usp_strip" || section?.type === "product_detail" || section?.type === "product_info" ? "usp"
     : section?.type === "testimonials" ? "testimonial"
     : section?.type === "values" ? "value"
     : section?.type === "category_grid" ? "category"
+    : section?.type === "provider_team" ? "provider"
     : (section?.type === "product_grid" || section?.type === "trending") ? "product"
     : "generic";
 
@@ -1727,7 +1838,8 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
     section?.type === "trending" || 
     section?.type === "featured_products" || 
     section?.type === "new_arrivals" ||
-    section?.type === "product_detail";
+    section?.type === "product_detail" ||
+    section?.type === "related_products";
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [prodQuery, setProdQuery] = useState("");
@@ -1832,6 +1944,16 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
               </div>
             )}
 
+            {!!merged.scroll_horizontal && section?.type !== "product_detail" && (
+              <div className="flex items-center justify-between pt-1.5 border-t">
+                <Label className="text-[11px] text-muted-foreground font-medium">Show Scrollbar</Label>
+                <Switch 
+                  checked={merged.show_scrollbar !== false} 
+                  onCheckedChange={(val) => onUpdate(idx, "show_scrollbar", val)} 
+                />
+              </div>
+            )}
+
             <div className={`transition-opacity duration-200 ${!merged.scroll_horizontal ? "opacity-50 pointer-events-none" : ""}`}>
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-[11px] text-muted-foreground font-medium">Drag to resize Card Width</Label>
@@ -1882,13 +2004,23 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-1.5 border-t">
+             <div className="flex items-center justify-between pt-1.5 border-t">
               <Label className="text-[11px] text-muted-foreground font-medium">Horizontal Scroll / Swipe</Label>
               <Switch 
                 checked={!!merged.scroll_horizontal} 
                 onCheckedChange={(val) => onUpdate(idx, "scroll_horizontal", val)} 
               />
             </div>
+
+            {!!merged.scroll_horizontal && (
+              <div className="flex items-center justify-between pt-1.5 border-t">
+                <Label className="text-[11px] text-muted-foreground font-medium">Show Scrollbar</Label>
+                <Switch 
+                  checked={merged.show_scrollbar !== false} 
+                  onCheckedChange={(val) => onUpdate(idx, "show_scrollbar", val)} 
+                />
+              </div>
+            )}
 
             <div className={`transition-opacity duration-200 ${!merged.scroll_horizontal ? "opacity-50 pointer-events-none" : ""}`}>
               <div className="flex items-center justify-between mb-1">
@@ -2549,6 +2681,148 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         </div>
       )}
 
+      {hasItems && itemShape === "provider" && (
+        <div className="space-y-4">
+          <div className="space-y-1.5 border-b pb-3">
+            <Label className="text-xs font-semibold">Chef Profiles Source</Label>
+            <select
+              value={sectionOv?.use_db_providers ? "database" : "static"}
+              onChange={(e) => onUpdate(idx, "use_db_providers", e.target.value === "database")}
+              className="w-full rounded border border-input bg-background px-2 h-8 text-xs cursor-pointer font-medium focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="static">Custom Chef List (Static Layout)</option>
+              <option value="database">Real Chefs (from Doctors/Staff database)</option>
+            </select>
+          </div>
+
+          {sectionOv?.use_db_providers ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Real Chefs / Staff (from database)</Label>
+                <Link to="/providers" className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5">
+                  Manage Staff <ExternalLink className="h-2.5 w-2.5" />
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {providers.map((prov: any) => {
+                  return (
+                    <div key={prov.id} className="p-3 border rounded-lg bg-card space-y-2.5">
+                      <div>
+                        <div className="text-xs font-semibold text-foreground">{prov.name}</div>
+                        <div className="text-[10px] text-muted-foreground font-medium">{prov.role || "Chef"}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Portrait Photo</Label>
+                        <div className="flex gap-2 items-center mt-1">
+                          <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
+                            {prov.image_url ? (
+                              <img src={prov.image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex flex-1 gap-1.5 min-w-0">
+                            <Button size="sm" variant="outline" asChild className="h-8 px-2 bg-background flex-1">
+                              <label className="cursor-pointer justify-center w-full flex items-center gap-1">
+                                <Upload className="h-3.5 w-3.5" /> Upload
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden" 
+                                  onChange={(e) => { 
+                                    const f = e.target.files?.[0]; 
+                                    if (f) onUploadImage(idx, f, { providerId: prov.id }); 
+                                  }} 
+                                />
+                              </label>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {providers.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4 bg-muted/30 rounded border border-dashed">
+                    No staff found. Go to <Link to="/providers" className="text-primary hover:underline font-semibold">Doctors/Staff tab</Link> to add chefs/staff.
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <ItemsEditor
+              label="Master Chefs / Team"
+              items={items}
+              renderRow={(it, update, i) => (
+                <div className="flex-grow space-y-2">
+                  <div className="flex gap-2">
+                    <div className="w-14 h-14 rounded border bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
+                      {it.image ? (
+                        <img src={it.image} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex flex-col justify-center gap-1">
+                      <Button size="sm" variant="outline" asChild className="h-6 text-[10px] px-2 bg-background">
+                        <label className="cursor-pointer">
+                          <Upload className="mr-1 h-3 w-3" /> Upload
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => { 
+                              const f = e.target.files?.[0]; 
+                              if (f) onUploadImage(idx, f, { itemIndex: i, key: "image" }); 
+                            }} 
+                          />
+                        </label>
+                      </Button>
+                      {it.image && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-5 text-[9px] text-destructive px-1.5"
+                          onClick={() => update({ ...it, image: "" })}
+                        >
+                          <Trash2 className="mr-1 h-2.5 w-2.5" /> Remove
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="space-y-0.5">
+                      <Label className="text-[10px] text-muted-foreground">Name</Label>
+                      <Input value={it.name ?? ""} onChange={(e) => update({ ...it, name: e.target.value })} className="h-7 text-xs bg-background" placeholder="Chef Name" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <Label className="text-[10px] text-muted-foreground">Role</Label>
+                      <Input value={it.role ?? ""} onChange={(e) => update({ ...it, role: e.target.value })} className="h-7 text-xs bg-background" placeholder="Role (e.g. Head Chef)" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="space-y-0.5">
+                      <Label className="text-[10px] text-muted-foreground">Qualifications</Label>
+                      <Input value={it.qualifications ?? ""} onChange={(e) => update({ ...it, qualifications: e.target.value })} className="h-7 text-xs bg-background" placeholder="Qualifications" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <Label className="text-[10px] text-muted-foreground">Experience</Label>
+                      <Input value={it.experience ?? ""} onChange={(e) => update({ ...it, experience: e.target.value })} className="h-7 text-xs bg-background" placeholder="Experience" />
+                    </div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-[10px] text-muted-foreground">Short Bio</Label>
+                    <Textarea rows={2} value={it.bio ?? ""} onChange={(e) => update({ ...it, bio: e.target.value })} className="text-xs bg-background" placeholder="Short biography..." />
+                  </div>
+                </div>
+              )}
+              blank={{ name: "New Chef", role: "Master Chef", experience: "5+ Years", qualifications: "Culinary Expert", bio: "", image: "" }}
+              onChange={updateItems}
+            />
+          )}
+        </div>
+      )}
+
       {"items" in sectionOv && (
         <button onClick={() => onReset(idx, "items")} className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <RotateCcw className="h-3 w-3" /> Reset items to theme default
@@ -2564,7 +2838,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
   );
 }
 
-function ItemsEditor({ label, items, renderRow, blank, onChange }: { label: string; items: any[]; renderRow: (it: any, update: (next: any) => void) => React.ReactNode; blank: any; onChange: (next: any[]) => void }) {
+function ItemsEditor({ label, items, renderRow, blank, onChange }: { label: string; items: any[]; renderRow: (it: any, update: (next: any) => void, index: number) => React.ReactNode; blank: any; onChange: (next: any[]) => void }) {
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
     if (j < 0 || j >= items.length) return;
@@ -2576,7 +2850,7 @@ function ItemsEditor({ label, items, renderRow, blank, onChange }: { label: stri
       <div className="mt-2 space-y-2">
         {items.map((it, i) => (
           <div key={i} className="border rounded-md p-2 flex gap-2 items-start">
-            {renderRow(it, (next) => onChange(items.map((x, idx) => idx === i ? next : x)))}
+            {renderRow(it, (next) => onChange(items.map((x, idx) => idx === i ? next : x)), i)}
             <div className="flex flex-col gap-0.5 shrink-0">
               <button onClick={() => move(i, -1)} className="text-muted-foreground hover:text-foreground p-0.5" disabled={i === 0}><ArrowUp className="h-3 w-3" /></button>
               <button onClick={() => move(i,  1)} className="text-muted-foreground hover:text-foreground p-0.5" disabled={i === items.length - 1}><ArrowDown className="h-3 w-3" /></button>
@@ -3028,12 +3302,21 @@ function HeroInspector({ idx, section, sectionOv, onUpdate, onReset, onUploadIma
                 <div className="w-16 h-16 rounded border bg-background overflow-hidden flex items-center justify-center shrink-0">
                   {s.image ? <img src={s.image} className="w-full h-full object-cover" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
                 </div>
-                <Button size="sm" variant="outline" asChild className="h-7 text-xs">
-                  <label className="cursor-pointer">
-                    <Upload className="h-3 w-3 mr-1" /> {s.image ? "Replace" : "Upload"}
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(idx, f, { slideIndex: i, key: "image" }); }} />
-                  </label>
-                </Button>
+                <div className="flex-1 space-y-1.5">
+                  <Button size="sm" variant="outline" asChild className="w-full h-7 text-xs">
+                    <label className="cursor-pointer">
+                      <Upload className="h-3 w-3 mr-1" /> {s.image ? "Replace" : "Upload"}
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(idx, f, { slideIndex: i, key: "image" }); }} />
+                    </label>
+                  </Button>
+                  <HeroAiImageButton 
+                    idx={idx} 
+                    merged={{ title: s.title || `Slide ${i + 1} Image` }} 
+                    onUpdate={onUpdate} 
+                    onAiImageGenerated={(url) => setSlide(i, { image: url })} 
+                    onInsufficientCredits={onInsufficientCredits} 
+                  />
+                </div>
               </div>
               <Input value={s.kicker ?? ""} placeholder="Kicker" onChange={(e) => setSlide(i, { kicker: e.target.value })} className="h-7 text-xs" />
               <Input value={s.title ?? ""}  placeholder="Headline" onChange={(e) => setSlide(i, { title:  e.target.value })} className="h-7 text-xs" />
