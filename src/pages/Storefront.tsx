@@ -1127,6 +1127,22 @@ const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }:
     },
     enabled: !!store?.id,
   });
+
+  const { data: providers = [] } = useQuery({
+    queryKey: ['storefront-providers', store?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('service_providers' as any)
+        .select('*')
+        .eq('store_id', store.id)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+    enabled: !!store?.id,
+  });
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
