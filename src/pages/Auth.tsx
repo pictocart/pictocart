@@ -127,6 +127,30 @@ const Auth = () => {
       if (error) {
         toast.error(error.message);
       } else {
+        // Fetch the authenticated user to check if they are store staff
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: staffData } = await (supabase as any)
+            .from('store_staff')
+            .select('role, stores(slug)')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (staffData) {
+            const storeSlug = (staffData as any).stores?.slug;
+            const role = (staffData as any).role;
+            if (role === 'waiter') {
+              navigate(`/store/${storeSlug}/waiter`);
+            } else if (role === 'chef') {
+              navigate(`/store/${storeSlug}/kitchen`);
+            } else if (role === 'manager') {
+              navigate(`/store/${storeSlug}/manager`);
+            }
+            setLoading(false);
+            return;
+          }
+        }
+
         // Check if user is a partner, navigate to /partner instead of /dashboard
         const { data: isPartner } = await supabase
           .from('partners')
@@ -297,17 +321,17 @@ const Auth = () => {
                     />
                   </div>
                 )}
-                 <div className="space-y-2">
-                  <Label htmlFor="email">{isLogin ? 'Email address or Partner ID' : 'Email'}</Label>
-                  <Input
-                    id="email"
-                    type="text"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={isLogin ? 'you@example.com or pcc234' : 'you@example.com'}
-                    required
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>

@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound.tsx";
 import { useStoreByHost, isPlatformHost } from "@/hooks/useStoreByHost";
 import { TourProvider } from "@/tours/TourProvider";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import GlobalStorefrontQRScanner from "@/components/storefront/GlobalStorefrontQRScanner";
 
 /* Scroll to top on every route change */
 const ScrollToTop = () => {
@@ -88,6 +89,9 @@ const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
 const Contact = lazy(() => import("@/pages/Contact"));
+const StaffManagement = lazy(() => import("@/pages/StaffManagement"));
+const WaiterDashboard = lazy(() => import("@/pages/staff/WaiterDashboard"));
+const ManagerDashboard = lazy(() => import("@/pages/staff/ManagerDashboard"));
 const Billing = lazy(() => import("@/pages/Billing"));
 const SiteOffer = lazy(() => import("@/pages/SiteOffer"));
 const AdminPlanOffer = lazy(() => import("@/pages/admin/AdminPlanOffer"));
@@ -243,6 +247,9 @@ const AppRoutes = () => {
           <Route path="/menu/t/:tableToken" element={<StorefrontMenu forceMode="dine_in" />} />
           <Route path="/menu/takeaway" element={<StorefrontMenu forceMode="takeaway" />} />
           <Route path="/menu/delivery" element={<StorefrontMenu forceMode="delivery" />} />
+          <Route path="/waiter" element={<WaiterDashboard />} />
+          <Route path="/kitchen-staff" element={<Kitchen />} />
+          <Route path="/manager" element={<ManagerDashboard />} />
           <Route path="/book" element={<StorefrontBooking />} />
           <Route path="/blog" element={<StorefrontBlog />} />
           <Route path="/blog/:postSlug" element={<StorefrontBlogPost />} />
@@ -314,6 +321,7 @@ const AppRoutes = () => {
             <Route path="/settings/fulfillment" element={<FulfillmentSettings />} />
             <Route path="/settings/mobile-app" element={<MobileAppSettings />} />
             <Route path="/settings/qr" element={<QRCodes />} />
+            <Route path="/settings/staff" element={<StaffManagement />} />
             <Route path="/settings/domain" element={<DomainSettings />} />
             <Route path="/settings/seo" element={<SEOSettings />} />
             <Route path="/settings/email" element={<EmailBrandingSettings />} />
@@ -415,6 +423,9 @@ const AppRoutes = () => {
           <Route path="/store/:slug/menu/t/:tableToken" element={<StorefrontMenu forceMode="dine_in" />} />
           <Route path="/store/:slug/menu/takeaway" element={<StorefrontMenu forceMode="takeaway" />} />
           <Route path="/store/:slug/menu/delivery" element={<StorefrontMenu forceMode="delivery" />} />
+          <Route path="/store/:slug/waiter" element={<WaiterDashboard />} />
+          <Route path="/store/:slug/kitchen" element={<Kitchen />} />
+          <Route path="/store/:slug/manager" element={<ManagerDashboard />} />
           <Route path="/store/:slug/book" element={<StorefrontBooking />} />
           <Route path="/track/:code" element={<OrderTracking />} />
           <Route path="/menu" element={<ProtectedRoute><DashboardLayout><Menu /></DashboardLayout></ProtectedRoute>} />
@@ -450,6 +461,7 @@ const App = () => (
             <TourProvider>
               <ErrorBoundary>
                 <AppRoutes />
+                <GlobalStorefrontQRScanner />
                 <WhatsAppFloat />
               </ErrorBoundary>
             </TourProvider>

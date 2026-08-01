@@ -231,11 +231,15 @@ const StorefrontCheckout = () => {
 
   useEffect(() => {
     if (!customerAuthLoading && !user && store) {
-      setShowLoginModal(true);
+      if (tableLabel) {
+        setShowLoginModal(false);
+      } else {
+        setShowLoginModal(true);
+      }
     } else if (user) {
       setShowLoginModal(false);
     }
-  }, [user, customerAuthLoading, store]);
+  }, [user, customerAuthLoading, store, tableLabel]);
 
   // Load Saved Addresses
   useEffect(() => {
@@ -417,6 +421,18 @@ const StorefrontCheckout = () => {
       }));
     }
   }, [user]);
+
+  // Auto-fill guest table details and skip step 1 for QR code check-ins
+  useEffect(() => {
+    if (tableLabel && checkoutStep === 1) {
+      setForm((f) => ({
+        ...f,
+        name: f.name || `Table ${tableLabel}`,
+        phone: f.phone || '0000000000',
+      }));
+      setCheckoutStep(3);
+    }
+  }, [tableLabel, checkoutStep]);
 
   // Check if store has Razorpay configured and domain is verified (or test mode)
   // domain_verified flag is synced into stores.settings by PaymentSettings on toggle
@@ -611,7 +627,8 @@ const StorefrontCheckout = () => {
       customer_user_id: user?.id || null,
       fulfillment_mode: fulfillmentMode,
       table_label: tableLabel || null,
-      prep_status: 'received',
+      prep_status: store?.category === 'food' ? null : 'received',
+      waiter_status: store?.category === 'food' ? 'pending' : 'approved',
       guest_tracking_code: trackingCode,
     } as any).select('id, order_number').single();
 
@@ -946,7 +963,7 @@ const StorefrontCheckout = () => {
         url={`${window.location.origin}/store/${slug}/checkout`}
       />
       
-      <div className={`max-w-4xl mx-auto px-4 py-8 relative transition-all duration-300 ${!user ? 'pointer-events-none select-none blur-[3px] opacity-45' : ''}`}>
+      <div className={`max-w-4xl mx-auto px-4 py-8 relative transition-all duration-300 ${(!user && !tableLabel) ? 'pointer-events-none select-none blur-[3px] opacity-45' : ''}`}>
         <Link
           to={`/store/${slug}/cart`}
           className="inline-flex items-center gap-1 text-sm opacity-60 hover:opacity-100 mb-6"
@@ -963,38 +980,52 @@ const StorefrontCheckout = () => {
           <div className="md:col-span-3 space-y-6">
             
             {/* Step Tracker */}
-            <div className="flex items-center justify-between mb-6 pb-4 border-b" style={{ borderColor: colors.secondary }}>
-              {steps.map((s, index) => {
-                const isActive = checkoutStep === s.step;
-                const isCompleted = checkoutStep > s.step;
-                return (
-                  <div key={s.step} className="flex items-center gap-2">
-                    <span 
-                      className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all"
-                      style={{
-                        backgroundColor: isActive ? colors.primary : isCompleted ? '#16a34a' : colors.secondary,
-                        color: isActive || isCompleted ? '#fff' : colors.text + '80'
-                      }}
-                    >
-                      {isCompleted ? '✓' : index + 1}
-                    </span>
-                    <span 
-                      className="text-xs font-semibold"
-                      style={{ color: isActive ? colors.primary : colors.text + '60' }}
-                    >
-                      {s.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            {!tableLabel && (
+              <div className="flex items-center justify-between mb-6 pb-4 border-b" style={{ borderColor: colors.secondary }}>
+                {steps.map((s, index) => {
+                  const isActive = checkoutStep === s.step;
+                  const isCompleted = checkoutStep > s.step;
+                  return (
+                    <div key={s.step} className="flex items-center gap-2">
+                      <span 
+                        className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                        style={{
+                          backgroundColor: isActive ? colors.primary : isCompleted ? '#16a34a' : colors.secondary,
+                          color: isActive || isCompleted ? '#fff' : colors.text + '80'
+                        }}
+                      >
+                        {isCompleted ? '✓' : index + 1}
+                      </span>
+                      <span 
+                        className="text-xs font-semibold"
+                        style={{ color: isActive ? colors.primary : colors.text + '60' }}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* STEP 1: Contact Details */}
             {checkoutStep === 1 && (
               <div className="space-y-4">
-                <h2 className="text-sm font-semibold mb-3" style={{ fontFamily: fonts.heading }}>
-                  Contact Information
-                </h2>
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-sm font-semibold" style={{ fontFamily: fonts.heading }}>
+                    Contact Information
+                  </h2>
+                  {!user && (
+                    <button 
+                      type="button" 
+                      onClick={() => { setAuthMode('login'); setShowLoginModal(true); }}
+                      className="text-xs font-bold underline transition hover:opacity-80"
+                      style={{ color: colors.primary }}
+                    >
+                      Already have an account? Sign in
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     placeholder="Full Name *"
@@ -1290,14 +1321,16 @@ const StorefrontCheckout = () => {
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <button 
-                    type="button"
-                    onClick={prevStep}
-                    className="flex-1 py-3 text-sm font-semibold border hover:bg-black/5"
-                    style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px` }}
-                  >
-                    Back
-                  </button>
+                  {!tableLabel && (
+                    <button 
+                      type="button"
+                      onClick={prevStep}
+                      className="flex-1 py-3 text-sm font-semibold border hover:bg-black/5"
+                      style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px` }}
+                    >
+                      Back
+                    </button>
+                  )}
                   <button 
                     type="button"
                     onClick={handlePlaceOrder}

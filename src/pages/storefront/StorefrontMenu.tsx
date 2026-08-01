@@ -959,12 +959,12 @@ const StorefrontMenu = ({ forceMode, tableFromParam }: Props) => {
 
       {/* Floating Bottom-Right Checkout Button */}
       {totalItems > 0 && (
-        <div className="fixed bottom-6 right-6 z-40">
+        <div className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 z-40 flex justify-center">
           <button
             id="floating-checkout-btn"
             key={totalItems}
             onClick={() => navigate(`/store/${slug}/checkout`)}
-            className="flex items-center gap-3 px-5 py-3.5 rounded-full shadow-2xl font-bold text-sm text-white transition-all duration-300 transform hover:scale-105 active:scale-95 animate-badge-pop border border-red-900/30"
+            className="flex items-center justify-between md:justify-start gap-3 w-full md:w-auto px-5 py-3.5 rounded-full shadow-2xl font-bold text-sm text-white transition-all duration-300 transform hover:scale-105 active:scale-95 animate-badge-pop border border-red-900/30"
             style={{ backgroundColor: '#8c2d19' }}
           >
             <div className="relative flex items-center justify-center">

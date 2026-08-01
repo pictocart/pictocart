@@ -27,12 +27,14 @@ CREATE TRIGGER guard_customer_tenant_email_trg
   BEFORE INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.guard_customer_tenant_email();
+
 -- 2. Ensure handle_new_user trigger is wired
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
+
 -- 3. Backfill: customer rows for tenant-aliased users that lack one
 INSERT INTO public.customers (user_id, store_id, name, email, phone)
 SELECT u.id, s.id,
@@ -45,6 +47,7 @@ JOIN public.stores s
 WHERE COALESCE((u.raw_user_meta_data->>'is_customer')::boolean, false) = true
   AND u.email LIKE '%.customers.pictocart.in'
 ON CONFLICT (user_id, store_id) DO NOTHING;
+
 -- 4. Throwaway QA storefronts (idempotent)
 INSERT INTO public.stores (user_id, name, slug, description, theme, settings, is_published, onboarding_step)
 SELECT '8cd4e055-b538-4c9d-943c-56ac3f9240fb'::uuid,
@@ -55,7 +58,9 @@ SELECT '8cd4e055-b538-4c9d-943c-56ac3f9240fb'::uuid,
        '{}'::jsonb,
        true,
        7
-WHERE NOT EXISTS (SELECT 1 FROM public.stores WHERE slug = 'qa-test-store-a');
+WHERE NOT EXISTS (SELECT 1 FROM public.stores WHERE slug = 'qa-test-store-a')
+  AND EXISTS (SELECT 1 FROM auth.users WHERE id = '8cd4e055-b538-4c9d-943c-56ac3f9240fb'::uuid);
+
 INSERT INTO public.stores (user_id, name, slug, description, theme, settings, is_published, onboarding_step)
 SELECT '8cd4e055-b538-4c9d-943c-56ac3f9240fb'::uuid,
        'QA Test Store B',
@@ -65,4 +70,5 @@ SELECT '8cd4e055-b538-4c9d-943c-56ac3f9240fb'::uuid,
        '{}'::jsonb,
        true,
        7
-WHERE NOT EXISTS (SELECT 1 FROM public.stores WHERE slug = 'qa-test-store-b');
+WHERE NOT EXISTS (SELECT 1 FROM public.stores WHERE slug = 'qa-test-store-b')
+  AND EXISTS (SELECT 1 FROM auth.users WHERE id = '8cd4e055-b538-4c9d-943c-56ac3f9240fb'::uuid);

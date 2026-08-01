@@ -63,8 +63,44 @@ const COLUMNS: { key: PrepStatus; label: string; tone: string }[] = [
 ];
 
 const Kitchen = () => {
-  const { store } = useStore();
+  const { store: contextStore } = useStore();
+  const [store, setStore] = useState<any>(null);
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
+
+  useEffect(() => {
+    if (contextStore) {
+      setStore(contextStore);
+    } else {
+      (async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: staff } = await supabase
+            .from('store_staff' as any)
+            .select('store_id, stores(*)')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (staff && (staff as any).stores) {
+            setStore((staff as any).stores);
+            return;
+          }
+        }
+
+        // Fallback: parse store slug from URL path
+        const parts = window.location.pathname.split('/');
+        const urlSlug = parts.includes('store') ? parts[parts.indexOf('store') + 1] : null;
+        if (urlSlug) {
+          const { data: fetchedStore } = await supabase
+            .from('stores')
+            .select('*')
+            .eq('slug', urlSlug)
+            .maybeSingle();
+          if (fetchedStore) {
+            setStore(fetchedStore);
+          }
+        }
+      })();
+    }
+  }, [contextStore]);
   const [loading, setLoading] = useState(true);
   const [soundOn, setSoundOn] = useState(true);
   const [rejectingOrder, setRejectingOrder] = useState<KitchenOrder | null>(null);

@@ -39,6 +39,8 @@ BEGIN
   DELETE FROM auth.users WHERE id <> admin_id;
 
   -- Ensure admin keeps both seller + admin roles
-  INSERT INTO public.user_roles (user_id, role) VALUES (admin_id, 'admin') ON CONFLICT DO NOTHING;
-  INSERT INTO public.user_roles (user_id, role) VALUES (admin_id, 'seller') ON CONFLICT DO NOTHING;
+  IF EXISTS (SELECT 1 FROM auth.users WHERE id = admin_id) THEN
+    INSERT INTO public.user_roles (user_id, role) VALUES (admin_id, 'admin') ON CONFLICT DO NOTHING;
+    INSERT INTO public.user_roles (user_id, role) VALUES (admin_id, 'seller') ON CONFLICT DO NOTHING;
+  END IF;
 END $$;

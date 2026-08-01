@@ -4,9 +4,11 @@ REVOKE SELECT (bank_account_number, bank_ifsc, bank_account_name, gstin, email, 
   ON public.sourcing_suppliers FROM anon, authenticated;
 REVOKE SELECT (supplier_phone_full, supplier_email_full)
   ON public.sourcing_products FROM anon, authenticated;
+
 -- 2) Remove the head-reads-downline RLS policy on partners that exposed every column
 -- (including PAN, bank, UPI, email, phone) of downline partners to head partners.
 DROP POLICY IF EXISTS "Head reads downline partners" ON public.partners;
+
 -- 3) Provide a SECURITY DEFINER function for heads to list their downline with
 -- only non-sensitive columns. Admins can also use it.
 CREATE OR REPLACE FUNCTION public.head_downline_partners(_head_partner_id uuid)
@@ -64,13 +66,22 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.head_downline_partners(uuid) TO authenticated;
+
 -- 4) Enable RLS on realtime.messages with a default-deny policy so authenticated
 -- users cannot subscribe to arbitrary channel topics. Specific app channels that
 -- need broadcast access can be opened up with targeted policies later.
-ALTER TABLE IF EXISTS realtime.messages ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "deny_all_realtime_messages" ON realtime.messages;
-CREATE POLICY "deny_all_realtime_messages"
-  ON realtime.messages
-  FOR SELECT
-  TO authenticated, anon
-  USING (false);
+DO $$
+BEGIN
+  BEGIN
+    ALTER TABLE IF EXISTS realtime.messages ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS "deny_all_realtime_messages" ON realtime.messages;
+    CREATE POLICY "deny_all_realtime_messages"
+      ON realtime.messages
+      FOR SELECT
+      TO authenticated, anon
+      USING (false);
+  EXCEPTION
+    WHEN OTHERS THEN
+      RAISE WARNING 'Could not configure RLS on realtime.messages: %', SQLERRM;
+  END;
+END $$;

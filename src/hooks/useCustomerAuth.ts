@@ -246,8 +246,23 @@ export const useCustomerAuth = (storeSlug: string) => {
       fullName,
       password,
     });
-    if (error) return { error: { message: 'Could not send verification code. Please try again.' } };
-    if (data?.error) return { error: { message: 'Could not send verification code. Please try again.' } };
+    if (error) {
+      let msg = 'Could not send verification code. Please try again.';
+      if (error.message) msg = error.message;
+      if (msg.startsWith('{') || msg.includes('{')) {
+        try {
+          const match = msg.match(/\{.*\}/);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            msg = parsed.detail || parsed.error || msg;
+          }
+        } catch {}
+      }
+      return { error: { message: msg } };
+    }
+    if (data?.error) {
+      return { error: { message: data.detail || data.error } };
+    }
     return { error: null };
   };
 
@@ -272,8 +287,23 @@ export const useCustomerAuth = (storeSlug: string) => {
       email,
       token,
     });
-    if (verifyError) return { data: null, error: { message: 'Invalid or expired code. Please try again.' } };
-    if (verifyData?.error) return { data: null, error: { message: 'Invalid or expired code. Please try again.' } };
+    if (verifyError) {
+      let msg = 'Invalid or expired code. Please try again.';
+      if (verifyError.message) msg = verifyError.message;
+      if (msg.startsWith('{') || msg.includes('{')) {
+        try {
+          const match = msg.match(/\{.*\}/);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            msg = parsed.detail || parsed.error || msg;
+          }
+        } catch {}
+      }
+      return { data: null, error: { message: msg } };
+    }
+    if (verifyData?.error) {
+      return { data: null, error: { message: verifyData.detail || verifyData.error } };
+    }
 
     // Step 2: If verify returned a session, apply it
     if (verifyData?.session) {

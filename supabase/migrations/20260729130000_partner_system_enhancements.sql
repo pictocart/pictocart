@@ -39,7 +39,7 @@ CREATE POLICY "authenticated read demo shops" ON public.partner_demo_shops
 
 -- 4. Create partner_wallet table (without explicit FK constraint)
 CREATE TABLE IF NOT EXISTS public.partner_wallet (
-  i d UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id UUID NOT NULL UNIQUE,
   balance INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -159,6 +159,7 @@ const navTree: NavEntry[] = [
       { label: 'Shipping', icon: Truck, path: '/settings/shipping' },
       { label: 'Fulfillment', icon: Utensils, path: '/settings/fulfillment' },
       { label: 'QR Codes', icon: QrCode, path: '/settings/qr' },
+      { label: 'Staff Management', icon: Users, path: '/settings/staff' },
       { label: 'Domain', icon: Globe, path: '/settings/domain' },
       { label: 'Email Branding', icon: Mail, path: '/settings/email' },
       { label: 'Billing', icon: Crown, path: '/billing' },

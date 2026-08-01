@@ -389,60 +389,39 @@ Deno.serve(async (req: Request) => {
     if (action === "send_email_otp") {
       const fullName = String(payload?.fullName || "").trim();
       const phone = String(payload?.phone || "").trim();
-      // password is optional — provided during signup so user is created with the right password upfront
       const userPassword = String(payload?.password || "").trim();
       const customerAlias = tenantEmail(email, storeSlug);
 
-      let existing = await findUserByEmail(customerAlias);
-      if (!existing) {
-        const accountPassword = userPassword.length >= 6
-          ? userPassword
-          : Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-        const { data: created, error: createErr } = await admin.auth.admin.createUser({
-          email: customerAlias,
-          password: accountPassword,
-          email_confirm: true,
-          user_metadata: {
-            is_customer: true,
-            store_slug: storeSlug,
-            customer_email: email,
-            full_name: fullName || null,
-            phone: phone || null,
-          }
-        });
-        if (createErr) {
-          // If user already exists (race condition), try to find them
-          if (/already.*registered|already exists|duplicate/i.test(createErr.message || "")) {
-            existing = await findUserByEmail(customerAlias);
-            if (!existing) {
-              console.error("send_email_otp createUser failed", createErr);
-              return json({ error: "otp_failed", detail: createErr.message }, 400);
-            }
-            if (userPassword.length >= 6) {
-              await admin.auth.admin.updateUserById(existing.id, { password: userPassword });
-            }
-          } else {
-            console.error("send_email_otp createUser failed", createErr);
-            return json({ error: "otp_failed", detail: createErr.message }, 400);
-          }
-        } else {
-          existing = created.user;
-        }
-      } else if (userPassword.length >= 6) {
-        // User already exists — update their password to the one they just chose
-        await admin.auth.admin.updateUserById(existing.id, { password: userPassword });
+      // Check if user is already registered in auth.users
+      const existingUser = await findUserByEmail(customerAlias);
+      if (existingUser) {
+        return json({ error: "already_registered_for_this_store", detail: "A user with this email address has already been registered." }, 400);
       }
 
-      await ensureCustomerUser(existing!.id, store, email, fullName, phone);
+      // Generate a 6-digit random OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-      const { data: linkData, error: linkErr } = await admin.auth.admin
-        .generateLink({ type: "magiclink", email: customerAlias });
-      if (linkErr || !linkData?.properties?.email_otp) {
-        console.error("magiclink generation failed", linkErr);
-        return json({ error: "otp_failed", detail: "OTP generation failed" }, 500);
+      // Clean up expired temp signups
+      await admin.from("temp_signups").delete().lt("expires_at", new Date().toISOString());
+
+      // Store in temp_signups
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes expiry
+      const { error: insertErr } = await admin
+        .from("temp_signups")
+        .upsert({
+          email,
+          store_slug: storeSlug,
+          password: userPassword,
+          full_name: fullName || null,
+          phone: phone || null,
+          otp_code: otp,
+          expires_at: expiresAt
+        }, { onConflict: "email,store_slug" });
+
+      if (insertErr) {
+        console.error("temp_signups insert failed", insertErr);
+        return json({ error: "otp_failed", detail: insertErr.message }, 500);
       }
-
-      const otp = linkData.properties.email_otp;
 
       // Send OTP directly via Resend API (bypasses queue for immediate delivery)
       const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -518,24 +497,69 @@ Deno.serve(async (req: Request) => {
       const token = String(payload?.token || "").trim();
       const customerAlias = tenantEmail(email, storeSlug);
 
-      const verifyOtpRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: ANON_KEY },
-        body: JSON.stringify({
-          type: "magiclink",
-          email: customerAlias,
-          token: token,
-        }),
-      });
+      // Verify temp signup from database
+      const { data: temp, error: fetchErr } = await admin
+        .from("temp_signups")
+        .select("*")
+        .eq("email", email)
+        .eq("store_slug", storeSlug)
+        .eq("otp_code", token)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
 
-      if (!verifyOtpRes.ok) {
-        const detail = await verifyOtpRes.text();
-        console.error("verify OTP failed", verifyOtpRes.status, detail);
-        return json({ error: "invalid_otp", detail }, 400);
+      if (fetchErr) {
+        console.error("fetch temp signup failed", fetchErr);
+        return json({ error: "verification_failed", detail: fetchErr.message }, 400);
       }
 
-      const session = await verifyOtpRes.json();
-      return json({ ok: true, session });
+      if (!temp) {
+        return json({ error: "invalid_otp", detail: "Invalid or expired verification code." }, 400);
+      }
+
+      // Check if user already registered (to prevent duplicate auth.users accounts)
+      let existing = await findUserByEmail(customerAlias);
+      if (!existing) {
+        // Create user in auth.users
+        const { data: created, error: createErr } = await admin.auth.admin.createUser({
+          email: customerAlias,
+          password: temp.password,
+          email_confirm: true,
+          user_metadata: {
+            is_customer: true,
+            store_slug: storeSlug,
+            customer_email: email,
+            full_name: temp.full_name,
+            phone: temp.phone,
+            // Add GoTrue required columns defaults
+            confirmation_token: '',
+            email_change: '',
+            email_change_token_new: '',
+            recovery_token: '',
+            phone_change: '',
+            phone_change_token: ''
+          }
+        });
+
+        if (createErr) {
+          console.error("verify_email_otp createUser failed", createErr);
+          return json({ error: "signup_failed", detail: createErr.message }, 400);
+        }
+        existing = created.user;
+      }
+
+      // Ensure customer profile and roles are set
+      await ensureCustomerUser(existing.id, store, email, temp.full_name, temp.phone);
+
+      // Create password session
+      const grant = await createPasswordSession(customerAlias, temp.password);
+      if (!grant.ok) {
+        return json({ error: "signin_failed", detail: grant.body }, grant.status);
+      }
+
+      // Success: delete temp signup
+      await admin.from("temp_signups").delete().eq("id", temp.id);
+
+      return json({ ok: true, session: grant.body });
     }
 
     // send_password_reset_otp: send a 6-digit OTP to the user's real email for password reset
