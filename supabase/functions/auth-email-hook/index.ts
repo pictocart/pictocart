@@ -108,19 +108,25 @@ async function getVerifiedStoreSender(supabase: any, authUrl?: string, storeSlug
   }
 }
 
-async function sendViaResend(to: string, from: string, subject: string, html: string, text: string): Promise<boolean> {
+async function sendViaResend(to: string, from: string, subject: string, html: string, text: string): Promise<{ ok: boolean; error?: string }> {
   const resendKey = Deno.env.get('RESEND_API_KEY')
-  if (!resendKey) return false
-  const res = await fetch(`${RESEND_API_URL}/emails`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
-    body: JSON.stringify({ from, to: [to], subject, html, text }),
-  })
-  if (!res.ok) {
-    console.error('Resend send failed', { status: res.status, body: await res.text() })
-    return false
+  if (!resendKey) return { ok: false, error: 'RESEND_API_KEY not found in Deno environment' }
+  try {
+    const res = await fetch(`${RESEND_API_URL}/emails`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
+      body: JSON.stringify({ from, to: [to], subject, html, text }),
+    })
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error('Resend send failed', { status: res.status, body: errBody })
+      return { ok: false, error: `Resend HTTP ${res.status}: ${errBody}` }
+    }
+    return { ok: true }
+  } catch (err: any) {
+    console.error('Fetch to Resend failed', err)
+    return { ok: false, error: err.message || 'Fetch failed' }
   }
-  return true
 }
 
 // Preview endpoint — returns rendered HTML, gated by service role key
@@ -270,16 +276,16 @@ async function handleWebhook(req: Request): Promise<Response> {
     : (EMAIL_SUBJECTS[emailType] || 'Notification');
 
   if (storeSender) {
-    const sent = await sendViaResend(recipientEmail, storeSender.from, subject, html, text)
+    const result = await sendViaResend(recipientEmail, storeSender.from, subject, html, text)
     await supabase.from('email_send_log').insert({ 
       message_id: messageId, 
       template_name: emailType, 
       recipient_email: recipientEmail, 
-      status: sent ? 'sent' : 'failed', 
-      error_message: sent ? null : 'Failed to send via store domain',
+      status: result.ok ? 'sent' : 'failed', 
+      error_message: result.ok ? null : `Failed to send via store domain: ${result.error}`,
       metadata: { headers: Object.fromEntries(req.headers.entries()) }
     })
-    if (!sent) return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    if (!result.ok) return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     console.log('Auth email sent via store domain', { emailType, recipientEmail, storeSlug, run_id })
     return new Response(JSON.stringify({}), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
@@ -287,18 +293,18 @@ async function handleWebhook(req: Request): Promise<Response> {
   // Send directly via Resend to guarantee immediate delivery
   console.log('Sending auth email directly via Resend...')
   const fallbackFrom = `${SITE_NAME} <noreply@${FROM_DOMAIN}>`
-  const sent = await sendViaResend(recipientEmail, fallbackFrom, subject, html, text)
+  const result = await sendViaResend(recipientEmail, fallbackFrom, subject, html, text)
   
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: emailType,
     recipient_email: recipientEmail,
-    status: sent ? 'sent' : 'failed',
-    error_message: sent ? null : 'Failed to send via direct Resend',
+    status: result.ok ? 'sent' : 'failed',
+    error_message: result.ok ? null : `Failed to send via direct Resend: ${result.error}`,
     metadata: { headers: Object.fromEntries(req.headers.entries()) }
   })
   
-  if (sent) {
+  if (result.ok) {
     console.log('Auth email sent via direct Resend successfully')
     return new Response(JSON.stringify({}), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } else {
