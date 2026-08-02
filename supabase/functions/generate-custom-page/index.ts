@@ -92,7 +92,13 @@ Deno.serve(async (req) => {
       .eq("id", (page as any).store_id)
       .maybeSingle();
     if (sErr || !store) return json({ error: "Store not found" }, 404);
-    if ((store as any).user_id !== userId) return json({ error: "Forbidden" }, 403);
+
+    let isAllowed = (store as any).user_id === userId;
+    if (!isAllowed) {
+      const { data: staff } = await admin.from("store_staff").select("id").eq("store_id", store.id).eq("user_id", userId).maybeSingle();
+      if (staff) isAllowed = true;
+    }
+    if (!isAllowed) return json({ error: "Forbidden" }, 403);
 
 
     // Charge credits (atomic; returns -1 if insufficient)

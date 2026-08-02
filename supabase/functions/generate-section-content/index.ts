@@ -31,7 +31,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing store_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const { data: store } = await admin.from("stores").select("id, user_id").eq("id", store_id).maybeSingle();
-    if (!store || store.user_id !== userData.user.id) {
+    if (!store) {
+      return new Response(JSON.stringify({ error: "Store not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    let isAllowed = store.user_id === userData.user.id;
+    if (!isAllowed) {
+      const { data: staff } = await admin.from("store_staff").select("id").eq("store_id", store_id).eq("user_id", userData.user.id).maybeSingle();
+      if (staff) isAllowed = true;
+    }
+    if (!isAllowed) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

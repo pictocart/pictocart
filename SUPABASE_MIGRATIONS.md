@@ -14,6 +14,7 @@ This will automatically generate the SQL migration file and record it here.
 ## Migration Records
 
 | Date (IST) | Migration File | Description | SQL Summary |
+| 02 Aug 2026 19:15 | [add_staff_rls_to_wallets_and_txns.sql](file:///d:/store-on-tips/supabase/migrations/20260802191500_add_staff_rls_to_wallets_and_txns.sql) | DB RLS Policies Update | Dropped owner-only check and updated SELECT/UPDATE RLS policies on wallets/txns to support staff queries. |
 | 02 Aug 2026 19:10 | [add_employee_role_to_staff.sql](file:///d:/store-on-tips/supabase/migrations/20260802183500_add_employee_role_to_staff.sql) | DB Schema & Trigger Update | Added `employee_id` text column, updated constraint for `'employee'` role, and redefined staff helper functions. |
 | 02 Aug 2026 17:35 | [admin-manage-user](file:///d:/store-on-tips/supabase/functions/admin-manage-user/index.ts) | Edge Function Update | Added `create_user` action to allow admin to create users with `email_confirm: true` and assign `seller` role. |
 | 02 Aug 2026 17:30 | [auth-email-hook](file:///d:/store-on-tips/supabase/functions/auth-email-hook/index.ts) | Edge Function Update | Reverted fallback sender to `noreply@pictocart.in` (ready for domain verification). |
@@ -63,4 +64,18 @@ END;
 ALTER TABLE public.store_staff ADD COLUMN IF NOT EXISTS employee_id TEXT;
 ALTER TABLE public.store_staff DROP CONSTRAINT IF EXISTS store_staff_role_check;
 ALTER TABLE public.store_staff ADD CONSTRAINT store_staff_role_check CHECK (role IN ('waiter', 'chef', 'manager', 'employee'));
+
+-- Update RLS policies on public.ai_credit_wallets and public.ai_credit_transactions to allow staff
+DROP POLICY IF EXISTS "Owners view own wallet" ON public.ai_credit_wallets;
+DROP POLICY IF EXISTS "Owners update own wallet prefs" ON public.ai_credit_wallets;
+CREATE POLICY "Owners and staff view own wallet" ON public.ai_credit_wallets FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = ai_credit_wallets.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+CREATE POLICY "Owners and staff update own wallet prefs" ON public.ai_credit_wallets FOR UPDATE TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = ai_credit_wallets.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Owners view own txns" ON public.ai_credit_transactions;
+CREATE POLICY "Owners and staff view own txns" ON public.ai_credit_transactions FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = ai_credit_transactions.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
 ```
