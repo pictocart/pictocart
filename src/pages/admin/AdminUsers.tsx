@@ -37,7 +37,48 @@ const AdminUsers = () => {
   const [viewUser, setViewUser] = useState<AdminUser | null>(null);
   const [resetUser, setResetUser] = useState<AdminUser | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPasswordVal, setNewPasswordVal] = useState('');
+  const [newName, setNewName] = useState('');
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const queryClient = useQueryClient();
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail || !newPasswordVal) {
+      toast.error('Email and password are required');
+      return;
+    }
+    if (newPasswordVal.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    setIsCreatingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-manage-user', {
+        body: {
+          action: 'create_user',
+          email: newEmail,
+          password: newPasswordVal,
+          name: newName
+        }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      toast.success('User created successfully! They can now log in and complete onboarding.');
+      setCreateUserOpen(false);
+      setNewEmail('');
+      setNewPasswordVal('');
+      setNewName('');
+      queryClient.invalidateQueries({ queryKey: ['admin-users-full'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to create user');
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users-full'],
@@ -240,9 +281,15 @@ const AdminUsers = () => {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-        <p className="text-sm text-muted-foreground">View, manage roles, and administer platform users</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+          <p className="text-sm text-muted-foreground">View, manage roles, and administer platform users</p>
+        </div>
+        <Button onClick={() => setCreateUserOpen(true)} className="flex items-center gap-2 self-start md:self-auto">
+          <UserPlus className="h-4 w-4" />
+          Add User
+        </Button>
       </div>
 
       {/* Stats */}
@@ -514,6 +561,68 @@ const AdminUsers = () => {
               {manageMutation.isPending ? 'Resetting...' : 'Reset Password'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Dialog */}
+      <Dialog open={createUserOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCreateUserOpen(false);
+          setNewEmail('');
+          setNewPasswordVal('');
+          setNewName('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account. This user will have NO store initially, and will be redirected to onboarding upon logging in.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateUser} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Full Name (Optional)</label>
+              <Input
+                type="text"
+                placeholder="e.g. Rahul Sharma"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email Address</label>
+              <Input
+                type="email"
+                placeholder="e.g. rahul@example.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password</label>
+              <Input
+                type="password"
+                placeholder="Minimum 6 characters"
+                value={newPasswordVal}
+                onChange={(e) => setNewPasswordVal(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => {
+                setCreateUserOpen(false);
+                setNewEmail('');
+                setNewPasswordVal('');
+                setNewName('');
+              }}>Cancel</Button>
+              <Button type="submit" disabled={isCreatingUser}>
+                {isCreatingUser ? 'Creating...' : 'Create User'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
