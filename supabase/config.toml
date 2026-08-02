@@ -57,8 +57,8 @@ project_id = "qxeyndsvkfsmkilkzmuc"
     verify_jwt = false
 
 [auth]
-site_url = "https://www.pictocart.in/"
-additional_redirect_urls = ["https://www.pictocart.in/"]
+site_url = "https://pictocart-u7pf.vercel.app/"
+additional_redirect_urls = ["https://pictocart-u7pf.vercel.app/", "http://localhost:5173/"]
 
 [auth.email]
 enable_signup = true
@@ -75,7 +75,7 @@ verify_enabled = true
 
 [auth.hook.send_email]
 enabled = true
-uri = "https://wuqznkpaldtvpfpdtllp.supabase.co/functions/v1/auth-email-hook"
+uri = "https://ylvvvcqnenbaangyzojl.supabase.co/functions/v1/auth-email-hook"
 secrets = "v1,whsec_ZmFrZS13ZWJob29rLXNlY3JldC12YWx1ZS1mb3ItdGVzdGluZw=="
 
 [storage.vector]
