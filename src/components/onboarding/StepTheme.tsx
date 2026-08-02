@@ -209,7 +209,7 @@ const StepTheme = ({ data, setData }: Props) => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data: themes = [], isLoading } = useQuery({
+  const { data: rawThemes = [], isLoading } = useQuery({
     queryKey: ['onboarding-theme-masters'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -231,6 +231,13 @@ const StepTheme = ({ data, setData }: Props) => {
       return (data || []) as ThemeMaster[];
     },
   });
+
+  // Filter themes based on the onboarding category selection:
+  // If 'food', show only Vibrant Gourmet ('theme-70904877').
+  // Otherwise, show only Style Up ('theme-styleup').
+  const isFoodCategory = data.category === 'food';
+  const targetThemeId = isFoodCategory ? 'theme-70904877' : 'theme-styleup';
+  const themes = rawThemes.filter((t) => t.theme_id === targetThemeId);
 
   // Preload images
   useEffect(() => {
