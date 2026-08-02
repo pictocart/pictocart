@@ -14,6 +14,7 @@ This will automatically generate the SQL migration file and record it here.
 ## Migration Records
 
 | Date (IST) | Migration File | Description | SQL Summary |
+| 02 Aug 2026 22:30 | [disable_automatic_default_licenses.sql](file:///d:/store-on-tips/supabase/migrations/20260802223000_disable_automatic_default_licenses.sql) | Disable Default Licenses Allocation | Redefined all signatures of allocate_partner_licenses RPC as no-ops to completely disable default license allocations. |
 | 02 Aug 2026 20:00 | [add_staff_rls_to_all_ecommerce_tables.sql](file:///d:/store-on-tips/supabase/migrations/20260802200000_add_staff_rls_to_all_ecommerce_tables.sql) | E-commerce RLS Policies Update | Dropped owner-only check and allowed staff full manage access to products, categories, coupons, pages, etc. |
 | 02 Aug 2026 19:15 | [add_staff_rls_to_wallets_and_txns.sql](file:///d:/store-on-tips/supabase/migrations/20260802191500_add_staff_rls_to_wallets_and_txns.sql) | DB RLS Policies Update | Dropped owner-only check and updated SELECT/UPDATE RLS policies on wallets/txns to support staff queries. |
 | 02 Aug 2026 19:10 | [add_employee_role_to_staff.sql](file:///d:/store-on-tips/supabase/migrations/20260802183500_add_employee_role_to_staff.sql) | DB Schema & Trigger Update | Added `employee_id` text column, updated constraint for `'employee'` role, and redefined staff helper functions. |
@@ -127,4 +128,9 @@ DROP POLICY IF EXISTS "Owners and staff insert own wallet" ON public.ai_credit_w
 CREATE POLICY "Owners and staff insert own wallet" ON public.ai_credit_wallets FOR INSERT TO authenticated WITH CHECK (
   EXISTS (SELECT 1 FROM public.stores s WHERE s.id = ai_credit_wallets.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
 );
+
+-- Redefine allocate_partner_licenses as no-ops to prevent default automatic license key allocations
+CREATE OR REPLACE FUNCTION public.allocate_partner_licenses(_partner_id UUID) RETURNS void AS $$ BEGIN RETURN; END; $$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION public.allocate_partner_licenses(_partner_id UUID, _qty_basic INT, _qty_premium INT) RETURNS void AS $$ BEGIN RETURN; END; $$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION public.allocate_partner_licenses(_partner_id UUID, _qty_starter INT, _qty_growth INT, _qty_scale INT) RETURNS void AS $$ BEGIN RETURN; END; $$ LANGUAGE plpgsql;
 ```
