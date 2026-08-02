@@ -14,6 +14,7 @@ This will automatically generate the SQL migration file and record it here.
 ## Migration Records
 
 | Date (IST) | Migration File | Description | SQL Summary |
+| 02 Aug 2026 20:00 | [add_staff_rls_to_all_ecommerce_tables.sql](file:///d:/store-on-tips/supabase/migrations/20260802200000_add_staff_rls_to_all_ecommerce_tables.sql) | E-commerce RLS Policies Update | Dropped owner-only check and allowed staff full manage access to products, categories, coupons, pages, etc. |
 | 02 Aug 2026 19:15 | [add_staff_rls_to_wallets_and_txns.sql](file:///d:/store-on-tips/supabase/migrations/20260802191500_add_staff_rls_to_wallets_and_txns.sql) | DB RLS Policies Update | Dropped owner-only check and updated SELECT/UPDATE RLS policies on wallets/txns to support staff queries. |
 | 02 Aug 2026 19:10 | [add_employee_role_to_staff.sql](file:///d:/store-on-tips/supabase/migrations/20260802183500_add_employee_role_to_staff.sql) | DB Schema & Trigger Update | Added `employee_id` text column, updated constraint for `'employee'` role, and redefined staff helper functions. |
 | 02 Aug 2026 17:35 | [admin-manage-user](file:///d:/store-on-tips/supabase/functions/admin-manage-user/index.ts) | Edge Function Update | Added `create_user` action to allow admin to create users with `email_confirm: true` and assign `seller` role. |
@@ -77,5 +78,53 @@ CREATE POLICY "Owners and staff update own wallet prefs" ON public.ai_credit_wal
 DROP POLICY IF EXISTS "Owners view own txns" ON public.ai_credit_transactions;
 CREATE POLICY "Owners and staff view own txns" ON public.ai_credit_transactions FOR SELECT TO authenticated USING (
   EXISTS (SELECT 1 FROM public.stores s WHERE s.id = ai_credit_transactions.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+
+-- E-commerce RLS policies (products, categories, coupons, pages, connection, testimonials) to allow staff management
+DROP POLICY IF EXISTS "Store owners can manage products" ON public.products;
+CREATE POLICY "Owners and staff can manage products" ON public.products FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = products.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Store owners can manage categories" ON public.categories;
+CREATE POLICY "Owners and staff can manage categories" ON public.categories FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = categories.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Store owners can manage coupons" ON public.coupons;
+CREATE POLICY "Owners and staff can manage coupons" ON public.coupons FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = coupons.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Store owners manage blog posts" ON public.blog_posts;
+CREATE POLICY "Owners and staff can manage blog posts" ON public.blog_posts FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = blog_posts.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Store owners can view customers" ON public.customers;
+CREATE POLICY "Owners and staff can view customers" ON public.customers FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = customers.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Owners manage their custom pages" ON public.store_custom_pages;
+CREATE POLICY "Owners and staff manage custom pages" ON public.store_custom_pages FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_custom_pages.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Owner manages own offer" ON public.store_site_offers;
+CREATE POLICY "Owners and staff manage offers" ON public.store_site_offers FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_site_offers.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Store owners manage their testimonials" ON public.store_testimonials;
+CREATE POLICY "Owners and staff manage testimonials" ON public.store_testimonials FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_testimonials.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Store owners view own connection" ON public.store_google_reviews_connections;
+DROP POLICY IF EXISTS "Store owners insert own connection" ON public.store_google_reviews_connections;
+DROP POLICY IF EXISTS "Store owners update own connection" ON public.store_google_reviews_connections;
+DROP POLICY IF EXISTS "Store owners delete own connection" ON public.store_google_reviews_connections;
+CREATE POLICY "Owners and staff view connections" ON public.store_google_reviews_connections FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_google_reviews_connections.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+CREATE POLICY "Owners and staff manage connections" ON public.store_google_reviews_connections FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = store_google_reviews_connections.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
+);
+DROP POLICY IF EXISTS "Owners and staff insert own wallet" ON public.ai_credit_wallets;
+CREATE POLICY "Owners and staff insert own wallet" ON public.ai_credit_wallets FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (SELECT 1 FROM public.stores s WHERE s.id = ai_credit_wallets.store_id AND (s.user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.store_staff ss WHERE ss.store_id = s.id AND ss.user_id = auth.uid())))
 );
 ```
