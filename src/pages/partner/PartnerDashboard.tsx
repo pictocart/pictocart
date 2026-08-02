@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { jsPDF } from "jspdf";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -170,6 +171,101 @@ const PartnerDashboard = () => {
       return data ?? [];
     },
   });
+
+  // 3b. Batches Query
+  const partnerBatchesQ = useQuery({
+    enabled: !!partner?.id,
+    queryKey: ["partner-batches-list", partner?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("partner_license_batches")
+        .select("*")
+        .eq("partner_id", partner!.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  // PDF Invoice Builder Helper for Partners
+  const downloadPartnerInvoice = (partner: any, invoiceRef: string, date: string, items: any[]) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(249, 115, 22); // PicToCart Orange
+    doc.text("PicToCart", 14, 20);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Premium E-commerce Partner Platform", 14, 25);
+    doc.text("Email: partners@pictocart.in", 14, 30);
+    
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text("INVOICE", 140, 20);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Invoice Ref: ${invoiceRef}`, 140, 25);
+    doc.text(`Date: ${new Date(date).toLocaleDateString("en-IN")}`, 140, 30);
+    
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 35, 196, 35);
+    
+    // Bill To
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(15, 23, 42);
+    doc.text("Bill To:", 14, 45);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Partner Name: ${partner.name}`, 14, 50);
+    doc.text(`Company: ${partner.company_name || "N/A"}`, 14, 55);
+    doc.text(`Email: ${partner.email}`, 14, 60);
+    doc.text(`Phone: ${partner.phone || "N/A"}`, 14, 65);
+    
+    doc.line(14, 70, 196, 70);
+    
+    // Table Header
+    doc.setFont("helvetica", "bold");
+    doc.text("License Type", 14, 78);
+    doc.text("Qty", 90, 78);
+    doc.text("Unit Price (INR)", 120, 78);
+    doc.text("Total Amount (INR)", 160, 78);
+    
+    doc.line(14, 82, 196, 82);
+    
+    // Rows
+    let y = 90;
+    let grandTotal = 0;
+    doc.setFont("helvetica", "normal");
+    items.forEach(item => {
+      const typeLabel = item.license_type === "growth" ? "Growth (1-Year)" : "Starter (1-Year)";
+      doc.text(typeLabel, 14, y);
+      doc.text(item.qty.toString(), 90, y);
+      doc.text(`INR ${Number(item.unit_price_inr).toLocaleString("en-IN")}`, 120, y);
+      doc.text(`INR ${Number(item.total_inr).toLocaleString("en-IN")}`, 160, y);
+      grandTotal += Number(item.total_inr);
+      y += 10;
+    });
+    
+    doc.line(14, y - 5, 196, y - 5);
+    
+    // Grand Total
+    doc.setFont("helvetica", "bold");
+    doc.text("Grand Total:", 120, y + 5);
+    doc.text(`INR ${grandTotal.toLocaleString("en-IN")}`, 160, y + 5);
+    
+    // Footer
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text("Thank you for your partnership with PicToCart!", 14, y + 25);
+    doc.text("This is a computer-generated invoice and does not require a physical signature.", 14, y + 30);
+    
+    doc.save(`${invoiceRef}.pdf`);
+  };
 
   // 4. Partner Wallet Query
   const walletQ = useQuery({
@@ -933,6 +1029,81 @@ const PartnerDashboard = () => {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                    
+                    {/* Invoices Section */}
+                    <div className="mt-8 border-t border-slate-800 pt-6">
+                      <h3 className="text-lg font-bold text-white mb-4">My Invoices</h3>
+                      {partnerBatchesQ.isLoading ? (
+                        <div className="py-6 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>
+                      ) : (partnerBatchesQ.data ?? []).length === 0 ? (
+                        <div className="text-center py-8 text-slate-500 border border-dashed border-slate-800 rounded-lg text-sm">
+                          No invoices generated yet.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {(() => {
+                            const groups: { [key: string]: { invoice_ref: string; created_at: string; items: any[]; total_amount: number; total_qty: number } } = {};
+                            
+                            partnerBatchesQ.data?.forEach((b: any) => {
+                              const ref = b.invoice_ref || `INV-OLD-${b.id.substring(0, 8)}`;
+                              if (!groups[ref]) {
+                                groups[ref] = {
+                                  invoice_ref: b.invoice_ref || "N/A (Legacy)",
+                                  created_at: b.created_at,
+                                  items: [],
+                                  total_amount: 0,
+                                  total_qty: 0
+                                };
+                              }
+                              groups[ref].items.push(b);
+                              groups[ref].total_amount += Number(b.total_inr);
+                              groups[ref].total_qty += b.qty;
+                            });
+                            
+                            const sortedGroups = Object.values(groups).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                            
+                            return sortedGroups.map((group: any) => (
+                              <div key={group.invoice_ref} className="border border-slate-800 rounded-lg p-4 bg-slate-900/30 space-y-3">
+                                <div className="flex justify-between items-start pb-2 border-b border-slate-800">
+                                  <div>
+                                    <div className="font-semibold text-slate-200">
+                                      Ref: {group.invoice_ref}
+                                    </div>
+                                    <div className="text-xs text-slate-400">
+                                      {new Date(group.created_at).toLocaleDateString("en-IN")}
+                                    </div>
+                                  </div>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => downloadPartnerInvoice(partner, group.invoice_ref, group.created_at, group.items)}
+                                    className="h-8 text-xs font-semibold border-slate-700 hover:bg-slate-800 text-slate-200"
+                                  >
+                                    Download Invoice
+                                  </Button>
+                                </div>
+                                
+                                <div className="space-y-1 text-sm text-slate-300">
+                                  {group.items.map((b: any) => (
+                                    <div key={b.id} className="flex justify-between items-center text-xs">
+                                      <span>
+                                        {b.qty} x <span className="capitalize font-semibold">{b.license_type || "starter"}</span> @ ₹{Number(b.unit_price_inr).toLocaleString("en-IN")}
+                                      </span>
+                                      <span>₹{Number(b.total_inr).toLocaleString("en-IN")}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                <div className="flex justify-between items-center pt-2 border-t border-slate-800 text-xs font-bold text-slate-200">
+                                  <span>Total Quantity: {group.total_qty} keys</span>
+                                  <span>Total Price: ₹{group.total_amount.toLocaleString("en-IN")}</span>
+                                </div>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

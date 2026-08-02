@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { jsPDF } from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,7 +101,7 @@ const AdminPartners = () => {
   const [otcCredits, setOtcCredits] = useState<number>(5000);
 
   const [addBatchOpen, setAddBatchOpen] = useState(false);
-  const [batchForm, setBatchForm] = useState({ qty: 1, unit_price: 0, notes: "", license_type: "starter" });
+  const [batchForm, setBatchForm] = useState({ starter_qty: 0, growth_qty: 0, notes: "" });
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [promoteForm, setPromoteForm] = useState({ tier: "state_head", override_pct: 5, region_name: "", state_name: "" });
   const [assignOpen, setAssignOpen] = useState(false);
@@ -367,29 +368,177 @@ const AdminPartners = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // PDF Invoice Builder Helper
+  const downloadPartnerInvoice = (partner: any, invoiceRef: string, date: string, items: any[]) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(249, 115, 22); // PicToCart Orange
+    doc.text("PicToCart", 14, 20);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Premium E-commerce Partner Platform", 14, 25);
+    doc.text("Email: partners@pictocart.in", 14, 30);
+    
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text("INVOICE", 140, 20);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Invoice Ref: ${invoiceRef}`, 140, 25);
+    doc.text(`Date: ${new Date(date).toLocaleDateString("en-IN")}`, 140, 30);
+    
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 35, 196, 35);
+    
+    // Bill To
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(15, 23, 42);
+    doc.text("Bill To:", 14, 45);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Partner Name: ${partner.name}`, 14, 50);
+    doc.text(`Company: ${partner.company_name || "N/A"}`, 14, 55);
+    doc.text(`Email: ${partner.email}`, 14, 60);
+    doc.text(`Phone: ${partner.phone || "N/A"}`, 14, 65);
+    
+    doc.line(14, 70, 196, 70);
+    
+    // Table Header
+    doc.setFont("helvetica", "bold");
+    doc.text("License Type", 14, 78);
+    doc.text("Qty", 90, 78);
+    doc.text("Unit Price (INR)", 120, 78);
+    doc.text("Total Amount (INR)", 160, 78);
+    
+    doc.line(14, 82, 196, 82);
+    
+    // Rows
+    let y = 90;
+    let grandTotal = 0;
+    doc.setFont("helvetica", "normal");
+    items.forEach(item => {
+      const typeLabel = item.license_type === "growth" ? "Growth (1-Year)" : "Starter (1-Year)";
+      doc.text(typeLabel, 14, y);
+      doc.text(item.qty.toString(), 90, y);
+      doc.text(`INR ${Number(item.unit_price_inr).toLocaleString("en-IN")}`, 120, y);
+      doc.text(`INR ${Number(item.total_inr).toLocaleString("en-IN")}`, 160, y);
+      grandTotal += Number(item.total_inr);
+      y += 10;
+    });
+    
+    doc.line(14, y - 5, 196, y - 5);
+    
+    // Grand Total
+    doc.setFont("helvetica", "bold");
+    doc.text("Grand Total:", 120, y + 5);
+    doc.text(`INR ${grandTotal.toLocaleString("en-IN")}`, 160, y + 5);
+    
+    // Footer
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text("Thank you for your partnership with PicToCart!", 14, y + 25);
+    doc.text("This is a computer-generated invoice and does not require a physical signature.", 14, y + 30);
+    
+    doc.save(`${invoiceRef}.pdf`);
+  };
+
   const addBatch = useMutation({
     mutationFn: async () => {
-      const total = batchForm.qty * batchForm.unit_price;
-      const { error } = await supabase.from("partner_license_batches").insert({
-        partner_id: selected.id,
-        qty: batchForm.qty,
-        unit_price_inr: batchForm.unit_price,
-        total_inr: total,
-        notes: batchForm.notes,
-        license_type: batchForm.license_type,
-      });
-      if (error) throw error;
+      const invoiceRef = `INV-${Date.now()}`;
+      const inserts = [];
+      
+      if (batchForm.starter_qty > 0) {
+        inserts.push(
+          supabase.from("partner_license_batches").insert({
+            partner_id: selected.id,
+            qty: batchForm.starter_qty,
+            unit_price_inr: 6000,
+            total_inr: batchForm.starter_qty * 6000,
+            notes: batchForm.notes,
+            license_type: "starter",
+            invoice_ref: invoiceRef,
+          })
+        );
+      }
+      
+      if (batchForm.growth_qty > 0) {
+        inserts.push(
+          supabase.from("partner_license_batches").insert({
+            partner_id: selected.id,
+            qty: batchForm.growth_qty,
+            unit_price_inr: 11000,
+            total_inr: batchForm.growth_qty * 11000,
+            notes: batchForm.notes,
+            license_type: "growth",
+            invoice_ref: invoiceRef,
+          })
+        );
+      }
+      
+      const results = await Promise.all(inserts);
+      for (const res of results) {
+        if (res.error) throw res.error;
+      }
+      
+      return { invoiceRef };
     },
-    onSuccess: () => {
-      toast.success("Licenses added");
+    onSuccess: (data) => {
+      toast.success("Licenses & Invoice generated successfully!");
       setAddBatchOpen(false);
-      setBatchForm({ qty: 1, unit_price: 0, notes: "", license_type: "starter" });
+      
+      // Auto-trigger invoice download
+      const items = [];
+      if (batchForm.starter_qty > 0) {
+        items.push({
+          license_type: "starter",
+          qty: batchForm.starter_qty,
+          unit_price_inr: 6000,
+          total_inr: batchForm.starter_qty * 6000
+        });
+      }
+      if (batchForm.growth_qty > 0) {
+        items.push({
+          license_type: "growth",
+          qty: batchForm.growth_qty,
+          unit_price_inr: 11000,
+          total_inr: batchForm.growth_qty * 11000
+        });
+      }
+      downloadPartnerInvoice(selected, data.invoiceRef, new Date().toISOString(), items);
+      
+      setBatchForm({ starter_qty: 0, growth_qty: 0, notes: "" });
+      
       qc.invalidateQueries({ queryKey: ["partner-batches", selected.id] });
       qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
+      qc.invalidateQueries({ queryKey: ["partner-licenses-admin", selected.id] });
       qc.invalidateQueries({ queryKey: ["admin-partners"] });
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const handleAddBatchSubmit = () => {
+    const isFirstTime = (licensesQ.data ?? []).length === 0;
+    const totalQty = batchForm.starter_qty + batchForm.growth_qty;
+    
+    if (totalQty === 0) {
+      toast.error("Please enter a quantity for Starter or Growth keys.");
+      return;
+    }
+    
+    if (isFirstTime && totalQty < 10) {
+      toast.error("First-time allocation must consist of at least 10 keys in total.");
+      return;
+    }
+    
+    addBatch.mutate();
+  };
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -1019,82 +1168,150 @@ const AdminPartners = () => {
                         <DialogHeader>
                           <DialogTitle>Add licenses to {selected.name}</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-3">
-                          <div>
-                            <Label>License Type</Label>
-                            <Select 
-                              value={batchForm.license_type} 
-                              onValueChange={(val) => setBatchForm({ ...batchForm, license_type: val })}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select license type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="starter">Starter</SelectItem>
-                                <SelectItem value="growth">Growth</SelectItem>
-                              </SelectContent>
-                            </Select>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Starter (₹6,000/yr)</Label>
+                              <Input 
+                                type="number" 
+                                min={0} 
+                                value={batchForm.starter_qty} 
+                                onChange={(e) => setBatchForm({ ...batchForm, starter_qty: Math.max(0, parseInt(e.target.value) || 0) })} 
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Growth (₹11,000/yr)</Label>
+                              <Input 
+                                type="number" 
+                                min={0} 
+                                value={batchForm.growth_qty} 
+                                onChange={(e) => setBatchForm({ ...batchForm, growth_qty: Math.max(0, parseInt(e.target.value) || 0) })} 
+                                className="mt-1"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <Label>Quantity</Label>
-                            <Input type="number" min={1} value={batchForm.qty} onChange={(e) => setBatchForm({ ...batchForm, qty: parseInt(e.target.value) || 1 })} />
+                          
+                          <div className="bg-muted/50 p-3 rounded-lg border text-sm space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Total Licenses:</span>
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">{batchForm.starter_qty + batchForm.growth_qty} keys</span>
+                            </div>
+                            <div className="flex justify-between text-base border-t pt-1.5 mt-1">
+                              <span className="font-bold text-slate-800 dark:text-slate-200">Total Price:</span>
+                              <span className="font-extrabold text-orange-600">₹{((batchForm.starter_qty * 6000) + (batchForm.growth_qty * 11000)).toLocaleString("en-IN")}</span>
+                            </div>
                           </div>
+
                           <div>
-                            <Label>Price per license (₹)</Label>
-                            <Input type="number" min={0} value={batchForm.unit_price} onChange={(e) => setBatchForm({ ...batchForm, unit_price: parseFloat(e.target.value) || 0 })} />
+                            <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Notes</Label>
+                            <Textarea 
+                              rows={2} 
+                              value={batchForm.notes} 
+                              onChange={(e) => setBatchForm({ ...batchForm, notes: e.target.value })} 
+                              placeholder="Optional batch or billing notes..."
+                              className="mt-1"
+                            />
                           </div>
-                          <div>
-                            <Label>Notes</Label>
-                            <Textarea rows={2} value={batchForm.notes} onChange={(e) => setBatchForm({ ...batchForm, notes: e.target.value })} />
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Total: ₹{(batchForm.qty * batchForm.unit_price).toLocaleString("en-IN")}
-                          </p>
                         </div>
                         <DialogFooter>
-                          <Button onClick={() => addBatch.mutate()} disabled={addBatch.isPending}>
-                            {addBatch.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Add
+                          <Button onClick={handleAddBatchSubmit} disabled={addBatch.isPending}>
+                            {addBatch.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Add & Generate Invoice
                           </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
                   </div>
-                  <div className="border rounded-lg divide-y text-sm">
+                  
+                  {/* Grouped invoices list */}
+                  <div className="space-y-3">
                     {batchesQ.data?.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">No batches yet</div>
-                    ) : batchesQ.data?.map((b: any) => (
-                      <div key={b.id} className="p-3 flex justify-between items-center gap-3">
-                        <div>
-                          <div className="font-medium">
-                            {b.qty} x <span className="capitalize font-semibold">{b.license_type || "starter"}</span> @ ₹{Number(b.unit_price_inr).toLocaleString("en-IN")}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString()}</div>
-                        </div>
-                        <div className="text-right flex items-center gap-3">
-                          <div className="font-semibold flex items-center"><IndianRupee className="w-3 h-3" />{Number(b.total_inr).toLocaleString("en-IN")}</div>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" title="Revoke remaining available licenses in this batch">
-                                <Ban className="w-3.5 h-3.5" />
+                      <div className="border rounded-lg p-4 text-center text-muted-foreground text-sm">No batches yet</div>
+                    ) : (
+                      (() => {
+                        const groups: { [key: string]: { invoice_ref: string; created_at: string; items: any[]; total_amount: number; total_qty: number } } = {};
+                        
+                        batchesQ.data?.forEach((b: any) => {
+                          const ref = b.invoice_ref || `INV-OLD-${b.id.substring(0, 8)}`;
+                          if (!groups[ref]) {
+                            groups[ref] = {
+                              invoice_ref: b.invoice_ref || "N/A (Legacy)",
+                              created_at: b.created_at,
+                              items: [],
+                              total_amount: 0,
+                              total_qty: 0
+                            };
+                          }
+                          groups[ref].items.push(b);
+                          groups[ref].total_amount += Number(b.total_inr);
+                          groups[ref].total_qty += b.qty;
+                        });
+                        
+                        const sortedGroups = Object.values(groups).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                        
+                        return sortedGroups.map((group: any) => (
+                          <div key={group.invoice_ref} className="border rounded-lg p-3 bg-muted/20 space-y-2 text-sm">
+                            <div className="flex justify-between items-center pb-2 border-b">
+                              <div>
+                                <div className="font-semibold text-slate-700 dark:text-slate-300">
+                                  Ref: {group.invoice_ref}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(group.created_at).toLocaleDateString("en-IN")}
+                                </div>
+                              </div>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => downloadPartnerInvoice(selected, group.invoice_ref, group.created_at, group.items)}
+                                className="h-8 text-xs font-semibold"
+                              >
+                                Download Invoice
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Revoke remaining licenses?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This marks all unused licenses in this batch as revoked. Already-consumed licenses (active client stores) are unaffected.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => revokeBatch.mutate(b.id)}>Revoke</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
-                    ))}
+                            </div>
+                            
+                            <div className="space-y-1">
+                              {group.items.map((b: any) => (
+                                <div key={b.id} className="flex justify-between items-center text-xs">
+                                  <span>
+                                    {b.qty} x <span className="capitalize font-semibold">{b.license_type || "starter"}</span> @ ₹{Number(b.unit_price_inr).toLocaleString("en-IN")}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">₹{Number(b.total_inr).toLocaleString("en-IN")}</span>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button size="icon" variant="ghost" className="h-5 w-5 text-destructive hover:text-destructive hover:bg-transparent" title="Revoke remaining available licenses in this batch">
+                                          <Ban className="w-3 h-3" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Revoke remaining licenses?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This marks all unused licenses in this batch as revoked. Already-consumed licenses (active client stores) are unaffected.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => revokeBatch.mutate(b.id)}>Revoke</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <div className="flex justify-between items-center pt-1 border-t text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span>Total Quantity: {group.total_qty} keys</span>
+                              <span>Total Price: ₹{group.total_amount.toLocaleString("en-IN")}</span>
+                            </div>
+                          </div>
+                        ));
+                      })()
+                    )}
                   </div>
+             </div>
                 </div>
 
                 <div className="mt-4">
