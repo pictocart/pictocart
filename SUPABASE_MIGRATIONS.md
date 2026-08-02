@@ -14,6 +14,7 @@ This will automatically generate the SQL migration file and record it here.
 ## Migration Records
 
 | Date (IST) | Migration File | Description | SQL Summary |
+| 02 Aug 2026 22:45 | [force_partner_suspended_on_create.sql](file:///d:/store-on-tips/supabase/migrations/20260802224000_force_partner_suspended_on_create.sql) | Default Partner Suspension | Added BEFORE INSERT trigger to force all new partner records to start with suspended status. |
 | 02 Aug 2026 22:30 | [disable_automatic_default_licenses.sql](file:///d:/store-on-tips/supabase/migrations/20260802223000_disable_automatic_default_licenses.sql) | Disable Default Licenses Allocation | Redefined all signatures of allocate_partner_licenses RPC as no-ops to completely disable default license allocations. |
 | 02 Aug 2026 20:00 | [add_staff_rls_to_all_ecommerce_tables.sql](file:///d:/store-on-tips/supabase/migrations/20260802200000_add_staff_rls_to_all_ecommerce_tables.sql) | E-commerce RLS Policies Update | Dropped owner-only check and allowed staff full manage access to products, categories, coupons, pages, etc. |
 | 02 Aug 2026 19:15 | [add_staff_rls_to_wallets_and_txns.sql](file:///d:/store-on-tips/supabase/migrations/20260802191500_add_staff_rls_to_wallets_and_txns.sql) | DB RLS Policies Update | Dropped owner-only check and updated SELECT/UPDATE RLS policies on wallets/txns to support staff queries. |

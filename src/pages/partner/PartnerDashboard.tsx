@@ -976,60 +976,70 @@ const PartnerDashboard = () => {
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-sm text-slate-300">
-                        <thead className="bg-slate-950 text-slate-400 text-xs uppercase font-semibold">
-                          <tr>
-                            <th className="px-4 py-3 rounded-l-lg">License Key</th>
-                            <th className="px-4 py-3">Type</th>
-                            <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3">Consumed By Store</th>
-                            <th className="px-4 py-3 rounded-r-lg">Consumed At</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/50">
-                          {(licensesQ.data ?? []).map((lic: any) => (
-                            <tr key={lic.id} className="hover:bg-slate-800/20">
-                              <td className="px-4 py-4 font-mono font-bold text-slate-100 select-all">{lic.license_key || "Generating..."}</td>
-                              <td className="px-4 py-4">
-                                <Badge className={
-                                  (lic.license_type === "premium" || lic.license_type === "growth") ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : 
-                                  "bg-orange-500/10 text-orange-400 border-orange-500/30"
-                                } variant="outline">
-                                  {
-                                    (lic.license_type === "premium" || lic.license_type === "growth") ? "Growth" : 
-                                    "Starter"
-                                  }
-                                </Badge>
-                              </td>
-                              <td className="px-4 py-4">
-                                {lic.status === "available" ? (
-                                  <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30" variant="outline">Available</Badge>
-                                ) : lic.status === "consumed" ? (
-                                  <Badge className="bg-slate-800 text-slate-500 border-slate-700" variant="outline">Consumed</Badge>
-                                ) : (
-                                  <Badge className="bg-red-500/10 text-red-400 border-red-500/30" variant="outline">Revoked</Badge>
-                                )}
-                              </td>
-                              <td className="px-4 py-4 text-slate-300 font-medium">
-                                {lic.stores?.name ? (
-                                  <Link to={`/dashboard?store=${lic.consumed_by_store_id}`} className="hover:underline text-orange-400">
-                                    {lic.stores.name}
-                                  </Link>
-                                ) : lic.consumed_by_store_id ? (
-                                  <span className="text-slate-500 font-mono text-xs">{lic.consumed_by_store_id.slice(0, 8)}</span>
-                                ) : (
-                                  "—"
-                                )}
-                              </td>
-                              <td className="px-4 py-4 text-xs text-slate-400">
-                                {lic.consumed_at ? format(new Date(lic.consumed_at), "dd MMM yyyy, HH:mm") : "—"}
-                              </td>
+                    {partner?.invite_status === "suspended" ? (
+                      <div className="text-center py-12 text-slate-400 bg-slate-950/40 border border-slate-800 rounded-lg">
+                        <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-amber-500 opacity-80 animate-pulse" />
+                        <h4 className="font-bold text-white mb-1">Account Suspended</h4>
+                        <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                          Your partner account is currently suspended. Please contact the administrator to activate your account and view your license keys.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm text-slate-300">
+                          <thead className="bg-slate-950 text-slate-400 text-xs uppercase font-semibold">
+                            <tr>
+                              <th className="px-4 py-3 rounded-l-lg">License Key</th>
+                              <th className="px-4 py-3">Type</th>
+                              <th className="px-4 py-3">Status</th>
+                              <th className="px-4 py-3">Consumed By Store</th>
+                              <th className="px-4 py-3 rounded-r-lg">Consumed At</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/50">
+                            {(licensesQ.data ?? []).map((lic: any) => (
+                              <tr key={lic.id} className="hover:bg-slate-800/20">
+                                <td className="px-4 py-4 font-mono font-bold text-slate-100 select-all">{lic.license_key || "Generating..."}</td>
+                                <td className="px-4 py-4">
+                                  <Badge className={
+                                    (lic.license_type === "premium" || lic.license_type === "growth") ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : 
+                                    "bg-orange-500/10 text-orange-400 border-orange-500/30"
+                                  } variant="outline">
+                                    {
+                                      (lic.license_type === "premium" || lic.license_type === "growth") ? "Growth" : 
+                                      "Starter"
+                                    }
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-4">
+                                  {lic.status === "available" ? (
+                                    <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30" variant="outline">Available</Badge>
+                                  ) : lic.status === "consumed" ? (
+                                    <Badge className="bg-slate-800 text-slate-500 border-slate-700" variant="outline">Consumed</Badge>
+                                  ) : (
+                                    <Badge className="bg-red-500/10 text-red-400 border-red-500/30" variant="outline">Revoked</Badge>
+                                  )}
+                                </td>
+                                <td className="px-4 py-4 text-slate-300 font-medium">
+                                  {lic.stores?.name ? (
+                                    <Link to={`/dashboard?store=${lic.consumed_by_store_id}`} className="hover:underline text-orange-400">
+                                      {lic.stores.name}
+                                    </Link>
+                                  ) : lic.consumed_by_store_id ? (
+                                    <span className="text-slate-500 font-mono text-xs">{lic.consumed_by_store_id.slice(0, 8)}</span>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                                <td className="px-4 py-4 text-xs text-slate-400">
+                                  {lic.consumed_at ? format(new Date(lic.consumed_at), "dd MMM yyyy, HH:mm") : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                     
                     {/* Invoices Section */}
                     <div className="mt-8 border-t border-slate-800 pt-6">

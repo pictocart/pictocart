@@ -1165,220 +1165,231 @@ const AdminPartners = () => {
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">License batches</h3>
-                    <Dialog open={addBatchOpen} onOpenChange={setAddBatchOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline"><Plus className="w-3.5 h-3.5 mr-1" /> Add licenses</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Add licenses to {selected.name}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Starter (₹6,000/yr)</Label>
-                              <Input 
-                                type="number" 
-                                min={0} 
-                                value={batchForm.starter_qty} 
-                                onChange={(e) => setBatchForm({ ...batchForm, starter_qty: e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value) || 0) })} 
-                                className="mt-1"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Growth (₹11,000/yr)</Label>
-                              <Input 
-                                type="number" 
-                                min={0} 
-                                value={batchForm.growth_qty} 
-                                onChange={(e) => setBatchForm({ ...batchForm, growth_qty: e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value) || 0) })} 
-                                className="mt-1"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="bg-muted/50 p-3 rounded-lg border text-sm space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Total Licenses:</span>
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">{(Number(batchForm.starter_qty) || 0) + (Number(batchForm.growth_qty) || 0)} keys</span>
-                            </div>
-                            <div className="flex justify-between text-base border-t pt-1.5 mt-1">
-                              <span className="font-bold text-slate-800 dark:text-slate-200">Total Price:</span>
-                              <span className="font-extrabold text-orange-600">₹{(((Number(batchForm.starter_qty) || 0) * 6000) + ((Number(batchForm.growth_qty) || 0) * 11000)).toLocaleString("en-IN")}</span>
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Notes</Label>
-                            <Textarea 
-                              rows={2} 
-                              value={batchForm.notes} 
-                              onChange={(e) => setBatchForm({ ...batchForm, notes: e.target.value })} 
-                              placeholder="Optional batch or billing notes..."
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={handleAddBatchSubmit} disabled={addBatch.isPending}>
-                            {addBatch.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Add & Generate Invoice
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                <Tabs defaultValue="keys" className="w-full mt-4">
+                  <TabsList className="grid grid-cols-2">
+                    <TabsTrigger value="keys">License Keys</TabsTrigger>
+                    <TabsTrigger value="purchases">Invoices & Purchases</TabsTrigger>
+                  </TabsList>
                   
-                  {/* Grouped invoices list */}
-                  <div className="space-y-3">
-                    {batchesQ.data?.length === 0 ? (
-                      <div className="border rounded-lg p-4 text-center text-muted-foreground text-sm">No batches yet</div>
-                    ) : (
-                      (() => {
-                        const groups: { [key: string]: { invoice_ref: string; created_at: string; items: any[]; total_amount: number; total_qty: number } } = {};
-                        
-                        batchesQ.data?.forEach((b: any) => {
-                          const ref = b.invoice_ref || `INV-OLD-${b.id.substring(0, 8)}`;
-                          if (!groups[ref]) {
-                            groups[ref] = {
-                              invoice_ref: b.invoice_ref || "N/A (Legacy)",
-                              created_at: b.created_at,
-                              items: [],
-                              total_amount: 0,
-                              total_qty: 0
-                            };
-                          }
-                          groups[ref].items.push(b);
-                          groups[ref].total_amount += Number(b.total_inr);
-                          groups[ref].total_qty += b.qty;
-                        });
-                        
-                        const sortedGroups = Object.values(groups).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                        
-                        return sortedGroups.map((group: any) => (
-                          <div key={group.invoice_ref} className="border rounded-lg p-3 bg-muted/20 space-y-2 text-sm">
-                            <div className="flex justify-between items-center pb-2 border-b">
-                              <div>
-                                <div className="font-semibold text-slate-700 dark:text-slate-300">
-                                  Ref: {group.invoice_ref}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {new Date(group.created_at).toLocaleDateString("en-IN")}
-                                </div>
+                  <TabsContent value="keys" className="mt-4 space-y-4">
+                    <div>
+                      <h3 className="font-semibold mb-2">All License Keys ({licensesQ.data?.length ?? 0})</h3>
+                      <div className="border rounded-lg divide-y text-sm max-h-80 overflow-y-auto">
+                        {licensesQ.isLoading ? (
+                          <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-orange-500" /></div>
+                        ) : licensesQ.data?.length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground">No licenses found</div>
+                        ) : licensesQ.data?.map((l: any) => (
+                          <div key={l.id} className="p-3 flex justify-between items-center gap-3 hover:bg-slate-50/50">
+                            <div className="space-y-1">
+                              <div className="font-mono font-bold text-slate-800 dark:text-slate-200">{l.license_key || "No Key"}</div>
+                              <div className="flex gap-2 items-center text-xs">
+                                <span className="capitalize font-semibold text-slate-600 dark:text-slate-400">{l.license_type || "starter"}</span>
+                                <span>•</span>
+                                <span className={`capitalize ${
+                                  l.status === 'available' ? 'text-emerald-600 font-medium' :
+                                  l.status === 'consumed' ? 'text-slate-500' : 'text-red-500'
+                                }`}>{l.status}</span>
+                                {l.status === 'consumed' && l.stores?.name && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-slate-600 dark:text-slate-400 font-medium">Used by: {l.stores.name}</span>
+                                  </>
+                                )}
                               </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {l.status === 'available' && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => revokeLicense.mutate(l.id)}
+                                  disabled={revokeLicense.isPending}
+                                  className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
+                                  title="Revoke License"
+                                >
+                                  Revoke
+                                </Button>
+                              )}
                               <Button 
                                 size="sm" 
-                                variant="outline" 
-                                onClick={() => downloadPartnerInvoice(selected, group.invoice_ref, group.created_at, group.items)}
-                                className="h-8 text-xs font-semibold"
+                                variant="ghost" 
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to permanently delete this license key?")) {
+                                    deleteLicense.mutate(l.id);
+                                  }
+                                }}
+                                disabled={deleteLicense.isPending}
+                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-red-50"
+                                title="Delete License"
                               >
-                                Download Invoice
+                                Delete
                               </Button>
                             </div>
-                            
-                            <div className="space-y-1">
-                              {group.items.map((b: any) => (
-                                <div key={b.id} className="flex justify-between items-center text-xs">
-                                  <span>
-                                    {b.qty} x <span className="capitalize font-semibold">{b.license_type || "starter"}</span> @ ₹{Number(b.unit_price_inr).toLocaleString("en-IN")}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">₹{Number(b.total_inr).toLocaleString("en-IN")}</span>
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button size="icon" variant="ghost" className="h-5 w-5 text-destructive hover:text-destructive hover:bg-transparent" title="Revoke remaining available licenses in this batch">
-                                          <Ban className="w-3 h-3" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Revoke remaining licenses?</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            This marks all unused licenses in this batch as revoked. Already-consumed licenses (active client stores) are unaffected.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => revokeBatch.mutate(b.id)}>Revoke</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            
-                            <div className="flex justify-between items-center pt-1 border-t text-xs font-bold text-slate-800 dark:text-slate-200">
-                              <span>Total Quantity: {group.total_qty} keys</span>
-                              <span>Total Price: ₹{group.total_amount.toLocaleString("en-IN")}</span>
-                            </div>
                           </div>
-                        ));
-                      })()
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2">All License Keys ({licensesQ.data?.length ?? 0})</h3>
-                  <div className="border rounded-lg divide-y text-sm max-h-80 overflow-y-auto">
-                    {licensesQ.isLoading ? (
-                      <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-orange-500" /></div>
-                    ) : licensesQ.data?.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">No licenses found</div>
-                    ) : licensesQ.data?.map((l: any) => (
-                      <div key={l.id} className="p-3 flex justify-between items-center gap-3 hover:bg-slate-50/50">
-                        <div className="space-y-1">
-                          <div className="font-mono font-bold text-slate-800 dark:text-slate-200">{l.license_key || "No Key"}</div>
-                          <div className="flex gap-2 items-center text-xs">
-                            <span className="capitalize font-semibold text-slate-600 dark:text-slate-400">{l.license_type || "starter"}</span>
-                            <span>•</span>
-                            <span className={`capitalize ${
-                              l.status === 'available' ? 'text-emerald-600 font-medium' :
-                              l.status === 'consumed' ? 'text-slate-500' : 'text-red-500'
-                            }`}>{l.status}</span>
-                            {l.status === 'consumed' && l.stores?.name && (
-                              <>
-                                <span>•</span>
-                                <span className="text-slate-600 dark:text-slate-400 font-medium">Used by: {l.stores.name}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {l.status === 'available' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => revokeLicense.mutate(l.id)}
-                              disabled={revokeLicense.isPending}
-                              className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
-                              title="Revoke License"
-                            >
-                              Revoke
-                            </Button>
-                          )}
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => {
-                              if (confirm("Are you sure you want to permanently delete this license key?")) {
-                                deleteLicense.mutate(l.id);
-                              }
-                            }}
-                            disabled={deleteLicense.isPending}
-                            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-red-50"
-                            title="Delete License"
-                          >
-                            Delete
-                          </Button>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="purchases" className="mt-4 space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">License batches</h3>
+                        <Dialog open={addBatchOpen} onOpenChange={setAddBatchOpen}>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline"><Plus className="w-3.5 h-3.5 mr-1" /> Add licenses</Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Add licenses to {selected.name}</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Starter (₹6,000/yr)</Label>
+                                  <Input 
+                                    type="number" 
+                                    min={0} 
+                                    value={batchForm.starter_qty} 
+                                    onChange={(e) => setBatchForm({ ...batchForm, starter_qty: e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value) || 0) })} 
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Growth (₹11,000/yr)</Label>
+                                  <Input 
+                                    type="number" 
+                                    min={0} 
+                                    value={batchForm.growth_qty} 
+                                    onChange={(e) => setBatchForm({ ...batchForm, growth_qty: e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value) || 0) })} 
+                                    className="mt-1"
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="bg-muted/50 p-3 rounded-lg border text-sm space-y-1">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Total Licenses:</span>
+                                  <span className="font-semibold text-slate-800 dark:text-slate-200">{(Number(batchForm.starter_qty) || 0) + (Number(batchForm.growth_qty) || 0)} keys</span>
+                                </div>
+                                <div className="flex justify-between text-base border-t pt-1.5 mt-1">
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">Total Price:</span>
+                                  <span className="font-extrabold text-orange-600">₹{(((Number(batchForm.starter_qty) || 0) * 6000) + ((Number(batchForm.growth_qty) || 0) * 11000)).toLocaleString("en-IN")}</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Notes</Label>
+                                <Textarea 
+                                  rows={2} 
+                                  value={batchForm.notes} 
+                                  onChange={(e) => setBatchForm({ ...batchForm, notes: e.target.value })} 
+                                  placeholder="Optional batch or billing notes..."
+                                  className="mt-1"
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button onClick={handleAddBatchSubmit} disabled={addBatch.isPending}>
+                                {addBatch.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Add & Generate Invoice
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                      
+                      {/* Grouped invoices list */}
+                      <div className="space-y-3">
+                        {batchesQ.data?.length === 0 ? (
+                          <div className="border rounded-lg p-4 text-center text-muted-foreground text-sm">No batches yet</div>
+                        ) : (
+                          (() => {
+                            const groups: { [key: string]: { invoice_ref: string; created_at: string; items: any[]; total_amount: number; total_qty: number } } = {};
+                            
+                            batchesQ.data?.forEach((b: any) => {
+                              const ref = b.invoice_ref || `INV-OLD-${b.id.substring(0, 8)}`;
+                              if (!groups[ref]) {
+                                groups[ref] = {
+                                  invoice_ref: b.invoice_ref || "N/A (Legacy)",
+                                  created_at: b.created_at,
+                                  items: [],
+                                  total_amount: 0,
+                                  total_qty: 0
+                                };
+                              }
+                              groups[ref].items.push(b);
+                              groups[ref].total_amount += Number(b.total_inr);
+                              groups[ref].total_qty += b.qty;
+                            });
+                            
+                            const sortedGroups = Object.values(groups).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                            
+                            return sortedGroups.map((group: any) => (
+                              <div key={group.invoice_ref} className="border rounded-lg p-3 bg-muted/20 space-y-2 text-sm">
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                  <div>
+                                    <div className="font-semibold text-slate-700 dark:text-slate-300">
+                                      Ref: {group.invoice_ref}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {new Date(group.created_at).toLocaleDateString("en-IN")}
+                                    </div>
+                                  </div>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => downloadPartnerInvoice(selected, group.invoice_ref, group.created_at, group.items)}
+                                    className="h-8 text-xs font-semibold"
+                                  >
+                                    Download Invoice
+                                  </Button>
+                                </div>
+                                
+                                <div className="space-y-1">
+                                  {group.items.map((b: any) => (
+                                    <div key={b.id} className="flex justify-between items-center text-xs">
+                                      <span>
+                                        {b.qty} x <span className="capitalize font-semibold">{b.license_type || "starter"}</span> @ ₹{Number(b.unit_price_inr).toLocaleString("en-IN")}
+                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">₹{Number(b.total_inr).toLocaleString("en-IN")}</span>
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <Button size="icon" variant="ghost" className="h-5 w-5 text-destructive hover:text-destructive hover:bg-transparent" title="Revoke remaining available licenses in this batch">
+                                              <Ban className="w-3 h-3" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Revoke remaining licenses?</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                This marks all unused licenses in this batch as revoked. Already-consumed licenses (active client stores) are unaffected.
+                                              </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => revokeBatch.mutate(b.id)}>Revoke</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                <div className="flex justify-between items-center pt-1 border-t text-xs font-bold text-slate-800 dark:text-slate-200">
+                                  <span>Total Quantity: {group.total_qty} keys</span>
+                                  <span>Total Price: ₹{group.total_amount.toLocaleString("en-IN")}</span>
+                                </div>
+                              </div>
+                            ));
+                          })()
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
 
                 <div className="mt-4">
                   <h3 className="font-semibold mb-2">Demo Store Visibility</h3>
