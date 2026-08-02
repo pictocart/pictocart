@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,8 +18,19 @@ export default function StaffManagement() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'waiter' | 'chef' | 'manager'>('waiter');
+  const [role, setRole] = useState<'waiter' | 'chef' | 'manager' | 'employee'>('employee');
+  const [empIdInput, setEmpIdInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const cat = String(store?.category || '').toLowerCase();
+  const isFnB = ['food', 'food_beverages', 'food-and-beverages', 'restaurant', 'cafe'].includes(cat);
+
+  useEffect(() => {
+    if (store) {
+      const isFood = ['food', 'food_beverages', 'food-and-beverages', 'restaurant', 'cafe'].includes(String(store.category || '').toLowerCase());
+      setRole(isFood ? 'waiter' : 'employee');
+    }
+  }, [store]);
 
   // Fetch staff list for current store
   const { data: staffList = [], isLoading } = useQuery({
@@ -57,6 +68,7 @@ export default function StaffManagement() {
         p_name: name.trim(),
         p_role: role,
         p_store_id: store.id,
+        p_employee_id: empIdInput.trim() || null,
       });
 
       if (error) throw error;
@@ -69,6 +81,7 @@ export default function StaffManagement() {
       setName('');
       setEmail('');
       setPassword('');
+      setEmpIdInput('');
       qc.invalidateQueries({ queryKey: ['store-staff', store.id] });
     } catch (err: any) {
       console.error(err);
@@ -160,6 +173,16 @@ export default function StaffManagement() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="empIdInput">Employee ID (Optional)</Label>
+                <Input
+                  id="empIdInput"
+                  placeholder="e.g. EMP-001 (Auto-generated if blank)"
+                  value={empIdInput}
+                  onChange={(e) => setEmpIdInput(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
                 <Select
                   value={role}
@@ -169,9 +192,16 @@ export default function StaffManagement() {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="waiter">Waiter</SelectItem>
-                    <SelectItem value="chef">Chef / Kitchen</SelectItem>
-                    <SelectItem value="manager">Manager / Counter</SelectItem>
+                    {isFnB ? (
+                      <>
+                        <SelectItem value="waiter">Waiter</SelectItem>
+                        <SelectItem value="chef">Chef / Kitchen</SelectItem>
+                        <SelectItem value="manager">Manager / Counter</SelectItem>
+                        <SelectItem value="employee">Employee</SelectItem>
+                      </>
+                    ) : (
+                      <SelectItem value="employee">Employee</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -215,6 +245,7 @@ export default function StaffManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Emp ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Login Email</TableHead>
                     <TableHead>Role</TableHead>
@@ -224,6 +255,7 @@ export default function StaffManagement() {
                 <TableBody>
                   {staffList.map((staff) => (
                     <TableRow key={staff.id}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{staff.employee_id || '—'}</TableCell>
                       <TableCell className="font-medium">{staff.name}</TableCell>
                       <TableCell>{staff.auth_email || 'N/A'}</TableCell>
                       <TableCell className="capitalize">
@@ -233,10 +265,12 @@ export default function StaffManagement() {
                               ? 'bg-purple-50 text-purple-700 border-purple-200'
                               : staff.role === 'chef'
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : staff.role === 'employee'
+                              ? 'bg-green-50 text-green-700 border-green-200'
                               : 'bg-orange-50 text-orange-700 border-orange-200'
                           }`}
                         >
-                          {staff.role === 'chef' ? 'Chef / Kitchen' : staff.role}
+                          {staff.role === 'chef' ? 'Chef / Kitchen' : staff.role === 'manager' ? 'Manager / Counter' : staff.role}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
