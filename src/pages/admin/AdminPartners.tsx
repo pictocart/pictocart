@@ -1311,7 +1311,6 @@ const AdminPartners = () => {
                       })()
                     )}
                   </div>
-             </div>
                 </div>
 
                 <div className="mt-4">
