@@ -38,6 +38,82 @@ async function getBase64ImageUrl(imageUrl: string): Promise<string> {
   return imageUrl;
 }
 
+function parseMarkdownToProduct(content: string) {
+  const product: any = {
+    title: "",
+    description: "",
+    shortDescription: "",
+    tags: [],
+    category: "",
+    suggestedPrice: 0,
+    seoTitle: "",
+    seoDescription: "",
+    highlights: [],
+    product_type: "physical",
+    metadata: {}
+  };
+
+  // Extract Title
+  const titleMatch = content.match(/\*\*Title\*\*:\s*([^\n]+)/i) || content.match(/\*\*Title:\*\*:\s*([^\n]+)/i) || content.match(/\*\*Title:\*\*\s*([^\n]+)/i) || content.match(/\* \*\*Title\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Title:\*\*:\s*([^\n]+)/i);
+  if (titleMatch) product.title = titleMatch[1].replace(/^[ \t*#"-]+|[ \t*#"-]+$/g, "").trim();
+
+  // Extract Description
+  const descMatch = content.match(/\*\*Description\*\*:\s*([^\n]+)/i) || content.match(/\*\*Description:\*\*:\s*([^\n]+)/i) || content.match(/\*\*Description:\*\*\s*([^\n]+)/i) || content.match(/\* \*\*Description\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Description:\*\*:\s*([^\n]+)/i);
+  if (descMatch) product.description = descMatch[1].replace(/^[ \t*#"-]+|[ \t*#"-]+$/g, "").trim();
+
+  // Extract Short Description
+  const shortDescMatch = content.match(/\*\*Short Description\*\*:\s*([^\n]+)/i) || content.match(/\*\*Short Description:\*\*:\s*([^\n]+)/i) || content.match(/\*\*Short Description:\*\*\s*([^\n]+)/i) || content.match(/\* \*\*Short Description\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Short Description:\*\*:\s*([^\n]+)/i);
+  if (shortDescMatch) product.shortDescription = shortDescMatch[1].replace(/^[ \t*#"-]+|[ \t*#"-]+$/g, "").trim();
+
+  // Extract Tags
+  const tagsMatch = content.match(/\*\*Tags\*\*:\s*([^\n]+)/i) || content.match(/\*\*Tags:\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Tags\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Tags:\*\*:\s*([^\n]+)/i);
+  if (tagsMatch) {
+    product.tags = tagsMatch[1]
+      .split(",")
+      .map(t => t.replace(/^[ \t*#"-]+|[ \t*#"-]+$/g, "").trim())
+      .filter(t => t.length > 0);
+  }
+
+  // Extract Category
+  const catMatch = content.match(/\*\*Category\*\*:\s*([^\n]+)/i) || content.match(/\*\*Category:\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Category\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Category:\*\*:\s*([^\n]+)/i);
+  if (catMatch) product.category = catMatch[1].replace(/^[ \t*#"-]+|[ \t*#"-]+$/g, "").trim();
+
+  // Extract Price
+  const priceMatch = content.match(/\*\*Suggested Price\*\*:\s*([^\n]+)/i) || content.match(/\*\*Suggested Price:\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Suggested Price\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Suggested Price:\*\*:\s*([^\n]+)/i);
+  if (priceMatch) {
+    const digits = priceMatch[1].match(/\d+/);
+    if (digits) product.suggestedPrice = parseInt(digits[0], 10);
+  }
+
+  // Extract SEO Title
+  const seoTitleMatch = content.match(/\*\*SEO Title\*\*:\s*([^\n]+)/i) || content.match(/\*\*SEO Title:\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*SEO Title\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*SEO Title:\*\*:\s*([^\n]+)/i);
+  if (seoTitleMatch) product.seoTitle = seoTitleMatch[1].replace(/^[ \t*#"-]+|[ \t*#"-]+$/g, "").trim();
+
+  // Extract SEO Description
+  const seoDescMatch = content.match(/\*\*SEO Description\*\*:\s*([^\n]+)/i) || content.match(/\*\*SEO Meta Description\*\*:\s*([^\n]+)/i) || content.match(/\*\*SEO Description:\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*SEO Description\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*SEO Meta Description\*\*:\s*([^\n]+)/i);
+  if (seoDescMatch) product.seoDescription = seoDescMatch[1].replace(/^[ \t*#"-]+|[ \t*#"-]+$/g, "").trim();
+
+  // Extract Product Type
+  const typeMatch = content.match(/\*\*Product Type\*\*:\s*([^\n]+)/i) || content.match(/\*\*Product Type:\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Product Type\*\*:\s*([^\n]+)/i) || content.match(/\* \*\*Product Type:\*\*:\s*([^\n]+)/i);
+  if (typeMatch) {
+    const rawType = typeMatch[1].toLowerCase().replace(/^[ \t*#"-]+|[ \t*#"-]+$/g, "").trim();
+    if (["physical", "digital", "food", "fashion", "electronics", "beauty", "handmade", "service"].includes(rawType)) {
+      product.product_type = rawType;
+    }
+  }
+
+  // Extract Highlights
+  const highlightsSection = content.match(/\*\*Highlights\*\*:\s*([\s\S]*?)(?=\*\*|$)/i) || content.match(/\* \*\*Highlights\*\*:\s*([\s\S]*?)(?=\*\*|$)/i);
+  if (highlightsSection) {
+    const lines = highlightsSection[1].split("\n");
+    product.highlights = lines
+      .map(line => line.replace(/^[ \t*+-]+|[ \t*+-]+$/g, "").trim())
+      .filter(line => line.length > 5 && !line.startsWith("**") && !line.includes(":"));
+  }
+
+  return product;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -246,9 +322,17 @@ Rules:
       } else {
         product = JSON.parse(content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
       }
-    } catch {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse AI response");
+    } catch (parseErr) {
+      console.log("JSON parsing failed, attempting markdown parsing fallback...");
+      try {
+        product = parseMarkdownToProduct(content);
+        if (!product.title) {
+          throw new Error("Fallback parser could not extract title");
+        }
+      } catch (fallbackErr) {
+        console.error("Failed to parse AI response:", content);
+        throw new Error("Failed to parse AI response");
+      }
     }
 
     // 4. Persist cache
