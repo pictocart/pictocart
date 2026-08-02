@@ -29,8 +29,11 @@ const TONE: Record<Action['tone'], string> = {
   primary: 'from-primary/10 to-background border-primary/20      [&_.ic]:bg-primary/15     [&_.ic]:text-primary',
 };
 
+import { useStore } from '@/hooks/useStore';
+
 const SmartActions = ({ pendingOrders, productCount, lowStockCount, hasCustomDomain, hasShipping, isPublished }: Props) => {
   const navigate = useNavigate();
+  const { isStaff } = useStore();
 
   const actions: Action[] = [];
   if (pendingOrders > 0) actions.push({
@@ -48,12 +51,12 @@ const SmartActions = ({ pendingOrders, productCount, lowStockCount, hasCustomDom
     desc: 'Snap a photo, AI writes the title, description & SEO.',
     icon: Sparkles, tone: 'primary', to: '/products/new', cta: 'Add product',
   });
-  if (productCount > 0 && !hasShipping) actions.push({
+  if (productCount > 0 && !hasShipping && !isStaff) actions.push({
     title: 'Set up shipping rates',
     desc: 'Connect Shiprocket to ship pan-India with 17+ couriers in 60 seconds.',
     icon: ShoppingBag, tone: 'indigo', to: '/settings/shipping', cta: 'Setup',
   });
-  if (isPublished && !hasCustomDomain) actions.push({
+  if (isPublished && !hasCustomDomain && !isStaff) actions.push({
     title: 'Connect your custom domain',
     desc: 'A pro domain builds trust and improves SEO.',
     icon: Globe, tone: 'emerald', to: '/settings/domain', cta: 'Connect',

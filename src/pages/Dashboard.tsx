@@ -42,7 +42,7 @@ import StatCard from '@/components/ui/StatCard';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { store, loading, refetchStore } = useStore();
+  const { store, loading, refetchStore, isStaff } = useStore();
   const { products } = useProducts();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -359,7 +359,7 @@ const Dashboard = () => {
       {store?.id && <RecentOrders storeId={store.id} />}
 
       {/* Setup checklist */}
-      {completionPct < 100 && (
+      {completionPct < 100 && !isStaff && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">

@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { useWallet, useCreditSettings } from '@/hooks/useWallet';
 import { useCountUp } from '@/hooks/useCountUp';
 import { cn } from '@/lib/utils';
+import { useStore } from '@/hooks/useStore';
 
 const WalletCard = () => {
   const { wallet, loading } = useWallet();
   const { data: settings } = useCreditSettings();
+  const { isStaff } = useStore();
 
   const balance = wallet?.balance ?? 0;
   const savedInr = Number(wallet?.lifetime_saved_inr ?? 0);
@@ -103,16 +105,18 @@ const WalletCard = () => {
         </div>
 
         {/* CTA */}
-        <div className="flex sm:flex-col gap-2 sm:items-end shrink-0">
-          <Button asChild size="sm" className="gap-1.5 shadow-md hover:shadow-lg transition-shadow">
-            <Link to="/wallet">
-              <Plus className="h-3.5 w-3.5" /> Recharge
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="ghost" className="text-xs h-8">
-            <Link to="/wallet">View activity</Link>
-          </Button>
-        </div>
+        {!isStaff && (
+          <div className="flex sm:flex-col gap-2 sm:items-end shrink-0">
+            <Button asChild size="sm" className="gap-1.5 shadow-md hover:shadow-lg transition-shadow">
+              <Link to="/wallet">
+                <Plus className="h-3.5 w-3.5" /> Recharge
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="ghost" className="text-xs h-8">
+              <Link to="/wallet">View activity</Link>
+            </Button>
+          </div>
+        )}
       </div>
     </Card>
   );
