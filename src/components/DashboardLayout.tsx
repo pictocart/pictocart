@@ -179,7 +179,7 @@ const mobileBottomNav: NavLeaf[] = [
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { signOut } = useAuth();
   const { isAdmin } = useAdminRole();
-  const { store } = useStore();
+  const { store, isStaff } = useStore();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -191,7 +191,19 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const filteredNavTree = useMemo<NavEntry[]>(() => {
     const fnbPaths = new Set(['/menu', '/kitchen', '/settings/qr']);
     const servicePaths = new Set(['/appointments', '/services', '/providers', '/providers/payouts', '/family-plans']);
-    return navTree
+    
+    // For staff members, hide billing, settings, accounts, sourcing
+    const allowedStaffKeys = new Set(['Dashboard', 'catalog', 'sales', 'bookings', 'marketing', 'storefront']);
+
+    let baseTree = navTree;
+    if (isStaff) {
+      baseTree = navTree.filter((entry) => {
+        const key = isGroup(entry) ? entry.key : entry.label;
+        return allowedStaffKeys.has(key);
+      });
+    }
+
+    return baseTree
       .map((entry) => {
         if (!isGroup(entry)) return entry;
         const children = entry.children.filter((c) => {
@@ -202,7 +214,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         return { ...entry, children };
       })
       .filter((entry) => isGroup(entry) ? entry.children.length > 0 : true);
-  }, [isFnB, isService]);
+  }, [isFnB, isService, isStaff]);
 
 
   const initiallyOpen = useMemo(() => {

@@ -29,6 +29,8 @@ export interface Store {
 interface StoreContextValue {
   store: Store | null;
   loading: boolean;
+  isStaff: boolean;
+  staffRole: string | null;
   setStore: React.Dispatch<React.SetStateAction<Store | null>>;
   refetchStore: () => Promise<void>;
 }
@@ -39,6 +41,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
   const [store, setStore] = useState<Store | null>(null);
+  const [isStaff, setIsStaff] = useState(false);
+  const [staffRole, setStaffRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   // Track which user id we've fetched the store for. Without this, right after
   // a fresh sign-in consumers briefly see `loading=false, store=null` from the
@@ -50,12 +54,14 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const fetchStore = useCallback(async () => {
     if (!userId) {
       setStore(null);
+      setIsStaff(false);
+      setStaffRole(null);
       setFetchedForUserId(null);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('stores')
       .select('*')
       .eq('user_id', userId)
@@ -67,8 +73,43 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-    const row = ((data as Store[] | null)?.[0]) ?? null;
+
+    let row = ((data as Store[] | null)?.[0]) ?? null;
+    let staffFound = false;
+    let sRole: string | null = null;
+
+    if (!row) {
+      // Check if they are a staff member of some store
+      const { data: staffData, error: staffError } = await supabase
+        .from('store_staff')
+        .select('store_id, role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (staffError) {
+        console.error('[StoreContext] staff fetch error:', staffError);
+      } else if (staffData?.store_id) {
+        const { data: storeData, error: storeError } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('id', staffData.store_id)
+          .maybeSingle();
+
+        if (storeError) {
+          console.error('[StoreContext] store fetch for staff error:', storeError);
+        } else if (storeData) {
+          row = storeData as Store;
+          // Set onboarding_step to 4 so staff bypasses onboarding redirects
+          row.onboarding_step = 4;
+          staffFound = true;
+          sRole = staffData.role;
+        }
+      }
+    }
+
     setStore(row ? (deriveLegacyThemeFields(row) as Store) : null);
+    setIsStaff(staffFound);
+    setStaffRole(sRole);
     setFetchedForUserId(userId);
     setLoading(false);
   }, [userId]);
@@ -82,6 +123,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     // Token refreshes keep the same userId so we skip the reset → no blink.
     if (userId !== fetchedForUserId) {
       setStore(null);
+      setIsStaff(false);
+      setStaffRole(null);
       setLoading(true);
     }
     fetchStore();
@@ -93,7 +136,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     loading || authLoading || (!!userId && fetchedForUserId !== userId);
 
   return (
-    <StoreContext.Provider value={{ store, loading: effectiveLoading, setStore, refetchStore: fetchStore }}>
+    <StoreContext.Provider value={{ store, loading: effectiveLoading, isStaff, staffRole, setStore, refetchStore: fetchStore }}>
       {children}
     </StoreContext.Provider>
   );
