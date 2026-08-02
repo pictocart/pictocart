@@ -101,7 +101,7 @@ const AdminPartners = () => {
   const [otcCredits, setOtcCredits] = useState<number>(5000);
 
   const [addBatchOpen, setAddBatchOpen] = useState(false);
-  const [batchForm, setBatchForm] = useState({ starter_qty: 0, growth_qty: 0, notes: "" });
+  const [batchForm, setBatchForm] = useState<{ starter_qty: number | ""; growth_qty: number | ""; notes: string }>({ starter_qty: "", growth_qty: "", notes: "" });
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [promoteForm, setPromoteForm] = useState({ tier: "state_head", override_pct: 5, region_name: "", state_name: "" });
   const [assignOpen, setAssignOpen] = useState(false);
@@ -454,13 +454,16 @@ const AdminPartners = () => {
       const invoiceRef = `INV-${Date.now()}`;
       const inserts = [];
       
-      if (batchForm.starter_qty > 0) {
+      const starterQty = Number(batchForm.starter_qty) || 0;
+      const growthQty = Number(batchForm.growth_qty) || 0;
+      
+      if (starterQty > 0) {
         inserts.push(
           supabase.from("partner_license_batches").insert({
             partner_id: selected.id,
-            qty: batchForm.starter_qty,
+            qty: starterQty,
             unit_price_inr: 6000,
-            total_inr: batchForm.starter_qty * 6000,
+            total_inr: starterQty * 6000,
             notes: batchForm.notes,
             license_type: "starter",
             invoice_ref: invoiceRef,
@@ -468,13 +471,13 @@ const AdminPartners = () => {
         );
       }
       
-      if (batchForm.growth_qty > 0) {
+      if (growthQty > 0) {
         inserts.push(
           supabase.from("partner_license_batches").insert({
             partner_id: selected.id,
-            qty: batchForm.growth_qty,
+            qty: growthQty,
             unit_price_inr: 11000,
-            total_inr: batchForm.growth_qty * 11000,
+            total_inr: growthQty * 11000,
             notes: batchForm.notes,
             license_type: "growth",
             invoice_ref: invoiceRef,
@@ -493,27 +496,30 @@ const AdminPartners = () => {
       toast.success("Licenses & Invoice generated successfully!");
       setAddBatchOpen(false);
       
+      const starterQty = Number(batchForm.starter_qty) || 0;
+      const growthQty = Number(batchForm.growth_qty) || 0;
+      
       // Auto-trigger invoice download
       const items = [];
-      if (batchForm.starter_qty > 0) {
+      if (starterQty > 0) {
         items.push({
           license_type: "starter",
-          qty: batchForm.starter_qty,
+          qty: starterQty,
           unit_price_inr: 6000,
-          total_inr: batchForm.starter_qty * 6000
+          total_inr: starterQty * 6000
         });
       }
-      if (batchForm.growth_qty > 0) {
+      if (growthQty > 0) {
         items.push({
           license_type: "growth",
-          qty: batchForm.growth_qty,
+          qty: growthQty,
           unit_price_inr: 11000,
-          total_inr: batchForm.growth_qty * 11000
+          total_inr: growthQty * 11000
         });
       }
       downloadPartnerInvoice(selected, data.invoiceRef, new Date().toISOString(), items);
       
-      setBatchForm({ starter_qty: 0, growth_qty: 0, notes: "" });
+      setBatchForm({ starter_qty: "", growth_qty: "", notes: "" });
       
       qc.invalidateQueries({ queryKey: ["partner-batches", selected.id] });
       qc.invalidateQueries({ queryKey: ["partner-summary", selected.id] });
@@ -525,7 +531,9 @@ const AdminPartners = () => {
 
   const handleAddBatchSubmit = () => {
     const isFirstTime = (licensesQ.data ?? []).length === 0;
-    const totalQty = batchForm.starter_qty + batchForm.growth_qty;
+    const starterQty = Number(batchForm.starter_qty) || 0;
+    const growthQty = Number(batchForm.growth_qty) || 0;
+    const totalQty = starterQty + growthQty;
     
     if (totalQty === 0) {
       toast.error("Please enter a quantity for Starter or Growth keys.");
@@ -1176,7 +1184,7 @@ const AdminPartners = () => {
                                 type="number" 
                                 min={0} 
                                 value={batchForm.starter_qty} 
-                                onChange={(e) => setBatchForm({ ...batchForm, starter_qty: Math.max(0, parseInt(e.target.value) || 0) })} 
+                                onChange={(e) => setBatchForm({ ...batchForm, starter_qty: e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value) || 0) })} 
                                 className="mt-1"
                               />
                             </div>
@@ -1186,7 +1194,7 @@ const AdminPartners = () => {
                                 type="number" 
                                 min={0} 
                                 value={batchForm.growth_qty} 
-                                onChange={(e) => setBatchForm({ ...batchForm, growth_qty: Math.max(0, parseInt(e.target.value) || 0) })} 
+                                onChange={(e) => setBatchForm({ ...batchForm, growth_qty: e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value) || 0) })} 
                                 className="mt-1"
                               />
                             </div>
@@ -1195,11 +1203,11 @@ const AdminPartners = () => {
                           <div className="bg-muted/50 p-3 rounded-lg border text-sm space-y-1">
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Total Licenses:</span>
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">{batchForm.starter_qty + batchForm.growth_qty} keys</span>
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">{(Number(batchForm.starter_qty) || 0) + (Number(batchForm.growth_qty) || 0)} keys</span>
                             </div>
                             <div className="flex justify-between text-base border-t pt-1.5 mt-1">
                               <span className="font-bold text-slate-800 dark:text-slate-200">Total Price:</span>
-                              <span className="font-extrabold text-orange-600">₹{((batchForm.starter_qty * 6000) + (batchForm.growth_qty * 11000)).toLocaleString("en-IN")}</span>
+                              <span className="font-extrabold text-orange-600">₹{(((Number(batchForm.starter_qty) || 0) * 6000) + ((Number(batchForm.growth_qty) || 0) * 11000)).toLocaleString("en-IN")}</span>
                             </div>
                           </div>
 
