@@ -126,6 +126,38 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true, partner_id: partnerData.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "create_user") {
+      const { email, password, name } = body;
+      
+      if (!email || !password) {
+        throw new Error("Missing required fields: email and password are required");
+      }
+      
+      // 1. Create auth user with email_confirm = true so they can login immediately
+      const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: name || "" }
+      });
+      if (authError) throw authError;
+      if (!authData?.user) throw new Error("Failed to create auth user");
+      
+      const newUserId = authData.user.id;
+      
+      // 2. Assign 'seller' role to the user
+      const { error: roleError } = await adminClient.from("user_roles").upsert({
+        user_id: newUserId,
+        role: "seller"
+      }, { onConflict: "user_id,role" });
+      
+      if (roleError) {
+        console.error("Failed to add seller role:", roleError);
+      }
+      
+      return new Response(JSON.stringify({ success: true, userId: newUserId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "delete_user") {
       const { error } = await adminClient.auth.admin.deleteUser(userId);
       if (error) throw error;
