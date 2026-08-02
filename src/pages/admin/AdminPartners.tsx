@@ -1173,69 +1173,8 @@ const AdminPartners = () => {
                   
                   <TabsContent value="keys" className="mt-4 space-y-4">
                     <div>
-                      <h3 className="font-semibold mb-2">All License Keys ({licensesQ.data?.length ?? 0})</h3>
-                      <div className="border rounded-lg divide-y text-sm max-h-80 overflow-y-auto">
-                        {licensesQ.isLoading ? (
-                          <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-orange-500" /></div>
-                        ) : licensesQ.data?.length === 0 ? (
-                          <div className="p-4 text-center text-muted-foreground">No licenses found</div>
-                        ) : licensesQ.data?.map((l: any) => (
-                          <div key={l.id} className="p-3 flex justify-between items-center gap-3 hover:bg-slate-50/50">
-                            <div className="space-y-1">
-                              <div className="font-mono font-bold text-slate-800 dark:text-slate-200">{l.license_key || "No Key"}</div>
-                              <div className="flex gap-2 items-center text-xs">
-                                <span className="capitalize font-semibold text-slate-600 dark:text-slate-400">{l.license_type || "starter"}</span>
-                                <span>•</span>
-                                <span className={`capitalize ${
-                                  l.status === 'available' ? 'text-emerald-600 font-medium' :
-                                  l.status === 'consumed' ? 'text-slate-500' : 'text-red-500'
-                                }`}>{l.status}</span>
-                                {l.status === 'consumed' && l.stores?.name && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="text-slate-600 dark:text-slate-400 font-medium">Used by: {l.stores.name}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {l.status === 'available' && (
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => revokeLicense.mutate(l.id)}
-                                  disabled={revokeLicense.isPending}
-                                  className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
-                                  title="Revoke License"
-                                >
-                                  Revoke
-                                </Button>
-                              )}
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                onClick={() => {
-                                  if (confirm("Are you sure you want to permanently delete this license key?")) {
-                                    deleteLicense.mutate(l.id);
-                                  }
-                                }}
-                                disabled={deleteLicense.isPending}
-                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-red-50"
-                                title="Delete License"
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="purchases" className="mt-4 space-y-4">
-                    <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">License batches</h3>
+                        <h3 className="font-semibold">All License Keys ({licensesQ.data?.length ?? 0})</h3>
                         <Dialog open={addBatchOpen} onOpenChange={setAddBatchOpen}>
                           <DialogTrigger asChild>
                             <Button size="sm" variant="outline"><Plus className="w-3.5 h-3.5 mr-1" /> Add licenses</Button>
@@ -1298,6 +1237,67 @@ const AdminPartners = () => {
                           </DialogContent>
                         </Dialog>
                       </div>
+                      <div className="border rounded-lg divide-y text-sm max-h-80 overflow-y-auto">
+                        {licensesQ.isLoading ? (
+                          <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-orange-500" /></div>
+                        ) : licensesQ.data?.length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground">No licenses found</div>
+                        ) : licensesQ.data?.map((l: any) => (
+                          <div key={l.id} className="p-3 flex justify-between items-center gap-3 hover:bg-slate-50/50">
+                            <div className="space-y-1">
+                              <div className="font-mono font-bold text-slate-800 dark:text-slate-200">{l.license_key || "No Key"}</div>
+                              <div className="flex gap-2 items-center text-xs">
+                                <span className="capitalize font-semibold text-slate-600 dark:text-slate-400">{l.license_type || "starter"}</span>
+                                <span>•</span>
+                                <span className={`capitalize ${
+                                  l.status === 'available' ? 'text-emerald-600 font-medium' :
+                                  l.status === 'consumed' ? 'text-slate-500' : 'text-red-500'
+                                }`}>{l.status}</span>
+                                {l.status === 'consumed' && l.stores?.name && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-slate-600 dark:text-slate-400 font-medium">Used by: {l.stores.name}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {l.status === 'available' && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => revokeLicense.mutate(l.id)}
+                                  disabled={revokeLicense.isPending}
+                                  className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
+                                  title="Revoke License"
+                                >
+                                  Revoke
+                                </Button>
+                              )}
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to permanently delete this license key?")) {
+                                    deleteLicense.mutate(l.id);
+                                  }
+                                }}
+                                disabled={deleteLicense.isPending}
+                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-red-50"
+                                title="Delete License"
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="purchases" className="mt-4 space-y-4">
+                    <div>
+                      <h3 className="font-semibold mb-2">Purchase History & Invoices</h3>
                       
                       {/* Grouped invoices list */}
                       <div className="space-y-3">
