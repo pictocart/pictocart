@@ -13,6 +13,7 @@ const PLATFORM_SUFFIXES = [
   '.lovable.app',
   '.lovableproject.com',
   '.lovable.dev',
+  '.vercel.app',
 ];
 
 export const isPlatformHost = (hostname: string): boolean => {
