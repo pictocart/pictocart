@@ -469,7 +469,7 @@ const Auth = () => {
 
               {isGoogleConfigured ? (
                 <div className="w-full flex justify-center mt-2 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]">
-                  <div id="google-signin-btn-container" className="w-full flex justify-center" style={{ minHeight: '40px' }} />
+                  <div id="google-signin-btn-container" className="w-full flex justify-center overflow-hidden rounded-md" style={{ minHeight: '40px' }} />
                 </div>
               ) : (
                 <Button
