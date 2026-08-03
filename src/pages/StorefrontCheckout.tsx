@@ -168,6 +168,8 @@ const StorefrontCheckout = () => {
   const [placing, setPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<{ number: string; trackingCode: string | null } | null>(null);
   const isFoodShop = store?.category === 'food';
+  const isDineIn = fulfillmentMode === 'dine_in' && isFoodShop;
+  const isTakeaway = fulfillmentMode === 'takeaway' && isFoodShop;
   const isGuestMode = (fulfillmentMode === 'dine_in' || fulfillmentMode === 'takeaway') && isFoodShop;
   const [razorpayAvailable, setRazorpayAvailable] = useState(false);
   const [codRules, setCodRules] = useState<any | null>(null);
@@ -1010,9 +1012,6 @@ const StorefrontCheckout = () => {
     borderRadius: `${borderRadius / 2}px`,
     color: colors.text,
   };
-
-  const isDineIn = fulfillmentMode === 'dine_in' && isFoodShop;
-  const isTakeaway = fulfillmentMode === 'takeaway' && isFoodShop;
 
   const paymentMethods = isDineIn
     ? [{ id: 'pay_at_counter', label: 'Pay at Counter', icon: Banknote, always: true, disabledReason: null as string | null }]
