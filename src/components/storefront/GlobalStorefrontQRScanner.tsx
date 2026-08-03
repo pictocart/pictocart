@@ -272,6 +272,17 @@ export default function GlobalStorefrontQRScanner() {
             </DialogDescription>
           </DialogHeader>
 
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes scan-line-movement {
+              0% { top: 10%; }
+              50% { top: 90%; }
+              100% { top: 10%; }
+            }
+            .scanner-laser-line {
+              animation: scan-line-movement 2.5s infinite ease-in-out;
+            }
+          `}} />
+
           <div className="relative mt-4 bg-black rounded-xl overflow-hidden aspect-square flex items-center justify-center">
             {scannerLoading && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 text-white gap-2">
@@ -279,6 +290,36 @@ export default function GlobalStorefrontQRScanner() {
                 <span className="text-sm font-medium">Opening camera...</span>
               </div>
             )}
+            
+            {/* Scanning Visual Effect Overlay */}
+            {!scannerLoading && (
+              <>
+                {/* Neon Green Laser Beam Line */}
+                <div 
+                  className="absolute left-0 right-0 h-[3px] scanner-laser-line z-20 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(to right, transparent, #10b981 30%, #10b981 70%, transparent)',
+                    boxShadow: '0 0 10px #10b981, 0 0 4px #10b981'
+                  }}
+                />
+                
+                {/* Target Finder Brackets */}
+                <div className="absolute inset-12 border border-white/10 rounded-lg pointer-events-none z-10">
+                  {/* Top-Left Corner */}
+                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-[3px] border-l-[3px] border-emerald-500 rounded-tl" />
+                  {/* Top-Right Corner */}
+                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-[3px] border-r-[3px] border-emerald-500 rounded-tr" />
+                  {/* Bottom-Left Corner */}
+                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-[3px] border-l-[3px] border-emerald-500 rounded-bl" />
+                  {/* Bottom-Right Corner */}
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-[3px] border-r-[3px] border-emerald-500 rounded-br" />
+                </div>
+
+                {/* Subtle Pulsing Scan Zone Glow */}
+                <div className="absolute inset-0 bg-emerald-500/5 animate-pulse pointer-events-none z-10" />
+              </>
+            )}
+
             <div id="qr-reader-element" className="w-full h-full overflow-hidden" />
           </div>
 
