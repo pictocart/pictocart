@@ -790,7 +790,7 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
         borderRadius={theme.borderRadius}
       /> */}
 
-      {activeOrders && activeOrders.length > 0 && (
+      {store?.category === 'food' && activeOrders && activeOrders.length > 0 && (
         <div
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}

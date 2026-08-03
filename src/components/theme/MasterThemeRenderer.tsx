@@ -1733,7 +1733,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         )}
       </div>
 
-      {activeOrders && activeOrders.length > 0 && (
+      {store?.category === 'food' && activeOrders && activeOrders.length > 0 && (
         <div
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
