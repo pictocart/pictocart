@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Trash2, ShieldAlert } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Loader2, Plus, Trash2, Edit2, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StaffManagement() {
@@ -21,6 +22,16 @@ export default function StaffManagement() {
   const [role, setRole] = useState<'waiter' | 'chef' | 'manager' | 'employee'>('employee');
   const [empIdInput, setEmpIdInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit dialog state variables
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<any>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editRole, setEditRole] = useState<'waiter' | 'chef' | 'manager' | 'employee'>('employee');
+  const [editEmpId, setEditEmpId] = useState('');
+  const [updating, setUpdating] = useState(false);
 
   const cat = String(store?.category || '').toLowerCase();
   const isFnB = ['food', 'food_beverages', 'food-and-beverages', 'restaurant', 'cafe'].includes(cat);
@@ -91,17 +102,72 @@ export default function StaffManagement() {
     }
   };
 
-  // Delete staff member
+  // Open edit dialog and populate current values
+  const startEdit = (staff: any) => {
+    setEditingStaff(staff);
+    setEditName(staff.name || '');
+    setEditEmail(staff.auth_email || '');
+    setEditPassword('');
+    setEditRole(staff.role || 'employee');
+    setEditEmpId(staff.employee_id || '');
+    setEditOpen(true);
+  };
+
+  // Update staff member
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff) return;
+    if (!editName || !editEmail) {
+      toast.error('Name and Email are required');
+      return;
+    }
+    if (editPassword && editPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const { data, error } = await supabase.rpc('update_store_staff_member' as any, {
+        p_staff_id: editingStaff.id,
+        p_email: editEmail.trim(),
+        p_password: editPassword || null,
+        p_name: editName.trim(),
+        p_role: editRole,
+        p_employee_id: editEmpId.trim() || null
+      });
+
+      if (error) throw error;
+      const res = data as any;
+      if (!res.success) {
+        throw new Error(res.message || 'Failed to update staff member');
+      }
+
+      toast.success('Staff member details updated successfully!');
+      setEditOpen(false);
+      qc.invalidateQueries({ queryKey: ['store-staff', store?.id] });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Error updating staff member');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Delete staff member and auth account
   const deleteMutation = useMutation({
     mutationFn: async (staffId: string) => {
-      const { error } = await supabase
-        .from('store_staff' as any)
-        .delete()
-        .eq('id', staffId);
+      const { data, error } = await supabase.rpc('delete_store_staff_member' as any, {
+        p_staff_id: staffId
+      });
       if (error) throw error;
+      const res = data as any;
+      if (!res.success) {
+        throw new Error(res.message || 'Failed to remove staff member');
+      }
     },
     onSuccess: () => {
-      toast.success('Staff member removed');
+      toast.success('Staff member permanently removed');
       qc.invalidateQueries({ queryKey: ['store-staff', store?.id] });
     },
     onError: (err: any) => {
@@ -249,7 +315,7 @@ export default function StaffManagement() {
                     <TableHead>Name</TableHead>
                     <TableHead>Login Email</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead className="w-[100px] text-right">Action</TableHead>
+                    <TableHead className="w-[120px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -273,13 +339,21 @@ export default function StaffManagement() {
                           {staff.role === 'chef' ? 'Chef / Kitchen' : staff.role === 'manager' ? 'Manager / Counter' : staff.role}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => startEdit(staff)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="text-destructive hover:text-destructive hover:bg-destructive/15"
                           onClick={() => {
-                            if (confirm(`Remove ${staff.name} from staff?`)) {
+                            if (confirm(`Are you sure you want to delete ${staff.name}? This will permanently remove their credentials and auth account.`)) {
                               deleteMutation.mutate(staff.id);
                             }
                           }}
@@ -296,6 +370,103 @@ export default function StaffManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Staff Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleUpdate}>
+            <DialogHeader>
+              <DialogTitle>Edit Staff Details</DialogTitle>
+              <DialogDescription>
+                Modify staff properties or reset password. Leave password blank to keep the current one.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editName">Full Name</Label>
+                <Input
+                  id="editName"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editEmail">Login Email</Label>
+                <Input
+                  id="editEmail"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editPassword">Reset Password (Optional)</Label>
+                <Input
+                  id="editPassword"
+                  type="password"
+                  placeholder="Enter new password to reset, or leave empty"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editEmpId">Employee ID</Label>
+                <Input
+                  id="editEmpId"
+                  value={editEmpId}
+                  onChange={(e) => setEditEmpId(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editRole">Role</Label>
+                <Select
+                  value={editRole}
+                  onValueChange={(val: any) => setEditRole(val)}
+                >
+                  <SelectTrigger id="editRole">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isFnB ? (
+                      <>
+                        <SelectItem value="waiter">Waiter</SelectItem>
+                        <SelectItem value="chef">Chef / Kitchen</SelectItem>
+                        <SelectItem value="manager">Manager / Counter</SelectItem>
+                        <SelectItem value="employee">Employee</SelectItem>
+                      </>
+                    ) : (
+                      <SelectItem value="employee">Employee</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updating}>
+                {updating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
