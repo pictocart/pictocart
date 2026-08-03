@@ -4,8 +4,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { template as customerOtp } from '../_shared/transactional-email-templates/customer-otp.tsx'
 
 const SITE_NAME = "Pic To Cart"
-const SENDER_DOMAIN = "pictocart.in"
-const FROM_DOMAIN = "pictocart.in"
+const SENDER_DOMAIN = Deno.env.get("EMAIL_DOMAIN") || "pictocart.in"
+const FROM_DOMAIN = Deno.env.get("EMAIL_DOMAIN") || "pictocart.in"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

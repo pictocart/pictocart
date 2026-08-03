@@ -33,12 +33,12 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 const SITE_NAME = "PicToCart"
-const SENDER_DOMAIN = "pictocart.in"
-const ROOT_DOMAIN = "pictocart.in"
-const FROM_DOMAIN = "pictocart.in"
+const SENDER_DOMAIN = Deno.env.get("EMAIL_DOMAIN") || "pictocart.in"
+const ROOT_DOMAIN = Deno.env.get("EMAIL_DOMAIN") || "pictocart.in"
+const FROM_DOMAIN = Deno.env.get("EMAIL_DOMAIN") || "pictocart.in"
 const RESEND_API_URL = 'https://api.resend.com'
 
-const SAMPLE_PROJECT_URL = "https://pictocart.in"
+const SAMPLE_PROJECT_URL = `https://${ROOT_DOMAIN}`
 const SAMPLE_EMAIL = "user@example.test"
 const SAMPLE_DATA: Record<string, object> = {
   signup: { siteName: SITE_NAME, siteUrl: SAMPLE_PROJECT_URL, recipient: SAMPLE_EMAIL, confirmationUrl: SAMPLE_PROJECT_URL, token: '123456' },

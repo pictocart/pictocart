@@ -28,7 +28,8 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const TENANT_DOMAIN = "customers.pictocart.in";
+const EMAIL_DOMAIN = Deno.env.get("EMAIL_DOMAIN") || "pictocart.in";
+const TENANT_DOMAIN = `customers.${EMAIL_DOMAIN}`;
 
 const normalizeEmail = (v: string) => v.trim().toLowerCase();
 
@@ -46,15 +47,8 @@ const json = (body: unknown, status = 200) =>
   });
 
 function getEffectiveFromAddress(fromAddress: string): string {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-  if (supabaseUrl.includes('ylvvvcqnenbaangyzojl')) {
-    const match = fromAddress.match(/^([^<]+)<[^>]+>$/);
-    if (match) {
-      return `${match[1].trim()} <onboarding@resend.dev>`;
-    }
-    return "onboarding@resend.dev";
-  }
-  return fromAddress;
+  const emailDomain = Deno.env.get("EMAIL_DOMAIN") || "pictocart.in";
+  return fromAddress.replace("pictocart.in", emailDomain);
 }
 
 async function getStore(slug: string) {
@@ -212,7 +206,7 @@ Deno.serve(async (req: Request) => {
 
       // Fire-and-forget welcome email to the customer's real inbox.
       try {
-        const storeUrl = `https://${storeSlug}.pictocart.in`;
+        const storeUrl = `https://${storeSlug}.${EMAIL_DOMAIN}`;
         await admin.functions.invoke("send-transactional-email", {
           body: {
             templateName: "welcome-customer",
