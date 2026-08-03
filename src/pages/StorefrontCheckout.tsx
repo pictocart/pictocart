@@ -105,7 +105,7 @@ const StorefrontCheckout = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { store, loading } = useStorefront(slug || '');
-  const { items: cartItems, totalPrice: cartTotalPrice, clearCart, fulfillmentMode, tableLabel, appliedCoupon, setAppliedCoupon, clearCoupon } = useCart(slug || '');
+  const { items: cartItems, totalPrice: cartTotalPrice, clearCart, fulfillmentMode, setFulfillmentMode, tableLabel, appliedCoupon, setAppliedCoupon, clearCoupon } = useCart(slug || '');
   const { settings } = useFulfillment(store?.id);
 
   const buyNowProductId = searchParams.get('buyNowProductId');
