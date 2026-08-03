@@ -146,18 +146,20 @@ const Auth = () => {
         cancel_on_tap_outside: true,
       });
 
-      const container = document.getElementById("google-signin-btn-container");
-      if (container) {
-        (window as any).google.accounts.id.renderButton(container, {
-          type: "standard",
-          theme: "outline",
-          size: "large",
-          text: "signin_with",
-          shape: "rectangular",
-          logo_alignment: "left",
-          width: container.clientWidth || 360,
-        });
-      }
+      setTimeout(() => {
+        const container = document.getElementById("google-signin-btn-container");
+        if (container) {
+          (window as any).google.accounts.id.renderButton(container, {
+            type: "standard",
+            theme: "outline",
+            size: "large",
+            text: "signin_with",
+            shape: "rectangular",
+            logo_alignment: "left",
+            width: container.clientWidth || 360,
+          });
+        }
+      }, 50);
     }
   }, [isGoogleConfigured, googleClientId, navigate]);
 
@@ -466,8 +468,8 @@ const Auth = () => {
               </div>
 
               {isGoogleConfigured ? (
-                <div className="w-full flex justify-center mt-2">
-                  <div id="google-signin-btn-container" className="w-full" style={{ minHeight: '40px' }} />
+                <div className="w-full flex justify-center mt-2 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]">
+                  <div id="google-signin-btn-container" className="w-full flex justify-center" style={{ minHeight: '40px' }} />
                 </div>
               ) : (
                 <Button
