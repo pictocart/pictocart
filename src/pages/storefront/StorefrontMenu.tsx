@@ -615,7 +615,6 @@ const StorefrontMenu = ({ forceMode, tableFromParam }: Props) => {
           {tableLabel && (
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs bg-red-100/60 text-red-700 font-bold">
               <Utensils className="h-3.5 w-3.5" /> Ordering for Table: {tableLabel}
-              <button onClick={() => setTableLabel(null)} className="ml-1 opacity-70 hover:opacity-100"><X className="h-3.5 w-3.5" /></button>
             </div>
           )}
 
