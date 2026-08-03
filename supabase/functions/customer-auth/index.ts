@@ -45,6 +45,18 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+function getEffectiveFromAddress(fromAddress: string): string {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  if (supabaseUrl.includes('ylvvvcqnenbaangyzojl')) {
+    const match = fromAddress.match(/^([^<]+)<[^>]+>$/);
+    if (match) {
+      return `${match[1].trim()} <onboarding@resend.dev>`;
+    }
+    return "onboarding@resend.dev";
+  }
+  return fromAddress;
+}
+
 async function getStore(slug: string) {
   const { data, error } = await admin
     .from("stores")
@@ -454,7 +466,7 @@ Deno.serve(async (req: Request) => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              from: `${cleanStoreName} <noreply@pictocart.in>`,
+              from: getEffectiveFromAddress(`${cleanStoreName} <noreply@pictocart.in>`),
               to: [email],
               subject: `${otp} is your ${store.name} verification code`,
               html: emailHtml,
@@ -608,7 +620,7 @@ Deno.serve(async (req: Request) => {
             method: "POST",
             headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              from: `${cleanStoreName} <noreply@pictocart.in>`,
+              from: getEffectiveFromAddress(`${cleanStoreName} <noreply@pictocart.in>`),
               to: [email],
               subject: `${otp} — your ${store.name} password reset code`,
               html: emailHtml,
