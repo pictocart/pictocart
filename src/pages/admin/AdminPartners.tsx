@@ -1293,6 +1293,151 @@ const AdminPartners = () => {
                         ))}
                       </div>
                     </div>
+                    
+                    {/* Demo Store Visibility (only visible under License Keys tab) */}
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-2">Demo Store Visibility</h3>
+                      <div className="border rounded-lg divide-y text-sm max-h-60 overflow-y-auto">
+                        {demoShopsQ.isLoading || hiddenDemoShopsQ.isLoading ? (
+                          <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-orange-500" /></div>
+                        ) : (demoShopsQ.data || []).length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground">No demo stores configured</div>
+                        ) : (demoShopsQ.data || []).map((shop: any) => {
+                          const isHidden = (hiddenDemoShopsQ.data || []).includes(shop.id);
+                          return (
+                            <div key={shop.id} className="p-3 flex justify-between items-center gap-3 hover:bg-slate-50/50">
+                              <div>
+                                <div className="font-medium text-slate-800 dark:text-slate-200">{shop.shop_name}</div>
+                                <div className="flex gap-2 items-center text-xs text-slate-500 mt-0.5">
+                                  <span className="capitalize">{shop.category}</span>
+                                  <span>•</span>
+                                  <span>ID: {shop.shop_id}</span>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant={isHidden ? "destructive" : "outline"}
+                                onClick={() => {
+                                  if (isHidden) {
+                                    showDemoShopForPartner.mutate(shop.id);
+                                  } else {
+                                    hideDemoShopForPartner.mutate(shop.id);
+                                  }
+                                }}
+                                disabled={hideDemoShopForPartner.isPending || showDemoShopForPartner.isPending}
+                                className="h-8 text-xs shrink-0"
+                              >
+                                {isHidden ? "Hidden (Show)" : "Visible (Hide)"}
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Client stores (only visible under License Keys tab) */}
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-2">Client stores ({storesQ.data?.length ?? 0})</h3>
+                      <div className="border rounded-lg divide-y text-sm">
+                        {storesQ.data?.length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground">No stores built yet</div>
+                        ) : storesQ.data?.map((s: any) => (
+                          <div key={s.id} className="p-3 flex justify-between items-center">
+                            <div>
+                              <div className="font-medium">{s.name || s.slug}</div>
+                              <div className="text-xs text-muted-foreground">/{s.slug}</div>
+                            </div>
+                            <Badge variant={s.partner_handover_status === "paid" ? "default" : "secondary"}>
+                              {s.partner_handover_status || "building"}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Hierarchy (only visible under License Keys tab) */}
+                    <div className="border rounded-lg p-3 space-y-2 mt-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-sm">Hierarchy</h3>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setPromoteForm({
+                              tier: selected.tier === "regional_head" ? "regional_head" : "state_head",
+                              override_pct: selected.override_commission_pct || 5,
+                              region_name: selected.region_name || "",
+                              state_name: selected.state_name || "",
+                            });
+                            setPromoteOpen(true);
+                          }}>Promote</Button>
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setAssignParentId(selected.parent_partner_id || "");
+                            setAssignOpen(true);
+                          }}>Assign parent</Button>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground grid grid-cols-2 gap-1">
+                        <div>Tier: <span className="font-medium capitalize text-foreground">{String(selected.tier || "partner").replace("_", " ")}</span></div>
+                        <div>Override: <span className="font-medium text-foreground">{selected.override_commission_pct || 0}%</span></div>
+                        <div>Region: <span className="text-foreground">{selected.region_name || "—"}</span></div>
+                        <div>State: <span className="text-foreground">{selected.state_name || "—"}</span></div>
+                        <div className="col-span-2">Parent: <span className="text-foreground">
+                          {selected.parent_partner_id ? (partnersQ.data?.find((p: any) => p.id === selected.parent_partner_id)?.name || "—") : "None"}
+                        </span></div>
+                      </div>
+                    </div>
+
+                    {/* Partner Actions (only visible under License Keys tab) */}
+                    <div className="flex gap-2 pt-4 border-t flex-wrap mt-6">
+                      {selected.invite_status === "active" ? (
+                        <Button variant="destructive" size="sm" onClick={() => updateStatus.mutate({ id: selected.id, status: "suspended" })}>
+                          Suspend partner
+                        </Button>
+                      ) : selected.invite_status === "suspended" ? (
+                        <Button size="sm" onClick={() => updateStatus.mutate({ id: selected.id, status: "active" })}>
+                          Reactivate
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" disabled><Mail className="w-3.5 h-3.5 mr-1" /> Invite pending</Button>
+                      )}
+                      {selected.user_id && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            const randomPassword = "temp" + Math.floor(1000 + Math.random() * 9000);
+                            setNewPasswordVal(randomPassword);
+                            setShowNewPasswordPlain(true);
+                            setChangePasswordOpen(true);
+                          }}
+                        >
+                          <Key className="w-3.5 h-3.5 mr-1" /> Change Password
+                        </Button>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="ml-auto text-destructive hover:text-destructive">
+                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete partner
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete {selected.name}?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This permanently removes the partner along with all their licenses, batches and pending invites. Partners with active client stores cannot be deleted.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => deletePartner.mutate(selected.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="purchases" className="mt-4 space-y-4">
@@ -1390,147 +1535,6 @@ const AdminPartners = () => {
                     </div>
                   </TabsContent>
                 </Tabs>
-
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2">Demo Store Visibility</h3>
-                  <div className="border rounded-lg divide-y text-sm max-h-60 overflow-y-auto">
-                    {demoShopsQ.isLoading || hiddenDemoShopsQ.isLoading ? (
-                      <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-orange-500" /></div>
-                    ) : (demoShopsQ.data || []).length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">No demo stores configured</div>
-                    ) : (demoShopsQ.data || []).map((shop: any) => {
-                      const isHidden = (hiddenDemoShopsQ.data || []).includes(shop.id);
-                      return (
-                        <div key={shop.id} className="p-3 flex justify-between items-center gap-3 hover:bg-slate-50/50">
-                          <div>
-                            <div className="font-medium text-slate-800 dark:text-slate-200">{shop.shop_name}</div>
-                            <div className="flex gap-2 items-center text-xs text-slate-500 mt-0.5">
-                              <span className="capitalize">{shop.category}</span>
-                              <span>•</span>
-                              <span>ID: {shop.shop_id}</span>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant={isHidden ? "destructive" : "outline"}
-                            onClick={() => {
-                              if (isHidden) {
-                                showDemoShopForPartner.mutate(shop.id);
-                              } else {
-                                hideDemoShopForPartner.mutate(shop.id);
-                              }
-                            }}
-                            disabled={hideDemoShopForPartner.isPending || showDemoShopForPartner.isPending}
-                            className="h-8 text-xs shrink-0"
-                          >
-                            {isHidden ? "Hidden (Show)" : "Visible (Hide)"}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold mb-2">Client stores ({storesQ.data?.length ?? 0})</h3>
-                  <div className="border rounded-lg divide-y text-sm">
-                    {storesQ.data?.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">No stores built yet</div>
-                    ) : storesQ.data?.map((s: any) => (
-                      <div key={s.id} className="p-3 flex justify-between items-center">
-                        <div>
-                          <div className="font-medium">{s.name || s.slug}</div>
-                          <div className="text-xs text-muted-foreground">/{s.slug}</div>
-                        </div>
-                        <Badge variant={s.partner_handover_status === "paid" ? "default" : "secondary"}>
-                          {s.partner_handover_status || "building"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm">Hierarchy</h3>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => {
-                        setPromoteForm({
-                          tier: selected.tier === "regional_head" ? "regional_head" : "state_head",
-                          override_pct: selected.override_commission_pct || 5,
-                          region_name: selected.region_name || "",
-                          state_name: selected.state_name || "",
-                        });
-                        setPromoteOpen(true);
-                      }}>Promote</Button>
-                      <Button size="sm" variant="outline" onClick={() => {
-                        setAssignParentId(selected.parent_partner_id || "");
-                        setAssignOpen(true);
-                      }}>Assign parent</Button>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground grid grid-cols-2 gap-1">
-                    <div>Tier: <span className="font-medium capitalize text-foreground">{String(selected.tier || "partner").replace("_", " ")}</span></div>
-                    <div>Override: <span className="font-medium text-foreground">{selected.override_commission_pct || 0}%</span></div>
-                    <div>Region: <span className="text-foreground">{selected.region_name || "—"}</span></div>
-                    <div>State: <span className="text-foreground">{selected.state_name || "—"}</span></div>
-                    <div className="col-span-2">Parent: <span className="text-foreground">
-                      {selected.parent_partner_id ? (partnersQ.data?.find((p: any) => p.id === selected.parent_partner_id)?.name || "—") : "None"}
-                    </span></div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-4 border-t flex-wrap">
-                  {selected.invite_status === "active" ? (
-                    <Button variant="destructive" size="sm" onClick={() => updateStatus.mutate({ id: selected.id, status: "suspended" })}>
-                      Suspend partner
-                    </Button>
-                  ) : selected.invite_status === "suspended" ? (
-                    <Button size="sm" onClick={() => updateStatus.mutate({ id: selected.id, status: "active" })}>
-                      Reactivate
-                    </Button>
-                  ) : (
-                    <Button variant="outline" size="sm" disabled><Mail className="w-3.5 h-3.5 mr-1" /> Invite pending</Button>
-                  )}
-                  {selected.user_id && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        const randomPassword = "temp" + Math.floor(1000 + Math.random() * 9000);
-                        setNewPasswordVal(randomPassword);
-                        setShowNewPasswordPlain(true);
-                        setChangePasswordOpen(true);
-                      }}
-                    >
-                      <Key className="w-3.5 h-3.5 mr-1" /> Change Password
-                    </Button>
-                  )}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="ml-auto text-destructive hover:text-destructive">
-                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete partner
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {selected.name}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This permanently removes the partner along with all their licenses, batches and pending invites. Partners with active client stores cannot be deleted.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={() => deletePartner.mutate(selected.id)}
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
               </div>
             </>
           )}
