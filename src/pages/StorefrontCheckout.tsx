@@ -21,6 +21,35 @@ declare global {
   }
 }
 
+function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // metres
+  const phi1 = lat1 * Math.PI / 180;
+  const phi2 = lat2 * Math.PI / 180;
+  const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+  const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+            Math.cos(phi1) * Math.cos(phi2) *
+            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // in metres
+}
+
+const getCustomerLocation = (): Promise<GeolocationPosition> => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is not supported by your browser.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 8000,
+      maximumAge: 0
+    });
+  });
+};
+
 const INDIAN_STATES = [
   "Andhra Pradesh",
   "Arunachal Pradesh",
@@ -851,7 +880,7 @@ const StorefrontCheckout = () => {
     setPlacing(false);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (items.length === 0) { toast.error('Your cart is empty'); return; }
 
     if (fulfillmentMode === 'dine_in') {
@@ -859,6 +888,31 @@ const StorefrontCheckout = () => {
         toast.error('Please scan your table QR code to place a dine-in order.');
         return;
       }
+
+      // Verify customer location is within 300 meters of the restaurant
+      const storeSettings = (store?.settings as any) || {};
+      const storeLat = Number(storeSettings.store_lat || 28.6139);
+      const storeLng = Number(storeSettings.store_lng || 77.2090);
+
+      toast.loading('Verifying store location...', { id: 'location-verify' });
+      try {
+        const position = await getCustomerLocation();
+        const customerLat = position.coords.latitude;
+        const customerLng = position.coords.longitude;
+        
+        const distance = getDistanceInMeters(storeLat, storeLng, customerLat, customerLng);
+        toast.dismiss('location-verify');
+
+        if (distance > 300) {
+          toast.error(`Location verification failed. You are too far from the store (approx. ${Math.round(distance)}m). You must be at the restaurant to place a table order.`, { duration: 6000 });
+          return;
+        }
+      } catch (err: any) {
+        toast.dismiss('location-verify');
+        toast.error('Location services are required to verify you are at the store. Please allow location permissions in your browser and try again.', { duration: 6000 });
+        return;
+      }
+
       handleCODOrder(); // pay-at-counter uses the same code path (no payment gateway)
       return;
     }
