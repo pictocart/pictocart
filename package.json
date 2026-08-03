@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy-track": "node deploy-tracker.js"
+    "deploy-track": "node deploy-tracker.js",
+    "combine": "node combine.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
