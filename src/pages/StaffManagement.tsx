@@ -33,6 +33,12 @@ export default function StaffManagement() {
   const [editEmpId, setEditEmpId] = useState('');
   const [updating, setUpdating] = useState(false);
 
+  // Validation states
+  const [emailTaken, setEmailTaken] = useState(false);
+  const [empIdTaken, setEmpIdTaken] = useState(false);
+  const [editEmailTaken, setEditEmailTaken] = useState(false);
+  const [editEmpIdTaken, setEditEmpIdTaken] = useState(false);
+
   const cat = String(store?.category || '').toLowerCase();
   const isFnB = ['food', 'food_beverages', 'food-and-beverages', 'restaurant', 'cafe'].includes(cat);
 
@@ -42,6 +48,76 @@ export default function StaffManagement() {
       setRole(isFood ? 'waiter' : 'employee');
     }
   }, [store]);
+
+  // Real-time email validation for ADD
+  useEffect(() => {
+    if (!email.trim()) {
+      setEmailTaken(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('check_email_exists', {
+        p_email: email.trim()
+      });
+      if (!error) {
+        setEmailTaken(!!data);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [email]);
+
+  // Real-time employee ID validation for ADD
+  useEffect(() => {
+    if (!empIdInput.trim()) {
+      setEmpIdTaken(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('check_employee_id_exists', {
+        p_employee_id: empIdInput.trim()
+      });
+      if (!error) {
+        setEmpIdTaken(!!data);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [empIdInput]);
+
+  // Real-time email validation for EDIT
+  useEffect(() => {
+    if (!editEmail.trim() || !editingStaff?.user_id) {
+      setEditEmailTaken(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('check_email_exists', {
+        p_email: editEmail.trim(),
+        p_exclude_user_id: editingStaff.user_id
+      });
+      if (!error) {
+        setEditEmailTaken(!!data);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [editEmail, editingStaff]);
+
+  // Real-time employee ID validation for EDIT
+  useEffect(() => {
+    if (!editEmpId.trim() || !editingStaff?.id) {
+      setEditEmpIdTaken(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('check_employee_id_exists', {
+        p_employee_id: editEmpId.trim(),
+        p_exclude_staff_id: editingStaff.id
+      });
+      if (!error) {
+        setEditEmpIdTaken(!!data);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [editEmpId, editingStaff]);
 
   // Fetch staff list for current store
   const { data: staffList = [], isLoading } = useQuery({
@@ -68,6 +144,14 @@ export default function StaffManagement() {
     }
     if (password.length < 6) {
       toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (emailTaken) {
+      toast.error('This email is already taken');
+      return;
+    }
+    if (empIdTaken) {
+      toast.error('This Employee ID is already taken');
       return;
     }
 
@@ -123,6 +207,14 @@ export default function StaffManagement() {
     }
     if (editPassword && editPassword.length < 6) {
       toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (editEmailTaken) {
+      toast.error('This email is already in use');
+      return;
+    }
+    if (editEmpIdTaken) {
+      toast.error('This Employee ID is already in use');
       return;
     }
 
@@ -215,7 +307,7 @@ export default function StaffManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Login Email</Label>
+                <Label htmlFor="email" className={emailTaken ? "text-destructive" : ""}>Login Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -223,7 +315,11 @@ export default function StaffManagement() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className={emailTaken ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}
                 />
+                {emailTaken && (
+                  <p className="text-xs text-destructive font-medium mt-1">This email is already in use in the system.</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -239,13 +335,17 @@ export default function StaffManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="empIdInput">Employee ID (Optional)</Label>
+                <Label htmlFor="empIdInput" className={empIdTaken ? "text-destructive" : ""}>Employee ID (Optional)</Label>
                 <Input
                   id="empIdInput"
                   placeholder="e.g. EMP-001 (Auto-generated if blank)"
                   value={empIdInput}
                   onChange={(e) => setEmpIdInput(e.target.value)}
+                  className={empIdTaken ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}
                 />
+                {empIdTaken && (
+                  <p className="text-xs text-destructive font-medium mt-1">This Employee ID is already in use globally.</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -272,7 +372,7 @@ export default function StaffManagement() {
                 </Select>
               </div>
 
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button type="submit" className="w-full" disabled={submitting || emailTaken || empIdTaken}>
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -394,14 +494,18 @@ export default function StaffManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="editEmail">Login Email</Label>
+                <Label htmlFor="editEmail" className={editEmailTaken ? "text-destructive" : ""}>Login Email</Label>
                 <Input
                   id="editEmail"
                   type="email"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
                   required
+                  className={editEmailTaken ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}
                 />
+                {editEmailTaken && (
+                  <p className="text-xs text-destructive font-medium mt-1">This email is already in use in the system.</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -416,12 +520,16 @@ export default function StaffManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="editEmpId">Employee ID</Label>
+                <Label htmlFor="editEmpId" className={editEmpIdTaken ? "text-destructive" : ""}>Employee ID</Label>
                 <Input
                   id="editEmpId"
                   value={editEmpId}
                   onChange={(e) => setEditEmpId(e.target.value)}
+                  className={editEmpIdTaken ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}
                 />
+                {editEmpIdTaken && (
+                  <p className="text-xs text-destructive font-medium mt-1">This Employee ID is already in use globally.</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -453,7 +561,7 @@ export default function StaffManagement() {
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={updating}>
+              <Button type="submit" disabled={updating || editEmailTaken || editEmpIdTaken}>
                 {updating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
