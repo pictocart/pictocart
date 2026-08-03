@@ -7,6 +7,8 @@ const PLATFORM_HOSTS = [
   'pictocart.in',
   'www.pictocart.in',
   'fallback.pictocart.in',
+  'pictocartdev.in',
+  'www.pictocartdev.in',
 ];
 
 const PLATFORM_SUFFIXES = [
