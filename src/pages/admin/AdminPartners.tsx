@@ -1261,34 +1261,6 @@ const AdminPartners = () => {
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {l.status === 'available' && (
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => revokeLicense.mutate(l.id)}
-                                  disabled={revokeLicense.isPending}
-                                  className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
-                                  title="Revoke License"
-                                >
-                                  Revoke
-                                </Button>
-                              )}
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                onClick={() => {
-                                  if (confirm("Are you sure you want to permanently delete this license key?")) {
-                                    deleteLicense.mutate(l.id);
-                                  }
-                                }}
-                                disabled={deleteLicense.isPending}
-                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-red-50"
-                                title="Delete License"
-                              >
-                                Delete
-                              </Button>
-                            </div>
                           </div>
                         ))}
                       </div>
