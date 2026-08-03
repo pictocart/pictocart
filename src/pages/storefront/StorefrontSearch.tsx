@@ -7,6 +7,7 @@ import { useCart } from '@/hooks/useCart';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Search, SlidersHorizontal, Star, ShoppingBag, Grid, List, X, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import Storefront from '../Storefront';
 
 type SortKey = 'popularity' | 'price_low_high' | 'price_high_low' | 'rating';
 
@@ -142,6 +143,11 @@ const StorefrontSearch = () => {
   }
 
   if (!store) return null;
+
+  const isMasterTheme = store?.theme_id?.startsWith('theme-') || store?.theme_id?.startsWith('layout1-') || store?.theme_id?.startsWith('custom-theme-');
+  if (isMasterTheme) {
+    return <Storefront page="shop" />;
+  }
 
   const theme = resolveTheme(getStoreThemeTokens(store), store);
   const { colors, fonts, borderRadius } = theme;

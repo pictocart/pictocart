@@ -93,6 +93,9 @@ const ProductRatingBadge = ({ productId }: { productId: string }) => {
 const Storefront = ({ page: pageProp = 'home' }: { page?: string } = {}) => {
   const searchParams = new URLSearchParams(window.location.search);
   let page = searchParams.get('page') || pageProp;
+  if (page === 'menu') {
+    page = 'shop';
+  }
   const { slug } = useParams<{ slug: string }>();
   const isOwnerPreview = searchParams.get('preview') === 'owner';
   const { store, products, loading, error } = useStorefront(slug || '', isOwnerPreview);

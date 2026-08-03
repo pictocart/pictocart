@@ -320,8 +320,9 @@ export default function CustomiserV2() {
       return [{ type: "collection_detail", props: {} }];
     }
     if (page === "shop") {
+      const defaultTitle = store?.category === "food" ? "Our Menu" : "All Products";
       return [
-        { type: "page_title", props: { title: "All Products" } },
+        { type: "page_title", props: { title: defaultTitle } },
         { type: "product_grid", props: { style: "grid_clean" } },
       ];
     }
@@ -1058,7 +1059,7 @@ export default function CustomiserV2() {
                     }}
                     className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${page === p.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"} ${!exists ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
-                    <span>{p.label}</span>
+                    <span>{(p.id === "shop" && store?.category === "food") ? "Our Menu" : p.label}</span>
                     {edited && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
                   </button>
                  );
