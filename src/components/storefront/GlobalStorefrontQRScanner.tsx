@@ -34,20 +34,34 @@ export default function GlobalStorefrontQRScanner() {
   const { tableLabel, setTableLabel, totalItems } = useCart(slug || '');
 
   // Fetch store details to verify category is food
-  const { data: store } = useQuery({
+  const { data: checkData } = useQuery({
     queryKey: ['global-store-check', slug],
     queryFn: async () => {
       if (!slug) return null;
-      const { data, error } = await supabase
+      const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('id, category, name')
         .eq('slug', slug)
         .maybeSingle();
-      if (error) throw error;
-      return data;
+      if (storeError || !storeData) return null;
+
+      // Fetch fulfillment settings
+      const { data: fullData } = await supabase
+        .from('store_fulfillment_settings' as any)
+        .select('dine_in_requires_table')
+        .eq('store_id', storeData.id)
+        .maybeSingle();
+
+      return {
+        store: storeData,
+        dine_in_requires_table: fullData ? (fullData as any).dine_in_requires_table !== false : true,
+      };
     },
     enabled: !!slug,
   });
+
+  const store = checkData?.store;
+  const requiresTable = checkData?.dine_in_requires_table !== false;
 
   // Load active countdown timer from sessionStorage on mount
   useEffect(() => {
@@ -96,23 +110,46 @@ export default function GlobalStorefrontQRScanner() {
       scanner.start(
         { facingMode: 'environment' },
         {
-          fps: 10
+          fps: 10,
+          qrbox: (width, height) => {
+            return {
+              w: width,
+              h: height
+            };
+          }
         },
         (decodedText) => {
-          // Success callback
           stopScanner();
           setIsOpen(false);
-          handleScannedUrl(decodedText);
+          // Parse table code
+          let targetUrl = decodedText;
+          if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+            if (targetUrl.includes('/store/')) {
+              targetUrl = window.location.origin + targetUrl;
+            } else {
+              targetUrl = window.location.origin + '/store/' + slug + '?table=' + encodeURIComponent(targetUrl);
+            }
+          }
+          try {
+            const urlObj = new URL(targetUrl);
+            const tableParam = urlObj.searchParams.get('table');
+            if (tableParam) {
+              setTableLabel(tableParam);
+              toast.success(`Checked in at Table ${tableParam}`);
+              navigate(urlObj.pathname + urlObj.search);
+            } else {
+              window.location.href = targetUrl;
+            }
+          } catch (e) {
+            toast.error('Invalid QR Code format');
+          }
         },
-        () => {
-          // Failure callback (silent)
-        }
-      )
-      .then(() => setScannerLoading(false))
-      .catch((err) => {
-        console.error('Html5Qrcode initialization error', err);
+        () => {}
+      ).then(() => {
         setScannerLoading(false);
-        toast.error('Failed to access camera. Check permissions.');
+      }).catch(() => {
+        setScannerLoading(false);
+        toast.error('Failed to access camera. Please check permissions.');
         setIsOpen(false);
       });
     }, 300);
@@ -124,39 +161,11 @@ export default function GlobalStorefrontQRScanner() {
   }, [isOpen]);
 
   const stopScanner = () => {
-    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-      html5QrCodeRef.current.stop()
-        .then(() => {
-          html5QrCodeRef.current = null;
-        })
-        .catch(err => console.error('Failed to stop html5Qrcode', err));
-    }
-  };
-
-  const handleScannedUrl = (url: string) => {
-    try {
-      const parsedUrl = new URL(url);
-      const pathname = parsedUrl.pathname;
-      if (pathname.includes('/q/')) {
-        // Redirection route
-        const redirectSlug = pathname.split('/q/')[1];
-        if (redirectSlug) {
-          navigate(`/q/${redirectSlug}`);
-          toast.success('QR Code Scanned successfully!');
-        }
-      } else {
-        // Fallback for absolute links
-        navigate(pathname + parsedUrl.search);
-        toast.success('QR Code Scanned!');
+    if (html5QrCodeRef.current) {
+      if (html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(err => console.error('Error stopping scanner:', err));
       }
-    } catch {
-      // In case it's a relative path or text
-      if (url.startsWith('/')) {
-        navigate(url);
-        toast.success('QR Code Scanned!');
-      } else {
-        toast.error('Invalid QR code format');
-      }
+      html5QrCodeRef.current = null;
     }
   };
 
@@ -164,15 +173,16 @@ export default function GlobalStorefrontQRScanner() {
   const handleCallWaiter = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!store?.id || !slug) return;
-    const finalTable = tableLabel || tableInput.trim();
+
+    const finalTable = tableLabel || tableInput;
     if (!finalTable) {
-      toast.error('Please enter your table number');
+      toast.error('Please specify a table number');
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('store_assistance_requests' as any)
+        .from('waiter_calls' as any)
         .insert({
           store_id: store.id,
           table_label: finalTable,
@@ -241,13 +251,15 @@ export default function GlobalStorefrontQRScanner() {
         )}
 
         {/* Scan Camera Button */}
-        <button
-          onClick={() => setIsOpen(true)}
-          className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors border border-primary/20"
-          title="Scan Table QR"
-        >
-          <Camera className="h-5 w-5" />
-        </button>
+        {requiresTable && (
+          <button
+            onClick={() => setIsOpen(true)}
+            className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors border border-primary/20"
+            title="Scan Table QR"
+          >
+            <Camera className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Camera QR Scanner Dialog */}

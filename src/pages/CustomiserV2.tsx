@@ -327,7 +327,7 @@ export default function CustomiserV2() {
       ];
     }
     return [];
-  }, [manifest, page]);
+  }, [manifest, page, store?.category]);
   const sectionOverrides: Record<string, any> = useMemo(() => {
     const pageSections = overrides?.pages?.[page]?.sections || {};
     const legacySections = page === "home" ? overrides?.sections || {} : {};
@@ -1059,7 +1059,7 @@ export default function CustomiserV2() {
                     }}
                     className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md flex items-center justify-between ${page === p.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"} ${!exists ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
-                    <span>{(p.id === "shop" && store?.category === "food") ? "Our Menu" : p.label}</span>
+                    <span>{(p.id === "shop" && isFoodLayout) ? "Our Menu" : p.label}</span>
                     {edited && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
                   </button>
                  );

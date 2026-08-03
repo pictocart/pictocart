@@ -40,6 +40,30 @@ export const DEFAULT_FULFILLMENT: Omit<FulfillmentSettings, 'store_id'> = {
 export const useFulfillment = (storeId: string | undefined) => {
   const qc = useQueryClient();
 
+  const storeQuery = useQuery({
+    queryKey: ['store-category-for-fulfillment', storeId],
+    queryFn: async () => {
+      if (!storeId) return null;
+      const { data } = await supabase
+        .from('stores')
+        .select('category')
+        .eq('id', storeId)
+        .maybeSingle();
+      return data ?? null;
+    },
+    enabled: !!storeId,
+  });
+
+  const isFood = storeQuery.data?.category === 'food';
+  const defaultDineIn = isFood ? true : false;
+  const defaultTakeaway = isFood ? true : false;
+
+  const dynamicDefault = {
+    ...DEFAULT_FULFILLMENT,
+    dine_in_enabled: defaultDineIn,
+    takeaway_enabled: defaultTakeaway,
+  };
+
   const query = useQuery({
     queryKey: ['fulfillment', storeId],
     queryFn: async (): Promise<FulfillmentSettings | null> => {
@@ -57,7 +81,7 @@ export const useFulfillment = (storeId: string | undefined) => {
   const upsert = useMutation({
     mutationFn: async (patch: Partial<FulfillmentSettings>) => {
       if (!storeId) throw new Error('No store');
-      const payload = { ...DEFAULT_FULFILLMENT, ...(query.data ?? {}), ...patch, store_id: storeId };
+      const payload = { ...dynamicDefault, ...(query.data ?? {}), ...patch, store_id: storeId };
       // Check if a row already exists for this store
       const { data: existing } = await supabase
         .from('store_fulfillment_settings' as any)
@@ -88,7 +112,7 @@ export const useFulfillment = (storeId: string | undefined) => {
   });
 
   const settings: FulfillmentSettings = {
-    ...DEFAULT_FULFILLMENT,
+    ...dynamicDefault,
     store_id: storeId ?? '',
     ...(query.data ?? {}),
   };
@@ -99,5 +123,5 @@ export const useFulfillment = (storeId: string | undefined) => {
     settings.delivery_enabled && 'delivery',
   ].filter(Boolean) as FulfillmentMode[];
 
-  return { settings, enabledModes, loading: query.isLoading, save: upsert.mutateAsync, saving: upsert.isPending };
+  return { settings, enabledModes, loading: query.isLoading || storeQuery.isLoading, save: upsert.mutateAsync, saving: upsert.isPending };
 };
