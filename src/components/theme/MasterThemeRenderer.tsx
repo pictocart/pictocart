@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import BottomNav from "@/components/storefront/BottomNav";
 
 /**
  * Manifest-driven theme renderer. Single source of truth for both the
@@ -859,7 +860,7 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
   const hslSecondary = hexToHsl(palette.border || '#e5e7eb');
 
   return (
-    <div style={style} data-master-theme key={page} className="animate-page-enter">
+    <div style={style} data-master-theme key={page} className="animate-page-enter pb-20 md:pb-0">
       <div className="scroll-progress-indicator" />
       <style dangerouslySetInnerHTML={{ __html: `
         body {
@@ -1876,6 +1877,21 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
           )}
         </div>
       )}
+
+      {/* Bottom Navigation for Mobile & Tablet screens */}
+      <BottomNav
+        colors={{
+          primary: palette.primary,
+          secondary: palette.border || 'rgba(0,0,0,0.1)',
+          card: palette.surface || '#ffffff',
+          text: palette.fg || '#000000',
+        }}
+        onSearchOpen={() => {
+          const isPlatform = window.location.hostname.includes('pictocart') || window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
+          navigate(isPlatform ? `/store/${storeSlug}/search` : `/search`);
+        }}
+        storeId={store?.id}
+      />
     </div>
   );
 }

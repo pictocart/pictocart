@@ -182,7 +182,7 @@ export default function GlobalStorefrontQRScanner() {
 
     try {
       const { error } = await supabase
-        .from('waiter_calls' as any)
+        .from('store_assistance_requests')
         .insert({
           store_id: store.id,
           table_label: finalTable,
