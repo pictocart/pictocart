@@ -128,6 +128,7 @@ const ProductList = () => {
         const returnDaysIndex = headers.findIndex(h => h.includes('no of days under which return'));
         const exchangeableIndex = headers.findIndex(h => h === 'exchangeable' || h.includes('exchangeable'));
         const exchangeDaysIndex = headers.findIndex(h => h.includes('exchange is allowed'));
+        const stockIndex = headers.findIndex(h => h === 'stock' || h === 'quantity' || h === 'inventory' || h === 'inventory_count' || h.includes('stock') || h.includes('quantity'));
 
         if (titleIndex === -1) {
           throw new Error("CSV must contain a '*TITLE' column");
@@ -192,6 +193,7 @@ const ProductList = () => {
             compare_at_price: null,
             cost_price: 0,
             tax_rate: 0,
+            inventory_count: 0,
           };
 
           if (titleIndex !== -1 && row[titleIndex]) {
@@ -230,8 +232,11 @@ const ProductList = () => {
           if (costPriceIndex !== -1 && row[costPriceIndex]) {
             item.cost_price = Number(row[costPriceIndex].replace(/[^0-9.]/g, '')) || 0;
           }
-          if (gstIndex !== -1 && row[gstIndex]) {
+           if (gstIndex !== -1 && row[gstIndex]) {
             item.tax_rate = Number(row[gstIndex].replace(/[^0-9.]/g, '')) || 0;
+          }
+          if (stockIndex !== -1 && row[stockIndex]) {
+            item.inventory_count = parseInt(row[stockIndex].replace(/[^0-9]/g, ''), 10) || 0;
           }
 
           if (returnableIndex !== -1 && row[returnableIndex]) {
@@ -286,11 +291,11 @@ const ProductList = () => {
     reader.readAsText(file);
   };
 
-  const downloadSampleCSV = () => {
-    const headers = "*TITLE,SHORT DESCRIPTION,DESCRIPTION,*CATEGORY,*SKU (unique item codes),MRP,Discount %,Selling Price,Cost Price,GST %,Returnable(Y/N),No of days under which Return is allowed,Exchangeable,number of days Exchange is allowed";
-    const row1 = '"Aero Smartwatch Pro","Telemetry logger","Heart monitoring & custom dials","Electronics","AERO-SMART-PRO",4999,50,2499,1200,18,"Y",7,"Y",7';
-    const row2 = '"Smart Digital Microwave","Auto cooking","Multi-stage auto cooking","Appliances","SMART-MICROWAVE",9999,35,6499,3500,12,"Y",7,"Y",7';
-    const row3 = '"Water Bottle","Insulated bottle","Stainless steel insulated water bottle","Accessories","BOTTLE-001",999,20,799,300,18,"N",0,"N",0';
+   const downloadSampleCSV = () => {
+    const headers = "*TITLE,SHORT DESCRIPTION,DESCRIPTION,*CATEGORY,*SKU (unique item codes),MRP,Discount %,Selling Price,Cost Price,GST %,Returnable(Y/N),No of days under which Return is allowed,Exchangeable,number of days Exchange is allowed,STOCK";
+    const row1 = '"Aero Smartwatch Pro","Telemetry logger","Heart monitoring & custom dials","Electronics","AERO-SMART-PRO",4999,50,2499,1200,18,"Y",7,"Y",7,50';
+    const row2 = '"Smart Digital Microwave","Auto cooking","Multi-stage auto cooking","Appliances","SMART-MICROWAVE",9999,35,6499,3500,12,"Y",7,"Y",7,25';
+    const row3 = '"Water Bottle","Insulated bottle","Stainless steel insulated water bottle","Accessories","BOTTLE-001",999,20,799,300,18,"N",0,"N",0,100';
     const csvContent = headers + "\n" + row1 + "\n" + row2 + "\n" + row3 + "\n";
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -612,6 +617,7 @@ const ProductList = () => {
                 <li><span className="font-semibold text-slate-700">No of days under which Return is allowed</span> — e.g. 7</li>
                 <li><span className="font-semibold text-slate-700">Exchangeable</span> — Y or N</li>
                 <li><span className="font-semibold text-slate-700">number of days Exchange is allowed</span> — e.g. 7</li>
+                <li><span className="font-semibold text-slate-700">STOCK</span> — available inventory quantity, e.g. 50</li>
               </ul>
             </div>
 
