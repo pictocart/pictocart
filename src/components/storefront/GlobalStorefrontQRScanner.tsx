@@ -251,7 +251,7 @@ export default function GlobalStorefrontQRScanner() {
         )}
 
         {/* Scan Camera Button */}
-        {requiresTable && (
+        {requiresTable && !tableLabel && (
           <button
             onClick={() => setIsOpen(true)}
             className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors border border-primary/20"
