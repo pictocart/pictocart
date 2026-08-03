@@ -2195,16 +2195,33 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
             />
             {/* Drawer Container */}
             <div 
-              className="fixed inset-y-0 right-0 w-72 bg-[#faf6f0] border-l border-stone-200/80 shadow-2xl z-[100] p-6 flex flex-col justify-between transition-transform duration-300 transform translate-x-0 overflow-y-auto"
-              style={{ fontFamily: 'var(--hf)' }}
+              className="fixed inset-y-0 right-0 w-72 border-l shadow-2xl z-[100] p-6 flex flex-col justify-between transition-transform duration-300 transform translate-x-0 overflow-y-auto"
+              style={{ 
+                fontFamily: 'var(--hf)',
+                backgroundColor: dna.palette?.surface || dna.palette?.bg || '#faf6f0',
+                color: dna.palette?.fg || '#2a1b15',
+                borderColor: dna.palette?.border || 'rgba(0,0,0,0.1)'
+              }}
             >
               <div>
                 {/* Header */}
-                <div className="flex items-center justify-between pb-6 border-b border-stone-205">
-                  <span className="font-bold text-[#8c2d19] text-base max-w-[180px] truncate">{effectiveBrand}</span>
+                <div 
+                  className="flex items-center justify-between pb-6 border-b"
+                  style={{ borderColor: dna.palette?.border || 'rgba(0,0,0,0.1)' }}
+                >
+                  <span 
+                    className="font-bold text-base max-w-[180px] truncate"
+                    style={{ color: dna.palette?.accent || '#8c2d19' }}
+                  >
+                    {effectiveBrand}
+                  </span>
                   <button 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-1.5 rounded-full hover:bg-stone-200/50 transition-colors text-stone-500 hover:text-stone-850"
+                    className="p-1.5 rounded-full transition-colors flex items-center justify-center"
+                    style={{ 
+                      color: dna.palette?.muted || '#706053',
+                      backgroundColor: 'transparent'
+                    }}
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -2214,6 +2231,22 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
                 <nav className="flex flex-col gap-4 py-8">
                   {links.map(l => {
                     const isActive = l.page === "home" || l.page === "";
+                    const linkStyle: React.CSSProperties = {
+                      background: "transparent",
+                      border: 0,
+                      cursor: "pointer",
+                      textAlign: "left",
+                      width: "100%",
+                      display: "block",
+                      paddingTop: "8px",
+                      paddingBottom: "8px",
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: isActive ? (dna.palette?.accent || '#8c2d19') : (dna.palette?.fg || '#2a1b15'),
+                      borderLeft: isActive ? `3px solid ${dna.palette?.accent || '#8c2d19'}` : 'none',
+                      paddingLeft: isActive ? '12px' : '0'
+                    };
+
                     return (
                       <span key={l.label}>
                         {onNavigate ? (
@@ -2222,8 +2255,7 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
                               onNavigate(l.page);
                               setMobileMenuOpen(false);
                             }}
-                            className={`block w-full text-left py-2 text-base transition duration-300 font-semibold ${isActive ? "text-[#8c2d19] border-l-2 border-[#8c2d19] pl-3" : "text-stone-700 hover:text-[#8c2d19]"}`}
-                            style={{ background: "transparent", border: 0, cursor: "pointer" }}
+                            style={linkStyle}
                           >
                             {l.label}
                           </button>
@@ -2231,12 +2263,17 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
                           <Link 
                             to={l.to} 
                             onClick={() => setMobileMenuOpen(false)}
-                            className={`block py-2 text-base transition duration-300 font-semibold ${isActive ? "text-[#8c2d19] border-l-2 border-[#8c2d19] pl-3" : "text-stone-700 hover:text-[#8c2d19]"}`}
+                            style={linkStyle}
                           >
                             {l.label}
                           </Link>
                         ) : (
-                          <span className={`block py-2 text-base font-semibold ${isActive ? "text-[#8c2d19]" : "text-stone-500"}`}>
+                          <span 
+                            style={{
+                              ...linkStyle,
+                              cursor: "default"
+                            }}
+                          >
                             {l.label}
                           </span>
                         )}
@@ -2247,20 +2284,45 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
               </div>
 
               {/* Bottom Actions (Account & Cart) */}
-              <div className="pt-6 border-t border-stone-200 space-y-4">
+              <div 
+                className="pt-6 border-t space-y-4"
+                style={{ borderColor: dna.palette?.border || 'rgba(0,0,0,0.1)' }}
+              >
                 {/* Account Section */}
                 {user ? (
                   <Link 
                     to={`${base}/account`}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors w-full"
+                    className="flex items-center gap-3 p-3 rounded-xl border transition-colors w-full"
+                    style={{ 
+                      borderColor: dna.palette?.border || 'rgba(0,0,0,0.1)',
+                      color: 'inherit',
+                      backgroundColor: 'transparent'
+                    }}
                   >
-                    <div className="h-9 w-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 border">
+                    <div 
+                      className="h-9 w-9 rounded-full flex items-center justify-center border"
+                      style={{ 
+                        backgroundColor: (dna.palette?.primary || '#8c2d19') + '15',
+                        color: dna.palette?.primary || '#8c2d19',
+                        borderColor: (dna.palette?.primary || '#8c2d19') + '25'
+                      }}
+                    >
                       <User className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-stone-400 font-medium leading-none">Signed In as</p>
-                      <p className="text-sm font-semibold text-stone-850 truncate mt-1">{customerName}</p>
+                      <p 
+                        className="text-[10px] font-medium leading-none"
+                        style={{ color: dna.palette?.muted || '#706053' }}
+                      >
+                        Signed In as
+                      </p>
+                      <p 
+                        className="text-sm font-semibold truncate mt-1"
+                        style={{ color: dna.palette?.fg || '#2a1b15' }}
+                      >
+                        {customerName}
+                      </p>
                     </div>
                   </Link>
                 ) : (
@@ -2269,14 +2331,36 @@ function Header({ dna, brandName, variant = "classic", storeSlug, onNavigate, he
                       setAuthOpen(true);
                       setMobileMenuOpen(false);
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors w-full text-left"
+                    className="flex items-center gap-3 p-3 rounded-xl border transition-colors w-full text-left"
+                    style={{ 
+                      borderColor: dna.palette?.border || 'rgba(0,0,0,0.1)',
+                      color: 'inherit',
+                      backgroundColor: 'transparent'
+                    }}
                   >
-                    <div className="h-9 w-9 rounded-full bg-[#8c2d19]/10 text-[#8c2d19] flex items-center justify-center border border-[#8c2d19]/20">
+                    <div 
+                      className="h-9 w-9 rounded-full flex items-center justify-center border"
+                      style={{ 
+                        backgroundColor: (dna.palette?.primary || '#8c2d19') + '15',
+                        color: dna.palette?.primary || '#8c2d19',
+                        borderColor: (dna.palette?.primary || '#8c2d19') + '25'
+                      }}
+                    >
                       <User className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-[#8c2d19]">Sign In</p>
-                      <p className="text-[10px] text-stone-400 font-medium mt-0.5">To view your orders</p>
+                      <p 
+                        className="text-sm font-semibold"
+                        style={{ color: dna.palette?.primary || '#8c2d19' }}
+                      >
+                        Sign In
+                      </p>
+                      <p 
+                        className="text-[10px] font-medium mt-0.5"
+                        style={{ color: dna.palette?.muted || '#706053' }}
+                      >
+                        To view your orders
+                      </p>
                     </div>
                   </button>
                 )}
