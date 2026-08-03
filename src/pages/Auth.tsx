@@ -148,7 +148,9 @@ const Auth = () => {
 
       setTimeout(() => {
         const container = document.getElementById("google-signin-btn-container");
+        const submitBtn = document.querySelector('button[type="submit"]');
         if (container) {
+          const btnWidth = submitBtn ? submitBtn.clientWidth : (container.clientWidth || 360);
           (window as any).google.accounts.id.renderButton(container, {
             type: "standard",
             theme: "outline",
@@ -156,10 +158,10 @@ const Auth = () => {
             text: "signin_with",
             shape: "rectangular",
             logo_alignment: "left",
-            width: container.clientWidth || 360,
+            width: btnWidth,
           });
         }
-      }, 50);
+      }, 100);
     }
   }, [isGoogleConfigured, googleClientId, navigate]);
 
@@ -469,7 +471,7 @@ const Auth = () => {
 
               {isGoogleConfigured ? (
                 <div className="w-full flex justify-center mt-2 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]">
-                  <div id="google-signin-btn-container" className="w-full flex justify-center overflow-hidden rounded-md" style={{ minHeight: '40px' }} />
+                  <div id="google-signin-btn-container" className="w-full flex justify-center" style={{ minHeight: '40px' }} />
                 </div>
               ) : (
                 <Button
