@@ -65,7 +65,8 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { action, store_id } = body;
-    if (!action || !store_id) return json({ error: "action and store_id are required" }, 400);
+    if (!action) return json({ error: "action is required" }, 400);
+    if (action !== "auth" && !store_id) return json({ error: "action and store_id are required" }, 400);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -82,12 +83,27 @@ serve(async (req) => {
       const { data: userData } = await userClient.auth.getUser(authHeader.replace("Bearer ", ""));
       if (!userData?.user) return json({ error: "Unauthorized" }, 401);
 
-      const { data: storeOwn } = await admin
-        .from("stores")
-        .select("user_id")
-        .eq("id", store_id)
-        .maybeSingle();
-      if (!storeOwn || storeOwn.user_id !== userData.user.id) return json({ error: "Forbidden" }, 403);
+      if (action !== "auth") {
+        const { data: storeOwn } = await admin
+          .from("stores")
+          .select("user_id")
+          .eq("id", store_id)
+          .maybeSingle();
+        if (!storeOwn || storeOwn.user_id !== userData.user.id) return json({ error: "Forbidden" }, 403);
+      }
+    }
+
+    if (action === "auth") {
+      const { email, password } = body;
+      if (!email || !password) return json({ error: "email and password are required" }, 400);
+      const r = await fetch(`${BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.token) return json({ error: j.message || "Shiprocket auth failed" }, 400);
+      return json({ token: j.token });
     }
 
     const t = await getToken(admin, store_id);

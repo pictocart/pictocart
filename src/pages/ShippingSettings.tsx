@@ -51,16 +51,34 @@ const ShippingSettings = () => {
         .eq('id', store.id)
         .maybeSingle();
 
+      let email = '';
+      let password = '';
+
       if (!error && data?.settings) {
         const s = data.settings as any;
         if (s.pickup_address) {
           setPickup(s.pickup_address);
         }
-        if (s.shiprocket_email) setSrEmail(s.shiprocket_email);
-        if (s.shiprocket_password) setSrPassword(s.shiprocket_password);
+        if (s.shiprocket_email) email = s.shiprocket_email;
+        if (s.shiprocket_password) password = s.shiprocket_password;
         if (s.shiprocket_pickup_name) setSrPickupName(s.shiprocket_pickup_name);
         if (s.cutoff_time) setCutoffTime(s.cutoff_time);
       }
+
+      // Load from store_secrets as source of truth for email/password
+      const { data: secrets } = await supabase
+        .from('store_secrets' as any)
+        .select('shiprocket_email, shiprocket_password')
+        .eq('store_id', store.id)
+        .maybeSingle();
+
+      if (secrets) {
+        if ((secrets as any).shiprocket_email) email = (secrets as any).shiprocket_email;
+        if ((secrets as any).shiprocket_password) password = (secrets as any).shiprocket_password;
+      }
+
+      setSrEmail(email);
+      setSrPassword(password);
       setLoading(false);
     })();
   }, [store?.id]);
@@ -69,6 +87,18 @@ const ShippingSettings = () => {
     if (!store) return;
     setSaving(true);
     try {
+      // 1. Save secrets to store_secrets
+      const { error: secretsError } = await supabase
+        .from('store_secrets' as any)
+        .upsert({
+          store_id: store.id,
+          shiprocket_email: srEmail.trim(),
+          shiprocket_password: srPassword.trim(),
+        }, { onConflict: 'store_id' });
+
+      if (secretsError) throw secretsError;
+
+      // 2. Save other settings to stores
       const { data: currentStore } = await supabase
         .from('stores')
         .select('settings')
@@ -124,6 +154,19 @@ const ShippingSettings = () => {
         toast.error(msg);
         setSrTesting(false);
         return;
+      }
+
+      // Save credentials temporarily so the serviceability proxy call (which reads from DB) will succeed
+      const { error: tempSaveError } = await supabase
+        .from('store_secrets' as any)
+        .upsert({
+          store_id: store.id,
+          shiprocket_email: srEmail.trim(),
+          shiprocket_password: srPassword.trim(),
+        }, { onConflict: 'store_id' });
+
+      if (tempSaveError) {
+        throw new Error('Failed to save connection test credentials');
       }
 
       const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
