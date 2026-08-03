@@ -57,7 +57,7 @@ const OrderTracking = () => {
       if (row?.store_id && !storeInfo) {
         const { data: sData } = await supabase
           .from('stores')
-          .select('name, logo_url, settings, category')
+          .select('name, logo_url, settings, category, slug')
           .eq('id', row.store_id)
           .maybeSingle();
         if (sData && !cancelled) {
@@ -242,6 +242,13 @@ const OrderTracking = () => {
   if (!order) return <div className="min-h-screen flex items-center justify-center text-muted-foreground bg-stone-50 dark:bg-stone-950">Order not found</div>;
 
   const isCompleted = COMPLETED_STATES.has(order.prep_status) || COMPLETED_STATES.has(order.status);
+
+  useEffect(() => {
+    if (order && isCompleted && storeInfo?.slug) {
+      localStorage.removeItem(`active_order_tracking_${storeInfo.slug}`);
+    }
+  }, [order, isCompleted, storeInfo]);
+
   const currentIdx = isCompleted
     ? PREP_STEPS.length - 1
     : Math.max(0, PREP_STEPS.findIndex((s) => s.key === order.prep_status));

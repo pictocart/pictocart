@@ -1878,20 +1878,6 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
         </div>
       )}
 
-      {/* Bottom Navigation for Mobile & Tablet screens */}
-      <BottomNav
-        colors={{
-          primary: palette.primary,
-          secondary: palette.border || 'rgba(0,0,0,0.1)',
-          card: palette.surface || '#ffffff',
-          text: palette.fg || '#000000',
-        }}
-        onSearchOpen={() => {
-          const isPlatform = window.location.hostname.includes('pictocart') || window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
-          navigate(isPlatform ? `/store/${storeSlug}/search` : `/search`);
-        }}
-        storeId={store?.id}
-      />
     </div>
   );
 }

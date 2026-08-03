@@ -758,8 +758,6 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
         <StorefrontFooter store={{ name: brandName, slug: store.slug }} config={footer} colors={extendedColors} />
       )}
 
-      <BottomNav colors={extendedColors} onSearchOpen={() => setSearchOpen(true)} storeId={store.id} />
-
       {searchOpen && (
         <SearchOverlay
           products={searchProducts}

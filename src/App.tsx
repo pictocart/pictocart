@@ -31,6 +31,7 @@ import { TourProvider } from "@/tours/TourProvider";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import GlobalStorefrontQRScanner from "@/components/storefront/GlobalStorefrontQRScanner";
 import ActiveOrderTrackerFloat from "@/components/storefront/ActiveOrderTrackerFloat";
+import GlobalStorefrontBottomNav from "@/components/storefront/GlobalStorefrontBottomNav";
 
 /* Scroll to top on every route change */
 const ScrollToTop = () => {
@@ -467,6 +468,7 @@ const App = () => (
                 <GlobalStorefrontQRScanner />
                 <WhatsAppFloat />
                 <ActiveOrderTrackerFloat />
+                <GlobalStorefrontBottomNav />
               </ErrorBoundary>
             </TourProvider>
           </StoreProvider>
