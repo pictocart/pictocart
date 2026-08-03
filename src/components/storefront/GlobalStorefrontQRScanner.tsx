@@ -96,11 +96,7 @@ export default function GlobalStorefrontQRScanner() {
       scanner.start(
         { facingMode: 'environment' },
         {
-          fps: 10,
-          qrbox: (width, height) => {
-            const size = Math.min(width, height) * 0.7;
-            return { width: size, height: size };
-          }
+          fps: 10
         },
         (decodedText) => {
           // Success callback
@@ -260,7 +256,7 @@ export default function GlobalStorefrontQRScanner() {
           <DialogHeader>
             <DialogTitle>Scan Table QR Code</DialogTitle>
             <DialogDescription>
-              Align the QR code inside the box to check in and view menu.
+              Position the QR code anywhere in the camera view to check in and view menu.
             </DialogDescription>
           </DialogHeader>
 
