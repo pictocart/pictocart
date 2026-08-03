@@ -125,7 +125,7 @@ export default function RiderDashboard() {
   const { data: orders = [], isLoading: loadingOrders } = useQuery({
     queryKey: ['rider-assigned-orders', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('orders')
         .select('*')
         .eq('store_id', storeId)
@@ -152,7 +152,7 @@ export default function RiderDashboard() {
           setCurrentCoords({ lat: latitude, lng: longitude });
 
           // Update rider coordinates in active order row
-          await supabase
+          await (supabase as any)
             .from('orders')
             .update({ rider_lat: latitude, rider_lng: longitude })
             .eq('id', activeOrder.id);
@@ -178,7 +178,7 @@ export default function RiderDashboard() {
         updates.status = 'completed';
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('orders')
         .update(updates)
         .eq('id', orderId);
