@@ -117,6 +117,10 @@ export const useFulfillment = (storeId: string | undefined) => {
     ...(query.data ?? {}),
   };
 
+  if (!isFood) {
+    settings.dine_in_enabled = false;
+  }
+
   const enabledModes: FulfillmentMode[] = [
     settings.dine_in_enabled && 'dine_in',
     settings.takeaway_enabled && 'takeaway',

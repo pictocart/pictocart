@@ -34,7 +34,7 @@ const emitCartUpdate = (storeSlug: string) => {
 
 export const useCart = (storeSlug: string) => {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [fulfillmentMode, setFulfillmentModeState] = useState<FulfillmentMode>('dine_in');
+  const [fulfillmentMode, setFulfillmentModeState] = useState<FulfillmentMode>('delivery');
   const [tableLabel, setTableLabelState] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCouponState] = useState<AppliedCoupon | null>(null);
 

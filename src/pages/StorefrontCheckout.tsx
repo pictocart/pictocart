@@ -167,7 +167,8 @@ const StorefrontCheckout = () => {
   
   const [placing, setPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<{ number: string; trackingCode: string | null } | null>(null);
-  const isGuestMode = fulfillmentMode === 'dine_in' || fulfillmentMode === 'takeaway';
+  const isFoodShop = store?.category === 'food';
+  const isGuestMode = (fulfillmentMode === 'dine_in' || fulfillmentMode === 'takeaway') && isFoodShop;
   const [razorpayAvailable, setRazorpayAvailable] = useState(false);
   const [codRules, setCodRules] = useState<any | null>(null);
   const [priorOrders, setPriorOrders] = useState<number>(0);
@@ -480,12 +481,12 @@ const StorefrontCheckout = () => {
 
   // Force payment method to match fulfillment mode (dine-in = pay-at-counter only)
   useEffect(() => {
-    if (fulfillmentMode === 'dine_in' && form.paymentMethod !== 'pay_at_counter') {
+    if (isDineIn && form.paymentMethod !== 'pay_at_counter') {
       setForm((f) => ({ ...f, paymentMethod: 'pay_at_counter' }));
-    } else if (fulfillmentMode !== 'dine_in' && form.paymentMethod === 'pay_at_counter') {
+    } else if (!isDineIn && form.paymentMethod === 'pay_at_counter') {
       setForm((f) => ({ ...f, paymentMethod: 'cod' }));
     }
-  }, [fulfillmentMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isDineIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load COD rules (safe non-sensitive subset via RPC) + customer order history (for risk checks)
   useEffect(() => {
@@ -532,7 +533,6 @@ const StorefrontCheckout = () => {
     return null;
   })();
 
-  // Async server-side check for blocked phones (list is private to the seller)
   useEffect(() => {
     const phone = form.phone?.trim();
     if (!store?.id || !phone || phone.length < 6) { setPhoneCodBlocked(false); return; }
@@ -543,6 +543,13 @@ const StorefrontCheckout = () => {
     })();
     return () => { cancelled = true; };
   }, [store?.id, form.phone]);
+
+  // If store is not a food store, force fulfillmentMode to 'delivery'
+  useEffect(() => {
+    if (store && store.category !== 'food' && fulfillmentMode !== 'delivery') {
+      setFulfillmentMode('delivery');
+    }
+  }, [store, fulfillmentMode, setFulfillmentMode]);
   function finalTotalForCheck() { return Math.max(0, totalPrice - (appliedCoupon?.discount || 0)); }
 
 
@@ -621,8 +628,8 @@ const StorefrontCheckout = () => {
       ? Math.random().toString(36).slice(2, 8).toUpperCase()
       : null;
 
-    const paymentMethod = fulfillmentMode === 'dine_in' ? 'pay_at_counter' : form.paymentMethod;
-    const paymentStatus = fulfillmentMode === 'dine_in'
+    const paymentMethod = isDineIn ? 'pay_at_counter' : form.paymentMethod;
+    const paymentStatus = isDineIn
       ? 'pending'
       : paymentMethod === 'cod' ? 'cod' : 'pending';
 
@@ -638,7 +645,7 @@ const StorefrontCheckout = () => {
         appliedCoupon ? `Coupon: ${appliedCoupon.code} (-₹${discount})` : null,
         deliveryInstructions ? `Instructions: ${deliveryInstructions}` : null
       ].filter(Boolean).join(' | '),
-      customer_name: form.name || (fulfillmentMode === 'dine_in' ? `Table ${tableLabel ?? ''}`.trim() : ''),
+      customer_name: form.name || (isDineIn ? `Table ${tableLabel ?? ''}`.trim() : ''),
       customer_email: form.email || null,
       customer_phone: form.phone || null,
       customer_address: fulfillmentMode === 'delivery' ? {
@@ -889,7 +896,7 @@ const StorefrontCheckout = () => {
   const handlePlaceOrder = async () => {
     if (items.length === 0) { toast.error('Your cart is empty'); return; }
 
-    if (fulfillmentMode === 'dine_in') {
+    if (isDineIn) {
       if (settings.dine_in_requires_table && !tableLabel) {
         toast.error('Please scan your table QR code to place a dine-in order.');
         return;
@@ -923,7 +930,7 @@ const StorefrontCheckout = () => {
       return;
     }
 
-    if (fulfillmentMode === 'takeaway') {
+    if (isTakeaway) {
       if (!form.phone || form.phone.length < 7) {
         toast.error('Please enter your phone number');
         return;
@@ -1004,8 +1011,8 @@ const StorefrontCheckout = () => {
     color: colors.text,
   };
 
-  const isDineIn = fulfillmentMode === 'dine_in';
-  const isTakeaway = fulfillmentMode === 'takeaway';
+  const isDineIn = fulfillmentMode === 'dine_in' && isFoodShop;
+  const isTakeaway = fulfillmentMode === 'takeaway' && isFoodShop;
 
   const paymentMethods = isDineIn
     ? [{ id: 'pay_at_counter', label: 'Pay at Counter', icon: Banknote, always: true, disabledReason: null as string | null }]
