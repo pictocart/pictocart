@@ -1,12 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
-import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
-import { getStoreThemeTokens, getStoreThemeId, getStorefrontConfig, getStoreBranding } from '@/lib/storefrontManifest';
-import { useCart } from '@/hooks/useCart';
-import { useValidateCoupon } from '@/hooks/useCoupons';
-import { Loader2, Minus, Plus, Trash2, ShoppingBag, Tag, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { getStoreThemeId, getStorefrontConfig, getStoreBranding } from '@/lib/storefrontManifest';
+import { Loader2 } from 'lucide-react';
 import { useThemeManifest } from '@/hooks/useThemeManifest';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -96,6 +92,7 @@ const StorefrontCart = () => {
         storeSlug={slug}
         products={products}
         sellerCategories={sellerCategories}
+        store={store}
       />
     </>
   );
