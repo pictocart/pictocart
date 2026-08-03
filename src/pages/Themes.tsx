@@ -143,6 +143,19 @@ const Themes = () => {
 
   const { plan } = useSubscription();
 
+  // Filter themes based on store category:
+  // Food stores -> theme-70904877 (Vibrant Gourmet)
+  // Non-food stores -> theme-styleup (Style Up)
+  const cat = String(store?.category || '').toLowerCase();
+  const isFoodStore = cat.includes('food') || cat.includes('restaurant') || cat.includes('cafe') || cat.includes('bakery') || cat.includes('sweet');
+  const filteredThemes = themes.filter((t) => {
+    if (isFoodStore) {
+      return t.theme_id === 'theme-70904877';
+    } else {
+      return t.theme_id === 'theme-styleup';
+    }
+  });
+
   const executeInstallTheme = async (theme: ThemeMaster) => {
     if (!store) return;
     try {
@@ -478,7 +491,7 @@ const Themes = () => {
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : themes.length === 0 ? (
+        ) : filteredThemes.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center text-sm text-muted-foreground">
               <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-50" />
@@ -487,7 +500,7 @@ const Themes = () => {
           </Card>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {themes.map((theme) => {
+            {filteredThemes.map((theme) => {
               const isActive = activeThemeId === theme.theme_id;
               const swatches = swatchFor(theme.theme_id);
               const isPremium = theme.is_premium === true;
