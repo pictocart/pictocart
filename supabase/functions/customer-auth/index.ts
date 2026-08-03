@@ -401,7 +401,7 @@ Deno.serve(async (req: Request) => {
       // Check if user is already registered in auth.users
       const existingUser = await findUserByEmail(customerAlias);
       if (existingUser) {
-        return json({ error: "already_registered_for_this_store", detail: "A user with this email address has already been registered." }, 400);
+        return json({ error: "already_registered_for_this_store", detail: "A user with this email address has already been registered." });
       }
 
       // Generate a 6-digit random OTP
@@ -515,11 +515,11 @@ Deno.serve(async (req: Request) => {
 
       if (fetchErr) {
         console.error("fetch temp signup failed", fetchErr);
-        return json({ error: "verification_failed", detail: fetchErr.message }, 400);
+        return json({ error: "verification_failed", detail: fetchErr.message });
       }
 
       if (!temp) {
-        return json({ error: "invalid_otp", detail: "Invalid or expired verification code." }, 400);
+        return json({ error: "invalid_otp", detail: "Invalid or expired verification code." });
       }
 
       // Check if user already registered (to prevent duplicate auth.users accounts)
@@ -548,7 +548,7 @@ Deno.serve(async (req: Request) => {
 
         if (createErr) {
           console.error("verify_email_otp createUser failed", createErr);
-          return json({ error: "signup_failed", detail: createErr.message }, 400);
+          return json({ error: "signup_failed", detail: createErr.message });
         }
         existing = created.user;
       }
