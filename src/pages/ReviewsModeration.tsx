@@ -28,10 +28,19 @@ interface ReviewRow {
   };
 }
 
+const TABS = [
+  { value: 'pending', label: 'Pending Reviews' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'order_feedback', label: 'Order Feedback' },
+];
+
 const ReviewsModeration = () => {
   const { store } = useStore();
-  const [reviews, setReviews] = useState<ReviewRow[]>([]);
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [tab, setTab] = useState<'pending' | 'approved' | 'rejected' | 'order_feedback'>('pending');
+  const [rows, setRows] = useState<ReviewRow[]>([]);
+  const [feedback, setFeedback] = useState<any[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [genOpen, setGenOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
@@ -43,7 +52,7 @@ const ReviewsModeration = () => {
 
   useEffect(() => {
     load();
-  }, [store?.id, activeTab]);
+  }, [store?.id, tab]);
 
   useEffect(() => {
     const fetchProducts = async () => {
