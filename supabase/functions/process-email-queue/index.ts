@@ -10,6 +10,17 @@ const DEFAULT_TRANSACTIONAL_TTL_MINUTES = 60
 async function sendViaResend(apiKey: string, payload: {
   to: string; from: string; subject: string; html: string; text?: string;
 }) {
+  let fromAddress = payload.from;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  if (supabaseUrl.includes('ylvvvcqnenbaangyzojl')) {
+    const match = fromAddress.match(/^([^<]+)<[^>]+>$/);
+    if (match) {
+      fromAddress = `${match[1].trim()} <onboarding@resend.dev>`;
+    } else {
+      fromAddress = "onboarding@resend.dev";
+    }
+  }
+
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -18,7 +29,7 @@ async function sendViaResend(apiKey: string, payload: {
     },
     body: JSON.stringify({
       to: [payload.to],
-      from: payload.from,
+      from: fromAddress,
       subject: payload.subject,
       html: payload.html,
       text: payload.text || '',

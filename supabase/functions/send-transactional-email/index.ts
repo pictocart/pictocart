@@ -311,7 +311,10 @@ Deno.serve(async (req) => {
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
     if (resendApiKey) {
       try {
-        const fromHeader = `${senderName || SITE_NAME} <noreply@${FROM_DOMAIN}>`
+        let fromHeader = `${senderName || SITE_NAME} <noreply@${FROM_DOMAIN}>`
+        if (supabaseUrl.includes('ylvvvcqnenbaangyzojl')) {
+          fromHeader = `${senderName || SITE_NAME} <onboarding@resend.dev>`
+        }
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {

@@ -188,6 +188,10 @@ Deno.serve(async (req) => {
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
     if (resendApiKey) {
       try {
+        let fromHeader = `${SITE_NAME} <noreply@${FROM_DOMAIN}>`
+        if (supabaseUrl.includes('ylvvvcqnenbaangyzojl')) {
+          fromHeader = `${SITE_NAME} <onboarding@resend.dev>`
+        }
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -195,7 +199,7 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${resendApiKey}`,
           },
           body: JSON.stringify({
-            from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+            from: fromHeader,
             to: normalizedEmail,
             subject: resolvedSubject,
             html: html,

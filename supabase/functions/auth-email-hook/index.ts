@@ -111,11 +111,23 @@ async function getVerifiedStoreSender(supabase: any, authUrl?: string, storeSlug
 async function sendViaResend(to: string, from: string, subject: string, html: string, text: string): Promise<{ ok: boolean; error?: string }> {
   const resendKey = Deno.env.get('RESEND_API_KEY')
   if (!resendKey) return { ok: false, error: 'RESEND_API_KEY not found in Deno environment' }
+
+  let fromAddress = from;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  if (supabaseUrl.includes('ylvvvcqnenbaangyzojl')) {
+    const match = fromAddress.match(/^([^<]+)<[^>]+>$/);
+    if (match) {
+      fromAddress = `${match[1].trim()} <onboarding@resend.dev>`;
+    } else {
+      fromAddress = "onboarding@resend.dev";
+    }
+  }
+
   try {
     const res = await fetch(`${RESEND_API_URL}/emails`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
-      body: JSON.stringify({ from, to: [to], subject, html, text }),
+      body: JSON.stringify({ from: fromAddress, to: [to], subject, html, text }),
     })
     if (!res.ok) {
       const errBody = await res.text();
