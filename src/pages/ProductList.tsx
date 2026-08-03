@@ -141,6 +141,45 @@ const ProductList = () => {
           throw new Error(`Uploading ${rows.length} products would exceed your plan limit of ${limits.products} products. Current count is ${products.length}.`);
         }
 
+        // Auto-create missing categories from CSV
+        if (categoryIndex !== -1) {
+          const uniqueCsvCats = Array.from(new Set(
+            rows
+              .map(row => row[categoryIndex] ? row[categoryIndex].trim() : null)
+              .filter((cat): cat is string => !!cat && cat !== '')
+          ));
+
+          if (uniqueCsvCats.length > 0) {
+            const { data: existingCategories, error: fetchCatError } = await supabase
+              .from('categories')
+              .select('name')
+              .eq('store_id', store.id);
+            if (fetchCatError) throw fetchCatError;
+
+            const existingCatNames = new Set(
+              (existingCategories || []).map(c => c.name.trim().toLowerCase())
+            );
+
+            const missingCategories = uniqueCsvCats.filter(
+              name => !existingCatNames.has(name.toLowerCase())
+            );
+
+            if (missingCategories.length > 0) {
+              const categoriesToInsert = missingCategories.map(name => ({
+                store_id: store.id,
+                name: name,
+              }));
+              const { error: insertCatError } = await supabase
+                .from('categories')
+                .insert(categoriesToInsert);
+              if (insertCatError) throw insertCatError;
+
+              // Invalidate categories query
+              queryClient.invalidateQueries({ queryKey: ['categories', store.id] });
+            }
+          }
+        }
+
         const productsToInsert = rows.map((row, idx) => {
           const item: any = {
             store_id: store.id,

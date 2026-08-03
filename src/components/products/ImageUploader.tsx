@@ -28,6 +28,105 @@ const ImageUploader = ({ images, onChange, maxImages = 6, enableAI = false, aiCo
   const [aiLoading, setAiLoading] = useState(false);
   const aiCredits = useAICredits({ onInsufficient: onInsufficientCredits });
 
+  // Client-side Cropper states
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string>('');
+  const [zoom, setZoom] = useState(1);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setDragStart({ x: clientX, y: clientY });
+  };
+
+  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - dragStart.x;
+    const dy = clientY - dragStart.y;
+    setOffsetX((prev) => prev + dx);
+    setOffsetY((prev) => prev + dy);
+    setDragStart({ x: clientX, y: clientY });
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleCropSave = () => {
+    if (!cropFile) return;
+    const img = new Image();
+    img.src = cropImageSrc;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const targetSize = 800;
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, targetSize, targetSize);
+
+      const containerSize = 320;
+      let renderWidth = 0;
+      let renderHeight = 0;
+
+      const imgRatio = img.width / img.height;
+      if (imgRatio > 1) {
+        renderWidth = containerSize;
+        renderHeight = containerSize / imgRatio;
+      } else {
+        renderHeight = containerSize;
+        renderWidth = containerSize * imgRatio;
+      }
+
+      const outputScale = targetSize / containerSize;
+
+      ctx.save();
+      ctx.translate(targetSize / 2, targetSize / 2);
+      ctx.translate(offsetX * outputScale, offsetY * outputScale);
+      ctx.scale(zoom, zoom);
+      ctx.drawImage(
+        img,
+        -(renderWidth * outputScale) / 2,
+        -(renderHeight * outputScale) / 2,
+        renderWidth * outputScale,
+        renderHeight * outputScale
+      );
+      ctx.restore();
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          toast.error('Failed to crop image');
+          return;
+        }
+
+        const croppedFile = new File([blob], cropFile.name, { type: 'image/jpeg' });
+        setCropOpen(false);
+        setUploading(true);
+        try {
+          const url = await uploadImage(croppedFile);
+          onChange([...images, url]);
+          toast.success('Image cropped and uploaded successfully!');
+        } catch (err: any) {
+          console.error('Upload error after crop:', err);
+          toast.error(err.message || 'Failed to upload cropped image');
+        } finally {
+          setUploading(false);
+        }
+      }, 'image/jpeg', 0.92);
+    };
+  };
+
   const generateAI = async () => {
     if (!aiPrompt.trim()) { toast.error('Describe what to generate'); return; }
     setAiLoading(true);
@@ -69,24 +168,27 @@ const ImageUploader = ({ images, onChange, maxImages = 6, enableAI = false, aiCo
     return publicUrl;
   }, []);
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files) return;
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
     const remaining = maxImages - images.length;
     if (remaining <= 0) {
       toast.error(`Maximum ${maxImages} images allowed`);
       return;
     }
-    const toUpload = Array.from(files).slice(0, remaining);
-    setUploading(true);
-    try {
-      const urls = await Promise.all(toUpload.map(uploadImage));
-      onChange([...images, ...urls]);
-    } catch (err: any) {
-      console.error('Image upload failed:', err);
-      toast.error(err?.message || 'Failed to upload image');
-    } finally {
-      setUploading(false);
+    if (files.length > 1) {
+      toast.info('Please upload photos one by one to crop each of them. First photo loaded.');
     }
+    const file = files[0];
+    setCropFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCropImageSrc(event.target?.result as string);
+      setZoom(1);
+      setOffsetX(0);
+      setOffsetY(0);
+      setCropOpen(true);
+    };
+    reader.readAsDataURL(file);
   };
 
   const removeImage = (index: number) => {
@@ -222,6 +324,96 @@ const ImageUploader = ({ images, onChange, maxImages = 6, enableAI = false, aiCo
             <Button variant="ghost" onClick={() => setAiOpen(false)} disabled={aiLoading}>Cancel</Button>
             <Button onClick={generateAI} disabled={aiLoading || !aiPrompt.trim()} className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:opacity-90">
               {aiLoading ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Generating…</> : <><Sparkles className="h-3.5 w-3.5 mr-1" /> Generate (10 cr)</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Crop & Resize Dialog */}
+      <Dialog open={cropOpen} onOpenChange={setCropOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crop & Resize Photo</DialogTitle>
+            <DialogDescription>
+              Drag to position the image inside the box, and use the slider to zoom.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div 
+              className="relative w-full max-w-[320px] aspect-square bg-slate-950/90 overflow-hidden border border-slate-800 rounded-lg mx-auto cursor-move select-none touch-none flex items-center justify-center"
+              onMouseDown={handleDragStart}
+              onMouseMove={handleDragMove}
+              onMouseUp={handleDragEnd}
+              onMouseLeave={handleDragEnd}
+              onTouchStart={handleDragStart}
+              onTouchMove={handleDragMove}
+              onTouchEnd={handleDragEnd}
+            >
+              {/* Crop Grid Overlay */}
+              <div className="absolute inset-0 border-2 border-primary/50 pointer-events-none z-10 grid grid-cols-3 grid-rows-3 opacity-40">
+                <div className="border-r border-b border-primary/30"></div>
+                <div className="border-r border-b border-primary/30"></div>
+                <div className="border-b border-primary/30"></div>
+                <div className="border-r border-b border-primary/30"></div>
+                <div className="border-r border-b border-primary/30"></div>
+                <div className="border-b border-primary/30"></div>
+                <div className="border-r border-primary/30"></div>
+                <div className="border-r border-primary/30"></div>
+                <div></div>
+              </div>
+              
+              <img 
+                src={cropImageSrc} 
+                alt="Crop Preview" 
+                draggable={false}
+                style={{
+                  transform: `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`,
+                  maxHeight: '100%',
+                  maxWidth: '100%',
+                  objectFit: 'contain',
+                  transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                }}
+              />
+            </div>
+
+            <div className="space-y-2 max-w-[320px] mx-auto">
+              <div className="flex justify-between text-xs text-muted-foreground font-semibold">
+                <span>Zoom</span>
+                <span>{Math.round(zoom * 100)}%</span>
+              </div>
+              <input 
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+            </div>
+            
+            <div className="flex justify-center gap-2">
+              <Button 
+                size="sm" 
+                type="button"
+                variant="outline" 
+                onClick={() => {
+                  setZoom(1);
+                  setOffsetX(0);
+                  setOffsetY(0);
+                }}
+                className="text-xs font-semibold"
+              >
+                Reset Position
+              </Button>
+            </div>
+          </div>
+          
+          <DialogFooter className="sm:justify-between flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => setCropOpen(false)}>Cancel</Button>
+            <Button type="button" onClick={handleCropSave} className="bg-primary text-primary-foreground font-semibold">
+              Crop & Upload
             </Button>
           </DialogFooter>
         </DialogContent>
