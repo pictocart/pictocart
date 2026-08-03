@@ -114,7 +114,7 @@ async function sendViaResend(to: string, from: string, subject: string, html: st
 
   let fromAddress = from;
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-  if (supabaseUrl.includes('ylvvvcqnenbaangyzojl')) {
+  if (supabaseUrl.includes('ylvvvcqnenbaangyzojl') && !Deno.env.get("EMAIL_DOMAIN")) {
     const match = fromAddress.match(/^([^<]+)<[^>]+>$/);
     if (match) {
       fromAddress = `${match[1].trim()} <onboarding@resend.dev>`;
