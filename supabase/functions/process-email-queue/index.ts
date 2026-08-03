@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -43,12 +43,6 @@ async function sendViaResend(apiKey: string, payload: {
   }
   return await res.json()
 }
-
-const MAX_RETRIES = 5
-const DEFAULT_BATCH_SIZE = 10
-const DEFAULT_SEND_DELAY_MS = 200
-const DEFAULT_AUTH_TTL_MINUTES = 15
-const DEFAULT_TRANSACTIONAL_TTL_MINUTES = 60
 
 // Check if an error is a rate-limit (429) response.
 // Uses EmailAPIError.status when available (email-js >=0.x with structured errors),
