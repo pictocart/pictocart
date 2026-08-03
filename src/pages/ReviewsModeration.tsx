@@ -23,8 +23,11 @@ interface ReviewRow {
   comment: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+  is_verified_purchase?: boolean;
+  title?: string | null;
+  body?: string | null;
   products?: {
-    name: string;
+    title: string;
   };
 }
 
@@ -59,7 +62,7 @@ const ReviewsModeration = () => {
       if (!store?.id) return;
       const { data } = await supabase
         .from('products')
-        .select('id, name')
+        .select('id, title')
         .eq('store_id', store.id);
       if (data) {
         setProducts(data);
@@ -140,7 +143,7 @@ const ReviewsModeration = () => {
 
       if (updateErr) throw updateErr;
 
-      toast.success(`Successfully generated ${data.count || count} reviews!`);
+      toast.success(`Successfully generated ${data?.count || reviewCount} reviews!`);
       setGenOpen(false);
       load(); // Reload reviews list
     } catch (err: any) {
@@ -161,7 +164,7 @@ const ReviewsModeration = () => {
         .eq('store_id', store.id)
         .order('created_at', { ascending: false });
       if (error) toast.error(error.message);
-      setFeedback((data || []) as OrderFeedbackRow[]);
+      setFeedback((data || []) as any[]);
     } else {
       const { data, error } = await sb
         .from('reviews')
@@ -211,7 +214,7 @@ const ReviewsModeration = () => {
         </Button>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
         <TabsList>
           {TABS.map((t) => (
             <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
