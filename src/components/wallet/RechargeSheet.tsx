@@ -43,8 +43,8 @@ const RechargeSheet = ({ open, onOpenChange, onSuccess }: Props) => {
       const body: any = { store_id: store.id, promo_code: promoCode.trim() || undefined };
       if (selected === 'custom') {
         const inr = Number(customInr);
-        if (!Number.isFinite(inr) || inr < (settings?.custom_min_inr || 99)) {
-          throw new Error(`Minimum ₹${settings?.custom_min_inr || 99}`);
+        if (!Number.isFinite(inr) || inr < (settings?.custom_min_inr || 9)) {
+          throw new Error(`Minimum ₹${settings?.custom_min_inr || 9}`);
         }
         body.custom_inr = inr;
       } else {
@@ -141,7 +141,7 @@ const RechargeSheet = ({ open, onOpenChange, onSuccess }: Props) => {
           >
             <div className="font-semibold">Custom amount</div>
             <div className="text-sm text-muted-foreground mt-1">
-              Min ₹{settings?.custom_min_inr || 99}, {settings?.custom_recharge_rate || 10} credits per ₹1
+              Min ₹{settings?.custom_min_inr || 9}, {settings?.custom_recharge_rate || 10} credits per ₹1
             </div>
             {selected === 'custom' && (
               <div className="mt-3 flex items-center gap-2">
@@ -151,7 +151,7 @@ const RechargeSheet = ({ open, onOpenChange, onSuccess }: Props) => {
                   value={customInr}
                   onChange={(e) => setCustomInr(e.target.value)}
                   placeholder="500"
-                  min={settings?.custom_min_inr || 99}
+                  min={settings?.custom_min_inr || 9}
                   max={settings?.custom_max_inr || 50000}
                   className="h-10"
                 />
