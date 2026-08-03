@@ -818,6 +818,9 @@ const StorefrontCheckout = () => {
             }
 
             track({ store_id: store.id, event_type: 'purchase', order_id: order.id, value: totalPrice, metadata: { payment: 'razorpay' } });
+            if (order.guest_tracking_code) {
+              localStorage.setItem(`active_order_tracking_${slug}`, order.guest_tracking_code);
+            }
             setOrderPlaced({ number: order.order_number, trackingCode: order.guest_tracking_code });
           } else {
             toast.error('Payment verification failed. Contact support.');
@@ -872,6 +875,9 @@ const StorefrontCheckout = () => {
       }).catch(() => {});
       if (!buyNowProductId) clearCart();
       track({ store_id: store.id, event_type: 'purchase', order_id: order.id, value: totalPrice, metadata: { payment: 'cod' } });
+      if (order.guest_tracking_code) {
+        localStorage.setItem(`active_order_tracking_${slug}`, order.guest_tracking_code);
+      }
       setOrderPlaced({ number: order.order_number, trackingCode: order.guest_tracking_code });
     } catch (err) {
       console.error(err);

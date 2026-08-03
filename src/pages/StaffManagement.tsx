@@ -19,7 +19,7 @@ export default function StaffManagement() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'waiter' | 'chef' | 'manager' | 'employee'>('employee');
+  const [role, setRole] = useState<'waiter' | 'chef' | 'manager' | 'employee' | 'rider'>('employee');
   const [empIdInput, setEmpIdInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -29,7 +29,7 @@ export default function StaffManagement() {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
-  const [editRole, setEditRole] = useState<'waiter' | 'chef' | 'manager' | 'employee'>('employee');
+  const [editRole, setEditRole] = useState<'waiter' | 'chef' | 'manager' | 'employee' | 'rider'>('employee');
   const [editEmpId, setEditEmpId] = useState('');
   const [updating, setUpdating] = useState(false);
 
@@ -56,7 +56,7 @@ export default function StaffManagement() {
       return;
     }
     const timer = setTimeout(async () => {
-      const { data, error } = await supabase.rpc('check_email_exists', {
+      const { data, error } = await supabase.rpc('check_email_exists' as any, {
         p_email: email.trim()
       });
       if (!error) {
@@ -73,7 +73,7 @@ export default function StaffManagement() {
       return;
     }
     const timer = setTimeout(async () => {
-      const { data, error } = await supabase.rpc('check_employee_id_exists', {
+      const { data, error } = await supabase.rpc('check_employee_id_exists' as any, {
         p_employee_id: empIdInput.trim()
       });
       if (!error) {
@@ -90,7 +90,7 @@ export default function StaffManagement() {
       return;
     }
     const timer = setTimeout(async () => {
-      const { data, error } = await supabase.rpc('check_email_exists', {
+      const { data, error } = await supabase.rpc('check_email_exists' as any, {
         p_email: editEmail.trim(),
         p_exclude_user_id: editingStaff.user_id
       });
@@ -108,7 +108,7 @@ export default function StaffManagement() {
       return;
     }
     const timer = setTimeout(async () => {
-      const { data, error } = await supabase.rpc('check_employee_id_exists', {
+      const { data, error } = await supabase.rpc('check_employee_id_exists' as any, {
         p_employee_id: editEmpId.trim(),
         p_exclude_staff_id: editingStaff.id
       });
@@ -363,6 +363,7 @@ export default function StaffManagement() {
                         <SelectItem value="waiter">Waiter</SelectItem>
                         <SelectItem value="chef">Chef / Kitchen</SelectItem>
                         <SelectItem value="manager">Manager / Counter</SelectItem>
+                        <SelectItem value="rider">Rider / Delivery</SelectItem>
                         <SelectItem value="employee">Employee</SelectItem>
                       </>
                     ) : (
@@ -433,10 +434,12 @@ export default function StaffManagement() {
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : staff.role === 'employee'
                               ? 'bg-green-50 text-green-700 border-green-200'
+                              : staff.role === 'rider'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
                               : 'bg-orange-50 text-orange-700 border-orange-200'
                           }`}
                         >
-                          {staff.role === 'chef' ? 'Chef / Kitchen' : staff.role === 'manager' ? 'Manager / Counter' : staff.role}
+                          {staff.role === 'chef' ? 'Chef / Kitchen' : staff.role === 'manager' ? 'Manager / Counter' : staff.role === 'rider' ? 'Rider / Delivery' : staff.role}
                         </span>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
@@ -547,6 +550,7 @@ export default function StaffManagement() {
                         <SelectItem value="waiter">Waiter</SelectItem>
                         <SelectItem value="chef">Chef / Kitchen</SelectItem>
                         <SelectItem value="manager">Manager / Counter</SelectItem>
+                        <SelectItem value="rider">Rider / Delivery</SelectItem>
                         <SelectItem value="employee">Employee</SelectItem>
                       </>
                     ) : (

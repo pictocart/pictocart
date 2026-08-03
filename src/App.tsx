@@ -30,6 +30,7 @@ import { useStoreByHost, isPlatformHost } from "@/hooks/useStoreByHost";
 import { TourProvider } from "@/tours/TourProvider";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import GlobalStorefrontQRScanner from "@/components/storefront/GlobalStorefrontQRScanner";
+import ActiveOrderTrackerFloat from "@/components/storefront/ActiveOrderTrackerFloat";
 
 /* Scroll to top on every route change */
 const ScrollToTop = () => {
@@ -92,6 +93,7 @@ const Contact = lazy(() => import("@/pages/Contact"));
 const StaffManagement = lazy(() => import("@/pages/StaffManagement"));
 const WaiterDashboard = lazy(() => import("@/pages/staff/WaiterDashboard"));
 const ManagerDashboard = lazy(() => import("@/pages/staff/ManagerDashboard"));
+const RiderDashboard = lazy(() => import("@/pages/staff/RiderDashboard"));
 const Billing = lazy(() => import("@/pages/Billing"));
 const SiteOffer = lazy(() => import("@/pages/SiteOffer"));
 const AdminPlanOffer = lazy(() => import("@/pages/admin/AdminPlanOffer"));
@@ -426,6 +428,7 @@ const AppRoutes = () => {
           <Route path="/store/:slug/waiter" element={<WaiterDashboard />} />
           <Route path="/store/:slug/kitchen" element={<Kitchen />} />
           <Route path="/store/:slug/manager" element={<ManagerDashboard />} />
+          <Route path="/store/:slug/rider" element={<RiderDashboard />} />
           <Route path="/store/:slug/book" element={<StorefrontBooking />} />
           <Route path="/track/:code" element={<OrderTracking />} />
           <Route path="/menu" element={<ProtectedRoute><DashboardLayout><Menu /></DashboardLayout></ProtectedRoute>} />
@@ -463,6 +466,7 @@ const App = () => (
                 <AppRoutes />
                 <GlobalStorefrontQRScanner />
                 <WhatsAppFloat />
+                <ActiveOrderTrackerFloat />
               </ErrorBoundary>
             </TourProvider>
           </StoreProvider>

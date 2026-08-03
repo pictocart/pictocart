@@ -208,6 +208,20 @@ export default function ManagerDashboard() {
     enabled: !!storeId,
   });
 
+  const { data: riders = [] } = useQuery({
+    queryKey: ['manager-riders', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('store_staff')
+        .select('user_id, name')
+        .eq('store_id', storeId)
+        .eq('role', 'rider');
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!storeId,
+  });
+
   // Action Mutations
   const approveOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {
@@ -257,6 +271,26 @@ export default function ManagerDashboard() {
     onSuccess: () => {
       toast.success('Kitchen status advanced (Chef Override)');
       qc.invalidateQueries({ queryKey: ['manager-kitchen-orders', storeId] });
+    }
+  });
+
+  const assignRiderMutation = useMutation({
+    mutationFn: async ({ orderId, riderId }: { orderId: string; riderId: string | null }) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          rider_id: riderId || null,
+          rider_status: riderId ? 'pending' : null 
+        })
+        .eq('id', orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Rider assigned successfully!');
+      qc.invalidateQueries({ queryKey: ['manager-kitchen-orders', storeId] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to assign rider');
     }
   });
 
@@ -584,9 +618,9 @@ export default function ManagerDashboard() {
                   <Card key={order.id} className="border-l-4 border-l-purple-500">
                     <CardHeader className="py-2.5 px-4 border-b bg-zinc-50/50 flex flex-row items-center justify-between space-y-0">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-sm text-purple-900">
-                            Table: {order.table_label} • Order #{order.order_number}
+                            {order.fulfillment_mode === 'delivery' ? 'Delivery 🚚' : order.fulfillment_mode === 'takeaway' ? 'Takeaway 🛍️' : `Table: ${order.table_label || '—'}`} • Order #{order.order_number}
                           </span>
                           <Badge variant="outline" className="capitalize text-[10px] py-0">
                             {order.prep_status}
@@ -603,6 +637,40 @@ export default function ManagerDashboard() {
                           </div>
                         ))}
                       </div>
+
+                      {order.fulfillment_mode === 'delivery' && (
+                        <div className="pt-2 border-t border-dashed mt-2 space-y-1.5">
+                          <Label className="text-[10px] uppercase font-black text-muted-foreground">Delivery Rider</Label>
+                          <div className="flex gap-2 items-center">
+                            <Select
+                              value={order.rider_id || "unassigned"}
+                              onValueChange={(val) => {
+                                assignRiderMutation.mutate({
+                                  orderId: order.id,
+                                  riderId: val === "unassigned" ? null : val
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs bg-white dark:bg-stone-950 flex-1">
+                                <SelectValue placeholder="Assign Rider..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {riders.map((r: any) => (
+                                  <SelectItem key={r.user_id} value={r.user_id}>
+                                    {r.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {order.rider_status && (
+                              <Badge className="text-[10px] uppercase shrink-0 font-bold bg-amber-50 text-amber-700 border border-amber-250 capitalize">
+                                {order.rider_status}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Overrides and Settle Actions */}
                       <div className="flex gap-2 flex-wrap sm:flex-nowrap">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Check, ChefHat, Bell, Truck, Utensils, PartyPopper, Star, MessageCircle, MapPin, Sparkles } from 'lucide-react';
@@ -26,6 +26,12 @@ const OrderTracking = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [callingWaiter, setCallingWaiter] = useState(false);
+
+  // Google Maps references
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
+  const mapRef = useRef<any>(null);
+  const riderMarkerRef = useRef<any>(null);
+  const routeLineRef = useRef<any>(null);
 
   useEffect(() => {
     if (!code) return;
@@ -61,9 +67,134 @@ const OrderTracking = () => {
       setLoading(false);
     };
     load();
-    const interval = setInterval(load, 12000);
+    const interval = setInterval(load, 10000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [code, storeInfo]);
+
+  // Load Google Maps script dynamically
+  useEffect(() => {
+    if (order?.fulfillment_mode !== 'delivery') return;
+    if ((window as any).google && (window as any).google.maps) {
+      setGoogleMapsLoaded(true);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setGoogleMapsLoaded(true);
+    document.body.appendChild(script);
+  }, [order?.fulfillment_mode]);
+
+  // Initialize and update Google Maps markers & polylines
+  useEffect(() => {
+    if (!googleMapsLoaded || !order || order.fulfillment_mode !== 'delivery') return;
+    const google = (window as any).google;
+    if (!google || !google.maps) return;
+
+    const storeSettings = storeInfo?.settings || {};
+    const storeLat = Number(storeSettings.store_lat || 28.6139);
+    const storeLng = Number(storeSettings.store_lng || 77.2090);
+
+    const riderLat = Number(order.rider_lat || storeLat);
+    const riderLng = Number(order.rider_lng || storeLng);
+
+    // Mock customer location offset slightly from restaurant
+    const customerLat = storeLat + 0.006;
+    const customerLng = storeLng + 0.008;
+
+    if (!mapRef.current) {
+      const mapContainer = document.getElementById('live-google-map');
+      if (!mapContainer) return;
+
+      const map = new google.maps.Map(mapContainer, {
+        center: { lat: (storeLat + customerLat) / 2, lng: (storeLng + customerLng) / 2 },
+        zoom: 14,
+        disableDefaultUI: true,
+        zoomControl: false,
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }]
+          }
+        ]
+      });
+
+      // Restaurant Marker
+      new google.maps.Marker({
+        position: { lat: storeLat, lng: storeLng },
+        map: map,
+        title: 'Store',
+        label: {
+          text: '🏪',
+          fontSize: '18px'
+        }
+      });
+
+      // Customer Marker
+      new google.maps.Marker({
+        position: { lat: customerLat, lng: customerLng },
+        map: map,
+        title: 'Delivery Location',
+        label: {
+          text: '🏠',
+          fontSize: '18px'
+        }
+      });
+
+      // Rider Marker
+      const riderMarker = new google.maps.Marker({
+        position: { lat: riderLat, lng: riderLng },
+        map: map,
+        title: 'Delivery Rider',
+        label: {
+          text: '🏍️',
+          fontSize: '20px'
+        }
+      });
+      riderMarkerRef.current = riderMarker;
+
+      // Draw red tracking path route
+      const routeLine = new google.maps.Polyline({
+        path: [
+          { lat: storeLat, lng: storeLng },
+          { lat: riderLat, lng: riderLng },
+          { lat: customerLat, lng: customerLng },
+        ],
+        geodesic: true,
+        strokeColor: '#EF4444',
+        strokeOpacity: 0.9,
+        strokeWeight: 4,
+        map: map
+      });
+      routeLineRef.current = routeLine;
+
+      // Set boundary view
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(new google.maps.LatLng(storeLat, storeLng));
+      bounds.extend(new google.maps.LatLng(customerLat, customerLng));
+      map.fitBounds(bounds);
+
+      mapRef.current = map;
+    } else {
+      const riderMarker = riderMarkerRef.current;
+      const routeLine = routeLineRef.current;
+
+      if (riderMarker) {
+        riderMarker.setPosition({ lat: riderLat, lng: riderLng });
+      }
+
+      if (routeLine) {
+        routeLine.setPath([
+          { lat: storeLat, lng: storeLng },
+          { lat: riderLat, lng: riderLng },
+          { lat: customerLat, lng: customerLng },
+        ]);
+      }
+    }
+  }, [googleMapsLoaded, order?.rider_lat, order?.rider_lng, order?.fulfillment_mode, storeInfo]);
 
   const submitFeedback = async () => {
     if (!order || rating < 1) return;
@@ -115,12 +246,6 @@ const OrderTracking = () => {
     ? PREP_STEPS.length - 1
     : Math.max(0, PREP_STEPS.findIndex((s) => s.key === order.prep_status));
 
-  // Determine latitude/longitude of the store
-  const storeSettings = storeInfo?.settings || {};
-  const lat = Number(storeSettings.store_lat || 28.6139);
-  const lng = Number(storeSettings.store_lng || 77.2090);
-
-  // Setup assistance text link
   const supportWaUrl = `https://wa.me/919810189606?text=${encodeURIComponent(
     `Hi, I need assistance with my order ${order.order_number} placed at ${storeInfo?.name || 'the store'}.`
   )}`;
@@ -163,15 +288,12 @@ const OrderTracking = () => {
 
           {/* Progress Bar Track */}
           <div className="relative py-4">
-            {/* Background Line */}
             <div className="absolute top-[28px] left-[18px] right-[18px] h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full z-0" />
-            {/* Active Progress Fill Line */}
             <div 
               className="absolute top-[28px] left-[18px] h-1.5 bg-gradient-to-r from-primary to-orange-500 rounded-full z-0 transition-all duration-500" 
               style={{ width: `${(currentIdx / (PREP_STEPS.length - 1)) * 90}%` }}
             />
 
-            {/* Stepper Nodes */}
             <div className="relative flex justify-between z-10">
               {PREP_STEPS.map((s, i) => {
                 const isPassed = i < currentIdx;
@@ -200,56 +322,81 @@ const OrderTracking = () => {
           </div>
         </div>
 
-        {/* Live GPS Tracker / Map Widget */}
-        <div className="bg-white dark:bg-stone-900 border border-stone-200/60 dark:border-stone-800 rounded-2xl p-4 shadow-sm space-y-4">
-          <div className="relative overflow-hidden rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-950">
-            {/* Embedded Location Map iframe */}
-            <iframe
-              title="Store Location"
-              width="100%"
-              height="240"
-              className="border-none block"
-              src={`https://maps.google.com/maps?q=${lat},${lng}&t=&z=16&ie=UTF8&iwloc=&output=embed`}
-            />
-            {/* Status Radar Tag Overlay */}
-            <div className="absolute top-3 left-3 right-3 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm p-3 rounded-xl shadow-md border border-stone-200/30 dark:border-stone-800/30 flex items-center gap-3">
-              <div className="relative flex h-3 w-3 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black text-stone-900 dark:text-stone-100 truncate">
-                  {isCompleted ? 'Order delivered successfully!' :
-                   order.prep_status === 'received' ? 'Preparing fresh ingredients...' :
-                   order.prep_status === 'preparing' ? 'Food is currently cooking...' :
-                   order.prep_status === 'ready' ? 'Packed & waiting for serving...' : 'Waiter/Rider is on route...'}
-                </p>
-                <p className="text-[8px] text-muted-foreground uppercase tracking-widest mt-0.5">Live store GPS radar tracking</p>
+        {/* Live GPS Tracker / Map Widget (EXCLUSIVELY FOR DELIVERY ORDERS) */}
+        {order.fulfillment_mode === 'delivery' && (
+          <div className="bg-white dark:bg-stone-900 border border-stone-200/60 dark:border-stone-800 rounded-2xl p-4 shadow-sm space-y-4">
+            <div className="relative overflow-hidden rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-950">
+              {/* Dynamic Google Map Element */}
+              <div id="live-google-map" style={{ height: "260px", width: "100%" }} className="block z-0 bg-stone-100" />
+              
+              {/* Status Radar Tag Overlay */}
+              <div className="absolute top-3 left-3 right-3 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm p-3 rounded-xl shadow-md border border-stone-200/30 dark:border-stone-800/30 flex items-center gap-3 z-10">
+                <div className="relative flex h-3 w-3 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-black text-stone-900 dark:text-stone-100 truncate">
+                    {!order.rider_id ? 'Assigning a delivery partner...' :
+                     order.rider_status === 'pending' ? 'Waiting for delivery partner...' :
+                     order.rider_status === 'accepted' ? 'Rider heading to store...' :
+                     order.rider_status === 'picked_up' ? 'Rider picked up your food!' :
+                     'Order is out for delivery!'}
+                  </p>
+                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest mt-0.5">Live store GPS radar tracking</p>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* Action Helper Buttons */}
-          <div className="flex gap-2">
-            <a 
-              href={supportWaUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 h-10 rounded-xl bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-700 shadow-sm shadow-emerald-600/10 transition-colors"
-            >
-              <MessageCircle className="h-4 w-4" /> Store Support
-            </a>
-            {order.fulfillment_mode === 'dine_in' && !isCompleted && (
-              <button
-                onClick={handleCallWaiter}
-                disabled={callingWaiter}
-                className="flex-1 h-10 rounded-xl bg-orange-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-orange-600 shadow-sm shadow-orange-500/10 transition-colors"
+            
+            {/* Action Helper Buttons */}
+            <div className="flex gap-2">
+              <a 
+                href={supportWaUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 h-10 rounded-xl bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-700 shadow-sm shadow-emerald-600/10 transition-colors"
               >
-                {callingWaiter ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />} Call Waiter
-              </button>
-            )}
+                <MessageCircle className="h-4 w-4" /> Store Support
+              </a>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Action Callout Panel (FOR DINE-IN AND TAKEAWAY ONLY - MAP HIDDEN) */}
+        {order.fulfillment_mode !== 'delivery' && (
+          <div className="bg-white dark:bg-stone-900 border border-stone-200/60 dark:border-stone-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-base font-black text-stone-900 dark:text-stone-100">
+                {order.fulfillment_mode === 'dine_in' ? 'Dining at Table' : 'Store Takeaway'}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {order.fulfillment_mode === 'dine_in' 
+                  ? `Your order will be served directly at Table ${order.table_label || '—'}.`
+                  : 'Your pack is being packaged for takeaway. Pick up at the counter.'}
+              </p>
+            </div>
+            
+            <div className="flex gap-2">
+              <a 
+                href={supportWaUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 h-10 rounded-xl bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-700 shadow-sm shadow-emerald-600/10 transition-colors"
+              >
+                <MessageCircle className="h-4 w-4" /> Store Support
+              </a>
+              {order.fulfillment_mode === 'dine_in' && !isCompleted && (
+                <button
+                  onClick={handleCallWaiter}
+                  disabled={callingWaiter}
+                  className="flex-1 h-10 rounded-xl bg-orange-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-orange-600 shadow-sm shadow-orange-500/10 transition-colors"
+                >
+                  {callingWaiter ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />} Call Waiter
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Enjoy / Feedback Section */}
         {isCompleted && (
