@@ -25,6 +25,8 @@ const CustomerOrderDetail = () => {
   const [returns, setReturns] = useState<any[]>([]);
   const [refunds, setRefunds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -39,6 +41,47 @@ const CustomerOrderDetail = () => {
     setLoading(false);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+
+  useEffect(() => {
+    if (order?.tracking_number && store) {
+      const getTracking = async () => {
+        setTrackingLoading(true);
+        try {
+          const { data } = await supabase.functions.invoke('shiprocket-proxy', {
+            body: {
+              action: 'track',
+              store_id: store.id,
+              waybill: order.awb || order.tracking_number,
+            },
+          });
+          if (data) {
+            setTrackingData(data);
+            if (data.status) {
+              const mapShiprocketStatus = (statusStr: string): string | null => {
+                if (!statusStr) return null;
+                const s = statusStr.toLowerCase().trim();
+                if (s.includes("delivered")) return "delivered";
+                if (s.includes("cancel")) return "cancelled";
+                if (s.includes("rto") || s.includes("return")) return "returned";
+                if (s.includes("transit") || s.includes("shipped") || s.includes("out for delivery") || s.includes("pickup") || s.includes("awb") || s.includes("label")) {
+                  return "shipped";
+                }
+                return null;
+              };
+              const mapped = mapShiprocketStatus(data.status);
+              if (mapped && mapped !== order.status) {
+                load();
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Failed to get customer tracking:', err);
+        }
+        setTrackingLoading(false);
+      };
+      getTracking();
+    }
+  }, [order?.tracking_number, store]);
 
   const theme = useMemo(() => (store ? resolveTheme(getStoreThemeTokens(store), store) : null), [store]);
 
@@ -115,18 +158,79 @@ const CustomerOrderDetail = () => {
             {/* Tracking */}
             {(order.tracking_number || order.awb || order.courier || order.courier_provider) && (
               <Section title="Shipment Tracking" icon={Truck}>
-                <div className="text-sm space-y-1.5">
-                  {(order.courier || order.courier_provider) && <p><span className="opacity-60">Courier:</span> <span className="font-medium">{order.courier || order.courier_provider}</span></p>}
-                  {(order.awb || order.tracking_number) && (
-                    <p className="flex items-center gap-2"><span className="opacity-60">Tracking:</span>
-                      <span className="font-mono">{order.awb || order.tracking_number}</span>
-                      <button onClick={() => copy(order.awb || order.tracking_number)} className="opacity-50 hover:opacity-100"><Copy className="h-3 w-3" /></button>
-                    </p>
-                  )}
-                  {order.delivered_at && <p><span className="opacity-60">Delivered:</span> {format(new Date(order.delivered_at), 'dd MMM yyyy')}</p>}
-                  <div className="mt-3 h-32 rounded-md flex items-center justify-center bg-muted/40 border border-dashed">
-                    <p className="text-xs opacity-50 flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> Live map coming soon</p>
+                <div className="text-sm space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 border-b border-dashed" style={{ borderColor: colors.secondary }}>
+                    {(order.courier || order.courier_provider) && (
+                      <p>
+                        <span className="opacity-60">Courier:</span>{" "}
+                        <span className="font-semibold">{order.courier || order.courier_provider}</span>
+                      </p>
+                    )}
+                    {(order.awb || order.tracking_number) && (
+                      <p className="flex items-center gap-2">
+                        <span className="opacity-60">Tracking:</span>
+                        <span className="font-mono font-semibold">{order.awb || order.tracking_number}</span>
+                        <button onClick={() => copy(order.awb || order.tracking_number)} className="opacity-50 hover:opacity-100">
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </p>
+                    )}
                   </div>
+
+                  {trackingLoading && (
+                    <div className="flex items-center justify-center py-4 text-xs opacity-60">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading tracking details...
+                    </div>
+                  )}
+
+                  {!trackingLoading && trackingData && (
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="opacity-60">Current Status:</span>
+                        <span className="px-2 py-0.5 rounded text-xs font-semibold text-white uppercase" style={{ backgroundColor: statusColors[order.status] || colors.primary }}>
+                          {trackingData.status}
+                        </span>
+                      </div>
+                      
+                      {trackingData.location && (
+                        <div className="flex justify-between">
+                          <span className="opacity-60">Location:</span>
+                          <span className="font-medium">{trackingData.location}</span>
+                        </div>
+                      )}
+
+                      {trackingData.scans && trackingData.scans.length > 0 && (
+                        <div className="pt-2">
+                          <p className="text-xs font-semibold opacity-60 mb-2">Transit History</p>
+                          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            {trackingData.scans.map((scan: any, i: number) => (
+                              <div key={i} className="text-xs p-2 rounded-md border flex flex-col gap-0.5 bg-muted/30" style={{ borderColor: colors.secondary }}>
+                                <div className="flex justify-between font-semibold">
+                                  <span>{scan?.ScanDetail?.Scan || 'Status Update'}</span>
+                                  {scan?.ScanDetail?.ScanDateTime && (
+                                    <span className="opacity-60 font-mono text-[10px]">
+                                      {format(new Date(scan.ScanDetail.ScanDateTime), 'dd MMM, hh:mm a')}
+                                    </span>
+                                  )}
+                                </div>
+                                {scan?.ScanDetail?.ScannedLocation && (
+                                  <p className="opacity-70 flex items-center gap-1 text-[11px] mt-0.5">
+                                    <MapPin className="h-3 w-3" /> {scan.ScanDetail.ScannedLocation}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!trackingLoading && !trackingData && (
+                    <div className="rounded-md flex items-center justify-center bg-muted/40 border border-dashed py-6">
+                      <p className="text-xs opacity-50 flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> No tracking details available yet</p>
+                    </div>
+                  )}
                 </div>
               </Section>
             )}

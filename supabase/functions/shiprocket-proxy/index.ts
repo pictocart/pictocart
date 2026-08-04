@@ -70,9 +70,9 @@ serve(async (req) => {
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Only the public storefront pincode check (serviceability) is allowed anonymously.
-    // create-shipment and track expose / consume the seller's Shiprocket account and MUST be authenticated.
-    if (action !== "serviceability" && action !== "check-serviceability") {
+    // Only the public storefront pincode check (serviceability) and tracking check are allowed anonymously.
+    // create-shipment exposes the seller's Shiprocket account and MUST be authenticated.
+    if (action !== "serviceability" && action !== "check-serviceability" && action !== "track") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
       const userClient = createClient(
@@ -216,8 +216,62 @@ serve(async (req) => {
       const r = await fetch(`${BASE}/courier/track/awb/${body.waybill}`, { headers });
       const j = await r.json();
       const t0 = j?.tracking_data;
+      const srStatus = t0?.shipment_status || "Unknown";
+
+      // Auto-update order status in the database if there is a status progression
+      try {
+        const { data: orderRow } = await admin
+          .from("orders")
+          .select("id, status, store_id")
+          .eq("tracking_number", body.waybill)
+          .maybeSingle();
+
+        if (orderRow) {
+          const mapShiprocketStatus = (statusStr: string): string | null => {
+            if (!statusStr) return null;
+            const s = statusStr.toLowerCase().trim();
+            if (s.includes("delivered")) return "delivered";
+            if (s.includes("cancel")) return "cancelled";
+            if (s.includes("rto") || s.includes("return")) return "returned";
+            if (s.includes("transit") || s.includes("shipped") || s.includes("out for delivery") || s.includes("pickup") || s.includes("awb") || s.includes("label")) {
+              return "shipped";
+            }
+            return null;
+          };
+
+          const mappedStatus = mapShiprocketStatus(srStatus);
+          if (mappedStatus && mappedStatus !== orderRow.status) {
+            const updateFields: any = { status: mappedStatus };
+            if (mappedStatus === "delivered") {
+              updateFields.delivered_at = new Date().toISOString();
+              updateFields.payment_status = "paid";
+            }
+            await admin
+              .from("orders")
+              .update(updateFields)
+              .eq("id", orderRow.id);
+            
+            // Send email notification for status updates
+            const projectId = Deno.env.get("SUPABASE_URL")?.split("//")?.[1]?.split(".")?.[0];
+            if (projectId && (mappedStatus === "shipped" || mappedStatus === "delivered")) {
+              const notificationType = mappedStatus === "shipped" ? "order_shipped" : "order_delivered";
+              await fetch(`https://${projectId}.supabase.co/functions/v1/send-order-notification`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                },
+                body: JSON.stringify({ type: notificationType, order_id: orderRow.id, store_id: orderRow.store_id }),
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch (dbErr) {
+        console.error("Error auto-updating order status from track action:", dbErr);
+      }
+
       return json({
-        status: t0?.shipment_status || "Unknown",
+        status: srStatus,
         location: t0?.shipment_track?.[0]?.current_status,
         scans: t0?.shipment_track_activities || [],
         raw: j,

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOrder, useOrders, ORDER_STATUSES, PAYMENT_STATUSES, type OrderStatus } from '@/hooks/useOrders';
@@ -221,11 +221,23 @@ const OrderDetail = () => {
       });
       if (error) throw error;
       setTrackingData(data);
+      if (data?.status && data.status !== order.status) {
+        refetch();
+      }
     } catch {
       toast.error('Failed to fetch tracking info');
     }
     setTrackingLoading(false);
   };
+
+  const [hasAutoSynced, setHasAutoSynced] = useState(false);
+
+  useEffect(() => {
+    if (order?.tracking_number && store && !hasAutoSynced) {
+      setHasAutoSynced(true);
+      handleTrack();
+    }
+  }, [order?.tracking_number, store, hasAutoSynced]);
   const confirmCollectPayment = async () => {
     setCollecting(true);
     const { error } = await supabase
