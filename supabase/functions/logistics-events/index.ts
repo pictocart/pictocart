@@ -19,11 +19,20 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const payload = await req.json();
+    let payload: any = {};
+    try {
+      if (req.method === "GET") {
+        return json({ success: true, message: "Webhook endpoint is online (GET)" });
+      }
+      payload = await req.json();
+    } catch (_) {
+      return json({ success: true, message: "Webhook endpoint is online (Empty Body)" });
+    }
+
     const { awb, current_status, etd, scans, courier_name } = payload;
     
     if (!awb) {
-      return json({ error: "awb is required in payload" }, 400);
+      return json({ success: true, message: "Webhook validation successful (No AWB)" });
     }
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -36,7 +45,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (findError || !order) {
-      return json({ error: "Order not found with AWB: " + awb }, 404);
+      return json({ success: true, message: "Webhook verified, but no order matches AWB: " + awb });
     }
 
     const mapShiprocketStatus = (statusStr: string): string | null => {
