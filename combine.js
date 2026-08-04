@@ -53,19 +53,21 @@ rl.question(`Enter production database password [Default: ${defaultPass}]: `, (p
     // 4. Configure .env for production
     console.log("\nConfiguring production environment credentials in .env...");
     let envContent = fs.readFileSync('.env', 'utf-8');
-    
-    // Comment staging
-    envContent = envContent.replace(/(^|\n)(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL)\s*=/g, '$1# $2=');
-    // Uncomment production
-    envContent = envContent.replace(/(^|\n)#\s*(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY)\s*=\s*"([^"]+)"/g, (match, p1, p2, p3) => {
-      // Ensure we only uncomment production credentials (containing wuqznk)
-      if (p3.includes('wuqznk') || p2 === 'SUPABASE_SERVICE_ROLE_KEY') {
-        return `${p1}${p2}="${p3}"`;
-      }
-      return match;
-    });
-    fs.writeFileSync('.env', envContent);
-    console.log("✅ .env file configured for production.");
+    const splitToken = '# OLD SUPABASE CREDENTIALS';
+    const parts = envContent.split(splitToken);
+    if (parts.length === 2) {
+      let stagingBlock = parts[0];
+      let prodBlock = parts[1];
+      // Comment staging
+      stagingBlock = stagingBlock.replace(/(^|\n)(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL)\s*=/g, '$1# $2=');
+      // Uncomment production
+      prodBlock = prodBlock.replace(/(^|\n)#\s*(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY)\s*=/g, '$1$2=');
+      envContent = stagingBlock + splitToken + prodBlock;
+      fs.writeFileSync('.env', envContent);
+      console.log("✅ .env file configured for production.");
+    } else {
+      throw new Error("Could not find '# OLD SUPABASE CREDENTIALS' in .env");
+    }
 
     // 5. Connect/Link to production project ref
     console.log("\nLinking CLI workspace to production Supabase project...");
@@ -115,22 +117,20 @@ rl.question(`Enter production database password [Default: ${defaultPass}]: `, (p
     // 9. Revert .env to staging credentials for dev
     console.log("\nReverting .env credentials back to staging...");
     let envRevert = fs.readFileSync('.env', 'utf-8');
-    // Comment production
-    envRevert = envRevert.replace(/(^|\n)(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY)\s*=\s*"([^"]+)"/g, (match, p1, p2, p3) => {
-      if (p3.includes('wuqznk') || p2 === 'SUPABASE_SERVICE_ROLE_KEY') {
-        return `${p1}# ${p2}="${p3}"`;
-      }
-      return match;
-    });
-    // Uncomment staging
-    envRevert = envRevert.replace(/(^|\n)#\s*(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL)\s*=\s*"([^"]+)"/g, (match, p1, p2, p3) => {
-      if (!p3.includes('wuqznk')) {
-        return `${p1}${p2}="${p3}"`;
-      }
-      return match;
-    });
-    fs.writeFileSync('.env', envRevert);
-    console.log("✅ .env file reverted back to staging credentials.");
+    const partsRevert = envRevert.split(splitToken);
+    if (partsRevert.length === 2) {
+      let stagingBlock = partsRevert[0];
+      let prodBlock = partsRevert[1];
+      // Uncomment staging
+      stagingBlock = stagingBlock.replace(/(^|\n)#\s*(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL)\s*=/g, '$1$2=');
+      // Comment production
+      prodBlock = prodBlock.replace(/(^|\n)(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY)\s*=/g, '$1# $2=');
+      envRevert = stagingBlock + splitToken + prodBlock;
+      fs.writeFileSync('.env', envRevert);
+      console.log("✅ .env file reverted back to staging credentials.");
+    } else {
+      console.warn("⚠️ Warning: Could not find '# OLD SUPABASE CREDENTIALS' in .env during revert");
+    }
 
     // 10. Return to dev branch
     console.log("\nSwitching back to dev branch...");
