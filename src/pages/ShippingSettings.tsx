@@ -1,3 +1,4 @@
+// main deploy test
 import { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { supabase } from '@/integrations/supabase/client';
