@@ -39,6 +39,7 @@ const ShippingSettings = () => {
   const [guideOpen, setGuideOpen] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [slideDir, setSlideDir] = useState<'left' | 'right'>('right');
+  const [webhookConfirmed, setWebhookConfirmed] = useState(false);
 
   // -------- Load pickup details --------
   useEffect(() => {
@@ -72,6 +73,7 @@ const ShippingSettings = () => {
           if (ship.shiprocket_password) password = ship.shiprocket_password;
           if (ship.shiprocket_pickup_name) pickupName = ship.shiprocket_pickup_name;
           if (ship.same_day_cutoff) cutoff = ship.same_day_cutoff;
+          if (ship.webhook_configured) setWebhookConfirmed(true);
         }
       }
 
@@ -118,6 +120,12 @@ const ShippingSettings = () => {
         .eq('id', store.id)
         .maybeSingle();
 
+      if (!webhookConfirmed) {
+        toast.error('Please configure and confirm the real-time tracking webhook to complete the setup.');
+        setSaving(false);
+        return;
+      }
+
       const baseSettings = (currentStore?.settings as any) || {};
       const updatedSettings = {
         ...baseSettings,
@@ -128,11 +136,12 @@ const ShippingSettings = () => {
         cutoff_time: cutoffTime,
         shipping: {
           ...(baseSettings.shipping || {}),
-          configured: !!(srEmail.trim() && srPassword.trim() && pickup.pincode),
+          configured: !!(srEmail.trim() && srPassword.trim() && pickup.pincode && webhookConfirmed),
           pickup: pickup,
           shiprocket_pickup_name: srPickupName.trim(),
           same_day_cutoff: cutoffTime,
           preferred_courier: 'shiprocket',
+          webhook_configured: true,
         }
       };
 
@@ -660,6 +669,18 @@ const ShippingSettings = () => {
             <p className="text-muted-foreground mt-2 italic text-[11px]">
               Note: The Webhook URL complies with Shiprocket's security guidelines and naming rules (contains no restricted words).
             </p>
+          </div>
+          <div className="flex items-start gap-2.5 pt-3 border-t">
+            <input
+              type="checkbox"
+              id="webhook-confirm"
+              checked={webhookConfirmed}
+              onChange={(e) => setWebhookConfirmed(e.target.checked)}
+              className="h-4 w-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+            />
+            <Label htmlFor="webhook-confirm" className="text-xs font-semibold leading-normal cursor-pointer select-none">
+              I have successfully added the Webhook Callback URL to my Shiprocket account under Settings &rarr; API &rarr; Webhooks.
+            </Label>
           </div>
         </CardContent>
       </Card>
