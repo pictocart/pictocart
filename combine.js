@@ -124,7 +124,7 @@ rl.question(`Enter production database password [Default: ${defaultPass}]: `, (p
     });
     // Uncomment staging
     envRevert = envRevert.replace(/(^|\n)#\s*(SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL|VITE_SUPABASE_PROJECT_ID|VITE_SUPABASE_PUBLISHABLE_KEY|VITE_SUPABASE_URL)\s*=\s*"([^"]+)"/g, (match, p1, p2, p3) => {
-      if (p3.includes('ylvvvcq')) {
+      if (!p3.includes('wuqznk')) {
         return `${p1}${p2}="${p3}"`;
       }
       return match;
