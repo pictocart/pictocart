@@ -1984,7 +1984,7 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
             <div>
               <Label className="text-[11px] text-muted-foreground">Viewing Option / Layout</Label>
               <Select 
-                value={merged.style || 'grid'} 
+                value={merged.style === 'editorial_grid' || !merged.style ? 'grid' : merged.style} 
                 onValueChange={(val) => onUpdate(idx, "style", val)}
               >
                 <SelectTrigger className="h-8 text-xs bg-background">

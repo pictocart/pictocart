@@ -3519,7 +3519,7 @@ function JournalList({ p, dna, storeSlug }: any) {
     );
   }
 
-  const style = p.style || "grid";
+  const style = p.style === 'editorial_grid' || !p.style ? 'grid' : p.style;
 
   if (style === "list") {
     return (

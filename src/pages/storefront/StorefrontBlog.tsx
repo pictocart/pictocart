@@ -23,7 +23,7 @@ const StorefrontBlog = () => {
   const journalListSection = journalSections.find((s: any) => s.type === 'journal_list');
   const journalProps = journalListSection?.props || {};
 
-  const style = journalProps.style || 'grid';
+  const style = journalProps.style === 'editorial_grid' || !journalProps.style ? 'grid' : journalProps.style;
   const limit = journalProps.limit || 6;
   const displayedPosts = posts.slice(0, limit);
 
