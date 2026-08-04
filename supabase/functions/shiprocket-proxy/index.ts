@@ -189,7 +189,27 @@ serve(async (req) => {
       });
       const j = await r.json();
       if (!r.ok || !j.shipment_id) return json({ error: j.message || "Shiprocket create failed", raw: j }, 400);
-      return json({ waybill: j.awb_code || String(j.shipment_id), shipment_id: j.shipment_id, raw: j });
+
+      // Automatically assign courier & generate AWB to move the order out of "NEW" state
+      const awbR = await fetch(`${BASE}/courier/assign/awb`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          shipment_id: j.shipment_id,
+        }),
+      });
+      const jAwb = await awbR.json();
+      const awbCode = jAwb?.response?.data?.awb_code || jAwb?.awb_code || jAwb?.response?.awb_code;
+
+      if (!awbR.ok || !awbCode) {
+        return json({
+          error: jAwb?.message || jAwb?.response?.data?.message || "Failed to auto-assign AWB courier. Please check your Shiprocket wallet balance or courier serviceability.",
+          shipment_id: j.shipment_id,
+          raw: jAwb,
+        }, 400);
+      }
+
+      return json({ waybill: awbCode, shipment_id: j.shipment_id, raw: { create: j, awb: jAwb } });
     }
 
     if (action === "track") {
