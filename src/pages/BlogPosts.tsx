@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import PremiumGate from '@/components/PremiumGate';
 
 const BlogPosts = () => {
@@ -63,14 +69,23 @@ const BlogPosts = () => {
                 <Badge variant={post.is_published ? 'default' : 'secondary'}>
                   {post.is_published ? 'Published' : 'Draft'}
                 </Badge>
-                <div className="flex gap-1">
-                  <Link to={`/blog-posts/${post.id}`}>
-                    <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
-                  </Link>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(post.id)} className="text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Manage
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to={`/blog-posts/${post.id}`} className="flex items-center w-full">
+                        <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDelete(post.id)} className="text-destructive">
+                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardContent>
             </Card>
           ))}

@@ -3398,7 +3398,7 @@ function JournalStrip({ p, dna, storeSlug }: any) {
     displayTitle = "Blogs";
   }
 
-  const blogLink = storeSlug ? `/store/${storeSlug}/journal` : "#";
+  const blogLink = storeSlug ? `/store/${storeSlug}/blog` : "#";
   const headingFont = { fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 } as React.CSSProperties;
 
   const productCols = p.product_cols ?? 3;
@@ -3430,7 +3430,7 @@ function JournalStrip({ p, dna, storeSlug }: any) {
         {posts.map((post) => (
           <Link 
             key={post.id} 
-            to={storeSlug ? `/store/${storeSlug}/journal/${post.slug}` : "#"} 
+            to={storeSlug ? `/store/${storeSlug}/blog/${post.slug}` : "#"} 
             className={`group flex flex-col overflow-hidden border ${p.scroll_horizontal ? 'snap-start shrink-0' : ''}`} 
             style={{ 
               background: dna.palette?.surface, 
@@ -3472,13 +3472,175 @@ function JournalStrip({ p, dna, storeSlug }: any) {
 }
 
 function JournalList({ p, dna, storeSlug }: any) {
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!storeSlug) {
+          setLoading(false);
+          return;
+        }
+        const { data: store } = await supabase.from("stores").select("id").eq("slug", storeSlug).maybeSingle();
+        if (!store?.id) {
+          setLoading(false);
+          return;
+        }
+        const { data } = await supabase
+          .from("blog_posts")
+          .select("*")
+          .eq("store_id", store.id)
+          .eq("is_published", true)
+          .order("created_at", { ascending: false })
+          .limit(p.limit || 6);
+        setPosts(data || []);
+      } catch (e) {
+        console.warn("Failed to fetch blog posts:", e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [storeSlug, p.limit]);
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-12 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (posts.length === 0) {
+    return (
+      <section className="max-w-5xl mx-auto px-6 py-16 text-center text-muted-foreground opacity-60">
+        No blog posts published yet.
+      </section>
+    );
+  }
+
+  const style = p.style || "grid";
+
+  if (style === "list") {
+    return (
+      <section className="max-w-5xl mx-auto px-6 py-12 space-y-8">
+        {posts.map((post) => (
+          <Link
+            key={post.id}
+            to={storeSlug ? `/store/${storeSlug}/blog/${post.slug}` : "#"}
+            className="group flex flex-col md:flex-row gap-6 p-6 border transition-shadow hover:shadow-md"
+            style={{ 
+              background: dna.palette?.surface, 
+              borderColor: dna.palette?.border, 
+              borderRadius: "var(--r)" 
+            }}
+          >
+            {(post.cover_image || post.thumbnail_image) && (
+              <div className="w-full md:w-64 aspect-[16/10] shrink-0 overflow-hidden bg-muted/10 rounded-md">
+                <img 
+                  src={post.cover_image || post.thumbnail_image} 
+                  alt={post.title} 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                />
+              </div>
+            )}
+            <div className="flex-1 flex flex-col justify-between py-1">
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: dna.palette?.accent }}>
+                  {new Date(post.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
+                <h3 className="text-xl font-bold group-hover:text-primary transition-colors" style={{ color: dna.palette?.fg, fontFamily: "var(--hf)" }}>
+                  {post.title}
+                </h3>
+                {post.seo_description && (
+                  <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed" style={{ color: dna.palette?.muted }}>
+                    {post.seo_description}
+                  </p>
+                )}
+              </div>
+              <div className="mt-4 text-xs font-semibold inline-flex items-center gap-1 group-hover:underline" style={{ color: dna.palette?.accent }}>
+                Read Article <span className="transition-transform group-hover:translate-x-1">→</span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </section>
+    );
+  }
+
+  if (style === "minimal") {
+    return (
+      <section className="max-w-5xl mx-auto px-6 py-12 space-y-6">
+        {posts.map((post) => (
+          <Link
+            key={post.id}
+            to={storeSlug ? `/store/${storeSlug}/blog/${post.slug}` : "#"}
+            className="group block p-5 border-b hover:bg-muted/10 transition-colors"
+            style={{ borderColor: dna.palette?.border }}
+          >
+            <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider font-semibold mb-1" style={{ color: dna.palette?.accent }}>
+              <span>{new Date(post.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              <span>•</span>
+              <span>Article</span>
+            </div>
+            <h3 className="text-lg font-bold group-hover:text-primary transition-colors" style={{ color: dna.palette?.fg, fontFamily: "var(--hf)" }}>
+              {post.title}
+            </h3>
+            {post.seo_description && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-1" style={{ color: dna.palette?.muted }}>
+                {post.seo_description}
+              </p>
+            )}
+          </Link>
+        ))}
+      </section>
+    );
+  }
+
+  // Default: grid (Tiles)
   return (
     <section className="max-w-5xl mx-auto px-6 py-12">
-      <div className="grid md:grid-cols-2 gap-6">
-        {Array.from({ length: p.limit || 6 }).map((_, i) => (
-          <Link key={i} to={storeSlug ? `/store/${storeSlug}/journal/post-${i}` : "#"} className="block p-6 border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)" }}>
-            <div className="text-xs uppercase tracking-wider mb-2" style={{ color: dna.palette?.accent }}>Story</div>
-            <div className="text-lg" style={{ fontFamily: "var(--hf)" }}>Journal post placeholder</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {posts.map((post) => (
+          <Link
+            key={post.id}
+            to={storeSlug ? `/store/${storeSlug}/blog/${post.slug}` : "#"}
+            className="group flex flex-col overflow-hidden border transition-shadow hover:shadow-md"
+            style={{ 
+              background: dna.palette?.surface, 
+              borderColor: dna.palette?.border, 
+              borderRadius: "var(--r)" 
+            }}
+          >
+            <div className="aspect-[16/10] overflow-hidden bg-muted/10">
+              {post.cover_image ? (
+                <img 
+                  src={post.cover_image} 
+                  alt={post.title} 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No cover image</div>
+              )}
+            </div>
+            <div className="p-5 flex-1 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: dna.palette?.accent }}>
+                  {new Date(post.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
+                <h3 className="text-base font-bold line-clamp-2 leading-snug group-hover:text-primary transition-colors" style={{ color: dna.palette?.fg, fontFamily: "var(--hf)" }}>
+                  {post.title}
+                </h3>
+                {post.seo_description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed" style={{ color: dna.palette?.muted }}>
+                    {post.seo_description}
+                  </p>
+                )}
+              </div>
+              <div className="mt-4 text-xs font-semibold inline-flex items-center gap-1 group-hover:underline" style={{ color: dna.palette?.accent }}>
+                Read Article <span className="transition-transform group-hover:translate-x-1">→</span>
+              </div>
+            </div>
           </Link>
         ))}
       </div>

@@ -1974,6 +1974,55 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
         </div>
       )}
 
+      {section?.type === "journal_list" && (
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/40 animate-fade-in">
+          <Label className="text-xs font-semibold flex items-center gap-1.5">
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" /> Blog List Styling
+          </Label>
+          
+          <div className="space-y-3">
+            <div>
+              <Label className="text-[11px] text-muted-foreground">Viewing Option / Layout</Label>
+              <Select 
+                value={merged.style || 'grid'} 
+                onValueChange={(val) => onUpdate(idx, "style", val)}
+              >
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="grid">Grid / Tiles</SelectItem>
+                  <SelectItem value="list">List Row</SelectItem>
+                  <SelectItem value="minimal">Minimal Text list</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-[11px] text-muted-foreground">Posts Limit</Label>
+                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.limit || 6} posts</span>
+              </div>
+              <Select 
+                value={String(merged.limit || 6)} 
+                onValueChange={(val) => onUpdate(idx, "limit", Number(val))}
+              >
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 Posts</SelectItem>
+                  <SelectItem value="4">4 Posts</SelectItem>
+                  <SelectItem value="6">6 Posts</SelectItem>
+                  <SelectItem value="8">8 Posts</SelectItem>
+                  <SelectItem value="12">12 Posts</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+
       {section?.type === "category_grid" && (
         <div className="space-y-3 p-3 border rounded-lg bg-muted/40 animate-fade-in">
           <Label className="text-xs font-semibold flex items-center gap-1.5">
