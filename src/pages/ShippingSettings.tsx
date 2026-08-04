@@ -662,7 +662,6 @@ const ShippingSettings = () => {
               <li>Login to your Shiprocket Dashboard.</li>
               <li>Go to <strong>Settings &rarr; API &rarr; Webhooks</strong>.</li>
               <li>Click <strong>Add New Webhook</strong>.</li>
-              <li>Select events: <strong>Status Update</strong>, <strong>RTO Initiated</strong>, <strong>RTO Delivered</strong>.</li>
               <li>Paste the Callback URL copied above into the <strong>URL</strong> field.</li>
               <li>Set <strong>Auth Token Type</strong> to <strong>x-api-key</strong>.</li>
               <li>Set <strong>Token</strong> to any dummy value (e.g. <span className="font-mono bg-muted px-1 py-0.5 rounded">123456</span> or <span className="font-mono bg-muted px-1 py-0.5 rounded">anykey</span>) — our webhook receiver is open-access and will ignore this field, but Shiprocket requires a value to save.</li>
