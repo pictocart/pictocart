@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { X, Loader2, Eye, EyeOff, Mail, ShieldCheck, ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -20,6 +20,7 @@ export default function CustomerAuthModal({
   borderColor = '#e5e7eb', textColor = '#111827',
   borderRadius = 20, onClose, redirectTo,
 }: Props) {
+  const navigate = useNavigate();
   const {
     user,
     signInWithEmail,
