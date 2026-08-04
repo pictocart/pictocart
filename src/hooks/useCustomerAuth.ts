@@ -17,9 +17,25 @@ export const useCustomerAuth = (storeSlug: string) => {
     return isCustomer && (metaSlug === storeSlug || email.endsWith(`@${storeSlug}.${TENANT_DOMAIN}`));
   };
 
-  const scopeCustomerUser = (candidate: User | null) => (
-    isStoreCustomer(candidate) ? { ...candidate, user_metadata: candidate?.user_metadata || {} } as User : null
-  );
+  const cleanCustomerEmail = (email: string | null | undefined): string => {
+    if (!email) return '';
+    if (email.includes('.customers.pictocart.in')) {
+      const parts = email.split('@');
+      if (parts.length > 0) {
+        return parts[0].replace('-at-', '@');
+      }
+    }
+    return email;
+  };
+
+  const scopeCustomerUser = (candidate: User | null) => {
+    if (!isStoreCustomer(candidate)) return null;
+    return {
+      ...candidate,
+      email: cleanCustomerEmail(candidate?.email),
+      user_metadata: candidate?.user_metadata || {}
+    } as User;
+  };
 
   useEffect(() => {
     let active = true;
