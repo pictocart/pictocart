@@ -1,6 +1,6 @@
 // logistics-events Edge Function
 // Handles real-time shipping webhooks from Shiprocket.
-// Implements secure callback validation and updates order status dynamically.
+// Redeployed with verify_jwt = false for open access.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
