@@ -160,7 +160,14 @@ export default function WaiterDashboard() {
         .eq('waiter_status', 'pending')
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      
+      const filtered = (data ?? []).filter((order: any) => {
+        const isOnline = ['razorpay', 'upi', 'card'].includes(order.payment_method);
+        const isUnpaid = order.payment_status === 'pending';
+        return !(isOnline && isUnpaid);
+      });
+      
+      return filtered;
     },
     enabled: !!storeId,
   });

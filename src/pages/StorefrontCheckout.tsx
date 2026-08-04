@@ -777,6 +777,7 @@ const StorefrontCheckout = () => {
           name: form.name,
           email: form.email,
           contact: form.phone,
+          ...(form.paymentMethod === 'upi' ? { method: 'upi' } : {}),
         },
         theme: { color: colors.primary },
         handler: async (response: any) => {
@@ -832,13 +833,24 @@ const StorefrontCheckout = () => {
             }
             setOrderPlaced({ number: order.order_number, trackingCode: order.guest_tracking_code });
           } else {
-            toast.error('Payment verification failed. Contact support.');
+            const errRes = await verifyRes.json().catch(() => ({}));
+            toast.error(errRes.error || 'Payment verification failed.');
+            try {
+              await (supabase as any).rpc('cancel_unpaid_order', { _order_id: order.id });
+            } catch (err) {
+              console.warn('Failed to cancel unpaid order:', err);
+            }
           }
           setPlacing(false);
         },
         modal: {
-          ondismiss: () => {
-            toast.info('Payment cancelled. Your order is saved — you can pay later.');
+          ondismiss: async () => {
+            toast.info('Payment cancelled.');
+            try {
+              await (supabase as any).rpc('cancel_unpaid_order', { _order_id: order.id });
+            } catch (err) {
+              console.warn('Failed to cancel unpaid order:', err);
+            }
             setPlacing(false);
           },
         },

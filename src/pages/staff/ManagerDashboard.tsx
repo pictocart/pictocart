@@ -13,6 +13,7 @@ import {
   Loader2, Check, X, Edit3, Volume2, VolumeX, Bell, AlertTriangle, Utensils, LogOut, Plus, Minus, Trash2, Printer, CheckCircle, PlusCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ManagerDashboard() {
   const { slug } = useParams<{ slug: string }>();
@@ -172,7 +173,14 @@ export default function ManagerDashboard() {
         .eq('waiter_status', 'pending')
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      
+      const filtered = (data ?? []).filter((order: any) => {
+        const isOnline = ['razorpay', 'upi', 'card'].includes(order.payment_method);
+        const isUnpaid = order.payment_status === 'pending';
+        return !(isOnline && isUnpaid);
+      });
+      
+      return filtered;
     },
     enabled: !!storeId,
   });
@@ -211,7 +219,7 @@ export default function ManagerDashboard() {
   const { data: riders = [] } = useQuery({
     queryKey: ['manager-riders', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('store_staff')
         .select('user_id, name')
         .eq('store_id', storeId)
@@ -276,7 +284,7 @@ export default function ManagerDashboard() {
 
   const assignRiderMutation = useMutation({
     mutationFn: async ({ orderId, riderId }: { orderId: string; riderId: string | null }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('orders')
         .update({ 
           rider_id: riderId || null,

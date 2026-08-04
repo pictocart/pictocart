@@ -53,9 +53,8 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims?.sub) {
+    const { data: userData, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userData?.user?.id) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -100,11 +99,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log("verify-razorpay-payment payload:", {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      order_id,
+      store_id,
+    });
+
     const { data: secrets } = await admin
       .from("store_secrets")
       .select("razorpay_key_secret")
       .eq("store_id", store_id)
       .maybeSingle();
+
+    console.log("Fetched secret:", secrets?.razorpay_key_secret ? `Exists (length ${secrets.razorpay_key_secret.length})` : "Does not exist");
 
     if (!secrets?.razorpay_key_secret) {
       return new Response(
@@ -120,6 +129,8 @@ Deno.serve(async (req) => {
       secrets.razorpay_key_secret
     );
 
+    console.log("Signature validation result:", isValid);
+
     if (!isValid) {
       return new Response(
         JSON.stringify({ error: "Payment verification failed — invalid signature" }),
@@ -132,7 +143,7 @@ Deno.serve(async (req) => {
       .update({
         payment_status: "paid",
         payment_method: "razorpay",
-        tracking_number: razorpay_payment_id,
+        razorpay_payment_id: razorpay_payment_id,
         status: "confirmed",
       })
       .eq("id", order_id)
@@ -150,7 +161,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, payment_id: razorpay_payment_id }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error:", err);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),

@@ -46,7 +46,14 @@ export const useOrders = () => {
         .eq('store_id', store.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as Order[];
+      
+      const filtered = (data as Order[]).filter((order: any) => {
+        const isOnline = ['razorpay', 'upi', 'card'].includes(order.payment_method);
+        const isUnpaid = order.payment_status === 'pending';
+        return !(isOnline && isUnpaid);
+      });
+      
+      return filtered;
     },
     enabled: !!store?.id,
   });
