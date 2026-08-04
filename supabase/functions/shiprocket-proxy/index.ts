@@ -89,7 +89,19 @@ serve(async (req) => {
           .select("user_id")
           .eq("id", store_id)
           .maybeSingle();
-        if (!storeOwn || storeOwn.user_id !== userData.user.id) return json({ error: "Forbidden" }, 403);
+        if (!storeOwn) return json({ error: "Store not found" }, 404);
+
+        let isAllowed = storeOwn.user_id === userData.user.id;
+        if (!isAllowed) {
+          const { data: staff } = await admin
+            .from("store_staff")
+            .select("id")
+            .eq("store_id", store_id)
+            .eq("user_id", userData.user.id)
+            .maybeSingle();
+          if (staff) isAllowed = true;
+        }
+        if (!isAllowed) return json({ error: "Forbidden" }, 403);
       }
     }
 
