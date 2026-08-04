@@ -55,6 +55,8 @@ project_id = "qxeyndsvkfsmkilkzmuc"
     verify_jwt = false
   [functions.theme-action]
     verify_jwt = false
+  [functions.logistics-events]
+    verify_jwt = false
 
 [auth]
 site_url = "https://pictocart-u7pf.vercel.app/"
