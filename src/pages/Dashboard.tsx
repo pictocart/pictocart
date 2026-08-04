@@ -77,7 +77,7 @@ const Dashboard = () => {
       { label: 'Category selected', done: !!store.category, link: '/customise' },
       { label: 'Logo uploaded', done: !!store.logo_url, link: '/customise' },
       { label: 'First product added', done: products.length > 0, link: '/products/new' },
-      { label: 'Set up shipping', done: !!settings.shipping_enabled, link: '/settings/shipping' },
+      { label: 'Set up shipping', done: !!(settings.shipping_enabled || settings.shiprocket_email || settings.shipping?.configured), link: '/settings/shipping' },
       { label: 'Connect custom domain', done: !!settings.custom_domain, link: '/settings/domain' },
       { label: 'Configure SEO', done: !!settings.seo_title, link: '/settings/seo' },
       { label: 'Write a blog post', done: false, link: '/blog-posts/new' },
@@ -282,7 +282,7 @@ const Dashboard = () => {
           productCount={products.length}
           lowStockCount={lowStockCount}
           hasCustomDomain={!!settings.custom_domain}
-          hasShipping={!!settings.shipping_enabled}
+          hasShipping={!!(settings.shipping_enabled || settings.shiprocket_email || settings.shipping?.configured)}
           isPublished={!!store?.is_published}
         />
       </div>
@@ -346,7 +346,7 @@ const Dashboard = () => {
         store={store}
         productCount={products.length}
         totalRevenue={stats.totalRevenue}
-        hasShipping={!!settings.shipping_enabled}
+        hasShipping={!!(settings.shipping_enabled || settings.shiprocket_email || settings.shipping?.configured)}
         hasDomain={!!settings.custom_domain}
         hasSeo={!!settings.seo_title}
         hasLogo={!!store?.logo_url}
