@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { X, Loader2, Eye, EyeOff, Mail, ShieldCheck, ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -20,8 +20,15 @@ export default function CustomerAuthModal({
   borderColor = '#e5e7eb', textColor = '#111827',
   borderRadius = 20, onClose, redirectTo,
 }: Props) {
-  const navigate = useNavigate();
-  const { user, signInWithEmail, sendPasswordResetOtp, resetPasswordWithOtp, sendSignupOtp, verifySignupOtp } = useCustomerAuth(storeSlug);
+  const {
+    user,
+    signInWithEmail,
+    sendPasswordResetOtp,
+    resetPasswordWithOtp,
+    sendSignupOtp,
+    verifySignupOtp,
+    signInWithGoogle,
+  } = useCustomerAuth(storeSlug);
 
   const [step, setStep] = useState<Step>('login');
   const [email, setEmail] = useState('');
@@ -61,6 +68,66 @@ export default function CustomerAuthModal({
 
   const dest = redirectTo || `/store/${storeSlug}`;
   const pr = primaryColor;
+
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const isGoogleConfigured = googleClientId && googleClientId !== "PLACEHOLDER_GOOGLE_CLIENT_ID";
+
+  useEffect(() => {
+    if (!isGoogleConfigured || (step !== 'login' && step !== 'signup')) return;
+
+    const id = "google-jssdk";
+    
+    const initializeGoogle = () => {
+      if (!(window as any).google) return;
+
+      (window as any).google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (response: any) => {
+          setSubmitting(true);
+          try {
+            const { error } = await signInWithGoogle(response.credential);
+            if (error) {
+              toast.error(error.message || "Google sign-in failed");
+            } else {
+              toast.success("Welcome back!");
+            }
+          } catch (err: any) {
+            toast.error(err.message || "Google sign-in failed");
+          }
+          setSubmitting(false);
+        },
+      });
+
+      const btnContainer = document.getElementById("google-signin-btn-container");
+      if (btnContainer) {
+        (window as any).google.accounts.id.renderButton(btnContainer, {
+          theme: "outline",
+          size: "large",
+          width: btnContainer.clientWidth || 376,
+        });
+      }
+    };
+
+    if (document.getElementById(id)) {
+      const timer = setTimeout(initializeGoogle, 100);
+      return () => clearTimeout(timer);
+    }
+
+    const script = document.createElement("script");
+    script.id = id;
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      initializeGoogle();
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      const s = document.getElementById(id);
+      if (s) s.remove();
+    };
+  }, [isGoogleConfigured, step]);
 
   // ── styles ──────────────────────────────────────────────────────────────
   const inp = (extra?: React.CSSProperties): React.CSSProperties => ({
@@ -450,6 +517,17 @@ export default function CustomerAuthModal({
                 {submitting && <Loader2 className="h-4 w-4 animate-spin"/>} Set New Password
               </button>
             </form>
+          )}
+
+          {(step === 'login' || step === 'signup') && isGoogleConfigured && (
+            <div className="pt-2 space-y-3.5">
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-gray-300" style={{ borderColor: `${borderColor}88` }}></div>
+                <span className="flex-shrink mx-4 text-gray-400 text-[11px] uppercase font-semibold tracking-wider">Or continue with</span>
+                <div className="flex-grow border-t border-gray-300" style={{ borderColor: `${borderColor}88` }}></div>
+              </div>
+              <div id="google-signin-btn-container" className="w-full flex justify-center" style={{ minHeight: '40px' }} />
+            </div>
           )}
 
         </div>
