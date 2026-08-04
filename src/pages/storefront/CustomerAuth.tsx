@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
@@ -21,6 +21,7 @@ export default function CustomerAuth() {
     user, loading: authLoading,
     signInWithEmail, sendPasswordResetOtp, resetPasswordWithOtp,
     sendSignupOtp, verifySignupOtp,
+    signInWithGoogle,
   } = useCustomerAuth(slug || '');
 
   const [step, setStep] = useState<Step>('login');
@@ -35,6 +36,66 @@ export default function CustomerAuth() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [btnHovered, setBtnHovered] = useState(false);
   const [agreeToPrivacy, setAgreeToPrivacy] = useState(false);
+
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const isGoogleConfigured = googleClientId && googleClientId !== "PLACEHOLDER_GOOGLE_CLIENT_ID";
+
+  useEffect(() => {
+    if (!isGoogleConfigured || (step !== 'login' && step !== 'signup')) return;
+
+    const id = "google-jssdk";
+    
+    const initializeGoogle = () => {
+      if (!(window as any).google) return;
+
+      (window as any).google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (response: any) => {
+          setSubmitting(true);
+          try {
+            const { error } = await signInWithGoogle(response.credential);
+            if (error) {
+              toast.error(error.message || "Google sign-in failed");
+            } else {
+              toast.success("Welcome back!");
+            }
+          } catch (err: any) {
+            toast.error(err.message || "Google sign-in failed");
+          }
+          setSubmitting(false);
+        },
+      });
+
+      const btnContainer = document.getElementById("google-signin-btn-container");
+      if (btnContainer) {
+        (window as any).google.accounts.id.renderButton(btnContainer, {
+          theme: "outline",
+          size: "large",
+          width: btnContainer.clientWidth || 376,
+        });
+      }
+    };
+
+    if (document.getElementById(id)) {
+      const timer = setTimeout(initializeGoogle, 100);
+      return () => clearTimeout(timer);
+    }
+
+    const script = document.createElement("script");
+    script.id = id;
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      initializeGoogle();
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      const s = document.getElementById(id);
+      if (s) s.remove();
+    };
+  }, [isGoogleConfigured, step]);
 
   const policies = (store?.settings as any)?.policies || {};
   const hasPrivacyPolicy = !!policies.privacy?.trim();
@@ -467,6 +528,17 @@ export default function CustomerAuth() {
                     {submitting && <Loader2 className="h-4 w-4 animate-spin"/>} Set New Password
                   </button>
                 </form>
+              )}
+
+              {(step === 'login' || step === 'signup') && isGoogleConfigured && (
+                <div className="pt-2 space-y-4">
+                  <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-gray-300" style={{ borderColor: `${colors.secondary}88` }}></div>
+                    <span className="flex-shrink mx-4 text-gray-400 text-[11px] uppercase font-semibold tracking-wider">Or continue with</span>
+                    <div className="flex-grow border-t border-gray-300" style={{ borderColor: `${colors.secondary}88` }}></div>
+                  </div>
+                  <div id="google-signin-btn-container" className="w-full flex justify-center" style={{ minHeight: '40px' }} />
+                </div>
               )}
 
             </div>
