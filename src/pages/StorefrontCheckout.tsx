@@ -405,16 +405,6 @@ const StorefrontCheckout = () => {
     if (store?.id && items.length > 0) {
       track({ store_id: store.id, event_type: 'checkout_start', value: totalPrice, metadata: { item_count: items.length } });
     }
-    (async () => {
-      if (!store?.id || items.length === 0 || appliedCoupon) return;
-      const cartLines = items.map((i) => ({ productId: i.productId, price: i.price, quantity: i.quantity }));
-      const best = await findBestAutoCoupon(store.id, totalPrice, cartLines);
-      if (best) {
-        setAppliedCoupon({ id: best.coupon.id, code: best.coupon.code, discount: best.discount });
-        setCouponCode(best.coupon.code);
-        toast.success(`Auto-applied "${best.coupon.code}" — you save ₹${Math.round(best.discount).toLocaleString('en-IN')}`);
-      }
-    })();
   }, [store?.id, items.length, totalPrice]);
 
   // Load saved address from localStorage if any (set via storefront menu address dialog)
