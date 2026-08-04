@@ -122,9 +122,38 @@ serve(async (req) => {
     if (t.error) return json({ error: t.error }, 400);
     const headers = { Authorization: `Bearer ${t.token}`, "Content-Type": "application/json" };
 
+    if (action === "get-wallet-balance") {
+      const r = await fetch(`${BASE}/settings/wallet/balance`, { headers });
+      const j = await r.json();
+      if (!r.ok) return json({ error: j.message || "Failed to fetch wallet balance", raw: j }, 400);
+      return json({ balance: j.balance_amount || 0, raw: j });
+    }
+
+    if (action === "get-courier-rates") {
+      let { pickup_pincode, delivery_pincode, weight = 0.5, cod = 0, length = 15, breadth = 15, height = 15, declared_value = 100 } = body;
+      if (!pickup_pincode) {
+        const { data: storeRow } = await admin
+          .from("stores")
+          .select("settings")
+          .eq("id", store_id)
+          .maybeSingle();
+        pickup_pincode = (storeRow?.settings as any)?.shipping?.pickup?.pincode;
+      }
+      if (!pickup_pincode || !delivery_pincode) {
+        return json({ error: "pickup_pincode and delivery_pincode are required" }, 400);
+      }
+      const url = `${BASE}/courier/serviceability/?pickup_postcode=${pickup_pincode}&delivery_postcode=${delivery_pincode}&cod=${cod}&weight=${weight}&length=${length}&breadth=${breadth}&height=${height}&declared_value=${declared_value}`;
+      const r = await fetch(url, { headers });
+      const j = await r.json();
+      if (!r.ok) return json({ error: j.message || "Failed to fetch courier rates", raw: j }, 400);
+      return json({
+        couriers: j?.data?.available_courier_companies || [],
+        raw: j
+      });
+    }
+
     if (action === "serviceability" || action === "check-serviceability") {
       let { pickup_pincode, delivery_pincode, weight = 0.5, cod = 0 } = body;
-      // Storefront PincodeChecker uses { destination_pincode } and doesn't know the seller's pickup.
       if (!delivery_pincode && body.destination_pincode) delivery_pincode = body.destination_pincode;
       if (!pickup_pincode) {
         const { data: storeRow } = await admin
@@ -158,58 +187,148 @@ serve(async (req) => {
 
     if (action === "create-shipment") {
       const s = body.shipment || {};
+      const payload = {
+        order_id: s.order_number,
+        order_date: new Date().toISOString().slice(0, 10),
+        pickup_location: s.pickup_name || "Primary",
+        billing_customer_name: s.customer_name,
+        billing_last_name: "",
+        billing_address: s.customer_address,
+        billing_city: s.customer_city,
+        billing_pincode: s.customer_pincode,
+        billing_state: s.customer_state,
+        billing_country: "India",
+        billing_email: s.customer_email || "noreply@pictocart.in",
+        billing_phone: s.customer_phone,
+        shipping_is_billing: true,
+        order_items: [{
+          name: `Order ${s.order_number}`,
+          sku: s.order_number,
+          units: 1,
+          selling_price: s.total_amount || 0,
+        }],
+        payment_method: s.payment_mode === "COD" ? "COD" : "Prepaid",
+        sub_total: s.total_amount || 0,
+        length: s.length || 15,
+        breadth: s.breadth || 15,
+        height: s.height || 15,
+        weight: (s.weight || 500) / 1000,
+      };
+
       const r = await fetch(`${BASE}/orders/create/adhoc`, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          order_id: s.order_number,
-          order_date: new Date().toISOString().slice(0, 10),
-          pickup_location: s.pickup_name || "Primary",
-          billing_customer_name: s.customer_name,
-          billing_last_name: "",
-          billing_address: s.customer_address,
-          billing_city: s.customer_city,
-          billing_pincode: s.customer_pincode,
-          billing_state: s.customer_state,
-          billing_country: "India",
-          billing_email: s.customer_email || "noreply@pictocart.in",
-          billing_phone: s.customer_phone,
-          shipping_is_billing: true,
-          order_items: [{
-            name: `Order ${s.order_number}`,
-            sku: s.order_number,
-            units: 1,
-            selling_price: s.total_amount || 0,
-          }],
-          payment_method: s.payment_mode === "COD" ? "COD" : "Prepaid",
-          sub_total: s.total_amount || 0,
-          length: 10, breadth: 10, height: 10,
-          weight: (s.weight || 500) / 1000,
-        }),
+        body: JSON.stringify(payload),
       });
       const j = await r.json();
       if (!r.ok || !j.shipment_id) return json({ error: j.message || "Shiprocket create failed", raw: j });
 
-      // Automatically assign courier & generate AWB to move the order out of "NEW" state
+      // Assign courier & generate AWB
+      const awbBody: any = { shipment_id: j.shipment_id };
+      if (body.courier_id) {
+        awbBody.courier_id = body.courier_id;
+      }
+      
       const awbR = await fetch(`${BASE}/courier/assign/awb`, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          shipment_id: j.shipment_id,
-        }),
+        body: JSON.stringify(awbBody),
       });
       const jAwb = await awbR.json();
       const awbCode = jAwb?.response?.data?.awb_code || jAwb?.awb_code || jAwb?.response?.awb_code;
 
       if (!awbR.ok || !awbCode) {
         return json({
-          error: jAwb?.message || jAwb?.response?.data?.message || "Failed to auto-assign AWB courier. Please check your Shiprocket wallet balance or courier serviceability.",
+          error: jAwb?.message || jAwb?.response?.data?.message || "Failed to assign AWB courier. Please check your Shiprocket wallet balance or courier serviceability.",
           shipment_id: j.shipment_id,
+          order_id: j.order_id,
           raw: jAwb,
         });
       }
 
-      return json({ waybill: awbCode, shipment_id: j.shipment_id, raw: { create: j, awb: jAwb } });
+      return json({ 
+        waybill: awbCode, 
+        shipment_id: j.shipment_id, 
+        order_id: j.order_id,
+        courier_name: jAwb?.response?.data?.courier_name || "",
+        raw: { create: j, awb: jAwb } 
+      });
+    }
+
+    if (action === "generate-label") {
+      const { shipment_id } = body;
+      if (!shipment_id) return json({ error: "shipment_id is required" }, 400);
+      const r = await fetch(`${BASE}/courier/generate/label`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ shipment_id: [Number(shipment_id)] }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.label_url) return json({ error: j.message || "Failed to generate label", raw: j }, 400);
+      return json({ label_url: j.label_url, raw: j });
+    }
+
+    if (action === "generate-invoice") {
+      const { order_id } = body;
+      if (!order_id) return json({ error: "order_id is required" }, 400);
+      const r = await fetch(`${BASE}/orders/print/invoice`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ids: [Number(order_id)] }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.invoice_url) return json({ error: j.message || "Failed to generate invoice", raw: j }, 400);
+      return json({ invoice_url: j.invoice_url, raw: j });
+    }
+
+    if (action === "cancel-shipment") {
+      const { order_id } = body;
+      if (!order_id) return json({ error: "order_id is required" }, 400);
+      const r = await fetch(`${BASE}/orders/cancel`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ids: [Number(order_id)] }),
+      });
+      const j = await r.json();
+      if (!r.ok) return json({ error: j.message || "Failed to cancel shipment", raw: j }, 400);
+      return json({ success: true, raw: j });
+    }
+
+    if (action === "generate-manifest") {
+      const { shipment_id } = body;
+      if (!shipment_id) return json({ error: "shipment_id is required" }, 400);
+      const r = await fetch(`${BASE}/manifests/generate`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ shipment_id: [Number(shipment_id)] }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.manifest_url) {
+        const printR = await fetch(`${BASE}/manifests/print`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ shipment_id: [Number(shipment_id)] }),
+        });
+        const printJ = await printR.json();
+        if (!printR.ok || !printJ.manifest_url) {
+          return json({ error: j.message || printJ.message || "Failed to generate/print manifest", raw: { generate: j, print: printJ } }, 400);
+        }
+        return json({ manifest_url: printJ.manifest_url, raw: printJ });
+      }
+      return json({ manifest_url: j.manifest_url, raw: j });
+    }
+
+    if (action === "request-pickup") {
+      const { shipment_id } = body;
+      if (!shipment_id) return json({ error: "shipment_id is required" }, 400);
+      const r = await fetch(`${BASE}/courier/generate/pickup`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ shipment_id: [Number(shipment_id)] }),
+      });
+      const j = await r.json();
+      if (!r.ok) return json({ error: j.message || "Failed to request pickup", raw: j }, 400);
+      return json({ success: true, raw: j });
     }
 
     if (action === "track") {

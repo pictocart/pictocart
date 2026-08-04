@@ -116,6 +116,173 @@ const OrderDetail = () => {
     setTrackingLoading(false);
   };
 
+  const [downloadingLabel, setDownloadingLabel] = useState(false);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+  const [cancellingShipment, setCancellingShipment] = useState(false);
+  const [downloadingManifest, setDownloadingManifest] = useState(false);
+  const [requestingPickup, setRequestingPickup] = useState(false);
+
+  const handleDownloadManifest = async () => {
+    const orderMetadata = order?.courier_response as any;
+    const shipmentId = orderMetadata?.shiprocket_shipment_id;
+    if (!shipmentId) {
+      toast.error('Shiprocket shipment ID not found.');
+      return;
+    }
+    setDownloadingManifest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'generate-manifest',
+          store_id: store?.id,
+          shipment_id: shipmentId
+        }
+      });
+      if (error || !data || !data.manifest_url) {
+        toast.error(error?.message || data?.error || 'Failed to generate manifest');
+      } else {
+        toast.success('Manifest generated successfully!');
+        window.open(data.manifest_url, '_blank');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate manifest');
+    }
+    setDownloadingManifest(false);
+  };
+
+  const handleRequestPickup = async () => {
+    const orderMetadata = order?.courier_response as any;
+    const shipmentId = orderMetadata?.shiprocket_shipment_id;
+    if (!shipmentId) {
+      toast.error('Shiprocket shipment ID not found.');
+      return;
+    }
+    setRequestingPickup(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'request-pickup',
+          store_id: store?.id,
+          shipment_id: shipmentId
+        }
+      });
+      if (error || !data) {
+        toast.error(error?.message || data?.error || 'Failed to request pickup');
+      } else {
+        toast.success('Pickup request submitted successfully to Shiprocket!');
+        refetch();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to request pickup');
+    }
+    setRequestingPickup(false);
+  };
+
+  const handleDownloadLabel = async () => {
+    const orderMetadata = order?.courier_response as any;
+    const shipmentId = orderMetadata?.shiprocket_shipment_id;
+    if (!shipmentId) {
+      toast.error('Shiprocket shipment ID not found. Ensure the order was shipped using the new courier selection flow.');
+      return;
+    }
+    setDownloadingLabel(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'generate-label',
+          store_id: store?.id,
+          shipment_id: shipmentId
+        }
+      });
+      if (error || !data || !data.label_url) {
+        toast.error(error?.message || data?.error || 'Failed to generate label');
+      } else {
+        toast.success('Label generated successfully!');
+        window.open(data.label_url, '_blank');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate label');
+    }
+    setDownloadingLabel(false);
+  };
+
+  const handleDownloadInvoice = async () => {
+    const orderMetadata = order?.courier_response as any;
+    const orderId = orderMetadata?.shiprocket_order_id;
+    if (!orderId) {
+      toast.error('Shiprocket order ID not found. Ensure the order was shipped using the new courier selection flow.');
+      return;
+    }
+    setDownloadingInvoice(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'generate-invoice',
+          store_id: store?.id,
+          order_id: orderId
+        }
+      });
+      if (error || !data || !data.invoice_url) {
+        toast.error(error?.message || data?.error || 'Failed to generate invoice');
+      } else {
+        toast.success('Invoice generated successfully!');
+        window.open(data.invoice_url, '_blank');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate invoice');
+    }
+    setDownloadingInvoice(false);
+  };
+
+  const handleCancelShipment = async () => {
+    const orderMetadata = order?.courier_response as any;
+    const orderId = orderMetadata?.shiprocket_order_id;
+    if (!orderId) {
+      toast.error('Shiprocket order ID not found. Ensure the order was shipped using the new courier selection flow.');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to cancel this shipment on Shiprocket? This will cancel the courier pickup request.')) {
+      return;
+    }
+
+    setCancellingShipment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'cancel-shipment',
+          store_id: store?.id,
+          order_id: orderId
+        }
+      });
+      if (error || !data) {
+        toast.error(error?.message || data?.error || 'Failed to cancel shipment');
+      } else {
+        await supabase
+          .from('orders')
+          .update({
+            tracking_number: null,
+            courier_provider: null,
+            status: 'confirmed',
+            courier_response: null
+          } as any)
+          .eq('id', order.id);
+
+        toast.success('Shipment cancelled successfully on Shiprocket! Order reset to Confirmed status.');
+        setTrackingData(null);
+        refetch();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to cancel shipment');
+    }
+    setCancellingShipment(false);
+  };
+
   useEffect(() => {
     if (order?.tracking_number && store && !hasAutoSynced) {
       setHasAutoSynced(true);
@@ -486,61 +653,152 @@ const OrderDetail = () => {
           </Card>
 
           {/* Tracking */}
-          {order.tracking_number && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Truck className="h-4 w-4" /> Shipping
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm">
-                    AWB: <span className="font-medium font-mono">{order.tracking_number}</span>
-                  </p>
-                  <Button variant="outline" size="sm" onClick={handleTrack} disabled={trackingLoading}>
-                    {trackingLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    Track
-                  </Button>
-                </div>
-                {trackingData && (
-                  <div className="space-y-2 border-t pt-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Status</span>
-                      <Badge variant="outline">{trackingData.status}</Badge>
+          {order.tracking_number && (() => {
+            const metadata = order.courier_response as any;
+            const isShiprocket = order.courier_provider === 'shiprocket' || !!metadata?.shiprocket_shipment_id;
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <span className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-primary" /> 
+                      {isShiprocket ? 'Shiprocket Logistics' : 'Shipping'}
+                    </span>
+                    {isShiprocket && (
+                      <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px]">
+                        Shiprocket
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Shipment Info */}
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">AWB (Waybill)</span>
+                      <span className="font-mono font-medium">{order.tracking_number}</span>
                     </div>
-                    {trackingData.location && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Location</span>
-                        <span>{trackingData.location}</span>
+                    {metadata?.courier_name && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Courier Partner</span>
+                        <span className="font-medium">{metadata.courier_name}</span>
                       </div>
                     )}
-                    {trackingData.expected_delivery && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Expected Delivery</span>
-                        <span>{trackingData.expected_delivery}</span>
-                      </div>
-                    )}
-                    {trackingData.scans?.length > 0 && (
-                      <div className="pt-2">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Recent Scans</p>
-                        <div className="space-y-1 max-h-40 overflow-y-auto">
-                          {trackingData.scans.slice(0, 5).map((scan: any, i: number) => (
-                            <div key={i} className="text-xs p-2 rounded bg-muted">
-                              <span className="font-medium">{scan?.ScanDetail?.Scan || 'Scan'}</span>
-                              {scan?.ScanDetail?.ScannedLocation && (
-                                <span className="text-muted-foreground ml-1">— {scan.ScanDetail.ScannedLocation}</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                    {metadata?.dimensions && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Package Size</span>
+                        <span className="font-medium text-xs">{metadata.dimensions} ({metadata.weight_grams}g)</span>
                       </div>
                     )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+
+                  {/* Actions Panel */}
+                  {isShiprocket && (
+                    <div className="grid grid-cols-2 gap-2 border-y py-3">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleDownloadLabel} 
+                        disabled={downloadingLabel}
+                        className="text-xs"
+                      >
+                        {downloadingLabel ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Printer className="h-3.5 w-3.5 mr-1" />}
+                        Print Label
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleDownloadInvoice} 
+                        disabled={downloadingInvoice}
+                        className="text-xs"
+                      >
+                        {downloadingInvoice ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <FileText className="h-3.5 w-3.5 mr-1" />}
+                        Print Invoice
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleDownloadManifest} 
+                        disabled={downloadingManifest}
+                        className="text-xs"
+                      >
+                        {downloadingManifest ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <FileText className="h-3.5 w-3.5 mr-1" />}
+                        Print Manifest
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleRequestPickup} 
+                        disabled={requestingPickup}
+                        className="text-xs"
+                      >
+                        {requestingPickup ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Truck className="h-3.5 w-3.5 mr-1" />}
+                        Request Pickup
+                      </Button>
+                      {metadata?.shiprocket_order_id && (
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={handleCancelShipment} 
+                          disabled={cancellingShipment}
+                          className="col-span-2 text-xs h-8 bg-destructive/10 hover:bg-destructive/20 text-destructive border-none"
+                        >
+                          {cancellingShipment ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                          Cancel Shipment
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tracking Button & Logs */}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs text-muted-foreground">Real-time status tracking</span>
+                    <Button variant="outline" size="sm" onClick={handleTrack} disabled={trackingLoading} className="h-8">
+                      {trackingLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                      Refresh Status
+                    </Button>
+                  </div>
+
+                  {trackingData && (
+                    <div className="space-y-2 border-t pt-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Courier Status</span>
+                        <Badge variant="outline" className="capitalize">{trackingData.status}</Badge>
+                      </div>
+                      {trackingData.location && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Current Location</span>
+                          <span className="font-medium">{trackingData.location}</span>
+                        </div>
+                      )}
+                      {trackingData.expected_delivery && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Expected Delivery</span>
+                          <span className="font-medium">{trackingData.expected_delivery}</span>
+                        </div>
+                      )}
+                      {trackingData.scans?.length > 0 && (
+                        <div className="pt-2">
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Transit Log</p>
+                          <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                            {trackingData.scans.slice(0, 5).map((scan: any, i: number) => (
+                              <div key={i} className="text-[11px] p-2 rounded bg-muted/60 space-y-0.5 border">
+                                <p className="font-semibold text-foreground">{scan?.ScanDetail?.Scan || 'Status Update'}</p>
+                                <div className="flex justify-between text-muted-foreground">
+                                  <span>{scan?.ScanDetail?.ScannedLocation || 'Location N/A'}</span>
+                                  <span>{scan?.ScanDetail?.ScanDateTime ? format(new Date(scan.ScanDetail.ScanDateTime), 'dd MMM, p') : ''}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
 
         {/* Customer & Payment sidebar */}

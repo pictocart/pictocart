@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Package, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound, ShieldCheck, Info, ChevronDown, ChevronLeft, ChevronRight, Sparkles, UserCheck, Warehouse, Wallet, Key, Settings2 } from 'lucide-react';
+import { Package, Loader2, CheckCircle2, XCircle, MapPin, ExternalLink, KeyRound, ShieldCheck, Info, ChevronDown, ChevronLeft, ChevronRight, Sparkles, UserCheck, Warehouse, Wallet, Key, Settings2, Radio } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import PremiumGate from '@/components/PremiumGate';
@@ -613,6 +613,53 @@ const ShippingSettings = () => {
                 Case-sensitive. Default is <span className="font-mono">Primary</span>.
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Webhook Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Radio className="h-4 w-4 text-primary animate-pulse" /> Real-time Tracking Webhook
+          </CardTitle>
+          <CardDescription>
+            Enable real-time tracking updates (Pickup, In Transit, Delivery, and RTO status updates) automatically by setting up a webhook in your Shiprocket account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Webhook Callback URL</Label>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logistics-events?store_id=${store?.id}`}
+                className="font-mono text-xs bg-muted"
+              />
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logistics-events?store_id=${store?.id}`);
+                  toast.success('Webhook URL copied to clipboard');
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-md border bg-card p-3 text-xs space-y-2">
+            <p className="font-semibold text-foreground">How to configure in Shiprocket:</p>
+            <ol className="list-decimal pl-4 space-y-1 text-muted-foreground">
+              <li>Login to your Shiprocket Dashboard.</li>
+              <li>Go to <strong>Settings &rarr; API &rarr; Webhooks</strong>.</li>
+              <li>Click <strong>Add New Webhook</strong>.</li>
+              <li>Select events: <strong>Status Update</strong>, <strong>RTO Initiated</strong>, <strong>RTO Delivered</strong>.</li>
+              <li>Paste the Callback URL copied above.</li>
+              <li>Set status to <strong>Active</strong> and click <strong>Save</strong>.</li>
+            </ol>
+            <p className="text-muted-foreground mt-2 italic text-[11px]">
+              Note: The Webhook URL complies with Shiprocket's security guidelines and naming rules (contains no restricted words).
+            </p>
           </div>
         </CardContent>
       </Card>
