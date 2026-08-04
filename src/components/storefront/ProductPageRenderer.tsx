@@ -413,13 +413,17 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
     const isEnabled = section.enabled !== false;
     if (!isEnabled) return null;
 
+    const ov = (sectionOverrides && typeof sectionOverrides === 'object')
+      ? (sectionOverrides[index] ?? sectionOverrides[String(index)] ?? sectionOverrides)
+      : {};
+
     switch (section.type) {
       case 'product_images': {
         const merged = [...videos.map((url) => ({ type: 'video' as const, url })), ...images.map((url) => ({ type: 'image' as const, url }))];
         const current = merged[selectedImage] || merged[0];
 
         return (
-          <div key={index} className="md:col-span-1">
+          <div key={index} className="md:col-span-1" data-section-anchor={`s-${index}`}>
             {/* Mobile Swiper */}
             <div className="md:hidden">
               <ProductImageSwiper
@@ -512,7 +516,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
 
       case 'product_info':
         return (
-          <div key={index} className="md:col-span-1 space-y-6">
+          <div key={index} className="md:col-span-1 space-y-6" data-section-anchor={`s-${index}`}>
             {/* Breadcrumb */}
             <nav className="flex items-center gap-1.5 text-xs opacity-50 mb-2">
               <Link to={`/store/${slug}`} className="hover:opacity-100 transition-opacity">Home</Link>
@@ -666,7 +670,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                         ) : added ? (
                           <><Check className="h-4 w-4" /> Added!</>
                         ) : (
-                          <><ShoppingCart className="h-4 w-4" /> {sectionOverrides?.add_to_cart_cta || "Add to Cart"}</>
+                          <><ShoppingCart className="h-4 w-4" /> {ov.add_to_cart_cta || "Add to Cart"}</>
                         )}
                       </button>
                     )}
@@ -679,7 +683,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                         borderRadius: `${borderRadius}px`,
                       }}
                     >
-                      <Zap className="h-4 w-4" /> {sectionOverrides?.buy_now_cta || (store?.category === 'food' ? 'Order Now' : 'Buy Now')}
+                      <Zap className="h-4 w-4" /> {ov.buy_now_cta || (store?.category === 'food' ? 'Order Now' : 'Buy Now')}
                     </button>
                   </div>
                 )}
@@ -726,9 +730,9 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
                 storeId={store.id}
                 colors={colors}
                 borderRadius={borderRadius}
-                title={sectionOverrides?.pincode_title}
-                placeholder={sectionOverrides?.pincode_placeholder}
-                cta={sectionOverrides?.pincode_cta}
+                title={ov.pincode_title}
+                placeholder={ov.pincode_placeholder}
+                cta={ov.pincode_cta}
               />
             </div>
 
@@ -796,7 +800,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
             </div>
 
             {/* Trust Badges */}
-            <TrustBadges colors={colors} borderRadius={borderRadius} category={store.category} items={sectionOverrides?.items} />
+            <TrustBadges colors={colors} borderRadius={borderRadius} category={store.category} items={ov.items} />
 
             {/* Product Accordion */}
             <ProductAccordion
@@ -823,7 +827,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
 
       case 'product_reviews':
         return (
-          <div key={index} className="md:col-span-2 mt-12" ref={reviewsRef}>
+          <div key={index} className="md:col-span-2 mt-12" ref={reviewsRef} data-section-anchor={`s-${index}`}>
             <ReviewSection
               productId={product.id}
               storeId={store.id}
@@ -831,6 +835,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
               colors={colors}
               fonts={fonts}
               borderRadius={borderRadius}
+              style={ov.style ?? section?.props?.style}
             />
 
             {/* Q&A Section */}
@@ -891,7 +896,7 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
 
       case 'related_products':
         return (
-          <div key={index} className="md:col-span-2 mt-8">
+          <div key={index} className="md:col-span-2 mt-8" data-section-anchor={`s-${index}`}>
             <RelatedProducts
               storeId={store.id}
               storeSlug={slug}
@@ -903,8 +908,8 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
               wishlistProductIds={new Set(wishlistProductIds)}
               isLoggedIn={!!user}
               onToggleWishlist={toggleWishlist}
-              productCols={sectionOverrides?.product_cols ?? section?.props?.product_cols}
-              productCardWidth={sectionOverrides?.product_card_width ?? section?.props?.product_card_width}
+              productCols={ov.product_cols ?? section?.props?.product_cols}
+              productCardWidth={ov.product_card_width ?? section?.props?.product_card_width}
             />
           </div>
         );

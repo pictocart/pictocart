@@ -343,3 +343,16 @@
   max-width: 95% !important;
   width: 95% !important;
 }
+
+/* Preserve newlines & formatting for section text in theme editor */
+.s-title,
+.s-sub,
+.s-body,
+.s-description,
+.s-kicker,
+.s-email,
+.s-phone,
+.s-address,
+.s-hours {
+  white-space: pre-wrap !important;
+}

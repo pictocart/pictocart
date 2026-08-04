@@ -60,7 +60,7 @@ serve(async (req) => {
 
     // Build prompting context
     const sysPrompt = `You are a helpful AI Business Coach for Indian e-commerce merchants.
-You analyze their weekly sales metrics and give them a bulleted list of 2 to 3 highly actionable and specific suggestions in Hinglish.
+You analyze their weekly sales metrics and give them a bulleted list of 2 to 3 highly actionable and specific suggestions in English.
 Address the merchant by name: "${merchantName}".
 Suggestions must be tailored to their stats (e.g. if conversion is low suggest cart recovery, if views are low suggest sharing product links on WhatsApp, if there is a top seller suggest highlighting it).
 Return the output as plain text with bullet points using '•' characters. No markdown headings, bolding (**), or HTML tags. Keep each bullet brief (1-2 sentences).`;
@@ -73,7 +73,7 @@ Return the output as plain text with bullet points using '•' characters. No ma
 - Conversion Rate: ${cvr.toFixed(1)}%
 ${topProductName ? `- Top Selling Product: "${topProductName}" (${topProductQty} units sold)` : ""}
 
-Provide a list of 2 to 3 bullet points of Hinglish business coaching tips using '•'.`;
+Provide a list of 2 to 3 bullet points of English business coaching tips using '•'.`;
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",

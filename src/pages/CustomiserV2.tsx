@@ -326,6 +326,14 @@ export default function CustomiserV2() {
         { type: "product_grid", props: { style: "grid_clean" } },
       ];
     }
+    if (page === "product") {
+      return [
+        { type: "product_images", props: {} },
+        { type: "product_info", props: {} },
+        { type: "product_reviews", props: {} },
+        { type: "related_products", props: {} },
+      ];
+    }
     return [];
   }, [manifest, page, store?.category]);
   const sectionOverrides: Record<string, any> = useMemo(() => {
@@ -1816,6 +1824,8 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
     product_info: ["buy_now_cta", "add_to_cart_cta", "pincode_title", "pincode_placeholder", "pincode_cta"],
     cart_summary: ["cta"],
     related_products: ["title"],
+    collections_grid: ["title"],
+    product_reviews: [],
   };
   const forcedKeys = typeSpecificKeys[section?.type] ?? [];
   const textKeys = TEXT_KEYS.filter((k) => (k in defaults) || forcedKeys.includes(k));
@@ -2016,6 +2026,78 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                   <SelectItem value="6">6 Posts</SelectItem>
                   <SelectItem value="8">8 Posts</SelectItem>
                   <SelectItem value="12">12 Posts</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {section?.type === "collections_grid" && (
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/40 animate-fade-in">
+          <Label className="text-xs font-semibold flex items-center gap-1.5">
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" /> Collections Grid Styling
+          </Label>
+          
+          <div className="space-y-3">
+            <div>
+              <Label className="text-[11px] text-muted-foreground">Viewing Option / Layout</Label>
+              <Select 
+                value={merged.style || 'grid'} 
+                onValueChange={(val) => onUpdate(idx, "style", val)}
+              >
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="grid">Grid / Cards</SelectItem>
+                  <SelectItem value="scroll">Horizontal Carousel</SelectItem>
+                  <SelectItem value="minimal">Minimal Row list</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {(merged.style || 'grid') === 'grid' && (
+              <div>
+                <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
+                <Select 
+                  value={String(merged.columns || 2)} 
+                  onValueChange={(val) => onUpdate(idx, "columns", Number(val))}
+                >
+                  <SelectTrigger className="h-8 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2 Columns</SelectItem>
+                    <SelectItem value="3">3 Columns</SelectItem>
+                    <SelectItem value="4">4 Columns</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {section?.type === "product_reviews" && (
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/40 animate-fade-in">
+          <Label className="text-xs font-semibold flex items-center gap-1.5">
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" /> Product Reviews Styling
+          </Label>
+          
+          <div className="space-y-3">
+            <div>
+              <Label className="text-[11px] text-muted-foreground">Viewing Option / Layout</Label>
+              <Select 
+                value={merged.style || 'list'} 
+                onValueChange={(val) => onUpdate(idx, "style", val)}
+              >
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="list">List view</SelectItem>
+                  <SelectItem value="tiles">Tiles / Grid view</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2272,8 +2354,8 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
               )}
             </div>
             {isLong
-              ? <Textarea rows={3} value={value} onChange={(e) => onUpdate(idx, k, e.target.value)} className="text-sm" />
-              : <Input value={value} onChange={(e) => onUpdate(idx, k, e.target.value)} className="h-8 text-sm" />}
+              ? <Textarea rows={3} value={value} onChange={(e) => onUpdate(idx, k, e.target.value)} onKeyDown={(e) => e.stopPropagation()} className="text-sm" />
+              : <Input value={value} onChange={(e) => onUpdate(idx, k, e.target.value)} onKeyDown={(e) => e.stopPropagation()} className="h-8 text-sm" />}
             
             {/* Text Color Picker */}
             <div className="flex items-center gap-2 mt-1 justify-end">

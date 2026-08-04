@@ -14,6 +14,7 @@ interface Props {
   fonts: any;
   borderRadius: number;
   allowMockFallback?: boolean;
+  style?: 'list' | 'tiles';
 }
 
 const StarRating = ({ rating, size = 16, color }: { rating: number; size?: number; color: string }) => (
@@ -49,7 +50,7 @@ const InteractiveStars = ({ rating, onChange, color }: { rating: number; onChang
   </div>
 );
 
-const ReviewSection = ({ productId, storeId, storeSlug, colors, fonts, borderRadius, allowMockFallback = false }: Props) => {
+const ReviewSection = ({ productId, storeId, storeSlug, colors, fonts, borderRadius, allowMockFallback = false, style = 'list' }: Props) => {
   const { data: dbReviews = [], isLoading } = useProductReviews(productId);
   const { user } = useCustomerAuth(storeSlug);
   const submitReview = useSubmitReview();
@@ -217,20 +218,33 @@ const ReviewSection = ({ productId, storeId, storeSlug, colors, fonts, borderRad
           )}
 
           {/* Reviews list */}
-          <div className="space-y-4">
+          <div className={style === 'tiles' ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
             {reviews.map((review) => (
-              <div key={review.id} className="p-4 border" style={{ borderColor: colors.secondary, borderRadius: `${borderRadius}px` }}>
-                <div className="flex items-center justify-between mb-2">
-                  <StarRating rating={review.rating} size={14} color={colors.primary} />
-                  <span className="text-[10px] opacity-40">{format(new Date(review.created_at), 'dd MMM yyyy')}</span>
-                </div>
-                {review.title && <h4 className="text-sm font-semibold mb-1">{review.title}</h4>}
-                {review.body && <p className="text-sm opacity-70">{review.body}</p>}
-                {review.is_verified_purchase && (
-                  <div className="flex items-center gap-1 mt-2 text-[10px] font-medium" style={{ color: '#16a34a' }}>
-                    <CheckCircle2 className="h-3 w-3" /> Verified Purchase
+              <div 
+                key={review.id} 
+                className="p-4 border flex flex-col justify-between" 
+                style={{ 
+                  borderColor: colors.secondary, 
+                  borderRadius: `${borderRadius}px`,
+                  backgroundColor: colors.card
+                }}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <StarRating rating={review.rating} size={14} color={colors.primary} />
+                    <span className="text-[10px] opacity-40">{format(new Date(review.created_at), 'dd MMM yyyy')}</span>
                   </div>
-                )}
+                  {review.title && <h4 className="text-sm font-semibold mb-1">{review.title}</h4>}
+                  {review.body && <p className="text-sm opacity-70 leading-relaxed">{review.body}</p>}
+                </div>
+                <div className="flex items-center justify-between mt-4 pt-2 border-t" style={{ borderColor: colors.secondary + '20' }}>
+                  <span className="text-[10px] font-semibold opacity-60">{review.customer_name || 'Anonymous Customer'}</span>
+                  {review.is_verified_purchase && (
+                    <div className="flex items-center gap-1 text-[10px] font-medium" style={{ color: '#16a34a' }}>
+                      <CheckCircle2 className="h-3 w-3" /> Verified Purchase
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

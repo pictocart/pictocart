@@ -3103,6 +3103,49 @@ function AuthForm({ p, dna, variant, storeSlug }: any) {
         {variant !== "reset_password" && <input type="email" placeholder="Email" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />}
         {variant === "signup" && <input placeholder="Full name" className="w-full px-4 py-3 text-sm border" style={{ borderColor: dna.palette?.border, borderRadius: "var(--r)", background: dna.palette?.bg }} />}
         <button type="button" className="w-full px-5 py-3 text-sm" style={{ background: "var(--p)", color: "var(--pf)", borderRadius: "var(--r)" }}>{p.cta}</button>
+        
+        {(variant === "signin" || variant === "signup") && (
+          <>
+            <div className="flex items-center my-4">
+              <div className="flex-1 border-t" style={{ borderColor: dna.palette?.border }} />
+              <span className="px-3 text-xs opacity-50 uppercase">or</span>
+              <div className="flex-1 border-t" style={{ borderColor: dna.palette?.border }} />
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const { error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                      redirectTo: `${window.location.origin}/store/${storeSlug}/auth/callback`
+                    }
+                  });
+                  if (error) throw error;
+                } catch (err: any) {
+                  toast.error(err.message || 'Google Auth failed');
+                }
+              }}
+              className="w-full px-5 py-3 text-sm border flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+              style={{ 
+                borderColor: dna.palette?.border,
+                borderRadius: "var(--r)",
+                background: dna.palette?.surface,
+                color: dna.palette?.fg
+              }}
+            >
+              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                  <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4C21.68,11.83 21.56,11.43 21.35,11.1z" fill="#4285F4" />
+                  <path d="M12,20.88c2.43,0 4.47,-0.8 5.96,-2.2l-2.58,-2.02c-0.72,0.48 -1.64,0.76 -2.58,0.76 -2.37,0 -4.38,-1.6 -5.1,-3.75H4.28v2.66C5.77,19.34 8.71,20.88 12,20.88z" fill="#34A853" />
+                  <path d="M6.9,13.67c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7.61H4.28c-0.61,1.22 -0.96,2.6 -0.96,4.06s0.35,2.84 0.96,4.06L6.9,13.67z" fill="#FBBC05" />
+                  <path d="M12,6.38c1.32,0 2.5,0.45 3.44,1.35l2.58,-2.58C16.46,3.69 14.42,3 12,3c-3.29,0 -6.23,1.54 -7.72,4.61l2.62,2.66c0.72,-2.15 2.73,-3.75 5.1,-3.75z" fill="#EA4335" />
+                </g>
+              </svg>
+              Continue with Google
+            </button>
+          </>
+        )}
       </form>
       <div className="mt-5 flex flex-col gap-2 text-sm">
         {(links[variant] ?? []).map((l, i) => <Link key={i} to={l.to} style={{ color: dna.palette?.accent }}>{l.label}</Link>)}
@@ -4028,9 +4071,11 @@ function ContactForm({ p, dna, storeSlug }: any) {
 }
 
 function ProductDetailStub({ p, dna, storeSlug, store, products, sectionOverrides }: any) {
+  const imgOv = sectionOverrides?.[0] ?? sectionOverrides?.["0"] ?? {};
   const infoOv = sectionOverrides?.[1] ?? sectionOverrides?.["1"] ?? {};
+  const revOv = sectionOverrides?.[2] ?? sectionOverrides?.["2"] ?? {};
   const relOv = sectionOverrides?.[3] ?? sectionOverrides?.["3"] ?? {};
-  const merged = { ...p, ...infoOv, ...relOv };
+  const merged = { ...p, ...imgOv, ...infoOv, ...revOv, ...relOv };
   const pr = merged.product ?? {};
 
   if (store && pr.id) {
@@ -4062,7 +4107,7 @@ function ProductDetailStub({ p, dna, storeSlug, store, products, sectionOverride
         theme={themeObj}
         slug={storeSlug || ''}
         products={products || []}
-        sectionOverrides={merged}
+        sectionOverrides={sectionOverrides}
       />
     );
   }
@@ -5024,6 +5069,7 @@ function CollectionsBlock({ p, dna, storeSlug }: any) {
     ? (c.id ? `/store/${storeSlug}/collections/${c.id}` : `/store/${storeSlug}/shop?category=${encodeURIComponent(c.name || "")}`)
     : "#";
   const shopHref = (catName: string) => storeSlug ? `/store/${storeSlug}/shop?category=${encodeURIComponent(catName || "")}` : "#";
+
   if (!items.length) {
     return (
       <section className="max-w-3xl mx-auto px-6 py-16 text-center">
@@ -5031,9 +5077,94 @@ function CollectionsBlock({ p, dna, storeSlug }: any) {
       </section>
     );
   }
+
+  const style = p.style || "grid";
+  const cols = p.columns || 2;
+  const colClass = cols === 3 ? "md:grid-cols-3" : cols === 4 ? "md:grid-cols-4" : "md:grid-cols-2";
+
+  if (style === "minimal") {
+    return (
+      <section className="max-w-6xl mx-auto px-6 pb-20">
+        {p.title && (
+          <h2 className="text-3xl font-bold mb-8 s-title" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>
+            {p.title}
+          </h2>
+        )}
+        <div className="divide-y border-t border-b" style={{ borderColor: dna.palette?.border }}>
+          {items.map((c: any, i: number) => (
+            <Link
+              key={i}
+              to={collHref(c)}
+              className="group flex items-center justify-between py-6 hover:bg-muted/10 transition-colors"
+            >
+              <div>
+                <h3 className="text-xl font-bold group-hover:text-primary transition-colors" style={{ fontFamily: "var(--hf)" }}>{c.name}</h3>
+                {c.description && <p className="text-sm mt-1 opacity-70" style={{ color: dna.palette?.muted }}>{c.description}</p>}
+              </div>
+              <span className="text-lg transition-transform group-hover:translate-x-1" style={{ color: dna.palette?.accent }}>→</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (style === "scroll") {
+    return (
+      <section className="max-w-6xl mx-auto px-6 pb-20">
+        {p.title && (
+          <h2 className="text-3xl font-bold mb-8 s-title" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>
+            {p.title}
+          </h2>
+        )}
+        <div className="flex gap-6 overflow-x-auto pb-4 snap-x scroll-smooth scrollbar-thin">
+          {items.map((c: any, i: number) => (
+            <article 
+              key={i} 
+              className="group flex flex-col snap-start shrink-0 w-80" 
+              style={{ 
+                background: dna.palette?.surface, 
+                borderRadius: "var(--r)", 
+                overflow: "hidden", 
+                border: `1px solid ${dna.palette?.border}` 
+              }}
+            >
+              <Link to={collHref(c)} className="relative block aspect-[16/10] overflow-hidden bg-muted/10" style={{ background: dna.palette?.bg }}>
+                {c.image
+                  ? <img src={c.image} alt={c.name} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-[1.03]" />
+                  : <div className="w-full h-full" />}
+              </Link>
+              <div className="p-5 flex-1 flex flex-col">
+                <Link to={collHref(c)}>
+                  <h3 className="text-xl font-bold mb-2 truncate" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{c.name}</h3>
+                </Link>
+                {c.description && (
+                  <p className="text-xs leading-relaxed mb-4 line-clamp-2" style={{ color: dna.palette?.muted }}>{c.description}</p>
+                )}
+                <Link
+                  to={collHref(c)}
+                  className="mt-auto inline-flex items-center text-xs font-semibold"
+                  style={{ color: dna.palette?.accent }}
+                >
+                  Shop Collection →
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Default: grid
   return (
     <section className="max-w-6xl mx-auto px-6 pb-20">
-      <div className="grid md:grid-cols-2 gap-8">
+      {p.title && (
+        <h2 className="text-3xl font-bold mb-8 s-title" style={{ fontFamily: "var(--hf)", color: dna.palette?.fg }}>
+          {p.title}
+        </h2>
+      )}
+      <div className={`grid grid-cols-1 ${colClass} gap-8`}>
         {items.map((c: any, i: number) => (
           <article key={i} className="group flex flex-col" style={{ background: dna.palette?.surface, borderRadius: "var(--r)", overflow: "hidden", border: `1px solid ${dna.palette?.border}` }}>
             <Link to={collHref(c)} className="relative block aspect-[16/10] overflow-hidden bg-muted/10" style={{ background: dna.palette?.bg }}>

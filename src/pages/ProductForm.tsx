@@ -480,7 +480,6 @@ const ProductForm = () => {
       if (p.description) setDescription(p.description);
       if (p.shortDescription) setShortDescription(p.shortDescription);
       if (p.suggestedPrice) setPrice(String(p.suggestedPrice));
-      if (p.category) setCategory(p.category);
       if (p.tags) setTags(p.tags);
       if (p.seoTitle) setSeoTitle(p.seoTitle);
       if (p.seoDescription) setSeoDescription(p.seoDescription);
