@@ -86,6 +86,42 @@ const OrderDetail = () => {
   const [rejecting, setRejecting] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [hasAutoSynced, setHasAutoSynced] = useState(false);
+
+  const handleTrack = async () => {
+    if (!order?.tracking_number || !store) return;
+    const settings = store?.settings as any;
+    const shippingConfig = settings?.shipping;
+    if (!shippingConfig?.configured && !shippingConfig?.api_token) {
+      toast.error('Configure shipping settings first');
+      return;
+    }
+    setTrackingLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: {
+          action: 'track',
+          store_id: store.id,
+          waybill: order.tracking_number,
+        },
+      });
+      if (error) throw error;
+      setTrackingData(data);
+      if (data?.status && data.status !== order.status) {
+        refetch();
+      }
+    } catch {
+      toast.error('Failed to fetch tracking info');
+    }
+    setTrackingLoading(false);
+  };
+
+  useEffect(() => {
+    if (order?.tracking_number && store && !hasAutoSynced) {
+      setHasAutoSynced(true);
+      handleTrack();
+    }
+  }, [order?.tracking_number, store, hasAutoSynced]);
 
   if (isLoading) {
     return (
@@ -201,43 +237,6 @@ const OrderDetail = () => {
     }
     setShipDialogOpen(true);
   };
-
-  const handleTrack = async () => {
-    if (!order.tracking_number || !store) return;
-    const settings = store?.settings as any;
-    const shippingConfig = settings?.shipping;
-    if (!shippingConfig?.configured && !shippingConfig?.api_token) {
-      toast.error('Configure shipping settings first');
-      return;
-    }
-    setTrackingLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
-        body: {
-          action: 'track',
-          store_id: store.id,
-          waybill: order.tracking_number,
-        },
-      });
-      if (error) throw error;
-      setTrackingData(data);
-      if (data?.status && data.status !== order.status) {
-        refetch();
-      }
-    } catch {
-      toast.error('Failed to fetch tracking info');
-    }
-    setTrackingLoading(false);
-  };
-
-  const [hasAutoSynced, setHasAutoSynced] = useState(false);
-
-  useEffect(() => {
-    if (order?.tracking_number && store && !hasAutoSynced) {
-      setHasAutoSynced(true);
-      handleTrack();
-    }
-  }, [order?.tracking_number, store, hasAutoSynced]);
   const confirmCollectPayment = async () => {
     setCollecting(true);
     const { error } = await supabase
