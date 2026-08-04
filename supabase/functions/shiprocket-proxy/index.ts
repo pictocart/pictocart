@@ -123,10 +123,11 @@ serve(async (req) => {
     const headers = { Authorization: `Bearer ${t.token}`, "Content-Type": "application/json" };
 
     if (action === "get-wallet-balance") {
-      const r = await fetch(`${BASE}/settings/wallet/balance`, { headers });
+      const r = await fetch("https://apiv2.shiprocket.in/partners/app/account/details/wallet-balance", { headers });
       const j = await r.json();
       if (!r.ok) return json({ error: j.message || "Failed to fetch wallet balance", raw: j }, 400);
-      return json({ balance: j.balance_amount || 0, raw: j });
+      const val = j.balance_amount !== undefined ? j.balance_amount : (j.data?.balance_amount !== undefined ? j.data.balance_amount : 0);
+      return json({ balance: parseFloat(String(val)) || 0, raw: j });
     }
 
     if (action === "get-courier-rates") {
