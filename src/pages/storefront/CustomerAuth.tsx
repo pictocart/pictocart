@@ -122,7 +122,7 @@ export default function CustomerAuth() {
 
   // ── styles ────────────────────────────────────────────────────────────
   const inp = (extra?: React.CSSProperties): React.CSSProperties => ({
-    width: '100%', padding: '12px 16px', fontSize: '14px',
+    width: '100%', padding: '10px 14px', fontSize: '14px',
     backgroundColor: `${pr}06`,
     border: `1.5px solid ${colors.secondary}`,
     borderRadius: 10, color: colors.text, outline: 'none',
@@ -138,10 +138,10 @@ export default function CustomerAuth() {
   });
 
   const btnPri = (disabled?: boolean): React.CSSProperties => ({
-    width: '100%', padding: '14px', fontSize: '14px', fontWeight: 700,
+    width: '100%', padding: '11px 14px', fontSize: '14px', fontWeight: 700,
     background: disabled ? `${pr}66` : (btnHovered ? `linear-gradient(135deg, ${pr} 0%, ${pr}dd 100%)` : pr),
     color: '#fff', border: 'none',
-    borderRadius: 12, cursor: disabled ? 'not-allowed' : 'pointer',
+    borderRadius: 10, cursor: disabled ? 'not-allowed' : 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
     boxShadow: disabled ? 'none' : (btnHovered ? `0 8px 28px ${pr}55` : `0 6px 20px ${pr}33`),
     transform: btnHovered && !disabled ? 'translateY(-1px)' : 'none',
@@ -151,7 +151,7 @@ export default function CustomerAuth() {
   const lbl: React.CSSProperties = {
     display: 'block', fontSize: 11, fontWeight: 700,
     textTransform: 'uppercase', letterSpacing: '0.1em',
-    color: colors.text, opacity: 0.45, marginBottom: 6,
+    color: colors.text, opacity: 0.45, marginBottom: 4,
   };
 
   // ── handlers ─────────────────────────────────────────────────────────
@@ -257,11 +257,11 @@ export default function CustomerAuth() {
 
   return (
     <StorefrontLayout store={store}>
-      <div className="min-h-[85vh] flex items-center justify-center px-4 py-14">
+      <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-[430px]">
           <Link
             to={`/store/${slug}`}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold mb-5 transition-colors opacity-70 hover:opacity-100"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold mb-4 transition-colors opacity-70 hover:opacity-100"
             style={{ color: colors.text }}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -283,8 +283,8 @@ export default function CustomerAuth() {
             }} />
 
             {/* Badge + title row */}
-            <div className="px-7 pt-6 pb-1">
-              <div className="flex items-center gap-1.5 w-fit px-2.5 py-1 rounded-full mb-3"
+            <div className="px-7 pt-5 pb-1">
+              <div className="flex items-center gap-1.5 w-fit px-2.5 py-1 rounded-full mb-2.5"
                 style={{ background: `${pr}10`, border: `1px solid ${pr}20` }}>
                 <Sparkles className="h-3 w-3" style={{ color: pr }} />
                 <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: pr }}>
@@ -302,7 +302,7 @@ export default function CustomerAuth() {
 
             {/* Tab switcher */}
             {(step === 'login' || step === 'signup') && (
-              <div className="mx-7 mt-4 flex gap-1 p-1 rounded-xl"
+              <div className="mx-7 mt-3 flex gap-1 p-1 rounded-xl"
                 style={{ background: `${colors.secondary}66` }}>
                 {(['login', 'signup'] as Step[]).map(s => (
                   <button key={s} type="button" onClick={() => setStep(s)}
@@ -329,11 +329,11 @@ export default function CustomerAuth() {
               </div>
             )}
 
-            <div className="px-7 py-5 space-y-4">
+            <div className="px-7 py-4.5 space-y-3.5">
 
               {/* LOGIN */}
               {step === 'login' && (
-                <form onSubmit={doLogin} className="space-y-4">
+                <form onSubmit={doLogin} className="space-y-3">
                   <div>
                     <span style={lbl}>Email</span>
                     <input type="email" placeholder="you@example.com" value={email}
@@ -397,7 +397,7 @@ export default function CustomerAuth() {
 
               {/* SIGNUP */}
               {step === 'signup' && (
-                <form onSubmit={doSignupSend} className="space-y-4">
+                <form onSubmit={doSignupSend} className="space-y-3">
                   <div>
                     <span style={lbl}>Full Name</span>
                     <input placeholder="Your full name" value={fullName}
@@ -473,7 +473,7 @@ export default function CustomerAuth() {
 
               {/* FORGOT EMAIL */}
               {step === 'forgot_email' && (
-                <form onSubmit={doForgotSend} className="space-y-4">
+                <form onSubmit={doForgotSend} className="space-y-3">
                   <div>
                     <span style={lbl}>Your Email</span>
                     <input type="email" placeholder="you@example.com" value={email}
@@ -506,7 +506,7 @@ export default function CustomerAuth() {
 
               {/* FORGOT NEW PW */}
               {step === 'forgot_newpw' && (
-                <form onSubmit={doForgotNewPw} className="space-y-4">
+                <form onSubmit={doForgotNewPw} className="space-y-3">
                   <div>
                     <span style={lbl}>New Password</span>
                     <div className="relative">
@@ -531,7 +531,7 @@ export default function CustomerAuth() {
               )}
 
               {(step === 'login' || step === 'signup') && isGoogleConfigured && (
-                <div className="pt-2 space-y-4">
+                <div className="pt-1.5 space-y-3">
                   <div className="relative flex py-2 items-center">
                     <div className="flex-grow border-t border-gray-300" style={{ borderColor: `${colors.secondary}88` }}></div>
                     <span className="flex-shrink mx-4 text-gray-400 text-[11px] uppercase font-semibold tracking-wider">Or continue with</span>
