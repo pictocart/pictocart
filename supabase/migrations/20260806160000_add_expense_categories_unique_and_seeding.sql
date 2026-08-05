@@ -1,6 +1,14 @@
 -- Add UNIQUE constraint to public.expense_categories if not exists
-ALTER TABLE public.expense_categories 
-  ADD CONSTRAINT expense_categories_store_id_name_key UNIQUE (store_id, name);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conrelid = 'public.expense_categories'::regclass AND conname = 'expense_categories_store_id_name_key'
+  ) THEN
+    ALTER TABLE public.expense_categories 
+      ADD CONSTRAINT expense_categories_store_id_name_key UNIQUE (store_id, name);
+  END IF;
+END $$;
 
 -- Seed default expense categories for existing stores
 INSERT INTO public.expense_categories (store_id, name, is_default)
