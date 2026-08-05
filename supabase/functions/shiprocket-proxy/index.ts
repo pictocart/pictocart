@@ -338,6 +338,35 @@ serve(async (req) => {
       const t0 = j?.tracking_data;
       const srStatus = t0?.shipment_status || "Unknown";
 
+      const mapShiprocketStatusCode = (status: string | number): string => {
+        const code = Number(status);
+        switch (code) {
+          case 1: return "AWB Assigned";
+          case 2: return "Label Generated";
+          case 3: return "Pickup Scheduled";
+          case 4: return "Pickup Queued";
+          case 5: return "In Transit";
+          case 6: return "Out for Delivery";
+          case 7: return "Delivered";
+          case 8: return "Cancelled";
+          case 9: return "RTO Initiated";
+          case 10: return "RTO Delivered";
+          case 11: return "RTO In Transit";
+          case 12: return "Lost";
+          case 13: return "Pickup Error";
+          case 14: return "RTO Reached Hub";
+          case 15: return "RTO Out for Delivery";
+          case 16: return "Delivered to RTO";
+          case 17: return "Pickup Exception";
+          case 18: return "Undelivered";
+          case 19: return "Delayed";
+          case 20: return "Reached Destination Hub";
+          default: return String(status);
+        }
+      };
+
+      const readableStatus = !isNaN(Number(srStatus)) ? mapShiprocketStatusCode(srStatus) : String(srStatus);
+
       // Auto-update order status in the database if there is a status progression
       try {
         const { data: orderRow } = await admin
@@ -359,7 +388,7 @@ serve(async (req) => {
             return null;
           };
 
-          const mappedStatus = mapShiprocketStatus(srStatus);
+          const mappedStatus = mapShiprocketStatus(readableStatus);
           if (mappedStatus && mappedStatus !== orderRow.status) {
             const updateFields: any = { status: mappedStatus };
             if (mappedStatus === "delivered") {
@@ -391,7 +420,7 @@ serve(async (req) => {
       }
 
       return json({
-        status: srStatus,
+        status: readableStatus,
         location: t0?.shipment_track?.[0]?.current_status,
         scans: t0?.shipment_track_activities || [],
         raw: j,
