@@ -26,13 +26,16 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Unauthorized" }, 401);
 
-    const userClient = createClient(SUPABASE_URL, PUBLISHABLE, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authErr } = await userClient.auth.getUser();
-    if (authErr || !user) {
-      return json({ error: "Unauthorized: " + (authErr?.message || "No user found in session") }, 401);
+    const jwt = authHeader.replace("Bearer ", "");
+    let userId: string;
+    try {
+      const parts = jwt.split('.');
+      if (parts.length !== 3) throw new Error('Invalid JWT format');
+      userId = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))).sub;
+    } catch (err) {
+      return json({ error: "Unauthorized: Invalid token format" }, 401);
     }
+    if (!userId) return json({ error: "Unauthorized: No user ID in token" }, 401);
 
     const body = await req.json().catch(() => ({}));
     const { order_id, amount, reason, speed = "normal" } = body as {
@@ -47,9 +50,9 @@ Deno.serve(async (req) => {
       .eq("id", order_id)
       .maybeSingle();
     if (ordErr || !order) return json({ error: "Order not found" }, 404);
-    if ((order as any).stores.user_id !== user.id) return json({ error: "Forbidden" }, 403);
+    if ((order as any).stores.user_id !== userId) return json({ error: "Forbidden" }, 403);
     if (!order.razorpay_payment_id) return json({ error: "Order has no captured Razorpay payment" }, 400);
-    if (order.payment_status !== "paid" && order.payment_status !== "partially_refunded") {
+    if (order.payment_status !== "paid" && order.payment_status !== "partially_refunded" && order.payment_status !== "refund_requested") {
       return json({ error: `Cannot refund order in status ${order.payment_status}` }, 400);
     }
 
@@ -67,7 +70,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         amount: Math.round(refundAmount * 100),
         speed,
-        notes: { reason: reason ?? "", initiated_by: user.id, order_id: order.id },
+        notes: { reason: reason ?? "", initiated_by: userId, order_id: order.id },
       }),
     });
     const rzpData = await rzpRes.json();
@@ -86,7 +89,7 @@ Deno.serve(async (req) => {
       status: rzpData.status === "processed" ? "processed" : "pending",
       speed,
       reason,
-      initiated_by: user.id,
+      initiated_by: userId,
     });
 
     return json({ ok: true, refund: rzpData });
