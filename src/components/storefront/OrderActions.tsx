@@ -57,7 +57,7 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
       window.open((order as any).invoice_url, '_blank');
       return;
     }
-    window.print();
+    window.open(`/invoices/${order.id}/print`, '_blank');
   };
 
   if (isLoading) {
