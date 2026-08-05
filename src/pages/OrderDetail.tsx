@@ -87,6 +87,7 @@ const OrderDetail = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [hasAutoSynced, setHasAutoSynced] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const handleTrack = async () => {
     if (!order?.tracking_number || !store) return;
@@ -238,18 +239,22 @@ const OrderDetail = () => {
     setDownloadingInvoice(false);
   };
 
-  const handleCancelShipment = async () => {
+  const handleCancelShipment = () => {
     const orderMetadata = order?.courier_response as any;
     const orderId = orderMetadata?.shiprocket_order_id;
     if (!orderId) {
       toast.error('Shiprocket order ID not found. Ensure the order was shipped using the new courier selection flow.');
       return;
     }
-    
-    if (!confirm('Are you sure you want to cancel this shipment on Shiprocket? This will cancel the courier pickup request.')) {
-      return;
-    }
+    setCancelDialogOpen(true);
+  };
 
+  const confirmCancelShipment = async () => {
+    const orderMetadata = order?.courier_response as any;
+    const orderId = orderMetadata?.shiprocket_order_id;
+    if (!orderId) return;
+
+    setCancelDialogOpen(false);
     setCancellingShipment(true);
     try {
       const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
@@ -1057,6 +1062,28 @@ const OrderDetail = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmStatusChange}>
               Yes, Change Status
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel shipment on Shiprocket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this shipment on Shiprocket? This will cancel the courier pickup request.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancellingShipment}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCancelShipment} 
+              disabled={cancellingShipment}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {cancellingShipment ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Yes, Cancel Shipment
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
