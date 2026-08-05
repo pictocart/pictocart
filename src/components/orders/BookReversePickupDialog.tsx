@@ -334,6 +334,8 @@ const BookReversePickupDialog = ({ open, onOpenChange, order, store, returnReque
                       const isCheapest = c.courier_company_id === cheapestCourierId;
                       const isFastest = c.courier_company_id === fastestCourierId;
                       
+                      const hasDoorstepQc = c.qc_status === 1 || c.qc_service === true || c.qc_service === 1 || c.is_qc === 1 || c.is_qc === true || String(c.courier_name).toLowerCase().includes('qc');
+                      
                       return (
                         <div 
                           key={c.courier_company_id}
@@ -349,6 +351,7 @@ const BookReversePickupDialog = ({ open, onOpenChange, order, store, returnReque
                               <span className="font-semibold text-sm">{c.courier_name}</span>
                               {isCheapest && <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] py-0 px-1">Cheapest</Badge>}
                               {isFastest && <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] py-0 px-1">Fastest</Badge>}
+                              {hasDoorstepQc && <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] py-0 px-1">Doorstep QC</Badge>}
                             </div>
                             <p className="text-xs text-muted-foreground">
                               ETA: {c.etd || `${c.estimated_delivery_days || '3-5'} days`}
