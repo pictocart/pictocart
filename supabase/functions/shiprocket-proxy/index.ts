@@ -265,7 +265,7 @@ serve(async (req) => {
         body: JSON.stringify({ shipment_id: [Number(shipment_id)] }),
       });
       const j = await r.json();
-      if (!r.ok || !j.label_url) return json({ error: j.message || "Failed to generate label", raw: j }, 400);
+      if (!r.ok || !j.label_url) return json({ error: j.message || "Failed to generate label", raw: j });
       return json({ label_url: j.label_url, raw: j });
     }
 
@@ -278,7 +278,7 @@ serve(async (req) => {
         body: JSON.stringify({ ids: [Number(order_id)] }),
       });
       const j = await r.json();
-      if (!r.ok || !j.invoice_url) return json({ error: j.message || "Failed to generate invoice", raw: j }, 400);
+      if (!r.ok || !j.invoice_url) return json({ error: j.message || "Failed to generate invoice", raw: j });
       return json({ invoice_url: j.invoice_url, raw: j });
     }
 
@@ -291,7 +291,7 @@ serve(async (req) => {
         body: JSON.stringify({ ids: [Number(order_id)] }),
       });
       const j = await r.json();
-      if (!r.ok) return json({ error: j.message || "Failed to cancel shipment", raw: j }, 400);
+      if (!r.ok) return json({ error: j.message || "Failed to cancel shipment", raw: j });
       return json({ success: true, raw: j });
     }
 
@@ -312,7 +312,7 @@ serve(async (req) => {
         });
         const printJ = await printR.json();
         if (!printR.ok || !printJ.manifest_url) {
-          return json({ error: j.message || printJ.message || "Failed to generate/print manifest", raw: { generate: j, print: printJ } }, 400);
+          return json({ error: j.message || printJ.message || "Failed to generate/print manifest", raw: { generate: j, print: printJ } });
         }
         return json({ manifest_url: printJ.manifest_url, raw: printJ });
       }
@@ -328,7 +328,7 @@ serve(async (req) => {
         body: JSON.stringify({ shipment_id: [Number(shipment_id)] }),
       });
       const j = await r.json();
-      if (!r.ok) return json({ error: j.message || "Failed to request pickup", raw: j }, 400);
+      if (!r.ok) return json({ error: j.message || "Failed to request pickup", raw: j });
       return json({ success: true, raw: j });
     }
 
