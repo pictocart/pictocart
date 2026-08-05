@@ -59,6 +59,21 @@ async function getToken(admin: any, store_id: string) {
   return { token: j.token };
 }
 
+function sanitizePhone(phone: any): string {
+  if (!phone) return "9999999999";
+  let digits = String(phone).replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  }
+  if (digits.length === 11 && digits.startsWith("0")) {
+    digits = digits.slice(1);
+  }
+  if (digits.length > 10) {
+    digits = digits.slice(-10);
+  }
+  return digits.length === 10 ? digits : "9999999999";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -200,7 +215,7 @@ serve(async (req) => {
         billing_state: s.customer_state,
         billing_country: "India",
         billing_email: s.customer_email || "noreply@pictocart.in",
-        billing_phone: s.customer_phone,
+        billing_phone: sanitizePhone(s.customer_phone),
         shipping_is_billing: true,
         order_items: [{
           name: `Order ${s.order_number}`,
@@ -268,7 +283,7 @@ serve(async (req) => {
         pickup_state: s.pickup_state,
         pickup_country: "India",
         pickup_pincode: s.pickup_pincode,
-        pickup_phone: s.pickup_phone,
+        pickup_phone: sanitizePhone(s.pickup_phone),
         shipping_customer_name: s.shipping_name,
         shipping_last_name: "",
         shipping_address: s.shipping_address,
@@ -276,7 +291,7 @@ serve(async (req) => {
         shipping_state: s.shipping_state,
         shipping_country: "India",
         shipping_pincode: s.shipping_pincode,
-        shipping_phone: s.shipping_phone,
+        shipping_phone: sanitizePhone(s.shipping_phone),
         order_items: (s.items || []).map((it: any) => ({
           name: it.name || "Return Item",
           sku: it.sku || "RETURN-SKU",
