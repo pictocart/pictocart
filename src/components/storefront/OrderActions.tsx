@@ -30,7 +30,7 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
     setCancelling(true);
     const updates: any = { status: 'cancelled' as any };
     if (order.payment_status === 'paid') {
-      updates.payment_status = 'refund_in_process';
+      updates.payment_status = 'refund_requested';
     }
     const { error } = await supabase.from('orders').update(updates).eq('id', order.id);
     setCancelling(false);
