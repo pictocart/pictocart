@@ -88,6 +88,7 @@ const BookReversePickupDialog = ({ open, onOpenChange, order, store, returnReque
           delivery_pincode: destinationPincode,
           weight: (parseInt(weight) || 100) / 1000,
           cod: 0, // reverse orders are always non-cod
+          is_return: 1,
           length: parseInt(length) || 15,
           breadth: parseInt(breadth) || 15,
           height: parseInt(height) || 15,
