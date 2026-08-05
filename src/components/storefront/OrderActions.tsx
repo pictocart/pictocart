@@ -20,6 +20,9 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
   const { slug } = useParams<{ slug: string }>();
   const { data: elig, isLoading, error } = useOrderEligibility(order.id);
   const [cancelling, setCancelling] = useState(false);
+  const hasAnyActiveReturnOrExchange = !!order.returns?.some((r: any) => r.status !== 'cancelled') || !!elig?.existingReturnId || !!elig?.existingExchangeId;
+  const existingReturnId = order.returns?.find((r: any) => r.request_type === 'return' && r.status !== 'cancelled')?.id || elig?.existingReturnId;
+  const existingExchangeId = order.returns?.find((r: any) => r.request_type === 'exchange' && r.status !== 'cancelled')?.id || elig?.existingExchangeId;
 
   // Debug: log if there's an error
   if (error) {
@@ -185,17 +188,23 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
         </AlertDialog>
       )}
 
-      {elig.canReturn && !elig.existingReturnId && (
+      {elig.canReturn && !hasAnyActiveReturnOrExchange && (
         <RequestReturnButton order={order} primaryColor={primaryColor} mode="return" />
       )}
 
-      {elig.canExchange && !elig.existingExchangeId && (
+      {elig.canExchange && !hasAnyActiveReturnOrExchange && (
         <RequestReturnButton order={order} primaryColor={primaryColor} mode="exchange" />
       )}
 
-      {elig.existingReturnId && (
-        <Link to={`/store/${slug}/account/returns/${elig.existingReturnId}`} className={btn}>
+      {existingReturnId && (
+        <Link to={`/store/${slug}/account/returns/${existingReturnId}`} className={btn}>
           <Undo2 className="h-3.5 w-3.5" /> View Return
+        </Link>
+      )}
+
+      {existingExchangeId && (
+        <Link to={`/store/${slug}/account/returns/${existingExchangeId}`} className={btn}>
+          <Repeat2 className="h-3.5 w-3.5" /> View Exchange
         </Link>
       )}
 

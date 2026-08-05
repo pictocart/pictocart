@@ -485,7 +485,52 @@ const OrderDetail = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Order #{order.order_number}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight">Order #{order.order_number}</h1>
+              {(() => {
+                const activeReturn = Array.isArray((order as any).returns) && (order as any).returns.length > 0 
+                  ? (order as any).returns.find((r: any) => r.status !== 'cancelled') 
+                  : null;
+                if (activeReturn) {
+                  const isExchange = activeReturn.request_type === 'exchange';
+                  const prefix = isExchange ? 'Exchange' : 'Return';
+                  let label = `${prefix} Requested`;
+                  let color = 'bg-orange-100 text-orange-800 border-orange-200';
+                  
+                  if (activeReturn.status === 'approved') {
+                    label = `${prefix} Approved`;
+                    color = 'bg-blue-100 text-blue-800 border-blue-200';
+                  } else if (activeReturn.status === 'rejected') {
+                    label = `${prefix} Rejected`;
+                    color = 'bg-red-100 text-red-800 border-red-200';
+                  } else if (activeReturn.status === 'pickup_scheduled') {
+                    label = `Pickup Scheduled`;
+                    color = 'bg-cyan-100 text-cyan-800 border-cyan-200';
+                  } else if (activeReturn.status === 'picked_up') {
+                    label = `Item Picked Up`;
+                    color = 'bg-indigo-100 text-indigo-800 border-indigo-200';
+                  } else if (activeReturn.status === 'received') {
+                    label = `Item Received`;
+                    color = 'bg-purple-100 text-purple-800 border-purple-200';
+                  } else if (activeReturn.status === 'refund_initiated' || activeReturn.status === 'refund_completed' || activeReturn.status === 'refunded') {
+                    label = isExchange ? 'Exchange Completed' : 'Returned';
+                    color = 'bg-green-100 text-green-800 border-green-200';
+                  } else if (activeReturn.status === 'replacement_shipped') {
+                    label = 'Replacement Shipped';
+                    color = 'bg-cyan-100 text-cyan-800 border-cyan-200';
+                  } else if (activeReturn.status === 'replacement_delivered') {
+                    label = 'Exchange Completed';
+                    color = 'bg-green-100 text-green-800 border-green-200';
+                  }
+                  return (
+                    <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold', color)}>
+                      {label}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
+            </div>
             <p className="text-sm text-muted-foreground">
               {format(new Date(order.created_at), 'dd MMM yyyy, hh:mm a')}
               {(order as any).invoice_number && (
@@ -578,6 +623,67 @@ const OrderDetail = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Active Return/Exchange Request Banner */}
+      {(() => {
+        const activeReturn = Array.isArray((order as any).returns) && (order as any).returns.length > 0 
+          ? (order as any).returns.find((r: any) => r.status !== 'cancelled') 
+          : null;
+        if (activeReturn) {
+          const isExchange = activeReturn.request_type === 'exchange';
+          const prefix = isExchange ? 'Exchange' : 'Return';
+          const linkPath = isExchange ? '/exchanges' : '/returns';
+          
+          let statusText = 'Requested';
+          let borderCls = 'border-orange-300 bg-orange-50 text-orange-800';
+          
+          if (activeReturn.status === 'approved') {
+            statusText = 'Approved';
+            borderCls = 'border-blue-300 bg-blue-50 text-blue-800';
+          } else if (activeReturn.status === 'rejected') {
+            statusText = 'Rejected';
+            borderCls = 'border-red-300 bg-red-50 text-red-800';
+          } else if (activeReturn.status === 'pickup_scheduled') {
+            statusText = 'Pickup Scheduled';
+            borderCls = 'border-cyan-300 bg-cyan-50 text-cyan-800';
+          } else if (activeReturn.status === 'picked_up') {
+            statusText = 'Item Picked Up';
+            borderCls = 'border-indigo-300 bg-indigo-50 text-indigo-800';
+          } else if (activeReturn.status === 'received') {
+            statusText = 'Item Received';
+            borderCls = 'border-purple-300 bg-purple-50 text-purple-800';
+          } else if (activeReturn.status === 'refund_initiated' || activeReturn.status === 'refund_completed' || activeReturn.status === 'refunded') {
+            statusText = isExchange ? 'Exchange Completed' : 'Returned';
+            borderCls = 'border-green-300 bg-green-50 text-green-800';
+          } else if (activeReturn.status === 'replacement_shipped') {
+            statusText = 'Replacement Shipped';
+            borderCls = 'border-cyan-300 bg-cyan-50 text-cyan-800';
+          } else if (activeReturn.status === 'replacement_delivered') {
+            statusText = 'Exchange Completed';
+            borderCls = 'border-green-300 bg-green-50 text-green-800';
+          }
+          
+          return (
+            <Card className={borderCls}>
+              <CardContent className="py-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold">{prefix} {statusText}</p>
+                    <p className="text-xs opacity-90 mt-0.5">
+                      This order has an active {prefix.toLowerCase()} request. Manage it under the {prefix} module.
+                    </p>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" className="bg-transparent border-current hover:bg-black/5" onClick={() => navigate(linkPath)}>
+                  Manage {prefix}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        }
+        return null;
+      })()}
 
       {/* Status timeline */}
       {!isCancelled && (

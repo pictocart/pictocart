@@ -44,7 +44,7 @@ export const useOrders = () => {
       if (!store?.id) return [];
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, returns (*)')
         .eq('store_id', store.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -127,7 +127,7 @@ export const useOrder = (id: string | undefined) => {
       if (!id) return null;
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, returns (*)')
         .eq('id', id)
         .single();
       if (error) throw error;
