@@ -7,7 +7,7 @@ export const useCustomerOrders = (userId: string | undefined, storeId: string | 
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, returns (*)')
         .eq('customer_user_id', userId!)
         .eq('store_id', storeId!)
         .order('created_at', { ascending: false });

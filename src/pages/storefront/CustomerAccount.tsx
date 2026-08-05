@@ -611,16 +611,71 @@ const CustomerAccount = () => {
                                 </p>
                               </div>
                               <div className="flex flex-col items-end gap-1.5">
-                                <span 
-                                  className="text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border" 
-                                  style={{ 
-                                    backgroundColor: (statusColors[order.status] || '#888') + '10', 
-                                    color: statusColors[order.status] || '#888',
-                                    borderColor: (statusColors[order.status] || '#888') + '30'
-                                  }}
-                                >
-                                  ● {order.status.replace(/_/g, ' ')}
-                                </span>
+                                {(() => {
+                                  const activeReturn = Array.isArray(order.returns) && order.returns.length > 0 
+                                    ? order.returns.find((r: any) => r.status !== 'cancelled') 
+                                    : null;
+                                    
+                                  if (activeReturn) {
+                                    const isExchange = activeReturn.request_type === 'exchange';
+                                    const prefix = isExchange ? 'Exchange' : 'Return';
+                                    
+                                    let label = `${prefix} Requested`;
+                                    let color = '#ea580c';
+                                    
+                                    if (activeReturn.status === 'approved') {
+                                      label = `${prefix} Approved`;
+                                      color = '#2563eb';
+                                    } else if (activeReturn.status === 'rejected') {
+                                      label = `${prefix} Rejected`;
+                                      color = '#dc2626';
+                                    } else if (activeReturn.status === 'pickup_scheduled') {
+                                      label = `Pickup Scheduled`;
+                                      color = '#0891b2';
+                                    } else if (activeReturn.status === 'picked_up') {
+                                      label = `Item Picked Up`;
+                                      color = '#4f46e5';
+                                    } else if (activeReturn.status === 'received') {
+                                      label = `Item Received`;
+                                      color = '#7c3aed';
+                                    } else if (activeReturn.status === 'refund_initiated' || activeReturn.status === 'refund_completed' || activeReturn.status === 'refunded') {
+                                      label = isExchange ? 'Exchange Completed' : 'Returned';
+                                      color = '#16a34a';
+                                    } else if (activeReturn.status === 'replacement_shipped') {
+                                      label = 'Replacement Shipped';
+                                      color = '#0891b2';
+                                    } else if (activeReturn.status === 'replacement_delivered') {
+                                      label = 'Exchange Completed';
+                                      color = '#16a34a';
+                                    }
+                                    
+                                    return (
+                                      <span 
+                                        className="text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border" 
+                                        style={{ 
+                                          backgroundColor: color + '10', 
+                                          color: color,
+                                          borderColor: color + '30'
+                                        }}
+                                      >
+                                        ● {label}
+                                      </span>
+                                    );
+                                  }
+                                  
+                                  return (
+                                    <span 
+                                      className="text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border" 
+                                      style={{ 
+                                        backgroundColor: (statusColors[order.status] || '#888') + '10', 
+                                        color: statusColors[order.status] || '#888',
+                                        borderColor: (statusColors[order.status] || '#888') + '30'
+                                      }}
+                                    >
+                                      ● {order.status.replace(/_/g, ' ')}
+                                    </span>
+                                  );
+                                })()}
                                 {order.payment_status && (
                                   <span 
                                     className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border" 

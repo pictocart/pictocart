@@ -185,21 +185,13 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
         </AlertDialog>
       )}
 
-      {canReturn ? (
+      {elig.canReturn && !elig.existingReturnId && (
         <RequestReturnButton order={order} primaryColor={primaryColor} mode="return" />
-      ) : elig.status === 'delivered' && elig.returnReason ? (
-        <button className={btn} disabled title={elig.returnReason || undefined}>
-          <Undo2 className="h-3.5 w-3.5" /> Return
-        </button>
-      ) : null}
+      )}
 
-      {canExchange ? (
+      {elig.canExchange && !elig.existingExchangeId && (
         <RequestReturnButton order={order} primaryColor={primaryColor} mode="exchange" />
-      ) : elig.status === 'delivered' && elig.exchangeReason ? (
-        <button className={btn} disabled title={elig.exchangeReason || undefined}>
-          <Repeat2 className="h-3.5 w-3.5" /> Exchange
-        </button>
-      ) : null}
+      )}
 
       {elig.existingReturnId && (
         <Link to={`/store/${slug}/account/returns/${elig.existingReturnId}`} className={btn}>
