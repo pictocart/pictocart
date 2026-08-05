@@ -150,7 +150,7 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
             payment_mode: order.payment_method === 'cod' ? 'COD' : 'Pre-paid',
             cod_amount: order.payment_method === 'cod' ? order.total || 0 : 0,
             total_amount: order.total || 0,
-            weight: parseInt(weight) || 500,
+            weight: parseInt(weight) || 100,
             length: parseInt(length) || 15,
             breadth: parseInt(breadth) || 15,
             height: parseInt(height) || 15,
@@ -268,7 +268,7 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
                   <Label className="text-xs">Weight (grams)</Label>
                   <Input
                     type="number"
-                    placeholder="500"
+                    placeholder="100"
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
                     min={1}
