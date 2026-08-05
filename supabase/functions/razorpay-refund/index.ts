@@ -30,7 +30,9 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
-    if (authErr || !user) return json({ error: "Unauthorized" }, 401);
+    if (authErr || !user) {
+      return json({ error: "Unauthorized: " + (authErr?.message || "No user found in session") }, 401);
+    }
 
     const body = await req.json().catch(() => ({}));
     const { order_id, amount, reason, speed = "normal" } = body as {
