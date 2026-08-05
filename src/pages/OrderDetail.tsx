@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useOrder, useOrders, ORDER_STATUSES, PAYMENT_STATUSES, type OrderStatus } from '@/hooks/useOrders';
 import { useStore } from '@/hooks/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +56,33 @@ const OrderDetail = () => {
   const [shipDialogOpen, setShipDialogOpen] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
+
+  const { data: paymentEvent } = useQuery({
+    queryKey: ['payment-event', order?.id],
+    queryFn: async () => {
+      if (!order?.id || order.payment_method?.toLowerCase() !== 'razorpay') return null;
+      const { data, error } = await supabase
+        .from('payment_events')
+        .select('*')
+        .eq('order_id', order.id)
+        .in('event_type', ['payment.captured', 'order.paid'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.error('Error fetching payment event:', error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!order?.id && order.payment_method?.toLowerCase() === 'razorpay',
+  });
+
+  const rzpPayment = useMemo(() => {
+    if (!paymentEvent?.payload) return null;
+    const payload = paymentEvent.payload as any;
+    return payload?.payload?.payment?.entity || null;
+  }, [paymentEvent]);
 
   // Offline payment modes available for "Collect Payment" at counter.
   // F&B stores get all three on by default; other shops respect merchant choice.
@@ -911,6 +938,70 @@ const OrderDetail = () => {
                 <div className="rounded-lg border border-green-200 bg-green-50 p-3 flex items-center gap-2 text-green-800">
                   <CheckCircle2 className="h-4 w-4" />
                   <span className="text-xs font-medium">Payment received</span>
+                </div>
+              )}
+
+              {rzpPayment && (
+                <div className="rounded-lg border border-muted bg-muted/30 p-3 space-y-2 mt-2 text-xs">
+                  <p className="font-semibold text-foreground border-b pb-1 mb-1">Razorpay Details</p>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment ID</span>
+                    <span className="font-mono select-all font-medium text-right break-all ml-4">{rzpPayment.id}</span>
+                  </div>
+                  {rzpPayment.order_id && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Order ID</span>
+                      <span className="font-mono select-all font-medium text-right break-all ml-4">{rzpPayment.order_id}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment Mode</span>
+                    <span className="capitalize font-medium">{rzpPayment.method}</span>
+                  </div>
+                  {rzpPayment.method === 'upi' && rzpPayment.vpa && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">UPI ID (VPA)</span>
+                      <span className="font-medium select-all text-right break-all ml-4">{rzpPayment.vpa}</span>
+                    </div>
+                  )}
+                  {rzpPayment.method === 'card' && rzpPayment.card && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Card Details</span>
+                      <span className="font-medium text-right ml-4">
+                        {rzpPayment.card.network} ending in {rzpPayment.card.last4}
+                      </span>
+                    </div>
+                  )}
+                  {rzpPayment.method === 'netbanking' && rzpPayment.bank && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bank</span>
+                      <span className="font-medium text-right ml-4">{rzpPayment.bank}</span>
+                    </div>
+                  )}
+                  {rzpPayment.method === 'wallet' && rzpPayment.wallet && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Wallet</span>
+                      <span className="font-medium text-right ml-4 capitalize">{rzpPayment.wallet}</span>
+                    </div>
+                  )}
+                  {(() => {
+                    const transId = rzpPayment.acquirer_data?.upi_transaction_id || 
+                                    rzpPayment.acquirer_data?.bank_transaction_id || 
+                                    rzpPayment.acquirer_data?.transaction_id ||
+                                    rzpPayment.acquirer_data?.rrn;
+                    return transId ? (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Ref / Txn No.</span>
+                        <span className="font-mono select-all font-medium text-right break-all ml-4">{transId}</span>
+                      </div>
+                    ) : null;
+                  })()}
+                  {(rzpPayment.email || rzpPayment.contact) && (
+                    <div className="border-t pt-1.5 mt-1.5 space-y-1 text-[11px] text-muted-foreground">
+                      {rzpPayment.email && <div>Email: {rzpPayment.email}</div>}
+                      {rzpPayment.contact && <div>Phone: {rzpPayment.contact}</div>}
+                    </div>
+                  )}
                 </div>
               )}
 
