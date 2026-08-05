@@ -31,7 +31,7 @@ const ShipOrderDialog = ({ open, onOpenChange, order, store, onShipped }: ShipOr
   const isConfigured = !!shippingConfig?.configured && !!shippingConfig?.pickup?.pincode;
 
   const [step, setStep] = useState<'specs' | 'couriers'>('specs');
-  const [weight, setWeight] = useState('500');
+  const [weight, setWeight] = useState('100');
   const [length, setLength] = useState('15');
   const [breadth, setBreadth] = useState('15');
   const [height, setHeight] = useState('15');
