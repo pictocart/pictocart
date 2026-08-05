@@ -625,12 +625,12 @@ const CustomerAccount = () => {
                                   <span 
                                     className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border" 
                                     style={{ 
-                                      backgroundColor: (order.payment_status === 'paid' ? '#16a34a' : '#f59e0b') + '10', 
-                                      color: order.payment_status === 'paid' ? '#16a34a' : '#f59e0b',
-                                      borderColor: (order.payment_status === 'paid' ? '#16a34a' : '#f59e0b') + '30'
+                                      backgroundColor: (order.payment_status === 'paid' ? '#16a34a' : order.payment_status === 'refund_in_process' ? '#3b82f6' : '#f59e0b') + '10', 
+                                      color: order.payment_status === 'paid' ? '#16a34a' : order.payment_status === 'refund_in_process' ? '#3b82f6' : '#f59e0b',
+                                      borderColor: (order.payment_status === 'paid' ? '#16a34a' : order.payment_status === 'refund_in_process' ? '#3b82f6' : '#f59e0b') + '30'
                                     }}
                                   >
-                                    {order.payment_status}
+                                    {order.payment_status === 'refund_in_process' ? 'Refund in Process' : order.payment_status}
                                   </span>
                                 )}
                               </div>

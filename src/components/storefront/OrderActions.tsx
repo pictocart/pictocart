@@ -28,7 +28,11 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
 
   const cancel = async () => {
     setCancelling(true);
-    const { error } = await supabase.from('orders').update({ status: 'cancelled' as any }).eq('id', order.id);
+    const updates: any = { status: 'cancelled' as any };
+    if (order.payment_status === 'paid') {
+      updates.payment_status = 'refund_in_process';
+    }
+    const { error } = await supabase.from('orders').update(updates).eq('id', order.id);
     setCancelling(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Order cancelled');
