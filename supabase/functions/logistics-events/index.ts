@@ -47,7 +47,44 @@ serve(async (req) => {
       .maybeSingle();
 
     if (findError || !order) {
-      return json({ success: true, message: "Webhook verified, but no order matches AWB: " + awb });
+      const { data: ret, error: findReturnError } = await admin
+        .from("returns" as any)
+        .select("id, order_id, status, request_type, timeline")
+        .eq("pickup_awb", awb)
+        .maybeSingle();
+
+      if (findReturnError || !ret) {
+        return json({ success: true, message: "Webhook verified, but no order or return request matches AWB: " + awb });
+      }
+
+      const mapShiprocketReturnStatus = (statusStr: string): string | null => {
+        if (!statusStr) return null;
+        const s = statusStr.toLowerCase().trim();
+        if (s.includes("delivered") || s.includes("received")) return "received";
+        if (s.includes("picked up") || s.includes("transit") || s.includes("out for delivery") || s.includes("picked")) return "picked_up";
+        if (s.includes("pickup scheduled") || s.includes("pickup queued") || s.includes("schedule")) return "pickup_scheduled";
+        if (s.includes("cancel")) return "cancelled";
+        return null;
+      };
+
+      const mappedReturnStatus = mapShiprocketReturnStatus(current_status);
+      if (mappedReturnStatus && mappedReturnStatus !== ret.status) {
+        const updates: any = { status: mappedReturnStatus };
+        if (mappedReturnStatus === "picked_up") {
+          updates.picked_up_at = new Date().toISOString();
+        }
+        const newTimelineEntry = { at: new Date().toISOString(), status: mappedReturnStatus, note: `Status auto-synced via Shiprocket: ${current_status}` };
+        const existingTimeline = Array.isArray(ret.timeline) ? ret.timeline : [];
+        updates.timeline = [...existingTimeline, newTimelineEntry];
+
+        await admin.from("returns" as any).update(updates).eq("id", ret.id);
+
+        if (mappedReturnStatus === "received") {
+          await admin.from("orders").update({ status: "returned" }).eq("id", ret.order_id);
+        }
+      }
+
+      return json({ success: true, message: "Webhook processed and return status updated successfully" });
     }
 
     const mapShiprocketStatus = (statusStr: string): string | null => {

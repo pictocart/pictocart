@@ -1,9 +1,11 @@
 import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useStorefront } from '@/hooks/useStorefront';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
 import { getStoreThemeTokens } from '@/lib/storefrontManifest';
 import { useCustomerReturn } from '@/hooks/useCustomerReturns';
-import { Loader2, ChevronLeft, Undo2, Repeat2, IndianRupee, ClipboardCheck, MessageCircle } from 'lucide-react';
+import { Loader2, ChevronLeft, Undo2, Repeat2, IndianRupee, ClipboardCheck, MessageCircle, MapPin } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import OrderTimeline from '@/components/storefront/OrderTimeline';
 
@@ -20,6 +22,32 @@ const CustomerReturnDetail = () => {
   const { slug, id } = useParams<{ slug: string; id: string }>();
   const { store, loading: storeLoading } = useStorefront(slug || '');
   const { data: ret, isLoading } = useCustomerReturn(id);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+
+  useEffect(() => {
+    if (ret?.pickup_awb && store) {
+      const getTracking = async () => {
+        setTrackingLoading(true);
+        try {
+          const { data } = await supabase.functions.invoke('shiprocket-proxy', {
+            body: {
+              action: 'track',
+              store_id: store.id,
+              waybill: ret.pickup_awb,
+            },
+          });
+          if (data) {
+            setTrackingData(data);
+          }
+        } catch (err) {
+          console.error('Failed to get return tracking:', err);
+        }
+        setTrackingLoading(false);
+      };
+      getTracking();
+    }
+  }, [ret?.pickup_awb, store]);
 
   if (storeLoading || isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   if (!store) return null;
@@ -126,9 +154,60 @@ const CustomerReturnDetail = () => {
                 <dl className="text-sm space-y-1.5">
                   {ret.pickup_courier && <div className="flex justify-between"><dt className="opacity-60">Courier</dt><dd>{ret.pickup_courier}</dd></div>}
                   {ret.pickup_awb && <div className="flex justify-between"><dt className="opacity-60">AWB</dt><dd className="font-mono">{ret.pickup_awb}</dd></div>}
-                  {ret.pickup_scheduled_at && <div className="flex justify-between"><dt className="opacity-60">Scheduled</dt><dd>{format(new Date(ret.pickup_scheduled_at), 'dd MMM')}</dd></div>}
-                  {ret.picked_up_at && <div className="flex justify-between"><dt className="opacity-60">Picked up</dt><dd>{format(new Date(ret.picked_up_at), 'dd MMM')}</dd></div>}
+                  {ret.pickup_scheduled_at && <div className="flex justify-between"><dt className="opacity-60">Scheduled</dt><dd>{format(new Date(ret.pickup_scheduled_at), 'dd MMM yyyy')}</dd></div>}
+                  {ret.picked_up_at && <div className="flex justify-between"><dt className="opacity-60">Picked up</dt><dd>{format(new Date(ret.picked_up_at), 'dd MMM yyyy')}</dd></div>}
                 </dl>
+              </Section>
+            )}
+
+            {ret.pickup_awb && (
+              <Section title="Pickup Tracking">
+                {trackingLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : trackingData ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="opacity-60">Current Status:</span>
+                      <span className="font-semibold uppercase tracking-wide" style={{ color: colors.primary }}>
+                        {trackingData.status || 'AWB Assigned'}
+                      </span>
+                    </div>
+                    {trackingData.location && (
+                      <div className="flex justify-between text-sm">
+                        <span className="opacity-60">Location:</span>
+                        <span className="font-medium">{trackingData.location}</span>
+                      </div>
+                    )}
+                    {trackingData.scans && trackingData.scans.length > 0 && (
+                      <div className="pt-2">
+                        <p className="text-xs font-semibold opacity-60 mb-2">History</p>
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {trackingData.scans.map((scan: any, i: number) => (
+                            <div key={i} className="text-xs p-2 rounded-md border flex flex-col gap-0.5" style={{ borderColor: colors.secondary + '60' }}>
+                              <div className="flex justify-between font-semibold">
+                                <span>{scan?.ScanDetail?.Scan || 'Status Update'}</span>
+                                {scan?.ScanDetail?.ScanDateTime && (
+                                  <span className="opacity-60 font-mono text-[10px]">
+                                    {format(new Date(scan.ScanDetail.ScanDateTime), 'dd MMM, hh:mm a')}
+                                  </span>
+                                )}
+                              </div>
+                              {scan?.ScanDetail?.ScannedLocation && (
+                                <p className="opacity-70 flex items-center gap-1 text-[11px] mt-0.5">
+                                  <MapPin className="h-3 w-3" /> {scan.ScanDetail.ScannedLocation}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs opacity-50 flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> No tracking details available yet</p>
+                )}
               </Section>
             )}
 

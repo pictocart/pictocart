@@ -53,6 +53,7 @@ export interface ReturnRequest {
   replacement_delivered_at: string | null;
   timeline: any;
   internal_notes: string | null;
+  courier_response: any;
   created_at: string;
   updated_at: string;
 }
