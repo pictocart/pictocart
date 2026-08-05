@@ -146,7 +146,7 @@ serve(async (req) => {
     }
 
     if (action === "get-courier-rates") {
-      let { pickup_pincode, delivery_pincode, weight = 0.5, cod = 0, length = 15, breadth = 15, height = 15, declared_value = 100 } = body;
+      let { pickup_pincode, delivery_pincode, weight = 0.5, cod = 0, length = 15, breadth = 15, height = 15, declared_value = 100, is_return = 0 } = body;
       if (!pickup_pincode) {
         const { data: storeRow } = await admin
           .from("stores")
@@ -158,7 +158,7 @@ serve(async (req) => {
       if (!pickup_pincode || !delivery_pincode) {
         return json({ error: "pickup_pincode and delivery_pincode are required" }, 400);
       }
-      const url = `${BASE}/courier/serviceability/?pickup_postcode=${pickup_pincode}&delivery_postcode=${delivery_pincode}&cod=${cod}&weight=${weight}&length=${length}&breadth=${breadth}&height=${height}&declared_value=${declared_value}`;
+      const url = `${BASE}/courier/serviceability/?pickup_postcode=${pickup_pincode}&delivery_postcode=${delivery_pincode}&cod=${cod}&weight=${weight}&length=${length}&breadth=${breadth}&height=${height}&declared_value=${declared_value}&is_return=${is_return}`;
       const r = await fetch(url, { headers });
       const j = await r.json();
       if (!r.ok) return json({ error: j.message || "Failed to fetch courier rates", raw: j }, 400);
