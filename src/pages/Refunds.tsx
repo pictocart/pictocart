@@ -36,12 +36,12 @@ const Refunds = () => {
       const [gatewayRes, returnsRes] = await Promise.all([
         supabase
           .from('refunds')
-          .select('id, order_id, amount, status, speed, reason, razorpay_refund_id, created_at, orders:order_id (order_number, customer_name, customer_email, payment_method)')
+          .select('id, order_id, amount, status, speed, reason, razorpay_refund_id, created_at, orders (order_number, customer_name, customer_email, payment_method)')
           .eq('store_id', store.id)
           .order('created_at', { ascending: false }),
         supabase
           .from('returns')
-          .select('id, order_id, refund_amount, refund_status, refund_method, request_type, status, reason, updated_at, created_at, orders:order_id (order_number, customer_name, customer_email, payment_method, store_id)')
+          .select('id, order_id, refund_amount, refund_status, refund_method, request_type, status, reason, updated_at, created_at, orders (order_number, customer_name, customer_email, payment_method, store_id)')
           .gt('refund_amount', 0)
           .order('updated_at', { ascending: false }),
       ]);
