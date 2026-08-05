@@ -334,7 +334,7 @@ const BookReversePickupDialog = ({ open, onOpenChange, order, store, returnReque
                       const isCheapest = c.courier_company_id === cheapestCourierId;
                       const isFastest = c.courier_company_id === fastestCourierId;
                       
-                      const hasDoorstepQc = c.qc_status === 1 || c.qc_service === true || c.qc_service === 1 || c.is_qc === 1 || c.is_qc === true || String(c.courier_name).toLowerCase().includes('qc');
+                      const hasDoorstepQc = c.qc_courier === 1 || c.qc_courier === '1' || c.qc_status === 1 || c.qc_service === true || c.qc_service === 1 || c.is_qc === 1 || c.is_qc === true || String(c.courier_name).toLowerCase().includes('qc');
                       
                       return (
                         <div 
