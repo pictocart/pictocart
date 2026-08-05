@@ -82,7 +82,12 @@ Deno.serve(async (req) => {
     }
     if (!isAuthorized) return json({ error: "Forbidden" }, 403);
     if (!order.razorpay_payment_id) return json({ error: "Order has no captured Razorpay payment" }, 400);
-    if (order.payment_status !== "paid" && order.payment_status !== "partially_refunded" && order.payment_status !== "refund_requested") {
+    if (
+      order.payment_status !== "paid" && 
+      order.payment_status !== "partially_refunded" && 
+      order.payment_status !== "refund_requested" &&
+      order.payment_status !== "refund_in_process"
+    ) {
       return json({ error: `Cannot refund order in status ${order.payment_status}` }, 400);
     }
 
