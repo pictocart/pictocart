@@ -60,7 +60,7 @@ serve(async (req) => {
       const mapShiprocketReturnStatus = (statusStr: string): string | null => {
         if (!statusStr) return null;
         const s = statusStr.toLowerCase().trim();
-        if (s.includes("delivered") || s.includes("received")) return "received";
+        if (s.includes("delivered") || s.includes("received") || s.includes("rto") || s.includes("returned")) return "received";
         if (s.includes("picked up") || s.includes("transit") || s.includes("out for delivery") || s.includes("picked")) return "picked_up";
         if (s.includes("pickup scheduled") || s.includes("pickup queued") || s.includes("schedule")) return "pickup_scheduled";
         if (s.includes("cancel")) return "cancelled";
@@ -80,7 +80,7 @@ serve(async (req) => {
         await admin.from("returns" as any).update(updates).eq("id", ret.id);
 
         if (mappedReturnStatus === "received") {
-          await admin.from("orders").update({ status: "returned" }).eq("id", ret.order_id);
+          await admin.from("orders").update({ status: "returned", payment_status: "refund_requested" }).eq("id", ret.order_id);
         }
       }
 

@@ -168,43 +168,6 @@ export const useValidateCoupon = () => {
   const validateCoupon = async (storeId: string, code: string, subtotal: number, items: CartLine[] = []) => {
     const codeUpper = code.toUpperCase();
     
-    if (codeUpper === 'WELCOME') {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { count } = await supabase
-          .from('orders')
-          .select('id', { count: 'exact', head: true })
-          .eq('store_id', storeId)
-          .eq('customer_user_id', user.id);
-        
-        if (count && count > 0) {
-          return { valid: false, error: 'WELCOME coupon is only valid for first-time customers' };
-        }
-      }
-      
-      const welcomeCoupon: Coupon = {
-        id: 'welcome-coupon-id',
-        store_id: storeId,
-        code: 'WELCOME',
-        type: 'percentage',
-        value: 10,
-        min_order_amount: 199,
-        max_uses: null,
-        used_count: 0,
-        starts_at: null,
-        expires_at: null,
-        is_active: true,
-        description: '10% OFF for first-time customers!',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      
-      if (subtotal < 199) {
-        return { valid: false, error: 'Minimum order of ₹199 required for WELCOME' };
-      }
-      
-      return { valid: true, coupon: welcomeCoupon, discount: computeDiscount(welcomeCoupon, subtotal, items) };
-    }
 
     const { data, error } = await supabase
       .from('coupons')
@@ -245,39 +208,7 @@ export const useValidateCoupon = () => {
       .eq('is_active', true)
       .eq('auto_apply', true);
     
-    // Add WELCOME as a potential best coupon if subtotal qualifies
     const candidates: any[] = data ? [...data] : [];
-    
-    // We can fetch user and check welcome coupon suitability
-    const { data: { user } } = await supabase.auth.getUser();
-    let isEligibleForWelcome = true;
-    if (user) {
-      const { count } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('store_id', storeId)
-        .eq('customer_user_id', user.id);
-      if (count && count > 0) {
-        isEligibleForWelcome = false;
-      }
-    }
-    
-    if (isEligibleForWelcome) {
-      candidates.push({
-        id: 'welcome-coupon-id',
-        store_id: storeId,
-        code: 'WELCOME',
-        type: 'percentage',
-        value: 10,
-        min_order_amount: 199,
-        max_uses: null,
-        used_count: 0,
-        starts_at: null,
-        expires_at: null,
-        is_active: true,
-        auto_apply: true,
-      });
-    }
 
     if (!candidates.length) return null;
     let best: { coupon: any; discount: number } | null = null;
@@ -295,7 +226,6 @@ export const useValidateCoupon = () => {
   // The legacy increment_coupon_usage RPC was locked down to service_role only.
   const incrementUsage = async (couponId: string, orderId?: string) => {
     if (!orderId) return;
-    if (couponId === 'welcome-coupon-id') return; // Skip DB increment for welcome coupon
     await supabase.rpc('apply_coupon_to_recent_order' as any, { _coupon_id: couponId, _order_id: orderId });
   };
 

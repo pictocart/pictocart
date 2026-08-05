@@ -679,6 +679,35 @@ const StorefrontLayout = ({ children, store, products = [], footerConfig, themeO
         body {
           background-color: hsl(${hslBg}) !important;
           color: hsl(${hslFg}) !important;
+          --background: ${hslBg} !important;
+          --foreground: ${hslFg} !important;
+          --card: ${hslCard} !important;
+          --card-foreground: ${hslFg} !important;
+          --popover: ${hslCard} !important;
+          --popover-foreground: ${hslFg} !important;
+          --primary: ${hslPrimary} !important;
+          --primary-foreground: 0 0% 100% !important;
+          --secondary: ${hslSecondary} !important;
+          --secondary-foreground: ${hslFg} !important;
+          --muted: ${hslMuted} !important;
+          --muted-foreground: ${hslFg} !important;
+          --border: ${hslBorder} !important;
+          --input: ${hslBorder} !important;
+          --ring: ${hslPrimary} !important;
+          
+          /* Custom theme variables for Dialog Portals and storefront overlays */
+          --p: ${extendedColors.primary} !important;
+          --pf: ${extendedColors.primary_fg || '#ffffff'} !important;
+          --ac: ${extendedColors.accent} !important;
+          --bg: ${extendedColors.background} !important;
+          --sf: ${extendedColors.surface || extendedColors.card} !important;
+          --fg: ${extendedColors.text} !important;
+          --mu: ${extendedColors.muted || '#888888'} !important;
+          --bd: ${extendedColors.border || extendedColors.secondary} !important;
+          --r: ${theme.borderRadius}px !important;
+          --hf: ${headingFont}, serif !important;
+          --surface: ${extendedColors.surface || extendedColors.card} !important;
+          --border-color: ${extendedColors.border || extendedColors.secondary} !important;
         }
         .storefront-root {
           --background: ${hslBg} !important;

@@ -104,32 +104,78 @@ Return ONLY valid JSON with this exact structure (no markdown, no code fences):
   "welcome_customer": { "subject": "...", "html": "..." }
 }`;
 
-    const aiRes = await fetch(AI_GATEWAY, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NVIDIA_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
-        messages: [
-          { role: 'system', content: 'You are a professional email template designer. Return only valid JSON, no markdown fences.' },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.7,
-      }),
-    });
+    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
+    let content = '';
+    let success = false;
 
-    if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      console.error('AI gateway error:', aiRes.status, errText);
-      return new Response(JSON.stringify({ error: 'AI generation failed' }), {
+    // 1. Try Groq (extremely fast and reliable)
+    if (GROQ_API_KEY) {
+      try {
+        console.log('Attempting email templates generation via Groq...');
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: 'You are a professional email template designer. Return only valid JSON, no markdown fences.' },
+              { role: 'user', content: prompt }
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.7,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          content = data.choices?.[0]?.message?.content || '';
+          if (content) {
+            success = true;
+            console.log('Successfully generated via Groq!');
+          }
+        } else {
+          console.warn('Groq failed with status:', res.status, await res.text());
+        }
+      } catch (err) {
+        console.error('Groq generation error:', err);
+      }
+    }
+
+    // 2. Fallback to NVIDIA
+    if (!success && NVIDIA_API_KEY) {
+      try {
+        console.log('Attempting email templates generation via NVIDIA...');
+        const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'meta/llama-3.3-70b-instruct',
+            messages: [
+              { role: 'system', content: 'You are a professional email template designer. Return only valid JSON, no markdown fences.' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          content = data.choices?.[0]?.message?.content || '';
+          if (content) {
+            success = true;
+            console.log('Successfully generated via NVIDIA!');
+          }
+        } else {
+          console.warn('NVIDIA failed with status:', res.status, await res.text());
+        }
+      } catch (err) {
+        console.error('NVIDIA generation error:', err);
+      }
+    }
+
+    if (!success) {
+      return new Response(JSON.stringify({ error: 'Failed to generate templates via all AI providers' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const aiData = await aiRes.json();
-    let content = aiData.choices?.[0]?.message?.content || '';
     
     // Clean markdown fences if present
     content = content.replace(/^```(?:json)?\s*\n?/m, '').replace(/\n?```\s*$/m, '').trim();

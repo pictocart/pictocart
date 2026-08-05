@@ -6,6 +6,12 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import RequestReturnButton from './RequestReturnButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { useSubmitReview } from '@/hooks/useReviews';
+import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 
 interface Props {
   order: any;
@@ -28,6 +34,50 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
   if (error) {
     console.error('OrderEligibility error:', error);
   }
+
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [selectedProductIdx, setSelectedProductIdx] = useState(0);
+  const [rating, setRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewBody, setReviewBody] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const submitReview = useSubmitReview();
+  const { user } = useCustomerAuth(slug || '');
+  const items = Array.isArray(order.items) ? order.items : [];
+
+  const handleReviewSubmit = async () => {
+    if (!user?.id) {
+      toast.error("Please log in to submit a review");
+      return;
+    }
+    const item = items[selectedProductIdx];
+    if (!item || !item.product_id) {
+      toast.error("Invalid product selected");
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      await submitReview.mutateAsync({
+        store_id: order.store_id,
+        product_id: item.product_id.replace(/-theme-style-\d+$/, ''),
+        user_id: user.id,
+        rating,
+        title: reviewTitle,
+        body: reviewBody,
+      });
+      toast.success("Review submitted for moderation!");
+      setReviewOpen(false);
+      // Reset form
+      setReviewTitle('');
+      setReviewBody('');
+      setRating(5);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const cancel = async () => {
     setCancelling(true);
@@ -129,9 +179,9 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
           <RequestReturnButton order={order} primaryColor={primaryColor} mode="return" />
         )}
 
-        {canExchange && (
+        {/* {canExchange && (
           <RequestReturnButton order={order} primaryColor={primaryColor} mode="exchange" />
-        )}
+        )} */}
 
         <Link to={`/store/${slug}/contact`} className={btn}>
           <MessageCircle className="h-3.5 w-3.5" /> Support
@@ -192,9 +242,9 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
         <RequestReturnButton order={order} primaryColor={primaryColor} mode="return" />
       )}
 
-      {elig.canExchange && !hasAnyActiveReturnOrExchange && (
+      {/* {elig.canExchange && !hasAnyActiveReturnOrExchange && (
         <RequestReturnButton order={order} primaryColor={primaryColor} mode="exchange" />
-      )}
+      )} */}
 
       {existingReturnId && (
         <Link to={`/store/${slug}/account/returns/${existingReturnId}`} className={btn}>
@@ -202,16 +252,119 @@ const OrderActions = ({ order, primaryColor = '#6366f1', variant = 'inline', onC
         </Link>
       )}
 
-      {existingExchangeId && (
+      {/* {existingExchangeId && (
         <Link to={`/store/${slug}/account/returns/${existingExchangeId}`} className={btn}>
           <Repeat2 className="h-3.5 w-3.5" /> View Exchange
         </Link>
-      )}
+      )} */}
 
       {elig.canReview && (
-        <Link to={`/store/${slug}/account/orders/${order.id}#review`} className={btn}>
-          <Star className="h-3.5 w-3.5" /> Write Review
-        </Link>
+        <>
+          <button 
+            type="button" 
+            onClick={() => setReviewOpen(true)} 
+            className={btn}
+            style={{ borderColor: primaryColor + '40', color: primaryColor }}
+          >
+            <Star className="h-3.5 w-3.5" /> Write Review
+          </button>
+
+          <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+            <DialogContent 
+              className="sm:max-w-md max-h-[90vh] overflow-y-auto"
+              style={{ 
+                background: "var(--bg, #ffffff)", 
+                color: "var(--fg, #111827)", 
+                borderColor: "var(--bd, #e5e7eb)" 
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle style={{ color: "var(--fg, #111827)" }}>Write a Review</DialogTitle>
+                <DialogDescription style={{ color: "var(--fg, #111827)", opacity: 0.7 }}>
+                  Share your experience with this purchase to help other shoppers.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                {/* Product Selector if multiple products exist in the order */}
+                {items.length > 1 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" style={{ color: "var(--fg, #111827)" }}>Select Product</label>
+                    <select 
+                      value={selectedProductIdx} 
+                      onChange={(e) => setSelectedProductIdx(Number(e.target.value))} 
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                      style={{ background: "var(--bg, #ffffff)", color: "var(--fg, #111827)", borderColor: "var(--bd, #e5e7eb)" }}
+                    >
+                      {items.map((it: any, i: number) => (
+                        <option key={i} value={i} style={{ background: "var(--bg, #ffffff)", color: "var(--fg, #111827)" }}>
+                          {it.title || 'Product'} (Qty {it.quantity || 1})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Rating selection (Stars) */}
+                <div className="space-y-2 text-center">
+                  <label className="text-sm font-medium block text-left" style={{ color: "var(--fg, #111827)" }}>Rating</label>
+                  <div className="flex gap-1.5 justify-center py-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        className="hover:scale-110 transition-transform focus:outline-none"
+                      >
+                        <Star
+                          className="h-8 w-8"
+                          style={{
+                            fill: star <= rating ? "var(--p, #6366f1)" : "transparent",
+                            color: star <= rating ? "var(--p, #6366f1)" : "var(--bd, #e5e7eb)",
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Review Title */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" style={{ color: "var(--fg, #111827)" }}>Review Title (optional)</label>
+                  <Input 
+                    value={reviewTitle} 
+                    onChange={(e) => setReviewTitle(e.target.value)} 
+                    placeholder="Summarize your experience…" 
+                    style={{ background: "var(--bg, #ffffff)", color: "var(--fg, #111827)", borderColor: "var(--bd, #e5e7eb)" }}
+                  />
+                </div>
+
+                {/* Review Body */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" style={{ color: "var(--fg, #111827)" }}>Review Details</label>
+                  <Textarea 
+                    value={reviewBody} 
+                    onChange={(e) => setReviewBody(e.target.value)} 
+                    placeholder="What did you like or dislike? How was the quality?…" 
+                    rows={4}
+                    style={{ background: "var(--bg, #ffffff)", color: "var(--fg, #111827)", borderColor: "var(--bd, #e5e7eb)" }}
+                  />
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex justify-end gap-2 pt-2 border-t" style={{ borderColor: "var(--bd, #e5e7eb)" }}>
+                  <Button variant="outline" onClick={() => setReviewOpen(false)} style={{ color: "var(--fg, #111827)", borderColor: "var(--bd, #e5e7eb)", background: "transparent" }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleReviewSubmit} disabled={submittingReview} style={{ background: "var(--p, #6366f1)", color: "var(--pf, #ffffff)" }}>
+                    {submittingReview && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Submit Review
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
 
       {elig.canBuyAgain && (

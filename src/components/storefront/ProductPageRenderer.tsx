@@ -137,18 +137,6 @@ const ProductPageRenderer: React.FC<ProductPageRendererProps> = ({
         .eq('is_active', true)
         .then(({ data }) => {
           const list = data ? data.filter(c => !c.expires_at || new Date(c.expires_at) > new Date()) : [];
-          const hasWelcome = list.some(c => c.code === 'WELCOME');
-          if (!hasWelcome) {
-            list.push({
-              id: 'welcome-coupon-id',
-              code: 'WELCOME',
-              type: 'percentage',
-              value: 10,
-              description: '10% OFF for first-time customers!',
-              min_order_amount: 199,
-              is_active: true,
-            } as any);
-          }
           setCoupons(list);
         });
     }

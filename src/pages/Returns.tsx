@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Undo2, Loader2, Search, Package, Truck, CheckCircle2, XCircle, Clock, Banknote, ShieldCheck, MessageSquare, MapPin } from 'lucide-react';
@@ -27,6 +29,10 @@ const Returns = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<ReturnStatus>('approved');
   const [applyingBulk, setApplyingBulk] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'qc_pending'>('all');
+  const [qcConfirm, setQcConfirm] = useState<{ id: string; status: 'passed' | 'failed'; orderId: string; timeline: any[] } | null>(null);
+  const [qcNotes, setQcNotes] = useState('');
+  const [updatingQc, setUpdatingQc] = useState(false);
 
   // Show only pure returns here (Exchanges have their own module)
   const scoped = returns.filter((r) => r.request_type !== 'exchange');
@@ -34,12 +40,23 @@ const Returns = () => {
 
   const filtered = useMemo(() => {
     return scoped.filter((r) => {
+      if (activeTab === 'qc_pending') {
+        if (r.status !== 'received') return false;
+        const qcVal = r.qc_status || 'pending';
+        if (qcVal !== 'pending') return false;
+      }
       if (filter !== 'all' && r.status !== filter) return false;
       if (!search) return true;
       const s = search.toLowerCase();
-      return r.reason?.toLowerCase().includes(s) || r.order_id.toLowerCase().includes(s) || r.customer_notes?.toLowerCase().includes(s);
+      return (
+        r.reason?.toLowerCase().includes(s) ||
+        r.order_id.toLowerCase().includes(s) ||
+        r.orders?.order_number?.toLowerCase().includes(s) ||
+        r.orders?.customer_name?.toLowerCase().includes(s) ||
+        r.customer_notes?.toLowerCase().includes(s)
+      );
     });
-  }, [scoped, filter, search]);
+  }, [scoped, filter, search, activeTab]);
 
   const stats = useMemo(() => ({
     total: scoped.length,
@@ -87,6 +104,21 @@ const Returns = () => {
         <Summary icon={CheckCircle2} label="Refunded"      value={stats.refunded} tone="success" />
         <Summary icon={Banknote}     label="Refund value"  value={`₹${stats.refundValue.toLocaleString('en-IN')}`} tone="default" />
       </div>
+
+      {/* Tab Filters */}
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'all' | 'qc_pending'); setFilter('all'); }} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+          <TabsTrigger value="all">All Returns</TabsTrigger>
+          <TabsTrigger value="qc_pending" className="relative flex items-center gap-1.5">
+            QC Pending
+            {scoped.filter(r => r.status === 'received' && (r.qc_status || 'pending') === 'pending').length > 0 && (
+              <span className="rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 animate-pulse">
+                {scoped.filter(r => r.status === 'received' && (r.qc_status || 'pending') === 'pending').length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Filters + search */}
       <div className="flex flex-col sm:flex-row gap-2">
@@ -140,9 +172,28 @@ const Returns = () => {
                   <Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSelect(r.id)} className="mt-1" />
                   <div className="flex-1 min-w-[200px]">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Link to={`/orders/${r.order_id}`} className="text-sm font-semibold hover:underline">Order</Link>
+                      <Link to={`/orders/${r.order_id}`} className="text-sm font-semibold hover:underline">
+                        Order #{r.orders?.order_number || r.order_id.slice(0, 8)}
+                      </Link>
                       <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', meta?.color)}>{meta?.label}</span>
-                      {r.refund_status && (
+                      
+                      {(() => {
+                        if (r.status === 'rejected' || r.status === 'cancelled' || r.status === 'refund_completed' || r.status === 'refunded') {
+                          return null;
+                        }
+                        const qcVal = r.qc_status || 'pending';
+                        const qcMeta = 
+                          qcVal === 'passed' ? { label: 'QC Passed', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' } :
+                          qcVal === 'failed' ? { label: 'QC Failed', color: 'bg-rose-100 text-rose-800 border-rose-200' } :
+                                               { label: 'QC Pending', color: 'bg-red-100 text-red-800 border-red-200' };
+                        return (
+                          <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', qcMeta.color)}>
+                            {qcMeta.label}
+                          </span>
+                        );
+                      })()}
+
+                      {r.refund_status && r.status !== 'refund_completed' && r.status !== 'refunded' && r.status !== 'rejected' && r.status !== 'cancelled' && (
                         <span className="rounded-full border px-2 py-0.5 text-xs font-medium bg-teal-50 text-teal-800 border-teal-200 capitalize">
                           Refund: {r.refund_status}
                         </span>
@@ -152,9 +203,29 @@ const Returns = () => {
                     {r.customer_notes && (<p className="text-xs text-muted-foreground mt-1 italic">"{r.customer_notes}"</p>)}
                     <p className="text-xs text-muted-foreground mt-1">{format(new Date(r.created_at), 'dd MMM yyyy, hh:mm a')}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end justify-between min-h-[70px]">
                     <p className="text-sm font-semibold">₹{Number(r.refund_amount).toLocaleString('en-IN')}</p>
-                    <Button size="sm" variant="outline" className="mt-2" onClick={() => setActiveId(r.id)}>Manage</Button>
+                    {r.status === 'received' && (r.qc_status || 'pending') === 'pending' ? (
+                      <div className="flex gap-1.5 mt-2">
+                        <Button 
+                          size="sm" 
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 px-2.5"
+                          onClick={() => setQcConfirm({ id: r.id, status: 'passed', orderId: r.order_id, timeline: r.timeline || [] })}
+                        >
+                          Pass QC
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          className="text-xs h-8 px-2.5"
+                          onClick={() => setQcConfirm({ id: r.id, status: 'failed', orderId: r.order_id, timeline: r.timeline || [] })}
+                        >
+                          Fail QC
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" className="mt-2" onClick={() => setActiveId(r.id)}>Manage</Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -169,6 +240,79 @@ const Returns = () => {
           {active && <ReturnDetailsPanel r={active} onSaved={() => { qc.invalidateQueries({ queryKey: ['returns'] }); }} />}
         </SheetContent>
       </Sheet>
+
+      {qcConfirm && (
+        <Dialog open={!!qcConfirm} onOpenChange={(o) => !o && setQcConfirm(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+                <ShieldCheck className={cn("h-5 w-5", qcConfirm.status === 'passed' ? "text-emerald-600" : "text-rose-600")} />
+                Confirm Quality Check {qcConfirm.status === 'passed' ? 'Pass' : 'Fail'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-3 text-sm">
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Are you sure you want to mark this return's quality check as <strong className={qcConfirm.status === 'passed' ? "text-emerald-600" : "text-rose-600"}>{qcConfirm.status.toUpperCase()}</strong>? 
+                {qcConfirm.status === 'passed' && " This will automatically make the order eligible for refund on the Refunds page."}
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="qc-confirm-notes" className="text-xs font-semibold text-foreground">QC Notes (Optional)</Label>
+                <Textarea 
+                  id="qc-confirm-notes" 
+                  placeholder="Enter notes about the product condition..." 
+                  value={qcNotes} 
+                  onChange={(e) => setQcNotes(e.target.value)}
+                  rows={2} 
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex sm:justify-end gap-2 border-t pt-3">
+              <Button variant="outline" size="sm" onClick={() => setQcConfirm(null)} disabled={updatingQc}>
+                Cancel
+              </Button>
+              <Button 
+                size="sm" 
+                disabled={updatingQc} 
+                className={qcConfirm.status === 'passed' ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"}
+                onClick={async () => {
+                  setUpdatingQc(true);
+                  try {
+                    const newEntry = { 
+                      at: new Date().toISOString(), 
+                      status: 'received', 
+                      note: `QC Checked: ${qcConfirm.status.toUpperCase()}. Notes: ${qcNotes || 'None'}` 
+                    };
+                    const updates = {
+                      qc_status: qcConfirm.status,
+                      qc_notes: qcNotes || null,
+                      timeline: [...(qcConfirm.timeline || []), newEntry]
+                    };
+                    
+                    const { error } = await supabase.from('returns' as any).update(updates).eq('id', qcConfirm.id);
+                    if (error) throw error;
+                    
+                    if (qcConfirm.status === 'passed' && qcConfirm.orderId) {
+                      await supabase.from('orders').update({ payment_status: 'refund_in_process' as any }).eq('id', qcConfirm.orderId);
+                    }
+                    
+                    toast.success(`QC status marked as ${qcConfirm.status}`);
+                    qc.invalidateQueries({ queryKey: ['returns'] });
+                    setQcConfirm(null);
+                    setQcNotes('');
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to update QC status');
+                  } finally {
+                    setUpdatingQc(false);
+                  }
+                }}
+              >
+                {updatingQc && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Confirm
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
@@ -198,9 +342,8 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
   const [pickupCourier, setPickupCourier] = useState(r.pickup_courier || '');
   const [pickupAwb, setPickupAwb] = useState(r.pickup_awb || '');
   const [pickupDate, setPickupDate] = useState(r.pickup_scheduled_at ? r.pickup_scheduled_at.slice(0, 16) : '');
-  const [qcStatus, setQcStatus] = useState<string>(r.qc_status || '');
+  const [qcStatus, setQcStatus] = useState<string>(r.qc_status || 'pending');
   const [qcNotes, setQcNotes] = useState(r.qc_notes || '');
-  const [refundStatus, setRefundStatus] = useState<string>(r.refund_status || '');
   const [saving, setSaving] = useState(false);
   const [reverseDialogOpen, setReverseDialogOpen] = useState(false);
   const [courierResponse, setCourierResponse] = useState<any>(r.courier_response || null);
@@ -209,6 +352,15 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [cancellingShipment, setCancellingShipment] = useState(false);
+
+  const { descriptionText, pickupText } = useMemo(() => {
+    const raw = r.customer_notes || '';
+    if (raw.includes('\nPickup: ')) {
+      const parts = raw.split('\nPickup: ');
+      return { descriptionText: parts[0], pickupText: parts[1] };
+    }
+    return { descriptionText: raw, pickupText: '' };
+  }, [r.customer_notes]);
 
   useEffect(() => {
     if (pickupAwb && store) {
@@ -318,23 +470,36 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
       pickup_courier: pickupCourier || null,
       pickup_awb: pickupAwb || null,
       pickup_scheduled_at: pickupDate ? new Date(pickupDate).toISOString() : null,
-      qc_status: qcStatus || null,
+      qc_status: qcStatus || 'pending',
       qc_notes: qcNotes || null,
-      refund_status: refundStatus || null,
       courier_response: courierResponse || null,
     };
     if (status === 'picked_up' && !r.picked_up_at) updates.picked_up_at = new Date().toISOString();
-    if (refundStatus === 'processing' && !r.refund_initiated_at) updates.refund_initiated_at = new Date().toISOString();
-    if (refundStatus === 'completed' && !r.refund_completed_at) updates.refund_completed_at = new Date().toISOString();
-    const newEntry = { at: new Date().toISOString(), status, note: `Status set to ${status}` };
+    const newEntry = { 
+      at: new Date().toISOString(), 
+      status, 
+      note: `Status set to ${status}. QC Status: ${qcStatus.toUpperCase()}` 
+    };
     updates.timeline = [...timeline, newEntry];
 
     const { error } = await supabase.from('returns' as any).update(updates).eq('id', r.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    // If refund completed or QC passed leading to received, sync order
-    if (status === 'received' || refundStatus === 'completed' || status === 'refunded' || status === 'refund_completed') {
-      await supabase.from('orders').update({ status: 'returned' }).eq('id', r.order_id);
+    
+    // Sync order status and payment_status accordingly
+    const orderUpdates: any = {};
+    if (status === 'received' || status === 'refunded' || status === 'refund_completed') {
+      orderUpdates.status = 'returned';
+    }
+    if (status === 'received') {
+      orderUpdates.payment_status = 'refund_requested';
+    } else if (status === 'refunded' || status === 'refund_completed') {
+      orderUpdates.payment_status = 'refunded';
+    } else if (qcStatus === 'passed') {
+      orderUpdates.payment_status = 'refund_in_process';
+    }
+    if (Object.keys(orderUpdates).length > 0) {
+      await supabase.from('orders').update(orderUpdates).eq('id', r.order_id);
     }
     toast.success('Return updated');
     onSaved();
@@ -352,12 +517,23 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
         <TabsContent value="summary" className="space-y-5 mt-4">
           <section>
             <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Package className="h-4 w-4" /> Return Summary</h3>
-            <div className="rounded-md bg-muted p-3 text-sm space-y-1">
+            <div className="rounded-md bg-muted p-3 text-sm space-y-1.5">
               <p><strong>Order:</strong> <Link to={`/orders/${r.order_id}`} className="text-primary hover:underline">View</Link></p>
               <p><strong>Reason:</strong> {r.reason}</p>
               <p><strong>Refund amount:</strong> ₹{Number(r.refund_amount).toLocaleString('en-IN')}</p>
               <p><strong>Status:</strong> {RETURN_STATUSES.find((s) => s.value === r.status)?.label}</p>
-              {r.customer_notes && <p className="text-muted-foreground italic">"{r.customer_notes}"</p>}
+              {descriptionText && (
+                <p>
+                  <strong>Customer Description:</strong>{" "}
+                  <span className="text-muted-foreground italic">"{descriptionText}"</span>
+                </p>
+              )}
+              {pickupText && (
+                <p>
+                  <strong>Customer Pickup Address:</strong>{" "}
+                  <span className="text-muted-foreground italic">"{pickupText}"</span>
+                </p>
+              )}
             </div>
 
             <div className="mt-4 rounded-md border p-3">
@@ -485,8 +661,8 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
           </section>
 
           <section>
-            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Quality Check</h3>
-            <Select value={qcStatus} onValueChange={setQcStatus}>
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> QC at store after receiving returned product</h3>
+            <Select value={qcStatus} onValueChange={setQcStatus} disabled={status === 'rejected' || status === 'cancelled'}>
               <SelectTrigger><SelectValue placeholder="QC result" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="pending">Pending</SelectItem>
@@ -494,20 +670,7 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
-            <Textarea className="mt-2" placeholder="QC notes" rows={2} value={qcNotes} onChange={(e) => setQcNotes(e.target.value)} />
-          </section>
-
-          <section>
-            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Banknote className="h-4 w-4" /> Refund</h3>
-            <Select value={refundStatus} onValueChange={setRefundStatus}>
-              <SelectTrigger><SelectValue placeholder="Refund state" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
+            <Textarea className="mt-2" placeholder="QC notes" rows={2} value={qcNotes} onChange={(e) => setQcNotes(e.target.value)} disabled={status === 'rejected' || status === 'cancelled'} />
           </section>
 
           <section>

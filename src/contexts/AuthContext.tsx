@@ -55,7 +55,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Force refresh session when browser tab becomes active / gains focus
+    // (Prevents background tab sleep/throttling from causing expired token logouts)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getSession().then(({ data: { session: activeSession } }) => {
+          if (activeSession) {
+            setSession(activeSession);
+            setUser(activeSession.user);
+          }
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {

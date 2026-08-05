@@ -42,7 +42,7 @@ export default function CustomerAuthModal({
   const [submitting, setSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [btnHovered, setBtnHovered] = useState(false);
-  const [agreeToPrivacy, setAgreeToPrivacy] = useState(false);
+  const [agreeToPrivacy, setAgreeToPrivacy] = useState(true);
   const [hasPrivacy, setHasPrivacy] = useState(false);
 
   useEffect(() => {

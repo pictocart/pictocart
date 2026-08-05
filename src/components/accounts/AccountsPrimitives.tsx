@@ -9,14 +9,14 @@ export const inr = (n: number | string | null | undefined) =>
 
 export const MoneyInput = ({
   value, onChange, placeholder = '0.00', className,
-}: { value: number | string; onChange: (n: number) => void; placeholder?: string; className?: string }) => {
-  // Keep an internal string so backspace can clear to empty without snapping back to 0
-  const [display, setDisplay] = useState(value === 0 || value === '' ? '' : String(value));
+}: { value: number; onChange: (n: number) => void; placeholder?: string; className?: string }) => {
+  const [display, setDisplay] = useState<string>(value === 0 ? '' : String(value));
 
-  // Sync when parent resets value to 0 (e.g. form reset after save)
   useEffect(() => {
-    if (value === 0 || value === '') setDisplay('');
-    else setDisplay(String(value));
+    const parsedDisplay = display === '' ? 0 : Number(display);
+    if (value !== parsedDisplay) {
+      setDisplay(value === 0 ? '' : String(value));
+    }
   }, [value]);
 
   return (
@@ -31,15 +31,53 @@ export const MoneyInput = ({
       onChange={(e) => {
         const raw = e.target.value;
         setDisplay(raw);
-        // Only propagate a real number upward; empty → 0
-        onChange(raw === '' ? 0 : Number(raw));
+        const val = raw === '' ? 0 : Number(raw);
+        onChange(val);
       }}
       onBlur={() => {
-        // On blur: if empty show blank (placeholder shows), if has value normalise display
-        if (display === '' || display === undefined) {
-          setDisplay('');
-          onChange(0);
-        }
+        setDisplay(value === 0 ? '' : String(value));
+      }}
+    />
+  );
+};
+
+export const NumInput = ({
+  value, onChange, placeholder = '0', className, min, max, step = '1'
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  placeholder?: string;
+  className?: string;
+  min?: number;
+  max?: number;
+  step?: string;
+}) => {
+  const [display, setDisplay] = useState<string>(value === 0 ? '' : String(value));
+
+  useEffect(() => {
+    const parsedDisplay = display === '' ? 0 : Number(display);
+    if (value !== parsedDisplay) {
+      setDisplay(value === 0 ? '' : String(value));
+    }
+  }, [value]);
+
+  return (
+    <Input
+      type="number"
+      className={className}
+      placeholder={placeholder}
+      min={min}
+      max={max}
+      step={step}
+      value={display}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setDisplay(raw);
+        const val = raw === '' ? 0 : Number(raw);
+        onChange(val);
+      }}
+      onBlur={() => {
+        setDisplay(value === 0 ? '' : String(value));
       }}
     />
   );

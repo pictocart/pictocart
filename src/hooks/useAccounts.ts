@@ -214,6 +214,7 @@ export const useKhataEntries = () => {
         .select('*, customers(name, phone, balance)')
         .eq('store_id', store!.id)
         .order('entry_date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(500);
       if (error) throw error;
       return (data ?? []) as any[];

@@ -24,6 +24,13 @@ export const BazaarProductCard = ({ product, href }: { product: Product; href?: 
           background: tokens.colors.surface,
         }}
       >
+        {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+          <span 
+            className="absolute top-2 left-2 text-[9px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded shadow z-10"
+          >
+            {Math.round(((Number(product.compare_at_price) - Number(product.price)) / Number(product.compare_at_price)) * 100)}% OFF
+          </span>
+        )}
         {img ? (
           <img src={img} alt={product.title} className="w-full aspect-[4/5] object-cover" loading="lazy" />
         ) : (

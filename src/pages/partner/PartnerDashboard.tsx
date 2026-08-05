@@ -857,9 +857,9 @@ const PartnerDashboard = () => {
                               </td>
                               <td className="px-4 py-4 text-xs text-slate-400">{format(new Date(store.created_at), "dd MMM yyyy")}</td>
                               <td className="px-4 py-4 text-right">
-                                <Button size="sm" variant="outline" className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white" asChild>
+                                {/* <Button size="sm" variant="outline" className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white" asChild>
                                   <Link to={`/dashboard?store=${store.id}`}>Manage</Link>
-                                </Button>
+                                </Button> */}
                               </td>
                             </tr>
                           );

@@ -142,8 +142,27 @@ export default function CustomiserV2() {
   const manifest = isCustom ? (getStoreThemeTokens(store) as any)?.manifest : dbManifest;
   const isLoading = isCustom ? false : manifestLoading;
 
-  const [overrides, setOverrides] = useState<any>(settings.theme_overrides || {});
-  const [promoTicker, setPromoTicker] = useState<PromoTickerConfig>({ ...DEFAULT_PROMO_TICKER, ...(settings.promo_ticker || {}) });
+  const [initializing, setInitializing] = useState(true);
+  const [overrides, setOverrides] = useState<any>(() => {
+    if (store?.id) {
+      const cached = localStorage.getItem(`customiser_overrides_${store.id}`);
+      if (cached) {
+        try { return JSON.parse(cached); } catch (e) {}
+      }
+      return settings.theme_overrides || {};
+    }
+    return {};
+  });
+  const [promoTicker, setPromoTicker] = useState<PromoTickerConfig>(() => {
+    if (store?.id) {
+      const cached = localStorage.getItem(`customiser_promo_ticker_${store.id}`);
+      if (cached) {
+        try { return JSON.parse(cached); } catch (e) {}
+      }
+      return { ...DEFAULT_PROMO_TICKER, ...(settings.promo_ticker || {}) };
+    }
+    return DEFAULT_PROMO_TICKER;
+  });
   const [page, setPage] = useState("home");
   const [selected, setSelected] = useState<Selection | null>(null);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
@@ -260,12 +279,56 @@ export default function CustomiserV2() {
   };
 
   useEffect(() => {
-    if (!store?.id || hydrated === store.id) return;
-    const s = getStorefrontConfig(store) as any;
-    setOverrides(s.theme_overrides || {});
-    setPromoTicker({ ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) });
-    setHydrated(store.id);
-  }, [store, hydrated]);
+    if (!store?.id) return;
+    
+    setInitializing(true);
+    const timer = setTimeout(() => {
+      const cachedOverrides = localStorage.getItem(`customiser_overrides_${store.id}`);
+      const cachedTicker = localStorage.getItem(`customiser_promo_ticker_${store.id}`);
+      const s = getStorefrontConfig(store) as any;
+      
+      if (cachedOverrides) {
+        try {
+          setOverrides(JSON.parse(cachedOverrides));
+        } catch (e) {
+          setOverrides(s.theme_overrides || {});
+        }
+      } else {
+        const val = s.theme_overrides || {};
+        localStorage.setItem(`customiser_overrides_${store.id}`, JSON.stringify(val));
+        setOverrides(val);
+      }
+      
+      if (cachedTicker) {
+        try {
+          setPromoTicker(JSON.parse(cachedTicker));
+        } catch (e) {
+          setPromoTicker({ ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) });
+        }
+      } else {
+        const val = { ...DEFAULT_PROMO_TICKER, ...(s.promo_ticker || {}) };
+        localStorage.setItem(`customiser_promo_ticker_${store.id}`, JSON.stringify(val));
+        setPromoTicker(val);
+      }
+      
+      setHydrated(store.id);
+      setInitializing(false);
+    }, 800); // 800ms screen loading transition to ensure all values are cached in localStorage
+    
+    return () => clearTimeout(timer);
+  }, [store?.id]);
+
+  useEffect(() => {
+    if (store?.id && hydrated === store.id) {
+      localStorage.setItem(`customiser_overrides_${store.id}`, JSON.stringify(overrides));
+    }
+  }, [overrides, store?.id, hydrated]);
+
+  useEffect(() => {
+    if (store?.id && hydrated === store.id) {
+      localStorage.setItem(`customiser_promo_ticker_${store.id}`, JSON.stringify(promoTicker));
+    }
+  }, [promoTicker, store?.id, hydrated]);
 
   // Deep-link ?tab=ticker from sidebar opens the Promo Ticker inspector directly.
   useEffect(() => {
@@ -917,8 +980,16 @@ export default function CustomiserV2() {
       </div>
     );
   }
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (isLoading || initializing) {
+    return (
+      <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-3 z-[100]">
+        <div className="relative">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <Palette className="h-5 w-5 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        </div>
+        <p className="text-sm font-semibold tracking-wide animate-pulse">Initializing Customizer...</p>
+      </div>
+    );
   }
   if (!manifest) {
     return <div className="p-8 text-center text-muted-foreground">This theme has no published manifest yet.</div>;
@@ -1993,19 +2064,15 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
           <div className="space-y-3">
             <div>
               <Label className="text-[11px] text-muted-foreground">Viewing Option / Layout</Label>
-              <Select 
+              <select 
                 value={merged.style === 'editorial_grid' || !merged.style ? 'grid' : merged.style} 
-                onValueChange={(val) => onUpdate(idx, "style", val)}
+                onChange={(e) => onUpdate(idx, "style", e.target.value)}
+                className="w-full h-8 text-xs bg-background border rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
               >
-                <SelectTrigger className="h-8 text-xs bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="grid">Grid / Tiles</SelectItem>
-                  <SelectItem value="list">List Row</SelectItem>
-                  <SelectItem value="minimal">Minimal Text list</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="grid">Grid / Tiles</option>
+                <option value="list">List Row</option>
+                <option value="minimal">Minimal Text list</option>
+              </select>
             </div>
             
             <div>
@@ -2013,21 +2080,17 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
                 <Label className="text-[11px] text-muted-foreground">Posts Limit</Label>
                 <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border">{merged.limit || 6} posts</span>
               </div>
-              <Select 
+              <select 
                 value={String(merged.limit || 6)} 
-                onValueChange={(val) => onUpdate(idx, "limit", Number(val))}
+                onChange={(e) => onUpdate(idx, "limit", Number(e.target.value))}
+                className="w-full h-8 text-xs bg-background border rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
               >
-                <SelectTrigger className="h-8 text-xs bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2">2 Posts</SelectItem>
-                  <SelectItem value="4">4 Posts</SelectItem>
-                  <SelectItem value="6">6 Posts</SelectItem>
-                  <SelectItem value="8">8 Posts</SelectItem>
-                  <SelectItem value="12">12 Posts</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="2">2 Posts</option>
+                <option value="4">4 Posts</option>
+                <option value="6">6 Posts</option>
+                <option value="8">8 Posts</option>
+                <option value="12">12 Posts</option>
+              </select>
             </div>
           </div>
         </div>
@@ -2042,37 +2105,29 @@ function SectionInspector({ idx, section, sectionOv, onUpdate, onReset, onUpload
           <div className="space-y-3">
             <div>
               <Label className="text-[11px] text-muted-foreground">Viewing Option / Layout</Label>
-              <Select 
+              <select 
                 value={merged.style || 'grid'} 
-                onValueChange={(val) => onUpdate(idx, "style", val)}
+                onChange={(e) => onUpdate(idx, "style", e.target.value)}
+                className="w-full h-8 text-xs bg-background border rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
               >
-                <SelectTrigger className="h-8 text-xs bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="grid">Grid / Cards</SelectItem>
-                  <SelectItem value="scroll">Horizontal Carousel</SelectItem>
-                  <SelectItem value="minimal">Minimal Row list</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="grid">Grid / Cards</option>
+                <option value="scroll">Horizontal Carousel</option>
+                <option value="minimal">Minimal Row list</option>
+              </select>
             </div>
             
             {(merged.style || 'grid') === 'grid' && (
               <div>
                 <Label className="text-[11px] text-muted-foreground">Columns (Desktop)</Label>
-                <Select 
+                <select 
                   value={String(merged.columns || 2)} 
-                  onValueChange={(val) => onUpdate(idx, "columns", Number(val))}
+                  onChange={(e) => onUpdate(idx, "columns", Number(e.target.value))}
+                  className="w-full h-8 text-xs bg-background border rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
                 >
-                  <SelectTrigger className="h-8 text-xs bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2">2 Columns</SelectItem>
-                    <SelectItem value="3">3 Columns</SelectItem>
-                    <SelectItem value="4">4 Columns</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <option value="2">2 Columns</option>
+                  <option value="3">3 Columns</option>
+                  <option value="4">4 Columns</option>
+                </select>
               </div>
             )}
           </div>

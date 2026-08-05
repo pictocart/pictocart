@@ -4,9 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Loader2, Mail, Search, Inbox, MailOpen, X, Clock, Reply } from 'lucide-react';
+import { Loader2, Mail, Search, Inbox, MailOpen, X, Clock, Reply, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from '@/components/ui/dialog';
 
 type ContactMessage = {
   id: string;
@@ -36,6 +39,47 @@ export default function ContactMessages() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<ContactMessage | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const handleSendEmail = async () => {
+    if (!selected) return;
+    if (!replyText.trim()) {
+      toast.error('Please enter a message');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const res = await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "reply-message",
+          recipientEmail: selected.email,
+          senderName: store?.name || "Store Admin",
+          idempotencyKey: `reply-msg-${selected.id}-${Date.now()}`,
+          templateData: {
+            storeName: store?.name || "our store",
+            subject: `Re: ${selected.subject || 'Your contact message'}`,
+            message: replyText,
+          },
+        },
+      });
+      if (res.error) throw res.error;
+      
+      // Update status to 'replied'
+      await markStatus.mutateAsync({ id: selected.id, status: 'replied' });
+      setSelected({ ...selected, status: 'replied' });
+      
+      toast.success('Email sent successfully!');
+      setComposeOpen(false);
+      setReplyText('');
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || 'Failed to send email');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['contact-messages', store?.id],
@@ -209,16 +253,23 @@ export default function ContactMessages() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-3 flex-wrap">
-                  <a
-                    href={`mailto:${selected.email}?subject=Re: ${encodeURIComponent(selected.subject || '')}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => markStatus.mutate({ id: selected.id, status: 'replied' })}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition"
-                  >
-                    <Reply className="h-4 w-4" />
-                    Reply via Email
-                  </a>
+                  {selected.status !== 'replied' ? (
+                    <button
+                      onClick={() => {
+                        setReplyText('');
+                        setComposeOpen(true);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition"
+                    >
+                      <Reply className="h-4 w-4" />
+                      Reply via Email
+                    </button>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200">
+                      <Check className="h-4 w-4 text-emerald-600" />
+                      Replied via Email
+                    </div>
+                  )}
                   {selected.status !== 'replied' && (
                     <button
                       onClick={() => {
@@ -253,6 +304,63 @@ export default function ContactMessages() {
           </div>
         </div>
       )}
+
+      {/* Compose Reply Email Dialog */}
+      <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Reply to {selected?.name}</DialogTitle>
+            <DialogDescription>
+              Write your reply message. This will be sent directly to <strong>{selected?.email}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold opacity-60">Recipient</label>
+              <Input value={selected ? `${selected.name} <${selected.email}>` : ''} disabled className="bg-muted" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold opacity-60">Subject</label>
+              <Input value={selected ? `Re: ${selected.subject || 'Your contact message'}` : ''} disabled className="bg-muted" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold opacity-60">Message Body</label>
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                className="w-full h-44 p-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-background"
+                placeholder="Type your message here..."
+                disabled={sendingEmail}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <button
+              onClick={() => setComposeOpen(false)}
+              className="px-4 py-2 text-sm font-semibold rounded-lg border border-border hover:bg-muted transition"
+              disabled={sendingEmail}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSendEmail}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition min-w-[100px]"
+              disabled={sendingEmail}
+            >
+              {sendingEmail ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                'Send Email'
+              )}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

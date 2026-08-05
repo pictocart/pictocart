@@ -56,6 +56,11 @@ export interface ReturnRequest {
   courier_response: any;
   created_at: string;
   updated_at: string;
+  orders?: {
+    order_number: string;
+    customer_name: string | null;
+    customer_email: string | null;
+  } | null;
 }
 
 export const RETURN_STATUSES: { value: ReturnStatus; label: string; color: string }[] = [
@@ -71,9 +76,9 @@ export const RETURN_STATUSES: { value: ReturnStatus; label: string; color: strin
   { value: 'refund_initiated',      label: 'Refund Initiated',      color: 'bg-teal-100 text-teal-800 border-teal-200' },
   { value: 'refund_completed',      label: 'Refund Completed',      color: 'bg-green-100 text-green-800 border-green-200' },
   { value: 'refunded',              label: 'Refunded',              color: 'bg-green-100 text-green-800 border-green-200' },
-  { value: 'replacement_packed',    label: 'Replacement Packed',    color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
-  { value: 'replacement_shipped',   label: 'Replacement Shipped',   color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-  { value: 'replacement_delivered', label: 'Replacement Delivered', color: 'bg-green-100 text-green-800 border-green-200' },
+  // { value: 'replacement_packed',    label: 'Replacement Packed',    color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+  // { value: 'replacement_shipped',   label: 'Replacement Shipped',   color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+  // { value: 'replacement_delivered', label: 'Replacement Delivered', color: 'bg-green-100 text-green-800 border-green-200' },
   { value: 'cancelled',             label: 'Cancelled',             color: 'bg-gray-100 text-gray-800 border-gray-200' },
 ];
 
@@ -87,7 +92,7 @@ export const useStoreReturns = () => {
       if (!store?.id) return [];
       const { data, error } = await supabase
         .from('returns' as any)
-        .select('*')
+        .select('*, orders (order_number, customer_name, customer_email)')
         .eq('store_id', store.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -102,9 +107,20 @@ export const useStoreReturns = () => {
       if (seller_notes !== undefined) updates.seller_notes = seller_notes;
       const { error } = await supabase.from('returns' as any).update(updates).eq('id', id);
       if (error) throw error;
-      // When merchant confirms the physical return is received or refunded, mark the order as returned
-      if (order_id && (status === 'received' || status === 'refunded')) {
-        await supabase.from('orders').update({ status: 'returned' }).eq('id', order_id);
+      // When merchant confirms the physical return is received or refunded, mark the order status and payment_status accordingly
+      if (order_id) {
+        const orderUpdates: any = {};
+        if (status === 'received' || status === 'refunded' || status === 'refund_completed') {
+          orderUpdates.status = 'returned';
+        }
+        if (status === 'received') {
+          orderUpdates.payment_status = 'refund_requested';
+        } else if (status === 'refunded' || status === 'refund_completed') {
+          orderUpdates.payment_status = 'refunded';
+        }
+        if (Object.keys(orderUpdates).length > 0) {
+          await supabase.from('orders').update(orderUpdates).eq('id', order_id);
+        }
       }
     },
     onSuccess: () => {
@@ -133,6 +149,7 @@ export const useCreateReturn = () => {
       items: any[];
       refund_amount: number;
       customer_notes?: string;
+      customer_photos?: string[];
       request_type?: 'return' | 'exchange';
       exchange_details?: Record<string, unknown>;
     }) => {

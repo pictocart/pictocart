@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2, Banknote } from 'lucide-react';
+import { NumInput } from '@/components/accounts/AccountsPrimitives';
 
 interface CodRules {
   enabled: boolean;
@@ -114,27 +115,27 @@ const CodSettings = () => {
         <CardContent className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Min order value (₹)</Label>
-            <Input
-              type="number" min={0}
+            <NumInput
+              min={0}
               value={rules.min_order_value}
-              onChange={(e) => setRules((r) => ({ ...r, min_order_value: Number(e.target.value) }))}
+              onChange={(v) => setRules((r) => ({ ...r, min_order_value: v }))}
             />
           </div>
           <div className="space-y-2">
             <Label>Max order value (₹)</Label>
-            <Input
-              type="number" min={0}
+            <NumInput
+              min={0}
               value={rules.max_order_value}
-              onChange={(e) => setRules((r) => ({ ...r, max_order_value: Number(e.target.value) }))}
+              onChange={(v) => setRules((r) => ({ ...r, max_order_value: v }))}
             />
             <p className="text-xs text-muted-foreground">Recommended: ₹5,000–₹10,000</p>
           </div>
           <div className="space-y-2 col-span-2">
             <Label>Minimum prior orders required</Label>
-            <Input
-              type="number" min={0}
+            <NumInput
+              min={0}
               value={rules.min_prior_orders}
-              onChange={(e) => setRules((r) => ({ ...r, min_prior_orders: Number(e.target.value) }))}
+              onChange={(v) => setRules((r) => ({ ...r, min_prior_orders: v }))}
             />
             <p className="text-xs text-muted-foreground">
               0 = anyone can use COD. Set to 1+ to require returning customers only.

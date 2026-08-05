@@ -46,11 +46,18 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: order, error: ordErr } = await admin
       .from("orders")
-      .select("id, store_id, total, amount_refunded, razorpay_payment_id, payment_status, stores!inner(user_id)")
+      .select("id, store_id, total, amount_refunded, razorpay_payment_id, payment_status")
       .eq("id", order_id)
       .maybeSingle();
     if (ordErr || !order) return json({ error: "Order not found" }, 404);
-    if ((order as any).stores.user_id !== userId) return json({ error: "Forbidden" }, 403);
+
+    const { data: store, error: storeErr } = await admin
+      .from("stores")
+      .select("user_id")
+      .eq("id", order.store_id)
+      .maybeSingle();
+    if (storeErr || !store) return json({ error: "Store not found" }, 404);
+    if (store.user_id !== userId) return json({ error: "Forbidden" }, 403);
     if (!order.razorpay_payment_id) return json({ error: "Order has no captured Razorpay payment" }, 400);
     if (order.payment_status !== "paid" && order.payment_status !== "partially_refunded" && order.payment_status !== "refund_requested") {
       return json({ error: `Cannot refund order in status ${order.payment_status}` }, 400);
