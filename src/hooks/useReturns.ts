@@ -143,8 +143,12 @@ export const useCreateReturn = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ['customer-returns'] });
+      qc.invalidateQueries({ queryKey: ['customer-orders'] });
+      if (data?.order_id) {
+        qc.invalidateQueries({ queryKey: ['order-eligibility', data.order_id] });
+      }
       toast.success('Return request submitted');
     },
     onError: (e: Error) => toast.error(e.message),

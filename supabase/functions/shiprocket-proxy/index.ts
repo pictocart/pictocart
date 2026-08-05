@@ -256,6 +256,81 @@ serve(async (req) => {
       });
     }
 
+    if (action === "create-reverse-shipment") {
+      const s = body.reverse_shipment || {};
+      const payload = {
+        order_id: s.order_number,
+        order_date: new Date().toISOString().slice(0, 10),
+        pickup_customer_name: s.pickup_name,
+        pickup_last_name: "",
+        pickup_address: s.pickup_address,
+        pickup_city: s.pickup_city,
+        pickup_state: s.pickup_state,
+        pickup_country: "India",
+        pickup_pincode: s.pickup_pincode,
+        pickup_phone: s.pickup_phone,
+        shipping_customer_name: s.shipping_name,
+        shipping_last_name: "",
+        shipping_address: s.shipping_address,
+        shipping_city: s.shipping_city,
+        shipping_state: s.shipping_state,
+        shipping_country: "India",
+        shipping_pincode: s.shipping_pincode,
+        shipping_phone: s.shipping_phone,
+        order_items: (s.items || []).map((it: any) => ({
+          name: it.name || "Return Item",
+          sku: it.sku || "RETURN-SKU",
+          units: it.units || 1,
+          selling_price: it.selling_price || 0,
+        })),
+        payment_method: "Prepaid",
+        sub_total: s.total_amount || 0,
+        length: s.length || 15,
+        breadth: s.breadth || 15,
+        height: s.height || 15,
+        weight: (s.weight || 100) / 1000,
+      };
+
+      const r = await fetch(`${BASE}/orders/create/return`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.shipment_id) return json({ error: j.message || "Shiprocket reverse order creation failed", raw: j });
+
+      // Assign courier & generate return AWB
+      const awbBody: any = { shipment_id: j.shipment_id, is_return: 1 };
+      if (body.courier_id) {
+        awbBody.courier_id = body.courier_id;
+      }
+      
+      const awbR = await fetch(`${BASE}/courier/assign/awb`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(awbBody),
+      });
+      const jAwb = await awbR.json();
+      const awbCode = jAwb?.response?.data?.awb_code || jAwb?.awb_code || jAwb?.response?.awb_code;
+
+      if (!awbR.ok || !awbCode) {
+        return json({
+          error: jAwb?.message || jAwb?.response?.data?.message || "Failed to assign return AWB courier.",
+          shipment_id: j.shipment_id,
+          order_id: j.order_id,
+          raw: jAwb,
+        });
+      }
+
+      return json({ 
+        waybill: awbCode, 
+        shipment_id: j.shipment_id, 
+        order_id: j.order_id,
+        courier_name: jAwb?.response?.data?.courier_name || "",
+        raw: { create: j, awb: jAwb } 
+      });
+    }
+
     if (action === "generate-label") {
       const { shipment_id } = body;
       if (!shipment_id) return json({ error: "shipment_id is required" }, 400);

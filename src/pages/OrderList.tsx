@@ -128,8 +128,52 @@ const OrderList = () => {
   };
 
   // ── Badges ────────────────────────────────────────────────────────
-  const getStatusBadge = (status: string | null) => {
-    const s = ORDER_STATUSES.find((st) => st.value === status);
+  const getStatusBadge = (order: any) => {
+    const activeReturn = Array.isArray(order.returns) && order.returns.length > 0 
+      ? order.returns.find((r: any) => r.status !== 'cancelled') 
+      : null;
+      
+    if (activeReturn) {
+      const isExchange = activeReturn.request_type === 'exchange';
+      const prefix = isExchange ? 'Exchange' : 'Return';
+      
+      let label = `${prefix} Requested`;
+      let color = 'bg-orange-100 text-orange-800 border-orange-200';
+      
+      if (activeReturn.status === 'approved') {
+        label = `${prefix} Approved`;
+        color = 'bg-blue-100 text-blue-800 border-blue-200';
+      } else if (activeReturn.status === 'rejected') {
+        label = `${prefix} Rejected`;
+        color = 'bg-red-100 text-red-800 border-red-200';
+      } else if (activeReturn.status === 'pickup_scheduled') {
+        label = `Pickup Scheduled`;
+        color = 'bg-cyan-100 text-cyan-800 border-cyan-200';
+      } else if (activeReturn.status === 'picked_up') {
+        label = `Item Picked Up`;
+        color = 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      } else if (activeReturn.status === 'received') {
+        label = `Item Received`;
+        color = 'bg-purple-100 text-purple-800 border-purple-200';
+      } else if (activeReturn.status === 'refund_initiated' || activeReturn.status === 'refund_completed' || activeReturn.status === 'refunded') {
+        label = isExchange ? 'Exchange Completed' : 'Returned';
+        color = 'bg-green-100 text-green-800 border-green-200';
+      } else if (activeReturn.status === 'replacement_shipped') {
+        label = 'Replacement Shipped';
+        color = 'bg-cyan-100 text-cyan-800 border-cyan-200';
+      } else if (activeReturn.status === 'replacement_delivered') {
+        label = 'Exchange Completed';
+        color = 'bg-green-100 text-green-800 border-green-200';
+      }
+      
+      return (
+        <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium', color)}>
+          {label}
+        </span>
+      );
+    }
+
+    const s = ORDER_STATUSES.find((st) => st.value === order.status);
     return s
       ? <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium', s.color)}>{s.label}</span>
       : <span className="text-xs text-muted-foreground">—</span>;
@@ -350,7 +394,7 @@ const OrderList = () => {
             >
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-sm">#{order.order_number}</span>
-                {getStatusBadge(order.status)}
+                {getStatusBadge(order)}
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground font-medium">{order.customer_name || 'Walk-in'}</span>
@@ -388,7 +432,7 @@ const OrderList = () => {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-sm">#{order.order_number}</span>
-                  {getStatusBadge(order.status)}
+                  {getStatusBadge(order)}
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{order.customer_name || 'Walk-in'}</span>
@@ -449,7 +493,7 @@ const OrderList = () => {
                     </TableCell>
                     <TableCell className="text-right font-medium">₹{order.total ?? 0}</TableCell>
                     <TableCell className="text-center">{getPaymentBadge(order.payment_status)}</TableCell>
-                    <TableCell className="text-center">{getStatusBadge(order.status)}</TableCell>
+                    <TableCell className="text-center">{getStatusBadge(order)}</TableCell>
                     <TableCell className="max-w-[200px]">
                       {(order.status as string) === 'rejected' && order.notes ? (
                         <div className="flex items-start gap-1 text-xs text-orange-700">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStoreReturns, RETURN_STATUSES, type ReturnStatus, type ReturnRequest } from '@/hooks/useReturns';
+import { useStore } from '@/hooks/useStore';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -174,6 +175,7 @@ const Returns = () => {
 /* ---------------- Details Panel ---------------- */
 
 const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => void }) => {
+  const { store } = useStore();
   const [status, setStatus] = useState<ReturnStatus>(r.status);
   const [sellerNotes, setSellerNotes] = useState(r.seller_notes || '');
   const [internalNotes, setInternalNotes] = useState(r.internal_notes || '');
@@ -184,6 +186,84 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
   const [qcNotes, setQcNotes] = useState(r.qc_notes || '');
   const [refundStatus, setRefundStatus] = useState<string>(r.refund_status || '');
   const [saving, setSaving] = useState(false);
+  const [bookingShipment, setBookingShipment] = useState(false);
+  const [order, setOrder] = useState<any>(null);
+  const [orderLoading, setOrderLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setOrderLoading(true);
+      const { data } = await supabase.from('orders').select('*').eq('id', r.order_id).maybeSingle();
+      setOrder(data);
+      setOrderLoading(false);
+    })();
+  }, [r.order_id]);
+
+  const bookReverseShipment = async () => {
+    if (!order || !store) return;
+    setBookingShipment(true);
+    try {
+      const shippingConfig = (store.settings as any)?.shipping;
+      const addr = order.customer_address || {};
+      
+      const payload = {
+        action: 'create-reverse-shipment',
+        store_id: store.id,
+        reverse_shipment: {
+          order_number: `${order.order_number}-RTN-${r.id.slice(0, 4).toUpperCase()}`,
+          pickup_name: order.customer_name || 'Customer',
+          pickup_phone: order.customer_phone || '9999999999',
+          pickup_email: order.customer_email || 'noreply@pictocart.in',
+          pickup_address: addr.line1 + (addr.line2 ? `, ${addr.line2}` : ''),
+          pickup_city: addr.city || 'City',
+          pickup_state: addr.state || 'State',
+          pickup_pincode: addr.pincode || '110001',
+          shipping_name: shippingConfig?.pickup?.name || store.name || (store as any).business_name || 'Merchant',
+          shipping_phone: shippingConfig?.pickup?.phone || (store as any).phone || '9999999999',
+          shipping_address: shippingConfig?.pickup?.address || 'Merchant Address',
+          shipping_city: shippingConfig?.pickup?.city || 'City',
+          shipping_state: shippingConfig?.pickup?.state || 'State',
+          shipping_pincode: shippingConfig?.pickup?.pincode || '110001',
+          total_amount: Number(r.refund_amount) || 0,
+          weight: 100, // default 100g
+          length: 15,
+          breadth: 15,
+          height: 15,
+          items: (Array.isArray(r.items) ? r.items : []).map((it: any) => ({
+            name: it.title || it.name || 'Return Product',
+            sku: it.sku || it.product_id || 'SKU',
+            units: it.quantity || 1,
+            selling_price: it.price || 0,
+          }))
+        }
+      };
+
+      const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
+        body: payload
+      });
+
+      if (error || !data || !data.waybill) {
+        throw new Error(error?.message || data?.error || 'Failed to book pickup on Shiprocket');
+      }
+
+      setPickupAwb(data.waybill);
+      setPickupCourier(data.courier_name || 'Shiprocket');
+      setStatus('pickup_scheduled');
+      
+      // Default scheduled date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setPickupDate(tomorrow.toISOString().slice(0, 16));
+
+      toast.success('Reverse pickup order successfully created in Shiprocket!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Reverse shipment creation failed');
+    } finally {
+      setBookingShipment(false);
+    }
+  };
+
   const timeline: any[] = Array.isArray(r.timeline) ? r.timeline : [];
 
   const save = async () => {
@@ -278,7 +358,21 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
           </section>
 
           <section>
-            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Truck className="h-4 w-4" /> Pickup</h3>
+            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Truck className="h-4 w-4" /> Pickup</h3>
+              {store?.settings?.shipping?.configured && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="h-7 text-xs flex items-center gap-1 border-primary/50 text-primary hover:bg-primary/5 px-2.5 py-1"
+                  disabled={bookingShipment || orderLoading || !order}
+                  onClick={bookReverseShipment}
+                >
+                  {bookingShipment ? <Loader2 className="h-3 w-3 animate-spin" /> : <Truck className="h-3 w-3" />}
+                  Book Reverse Pickup (Shiprocket)
+                </Button>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <Input placeholder="Courier (e.g. Shiprocket)" value={pickupCourier} onChange={(e) => setPickupCourier(e.target.value)} />
               <Input placeholder="AWB / Waybill" value={pickupAwb} onChange={(e) => setPickupAwb(e.target.value)} />
