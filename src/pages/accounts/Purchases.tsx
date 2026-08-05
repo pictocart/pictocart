@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/hooks/useStore';
 import {
-  inr, MoneyInput, PaymentModePicker, ExportCsvButton, todayISO,
+  inr, MoneyInput, NumInput, PaymentModePicker, ExportCsvButton, todayISO,
 } from '@/components/accounts/AccountsPrimitives';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -238,15 +238,15 @@ const Purchases = () => {
                           value={l.name} onChange={(e) => updateLine(i, { name: e.target.value })} />
                       </div>
                       <div className="col-span-2">
-                        <Input type="number" min={1} value={l.quantity}
-                          onChange={(e) => updateLine(i, { quantity: Number(e.target.value || 0) })} />
+                        <NumInput min={1} value={l.quantity}
+                          onChange={(v) => updateLine(i, { quantity: v })} />
                       </div>
                       <div className="col-span-2">
                         <MoneyInput value={l.rate} onChange={(v) => updateLine(i, { rate: v })} />
                       </div>
                       <div className="col-span-2">
-                        <Input type="number" value={l.gst}
-                          onChange={(e) => updateLine(i, { gst: Number(e.target.value || 0) })} />
+                        <NumInput value={l.gst}
+                          onChange={(v) => updateLine(i, { gst: v })} />
                       </div>
                       <div className="col-span-1">
                         <Button size="icon" variant="ghost" onClick={() => removeLine(i)}>

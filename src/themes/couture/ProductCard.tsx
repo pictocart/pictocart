@@ -23,6 +23,13 @@ export const CoutureProductCard = ({ product, href }: { product: Product; href?:
           borderRadius: tokens.radius.sm,
         }}
       >
+        {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+          <span 
+            className="absolute top-2 left-2 text-[9px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded shadow z-10"
+          >
+            {Math.round(((Number(product.compare_at_price) - Number(product.price)) / Number(product.compare_at_price)) * 100)}% OFF
+          </span>
+        )}
         {img ? (
           <img
             src={img}

@@ -956,6 +956,17 @@ const Layout1ProductCard = ({ product, theme, storeSlug }: any) => (
     onMouseLeave={(e: any) => e.currentTarget.style.transform = "none"}
   >
     <div style={{ position: "relative", height: 200 }}>
+      {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+        <span 
+          style={{
+            position: "absolute", top: 8, left: 8, background: "#dc2626", color: "#ffffff",
+            fontSize: 9, fontWeight: 900, padding: "2px 6px", borderRadius: 4, zIndex: 10,
+            boxShadow: "0 1px 2px rgba(0,0,0,0.1)"
+          }}
+        >
+          {Math.round(((Number(product.compare_at_price) - Number(product.price)) / Number(product.compare_at_price)) * 100)}% OFF
+        </span>
+      )}
       <img 
         src={product.images?.[0] || '/api/placeholder/200/200'} 
         alt={product.name} 
@@ -1211,6 +1222,7 @@ const MasterThemeView = ({ slug, themeId, seo, store, products, page = 'home' }:
         products={products}
         sellerCategories={sellerCategories}
         providers={providers}
+        store={store}
       />
     </>
   );

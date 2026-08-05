@@ -120,7 +120,9 @@ const OrderRelatedCards = ({ orderId, courier, awb, trackingNumber, deliveredAt,
             )}
             <div className="flex gap-2 pt-1">
               <Button variant="outline" size="sm" className="flex-1" asChild>
-                <Link to="/shipments"><MapPin className="h-3.5 w-3.5 mr-1" /> Track Shipment</Link>
+                <a href={`https://app.shiprocket.in/seller/shipments?search=${track}`} target="_blank" rel="noopener noreferrer">
+                  <MapPin className="h-3.5 w-3.5 mr-1" /> Track Shipment on Shiprocket
+                </a>
               </Button>
               {shippingLabelUrl && (
                 <Button variant="outline" size="sm" asChild>

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, MessageCircle } from 'lucide-react';
+import { Plus, MessageCircle, Search } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from '@/components/ui/dialog';
@@ -29,6 +29,9 @@ const Khata = () => {
     customer_id: '', customer_name: '', customer_phone: '',
     entry_type: 'credit', amount: 0, entry_date: todayISO(), payment_mode: 'cash', notes: '',
   });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'credit' | 'payment'>('all');
 
   const { data: customers = [] } = useQuery({
     queryKey: ['accounts', 'customers-with-balance', store?.id],
@@ -56,6 +59,32 @@ const Khata = () => {
     return Array.from(map.values()).filter((c) => c.balance > 0.005)
       .sort((a, b) => b.balance - a.balance);
   }, [entries]);
+
+  const filteredOwingList = useMemo(() => {
+    return owingList.filter((c) => {
+      const matchQuery = !searchQuery.trim() || 
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.phone && c.phone.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchQuery;
+    });
+  }, [owingList, searchQuery]);
+
+  const filteredEntries = useMemo(() => {
+    return entries.filter((e: any) => {
+      const name = e.customer_name || e.customers?.name || 'Walk-in';
+      const phone = e.customer_phone || e.customers?.phone || '';
+      const notes = e.notes || '';
+      
+      const matchQuery = !searchQuery.trim() || 
+        name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        notes.toLowerCase().includes(searchQuery.toLowerCase());
+        
+      const matchType = typeFilter === 'all' || e.entry_type === typeFilter;
+      
+      return matchQuery && matchType;
+    });
+  }, [entries, searchQuery, typeFilter]);
 
   const totals = useMemo(() => ({
     recv: owingList.reduce((s, c) => s + c.balance, 0),
@@ -111,7 +140,7 @@ const Khata = () => {
                   const c = customers.find((cc: any) => cc.id === v);
                   setForm({ ...form, customer_id: v, customer_name: c?.name || '', customer_phone: c?.phone || '' });
                 }}>
-                  <SelectTrigger><SelectValue placeholder="Walk-in or pick" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="" /></SelectTrigger>
                   <SelectContent>
                     {customers.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</SelectItem>
@@ -159,6 +188,35 @@ const Khata = () => {
         </Dialog>
       </div>
 
+      {/* Search and Filter Controls */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by customer name, phone, or notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="w-full md:w-64">
+              <Select value={typeFilter} onValueChange={(v: any) => setTypeFilter(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="credit">Credit given (sale)</SelectItem>
+                  <SelectItem value="payment">Payment received</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader><CardTitle className="text-base">Customers owing</CardTitle></CardHeader>
         <CardContent className="p-0">
@@ -173,7 +231,7 @@ const Khata = () => {
                 </tr>
               </thead>
               <tbody>
-                {owingList.map((c) => (
+                {filteredOwingList.map((c) => (
                   <tr key={c.key} className="border-t">
                     <td className="p-3">{c.name}</td>
                     <td className="p-3">{c.phone || '—'}</td>
@@ -188,7 +246,7 @@ const Khata = () => {
                     </td>
                   </tr>
                 ))}
-                {!owingList.length && (
+                {!filteredOwingList.length && (
                   <tr><td className="p-6 text-center text-muted-foreground" colSpan={4}>No outstanding khata.</td></tr>
                 )}
               </tbody>
@@ -212,7 +270,7 @@ const Khata = () => {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e: any) => (
+                {filteredEntries.map((e: any) => (
                   <tr key={e.id} className="border-t">
                     <td className="p-3">{format(new Date(e.entry_date), 'dd MMM')}</td>
                     <td className="p-3">{e.customer_name || e.customers?.name || '—'}</td>
@@ -225,7 +283,7 @@ const Khata = () => {
                     <td className="p-3 text-muted-foreground">{e.notes}</td>
                   </tr>
                 ))}
-                {!entries.length && (
+                {!filteredEntries.length && (
                   <tr><td className="p-6 text-center text-muted-foreground" colSpan={5}>No entries yet.</td></tr>
                 )}
               </tbody>

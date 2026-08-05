@@ -30,9 +30,12 @@ export const useSubscribeNewsletter = () => {
     mutationFn: async ({ store_id, email }: { store_id: string; email: string }) => {
       const { error } = await supabase.from('newsletter_subscribers').insert({ store_id, email });
       if (error) {
-        if (error.code === '23505') throw new Error('Already subscribed!');
+        if (error.code === '23505') {
+          return { alreadySubscribed: true };
+        }
         throw error;
       }
+      return { alreadySubscribed: false };
     },
   });
 };

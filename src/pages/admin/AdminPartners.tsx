@@ -1327,7 +1327,7 @@ const AdminPartners = () => {
                       </div>
                     </div>
 
-                    {/* Hierarchy (only visible under License Keys tab) */}
+                    {/* Hierarchy (only visible under License Keys tab)
                     <div className="border rounded-lg p-3 space-y-2 mt-6">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm">Hierarchy</h3>
@@ -1357,6 +1357,7 @@ const AdminPartners = () => {
                         </span></div>
                       </div>
                     </div>
+                    */}
 
                     {/* Partner Actions (only visible under License Keys tab) */}
                     <div className="flex gap-2 pt-4 border-t flex-wrap mt-6">

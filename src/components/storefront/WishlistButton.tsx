@@ -10,6 +10,8 @@ interface Props {
 }
 
 const WishlistButton = ({ isWishlisted, onToggle, isLoggedIn, primaryColor, size = 'sm' }: Props) => {
+  return null;
+  /*
   const iconSize = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
   const padding = size === 'sm' ? 'p-1.5' : 'p-2';
 
@@ -46,6 +48,7 @@ const WishlistButton = ({ isWishlisted, onToggle, isLoggedIn, primaryColor, size
       />
     </button>
   );
+  */
 };
 
 export default WishlistButton;

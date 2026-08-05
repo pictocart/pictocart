@@ -333,18 +333,14 @@ const CustomerAccount = () => {
               </h2>
               <p className="text-xs opacity-60 truncate mb-4">{displayEmail || user.phone}</p>
               
-              <div className="border-t pt-4 my-2 grid grid-cols-3 gap-2" style={{ borderColor: colors.secondary + '60' }}>
+              <div className="border-t pt-4 my-2 grid grid-cols-2 gap-2" style={{ borderColor: colors.secondary + '60' }}>
                 <div className="text-center">
                   <p className="text-sm font-bold" style={{ color: colors.primary }}>{orderStats.total}</p>
                   <p className="text-[10px] opacity-50 uppercase font-medium">Orders</p>
                 </div>
-                <div className="text-center border-x" style={{ borderColor: colors.secondary + '60' }}>
+                <div className="text-center border-l" style={{ borderColor: colors.secondary + '60' }}>
                   <p className="text-sm font-bold text-amber-500">{orderStats.active}</p>
                   <p className="text-[10px] opacity-50 uppercase font-medium">Active</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-emerald-600">{wishlistCount}</p>
-                  <p className="text-[10px] opacity-50 uppercase font-medium">Wishlist</p>
                 </div>
               </div>
 
@@ -473,7 +469,7 @@ const CustomerAccount = () => {
                     </div>
                   </div>
 
-                  {/* Wishlist Link Card */}
+                  {/* Wishlist Link Card
                   <Link
                     to={`/store/${slug}/account/wishlist`}
                     className="flex items-center gap-4 p-4 border transition-all hover:shadow-md hover:scale-[1.01] mb-6"
@@ -488,6 +484,7 @@ const CustomerAccount = () => {
                     </div>
                     <ChevronRight className="h-5 w-5 opacity-40" />
                   </Link>
+                  */}
 
                   {/* Change Password Card */}
                   <div

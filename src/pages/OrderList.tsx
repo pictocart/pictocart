@@ -153,7 +153,7 @@ const OrderList = () => {
         label = `Item Picked Up`;
         color = 'bg-indigo-100 text-indigo-800 border-indigo-200';
       } else if (activeReturn.status === 'received') {
-        label = `Item Received`;
+        label = `Delivered to Warehouse/Store`;
         color = 'bg-purple-100 text-purple-800 border-purple-200';
       } else if (activeReturn.status === 'refund_initiated' || activeReturn.status === 'refund_completed' || activeReturn.status === 'refunded') {
         label = isExchange ? 'Exchange Completed' : 'Returned';

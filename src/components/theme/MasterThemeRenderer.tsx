@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ProductCardActions from "@/components/storefront/ProductCardActions";
 import ProductPageRenderer from "@/components/storefront/ProductPageRenderer";
 import CustomerAuthModal from "@/components/storefront/CustomerAuthModal";
+import NewsletterSection from "@/components/storefront/NewsletterSection";
 import { useValidateCoupon } from "@/hooks/useCoupons";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -1290,6 +1291,15 @@ export default function MasterThemeRenderer({ manifest, page = "home", overrides
             font-weight: 700 !important;
           }
         ` : ''}
+
+        /* Preserve newlines in descriptions and hero sections */
+        [data-hero-section] p,
+        [data-hero-section="true"] p,
+        .s-sub,
+        .section-subtitle,
+        p.s-sub {
+          white-space: pre-line !important;
+        }
 
         /* Global Button Overrides */
         [data-master-theme] button:not(.qty-btn):not([aria-label="Close"]):not(.sr-only):not([type="submit"]), 
@@ -2750,16 +2760,18 @@ function Section({ s, dna, storeSlug, page, store, products, storeCategory, isFo
     case "testimonials": return <TestimonialsBlock p={p} dna={dna} storeSlug={storeSlug} />;
     case "google_reviews": return <GoogleReviewsBlock p={p} dna={dna} storeSlug={storeSlug} />
     case "newsletter": return (
-      <section className="py-20 text-center" style={{ background: dna.palette?.primary, color: dna.palette?.primary_fg }}>
-        <div className="max-w-xl mx-auto px-6">
-          <h2 className="text-3xl mb-3 s-title" style={{ fontFamily: "var(--hf)", fontWeight: dna.fonts?.heading_weight ?? 700 }}>{p.title}</h2>
-          <p className="mb-6 opacity-80 s-sub">{p.sub}</p>
-          <form className="flex gap-2 max-w-md mx-auto">
-            <input placeholder="you@example.com" className="flex-1 px-4 py-3 text-sm" style={{ background: dna.palette?.bg, color: dna.palette?.fg, borderRadius: "var(--r)" }} />
-            <button className="px-5 py-3 text-sm font-medium" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{p.cta}</button>
-          </form>
-        </div>
-      </section>
+      <NewsletterSection
+        storeId={store?.id || ""}
+        title={p.title}
+        subtitle={p.sub}
+        colors={{
+          primary: dna.palette?.accent || dna.palette?.primary || "",
+          secondary: dna.palette?.primary || "",
+          card: dna.palette?.bg || "",
+          text: dna.palette?.fg || "",
+        }}
+        borderRadius={parseInt(String(dna.radius ?? "4").replace("px", ""), 10) || 4}
+      />
     );
     case "page_title": return (
       <section className="max-w-6xl mx-auto px-6 pt-16 pb-8">
@@ -3319,10 +3331,7 @@ function CartSummary({ p, dna, storeSlug, store }: any) {
               <span>-₹{Math.round(discount).toLocaleString("en-IN")}</span>
             </div>
           )}
-          <div className="flex justify-between text-sm opacity-70 pb-2 border-b" style={{ borderColor: dna.palette?.border }}>
-            <span>Shipping</span>
-            <span className="text-[11px] uppercase tracking-wider font-semibold text-primary">Calculated at checkout</span>
-          </div>
+          <div className="border-b" style={{ borderColor: dna.palette?.border }} />
           <div className="flex justify-between text-base font-bold pt-2">
             <span>Total</span>
             <span style={{ color: "var(--p)" }}>₹{Math.round(finalPrice).toLocaleString("en-IN")}</span>
@@ -4034,7 +4043,7 @@ function ContactForm({ p, dna, storeSlug }: any) {
                             </p>
                             {msg.status === "replied" && (
                               <p className="text-xs font-semibold px-3 py-2 rounded-lg" style={{ background: "var(--p)" + "18", color: "var(--p)" }}>
-                                ✓ Store has replied — check your email inbox for their response.
+                                ✓ The reply to your question has been successfully sent to your email. Please check your inbox.
                               </p>
                             )}
                           </div>
@@ -5714,7 +5723,13 @@ function ProductBlock({ p, dna, storeSlug, page, storeCategory, isFoodLayout }: 
               <Link to={linkFor(pr)} className="block">
                 <div className="aspect-square mb-3 overflow-hidden relative" style={{ background: dna.palette?.surface, borderRadius: "var(--r)" }}>
                   {pr.image && <img src={pr.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
-                  {pr.badge && <span className="absolute top-2 left-2 text-[10px] px-2 py-1 uppercase tracking-wider z-10" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{pr.badge}</span>}
+                  {pr.compare_at && Number(pr.compare_at) > Number(pr.price) ? (
+                    <span className="absolute top-2 left-2 text-[9px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded shadow z-10">
+                      {Math.round(((Number(pr.compare_at) - Number(pr.price)) / Number(pr.compare_at)) * 100)}% OFF
+                    </span>
+                  ) : pr.badge ? (
+                    <span className="absolute top-2 left-2 text-[10px] px-2 py-1 uppercase tracking-wider z-10" style={{ background: dna.palette?.accent, color: dna.palette?.bg, borderRadius: "var(--r)" }}>{pr.badge}</span>
+                  ) : null}
                   {isOutOfStock && <span className="absolute top-2 right-2 text-[9px] font-black bg-gray-600 text-white px-2 py-0.5 rounded shadow z-10">OUT OF STOCK</span>}
                 </div>
                 <div 

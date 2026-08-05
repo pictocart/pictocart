@@ -35,7 +35,7 @@ export default function CustomerAuth() {
   const [submitting, setSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [btnHovered, setBtnHovered] = useState(false);
-  const [agreeToPrivacy, setAgreeToPrivacy] = useState(false);
+  const [agreeToPrivacy, setAgreeToPrivacy] = useState(true);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const isGoogleConfigured = googleClientId && googleClientId !== "PLACEHOLDER_GOOGLE_CLIENT_ID";

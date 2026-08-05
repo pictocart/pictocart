@@ -21,8 +21,8 @@ Deno.serve(async (req) => {
     }
 
     const { topic, store_name, category } = await req.json();
+    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
     const NVIDIA_API_KEY = Deno.env.get('NVIDIA_API_KEY');
-    if (!NVIDIA_API_KEY) throw new Error('NVIDIA_API_KEY not configured');
 
     const prompt = `You are a senior SEO content writer for an online store called "${store_name || 'My Store'}" (category: ${category || 'general'}).
 
@@ -46,28 +46,87 @@ Also produce SEO metadata:
 Return ONLY valid JSON, no markdown fences, in this shape:
 { "body": "...", "seo_title": "...", "seo_description": "...", "tags": ["..."], "image_prompt": "..." }`;
 
-    const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.5,
-      }),
-    });
+    let responseText = '';
+    let success = false;
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`AI API error: ${res.status} ${errText}`);
+    // 1. Try Groq (extremely fast and reliable)
+    if (GROQ_API_KEY) {
+      try {
+        console.log('Attempting blog generation via Groq...');
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+            response_format: { type: 'json_object' }
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          responseText = data.choices[0].message.content;
+          success = true;
+        } else {
+          console.warn(`Groq failed with status ${res.status}: ${await res.text()}`);
+        }
+      } catch (e) {
+        console.warn('Groq fetch error:', e);
+      }
     }
 
-    const data = await res.json();
-    const content = JSON.parse(data.choices[0].message.content);
+    // 2. Fallback to NVIDIA integrate API with model cascading
+    if (!success) {
+      if (!NVIDIA_API_KEY) throw new Error('No AI API keys configured on platform');
+      
+      const models = [
+        'meta/llama-3.3-70b-instruct',
+        'nvidia/llama-3.1-nemotron-70b-instruct',
+        'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'
+      ];
+
+      for (const model of models) {
+        try {
+          console.log(`Attempting blog generation via NVIDIA fallback with model: ${model}...`);
+          const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model,
+              messages: [{ role: 'user', content: prompt }],
+              temperature: 0.5,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            responseText = data.choices[0].message.content;
+            success = true;
+            break;
+          } else {
+            console.warn(`NVIDIA model ${model} failed: ${res.status} ${await res.text()}`);
+          }
+        } catch (e) {
+          console.warn(`NVIDIA model ${model} fetch error:`, e);
+        }
+      }
+    }
+
+    if (!success || !responseText) {
+      throw new Error('AI generation failed on all available LLM backends');
+    }
+
+    // Clean markdown code blocks from JSON response if present
+    let cleaned = responseText.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+    }
+    const content = JSON.parse(cleaned);
 
     return new Response(JSON.stringify(content), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    console.error('generate-blog error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

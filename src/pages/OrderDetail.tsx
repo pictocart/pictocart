@@ -510,7 +510,7 @@ const OrderDetail = () => {
                     label = `Item Picked Up`;
                     color = 'bg-indigo-100 text-indigo-800 border-indigo-200';
                   } else if (activeReturn.status === 'received') {
-                    label = `Item Received`;
+                    label = `Delivered to Warehouse/Store`;
                     color = 'bg-purple-100 text-purple-800 border-purple-200';
                   } else if (activeReturn.status === 'refund_initiated' || activeReturn.status === 'refund_completed' || activeReturn.status === 'refunded') {
                     label = isExchange ? 'Exchange Completed' : 'Returned';
@@ -650,7 +650,7 @@ const OrderDetail = () => {
             statusText = 'Item Picked Up';
             borderCls = 'border-indigo-300 bg-indigo-50 text-indigo-800';
           } else if (activeReturn.status === 'received') {
-            statusText = 'Item Received';
+            statusText = 'Delivered to Warehouse/Store';
             borderCls = 'border-purple-300 bg-purple-50 text-purple-800';
           } else if (activeReturn.status === 'refund_initiated' || activeReturn.status === 'refund_completed' || activeReturn.status === 'refunded') {
             statusText = isExchange ? 'Exchange Completed' : 'Returned';

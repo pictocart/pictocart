@@ -34,7 +34,7 @@ const isFoodStore = (category?: string | null) =>
 
 const SellerProfile = () => {
   const { user } = useAuth();
-  const { store, setStore } = useStore();
+  const { store, setStore, isStaff } = useStore();
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const { plan: currentPlan, allPlans = [], subscription } = useSubscription();
@@ -349,7 +349,7 @@ const SellerProfile = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Full Name</Label>
-              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" />
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" disabled={isStaff} className={isStaff ? "bg-muted" : ""} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Phone Number</Label>
@@ -385,6 +385,8 @@ const SellerProfile = () => {
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
                   placeholder="Your store name"
+                  disabled={isStaff}
+                  className={isStaff ? "bg-muted" : ""}
                 />
               </div>
               <div className="space-y-1">
@@ -421,7 +423,7 @@ const SellerProfile = () => {
                 else { toast.success('Store name updated'); setStore({ ...store, name: storeName.trim() }); }
                 setStoreNameLoading(false);
               }}
-              disabled={storeNameLoading || storeName.trim() === store.name}
+              disabled={storeNameLoading || storeName.trim() === store.name || isStaff}
               className="w-fit"
             >
               {storeNameLoading ? 'Saving...' : 'Save Store Name'}
@@ -706,7 +708,7 @@ const SellerProfile = () => {
                       </ul>
                     </div>
 
-                    {!isCurrent && config.plan !== 'free' && (
+                    {!isCurrent && config.plan !== 'free' && !isStaff && (
                       <Button
                         size="sm"
                         className="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white font-medium text-xs h-8"
@@ -724,7 +726,7 @@ const SellerProfile = () => {
       )}
 
       {/* Partner Connection & Upgrade section */}
-      {store && (
+      {store && !isStaff && (
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardContent className="p-0">
             <Accordion type="single" collapsible className="w-full">

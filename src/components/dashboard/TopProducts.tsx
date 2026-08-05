@@ -44,7 +44,7 @@ const TopProducts = ({ storeId }: Props) => {
     });
 
     return Object.values(map)
-      .sort((a, b) => b.revenue - a.revenue)
+      .sort((a, b) => b.qty - a.qty)
       .slice(0, 5);
   }, [orders]);
 

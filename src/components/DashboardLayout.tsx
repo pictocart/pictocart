@@ -127,11 +127,11 @@ const navTree: NavEntry[] = [
     key: 'marketing',
     children: [
       { label: 'Site-wide Offer', icon: Sparkles, path: '/site-offer' },
-      { label: 'AI Copywriter', icon: MessageSquare, path: '/marketing/copywriter' },
+      // { label: 'AI Copywriter', icon: MessageSquare, path: '/marketing/copywriter' },
       { label: 'Blog Posts', icon: FileText, path: '/blog-posts' },
       { label: 'Product Reviews', icon: Star, path: '/reviews' },
       { label: 'Testimonials', icon: Star, path: '/testimonials' },
-      { label: 'Google Reviews', icon: Star, path: '/google-reviews' },
+      // { label: 'Google Reviews', icon: Star, path: '/google-reviews' },
       { label: 'Subscribers', icon: Mail, path: '/subscribers' },
       { label: 'SEO', icon: Search, path: '/settings/seo' },
     ],
@@ -161,7 +161,7 @@ const navTree: NavEntry[] = [
       { label: 'QR Codes', icon: QrCode, path: '/settings/qr' },
       { label: 'Staff Management', icon: Users, path: '/settings/staff' },
       { label: 'Domain', icon: Globe, path: '/settings/domain' },
-      { label: 'Email Branding', icon: Mail, path: '/settings/email' },
+      // { label: 'Email Branding', icon: Mail, path: '/settings/email' },
       { label: 'Billing', icon: Crown, path: '/billing' },
       { label: 'AI Wallet', icon: Sparkles, path: '/wallet' },
     ],
@@ -189,7 +189,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const isService = ['healthcare', 'beauty_services'].includes(cat);
 
   const filteredNavTree = useMemo<NavEntry[]>(() => {
-    const fnbPaths = new Set(['/menu', '/kitchen', '/settings/qr']);
+    const fnbPaths = new Set(['/menu', '/kitchen', '/settings/qr', '/settings/fulfillment']);
     const servicePaths = new Set(['/appointments', '/services', '/providers', '/providers/payouts', '/family-plans']);
     
     // For staff members, hide billing, settings, accounts, sourcing

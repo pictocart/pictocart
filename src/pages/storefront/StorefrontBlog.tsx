@@ -19,9 +19,20 @@ const StorefrontBlog = () => {
 
   const storefrontConfig = getStorefrontConfig(store);
   const overrides = storefrontConfig?.theme_overrides || {};
-  const journalSections = overrides.pages?.journal?.sectionsList || [];
-  const journalListSection = journalSections.find((s: any) => s.type === 'journal_list');
-  const journalProps = journalListSection?.props || {};
+  
+  // Try to find the journal_list section overrides by index in the manifest page sections
+  const manifestSections = store?.resolved_storefront_manifest?.manifest?.pages?.journal?.sections || [];
+  const journalListIdx = manifestSections.findIndex((s: any) => s.type === 'journal_list');
+  
+  let journalProps: any = {};
+  if (journalListIdx !== -1 && overrides.pages?.journal?.sections?.[journalListIdx]) {
+    journalProps = overrides.pages.journal.sections[journalListIdx];
+  } else {
+    // Fallback to legacy Customiser sectionsList if present
+    const journalSections = overrides.pages?.journal?.sectionsList || [];
+    const journalListSection = journalSections.find((s: any) => s.type === 'journal_list');
+    journalProps = journalListSection?.props || {};
+  }
 
   const style = journalProps.style === 'editorial_grid' || !journalProps.style ? 'grid' : journalProps.style;
   const limit = journalProps.limit || 6;
