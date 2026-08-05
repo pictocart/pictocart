@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStoreReturns, RETURN_STATUSES, type ReturnStatus, type ReturnRequest } from '@/hooks/useReturns';
 import { useStore } from '@/hooks/useStore';
 import { supabase } from '@/integrations/supabase/client';
+import BookReversePickupDialog from '@/components/orders/BookReversePickupDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Undo2, Loader2, Search, Package, Truck, CheckCircle2, XCircle, Clock, Banknote, ShieldCheck, MessageSquare } from 'lucide-react';
+import { Undo2, Loader2, Search, Package, Truck, CheckCircle2, XCircle, Clock, Banknote, ShieldCheck, MessageSquare, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -186,9 +187,37 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
   const [qcNotes, setQcNotes] = useState(r.qc_notes || '');
   const [refundStatus, setRefundStatus] = useState<string>(r.refund_status || '');
   const [saving, setSaving] = useState(false);
-  const [bookingShipment, setBookingShipment] = useState(false);
+  const [reverseDialogOpen, setReverseDialogOpen] = useState(false);
+  const [courierResponse, setCourierResponse] = useState<any>(r.courier_response || null);
   const [order, setOrder] = useState<any>(null);
   const [orderLoading, setOrderLoading] = useState(true);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [cancellingShipment, setCancellingShipment] = useState(false);
+
+  useEffect(() => {
+    if (pickupAwb && store) {
+      const getTracking = async () => {
+        setTrackingLoading(true);
+        try {
+          const { data } = await supabase.functions.invoke('shiprocket-proxy', {
+            body: {
+              action: 'track',
+              store_id: store.id,
+              waybill: pickupAwb,
+            },
+          });
+          if (data) {
+            setTrackingData(data);
+          }
+        } catch (err) {
+          console.error('Failed to get return tracking:', err);
+        }
+        setTrackingLoading(false);
+      };
+      getTracking();
+    }
+  }, [pickupAwb, store]);
 
   useEffect(() => {
     (async () => {
@@ -199,68 +228,67 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
     })();
   }, [r.order_id]);
 
-  const bookReverseShipment = async () => {
-    if (!order || !store) return;
-    setBookingShipment(true);
-    try {
-      const shippingConfig = (store.settings as any)?.shipping;
-      const addr = order.customer_address || {};
-      
-      const payload = {
-        action: 'create-reverse-shipment',
-        store_id: store.id,
-        reverse_shipment: {
-          order_number: `${order.order_number}-RTN-${r.id.slice(0, 4).toUpperCase()}`,
-          pickup_name: order.customer_name || 'Customer',
-          pickup_phone: order.customer_phone || '9999999999',
-          pickup_email: order.customer_email || 'noreply@pictocart.in',
-          pickup_address: addr.line1 + (addr.line2 ? `, ${addr.line2}` : ''),
-          pickup_city: addr.city || 'City',
-          pickup_state: addr.state || 'State',
-          pickup_pincode: addr.pincode || '110001',
-          shipping_name: shippingConfig?.pickup?.name || store.name || (store as any).business_name || 'Merchant',
-          shipping_phone: shippingConfig?.pickup?.phone || (store as any).phone || '9999999999',
-          shipping_address: shippingConfig?.pickup?.address || 'Merchant Address',
-          shipping_city: shippingConfig?.pickup?.city || 'City',
-          shipping_state: shippingConfig?.pickup?.state || 'State',
-          shipping_pincode: shippingConfig?.pickup?.pincode || '110001',
-          total_amount: Number(r.refund_amount) || 0,
-          weight: 100, // default 100g
-          length: 15,
-          breadth: 15,
-          height: 15,
-          items: (Array.isArray(r.items) ? r.items : []).map((it: any) => ({
-            name: it.title || it.name || 'Return Product',
-            sku: it.sku || it.product_id || 'SKU',
-            units: it.quantity || 1,
-            selling_price: it.price || 0,
-          }))
-        }
-      };
+  const handleReverseBooked = (waybill: string, courierName: string, metadata: any) => {
+    setPickupAwb(waybill);
+    setPickupCourier(courierName);
+    setCourierResponse(metadata);
+    setStatus('pickup_scheduled');
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setPickupDate(tomorrow.toISOString().slice(0, 16));
+  };
 
+  const cancelReverseShipment = async () => {
+    const sId = courierResponse?.shiprocket_order_id;
+    if (!sId || !store) return;
+    
+    if (!window.confirm("Are you sure you want to cancel this reverse pickup shipment in Shiprocket?")) {
+      return;
+    }
+
+    setCancellingShipment(true);
+    try {
       const { data, error } = await supabase.functions.invoke('shiprocket-proxy', {
-        body: payload
+        body: {
+          action: 'cancel-shipment',
+          store_id: store.id,
+          order_id: sId
+        }
       });
 
-      if (error || !data || !data.waybill) {
-        throw new Error(error?.message || data?.error || 'Failed to book pickup on Shiprocket');
+      if (error || !data) {
+        throw new Error(error?.message || data?.error || 'Failed to cancel shipment');
       }
 
-      setPickupAwb(data.waybill);
-      setPickupCourier(data.courier_name || 'Shiprocket');
-      setStatus('pickup_scheduled');
+      toast.success('Reverse pickup shipment successfully cancelled in Shiprocket!');
       
-      // Default scheduled date to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      setPickupDate(tomorrow.toISOString().slice(0, 16));
-
-      toast.success('Reverse pickup order successfully created in Shiprocket!');
+      setPickupAwb('');
+      setPickupCourier('');
+      setPickupDate('');
+      setCourierResponse(null);
+      setStatus('approved');
+      
+      const newEntry = { at: new Date().toISOString(), status: 'approved', note: 'Reverse pickup shipment cancelled by merchant' };
+      const { error: dbErr } = await supabase
+        .from('returns' as any)
+        .update({
+          pickup_awb: null,
+          pickup_courier: null,
+          pickup_scheduled_at: null,
+          courier_response: null,
+          status: 'approved',
+          timeline: [...timeline, newEntry]
+        })
+        .eq('id', r.id);
+      
+      if (dbErr) throw dbErr;
+      
+      onSaved();
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Reverse shipment creation failed');
+      toast.error(err.message || 'Failed to cancel reverse pickup shipment');
     } finally {
-      setBookingShipment(false);
+      setCancellingShipment(false);
     }
   };
 
@@ -278,6 +306,7 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
       qc_status: qcStatus || null,
       qc_notes: qcNotes || null,
       refund_status: refundStatus || null,
+      courier_response: courierResponse || null,
     };
     if (status === 'picked_up' && !r.picked_up_at) updates.picked_up_at = new Date().toISOString();
     if (refundStatus === 'processing' && !r.refund_initiated_at) updates.refund_initiated_at = new Date().toISOString();
@@ -361,23 +390,83 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
               <h3 className="text-sm font-semibold flex items-center gap-2"><Truck className="h-4 w-4" /> Pickup</h3>
               {store?.settings?.shipping?.configured && (
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-7 text-xs flex items-center gap-1 border-primary/50 text-primary hover:bg-primary/5 px-2.5 py-1"
-                  disabled={bookingShipment || orderLoading || !order}
-                  onClick={bookReverseShipment}
-                >
-                  {bookingShipment ? <Loader2 className="h-3 w-3 animate-spin" /> : <Truck className="h-3 w-3" />}
-                  Book Reverse Pickup (Shiprocket)
-                </Button>
+                pickupAwb ? (
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    className="h-7 text-xs flex items-center gap-1 px-2.5 py-1"
+                    disabled={cancellingShipment || orderLoading || !order}
+                    onClick={cancelReverseShipment}
+                  >
+                    {cancellingShipment ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                    Cancel Reverse Pickup
+                  </Button>
+                ) : (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-7 text-xs flex items-center gap-1 border-primary/50 text-primary hover:bg-primary/5 px-2.5 py-1"
+                    disabled={orderLoading || !order}
+                    onClick={() => setReverseDialogOpen(true)}
+                  >
+                    <Truck className="h-3 w-3" />
+                    Book Reverse Pickup (Shiprocket)
+                  </Button>
+                )
               )}
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <Input placeholder="Courier (e.g. Shiprocket)" value={pickupCourier} onChange={(e) => setPickupCourier(e.target.value)} />
               <Input placeholder="AWB / Waybill" value={pickupAwb} onChange={(e) => setPickupAwb(e.target.value)} />
               <Input type="datetime-local" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="col-span-2" />
             </div>
+
+            {pickupAwb && (
+              <div className="mt-3 p-3 border rounded-lg bg-muted/20 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">Live Tracking</p>
+                {trackingLoading ? (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : trackingData ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span>Status:</span>
+                      <span className="text-primary uppercase font-bold">{trackingData.status || 'AWB Assigned'}</span>
+                    </div>
+                    {trackingData.location && (
+                      <div className="flex justify-between text-xs font-medium">
+                        <span>Location:</span>
+                        <span>{trackingData.location}</span>
+                      </div>
+                    )}
+                    {trackingData.scans && trackingData.scans.length > 0 && (
+                      <div className="mt-2 pt-2 border-t space-y-1.5 max-h-36 overflow-y-auto">
+                        {trackingData.scans.map((scan: any, i: number) => (
+                          <div key={i} className="text-[11px] p-1.5 border rounded bg-background flex flex-col gap-0.5">
+                            <div className="flex justify-between font-semibold">
+                              <span>{scan?.ScanDetail?.Scan || 'Status Update'}</span>
+                              {scan?.ScanDetail?.ScanDateTime && (
+                                <span className="opacity-60 text-[9px] font-mono">
+                                  {format(new Date(scan.ScanDetail.ScanDateTime), 'dd MMM, hh:mm')}
+                                </span>
+                              )}
+                            </div>
+                            {scan?.ScanDetail?.ScannedLocation && (
+                              <p className="opacity-70 flex items-center gap-1 text-[10px]">
+                                <MapPin className="h-2.5 w-2.5 text-muted-foreground" /> {scan.ScanDetail.ScannedLocation}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground italic flex items-center gap-1.5"><MapPin className="h-3 w-3" /> No live scans recorded yet</p>
+                )}
+              </div>
+            )}
           </section>
 
           <section>
@@ -424,6 +513,16 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save changes
         </Button>
       </div>
+      {reverseDialogOpen && (
+        <BookReversePickupDialog
+          open={reverseDialogOpen}
+          onOpenChange={setReverseDialogOpen}
+          order={order}
+          store={store}
+          returnRequest={r}
+          onBooked={handleReverseBooked}
+        />
+      )}
     </div>
   );
 };
