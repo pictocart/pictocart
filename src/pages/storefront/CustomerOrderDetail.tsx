@@ -122,7 +122,63 @@ const CustomerOrderDetail = () => {
               <p className="text-xs opacity-60 mt-1">Placed on {format(new Date(order.created_at), 'dd MMM yyyy, hh:mm a')}</p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide" style={{ backgroundColor: (statusColors[order.status] || '#888') + '20', color: statusColors[order.status] || '#888' }}>{order.status}</span>
+              {(() => {
+                const activeReturn = Array.isArray(returns) && returns.length > 0 
+                  ? returns.find((r: any) => r.status !== 'cancelled') 
+                  : null;
+                  
+                if (activeReturn) {
+                  const isExchange = activeReturn.request_type === 'exchange';
+                  const prefix = isExchange ? 'Exchange' : 'Return';
+                  
+                  let label = `${prefix} Requested`;
+                  let color = '#ea580c';
+                  
+                  if (activeReturn.status === 'approved') {
+                    label = `${prefix} Approved`;
+                    color = '#2563eb';
+                  } else if (activeReturn.status === 'rejected') {
+                    label = `${prefix} Rejected`;
+                    color = '#dc2626';
+                  } else if (activeReturn.status === 'pickup_scheduled') {
+                    label = `Pickup Scheduled`;
+                    color = '#0891b2';
+                  } else if (activeReturn.status === 'picked_up') {
+                    label = `Item Picked Up`;
+                    color = '#4f46e5';
+                  } else if (activeReturn.status === 'received') {
+                    label = `Item Received`;
+                    color = '#7c3aed';
+                  } else if (activeReturn.status === 'refund_initiated' || activeReturn.status === 'refund_completed' || activeReturn.status === 'refunded') {
+                    label = isExchange ? 'Exchange Completed' : 'Returned';
+                    color = '#16a34a';
+                  } else if (activeReturn.status === 'replacement_shipped') {
+                    label = 'Replacement Shipped';
+                    color = '#0891b2';
+                  } else if (activeReturn.status === 'replacement_delivered') {
+                    label = 'Exchange Completed';
+                    color = '#16a34a';
+                  }
+                  
+                  return (
+                    <span 
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide" 
+                      style={{ backgroundColor: color + '20', color: color }}
+                    >
+                      {label}
+                    </span>
+                  );
+                }
+                
+                return (
+                  <span 
+                    className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide" 
+                    style={{ backgroundColor: (statusColors[order.status] || '#888') + '20', color: statusColors[order.status] || '#888' }}
+                  >
+                    {order.status}
+                  </span>
+                );
+              })()}
               <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase" style={{ backgroundColor: (order.payment_status === 'paid' ? '#16a34a' : '#f59e0b') + '20', color: order.payment_status === 'paid' ? '#16a34a' : '#f59e0b' }}>{order.payment_status}</span>
             </div>
           </div>
