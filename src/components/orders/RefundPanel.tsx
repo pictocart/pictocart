@@ -44,7 +44,7 @@ const RefundPanel = ({ orderId, total, amountRefunded, hasRazorpayPayment, payme
   });
 
   const canRefund = hasRazorpayPayment && refundable > 0 &&
-    (paymentStatus === 'paid' || paymentStatus === 'partially_refunded');
+    (paymentStatus === 'paid' || paymentStatus === 'partially_refunded' || paymentStatus === 'refund_requested');
 
   const submit = async () => {
     const amt = Number(amount);
@@ -60,6 +60,10 @@ const RefundPanel = ({ orderId, total, amountRefunded, hasRazorpayPayment, payme
       if (error || (data as any)?.error) {
         throw new Error((data as any)?.error || error?.message || 'Refund failed');
       }
+      
+      // Update order payment_status to 'refund_in_process'
+      await supabase.from('orders').update({ payment_status: 'refund_in_process' }).eq('id', orderId);
+
       toast.success(`Refund initiated: ₹${amt.toFixed(2)}`);
       setOpen(false);
       setReason('');

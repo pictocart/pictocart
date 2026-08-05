@@ -8,7 +8,7 @@ export type Order = Tables<'orders'>;
 export type OrderUpdate = TablesUpdate<'orders'>;
 
 export type OrderStatus = 'new' | 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'returned' | 'rejected';
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cod' | 'refund_in_process';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cod' | 'refund_in_process' | 'refund_requested';
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string; color: string }[] = [
   { value: 'new',              label: 'New',              color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
@@ -31,6 +31,7 @@ export const PAYMENT_STATUSES: { value: PaymentStatus; label: string; color: str
   { value: 'refunded', label: 'Refunded', color: 'bg-gray-100 text-gray-800' },
   { value: 'cod', label: 'COD', color: 'bg-orange-100 text-orange-800' },
   { value: 'refund_in_process', label: 'Refund in Process', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { value: 'refund_requested', label: 'Refund Requested', color: 'bg-purple-100 text-purple-800 border-purple-200' },
 ];
 
 export const useOrders = () => {
