@@ -83,7 +83,7 @@ const CustomerAccount = () => {
   const { slug } = useParams<{ slug: string }>();
   const { store, loading: storeLoading } = useStorefront(slug || '');
   const { user, signOut } = useCustomerAuth(slug || '');
-  const { data: orders, isLoading: ordersLoading } = useCustomerOrders(user?.id, store?.id);
+  const { data: orders, isLoading: ordersLoading, refetch: refetchOrders } = useCustomerOrders(user?.id, store?.id);
   const [tab, setTab] = useState<TabKey>('profile');
   const [orderFilter, setOrderFilter] = useState('all');
   const [orderSearch, setOrderSearch] = useState('');
@@ -672,7 +672,7 @@ const CustomerAccount = () => {
                                 <span className="opacity-50">Total Amount:</span>
                                 <span className="font-bold text-sm ml-1" style={{ color: colors.primary }}>₹{Number(order.total).toLocaleString('en-IN')}</span>
                               </div>
-                              <OrderActions order={order} primaryColor={colors.primary} onChanged={() => {}} />
+                              <OrderActions order={order} primaryColor={colors.primary} onChanged={refetchOrders} />
                             </div>
                           </div>
                         );
