@@ -898,13 +898,13 @@ const OrderDetail = () => {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Amount Due</span>
                 <span className="font-semibold">
-                  ₹{['paid', 'refund_requested', 'refund_in_process', 'refunded'].includes(order.payment_status || '') ? 0 : Number(order.total || 0).toLocaleString('en-IN')}
+                  ₹{['paid', 'refund_requested', 'refund_in_process', 'refunded'].includes((order.payment_status as any) || '') ? 0 : Number(order.total || 0).toLocaleString('en-IN')}
                 </span>
               </div>
 
               {order.status !== 'cancelled' && order.status !== 'rejected' && order.status !== 'returned' &&
-               order.payment_status !== 'paid' && order.payment_status !== 'refund_requested' && 
-               order.payment_status !== 'refund_in_process' && order.payment_status !== 'refunded' && 
+               (order.payment_status as any) !== 'paid' && (order.payment_status as any) !== 'refund_requested' && 
+               (order.payment_status as any) !== 'refund_in_process' && (order.payment_status as any) !== 'refunded' && 
                offlineModes.length > 0 && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
                   <p className="text-xs font-semibold text-primary uppercase tracking-wide">Collect Payment</p>
