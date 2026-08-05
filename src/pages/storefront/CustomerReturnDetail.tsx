@@ -18,6 +18,21 @@ const statusColor: Record<string, string> = {
   cancelled: '#78716c',
 };
 
+const formatLiveReturnStatus = (status: string): string => {
+  if (!status) return 'AWB Assigned';
+  const s = status.toLowerCase();
+  if (s.includes('out for delivery') || s.includes('out_for_delivery')) {
+    return 'Out for Delivery to Store/Warehouse';
+  }
+  if (s.includes('delivered') || s.includes('received') || s.includes('rto delivered')) {
+    return 'Delivered to Store/Warehouse';
+  }
+  if (s.includes('picked up') || s.includes('picked_up')) {
+    return 'Picked Up (On the way to Store)';
+  }
+  return status;
+};
+
 const CustomerReturnDetail = () => {
   const { slug, id } = useParams<{ slug: string; id: string }>();
   const { store, loading: storeLoading } = useStorefront(slug || '');
@@ -171,7 +186,7 @@ const CustomerReturnDetail = () => {
                     <div className="flex justify-between text-sm">
                       <span className="opacity-60">Current Status:</span>
                       <span className="font-semibold uppercase tracking-wide" style={{ color: colors.primary }}>
-                        {trackingData.status || 'AWB Assigned'}
+                        {formatLiveReturnStatus(trackingData.status)}
                       </span>
                     </div>
                     {trackingData.location && (
@@ -187,7 +202,7 @@ const CustomerReturnDetail = () => {
                           {trackingData.scans.map((scan: any, i: number) => (
                             <div key={i} className="text-xs p-2 rounded-md border flex flex-col gap-0.5" style={{ borderColor: colors.secondary + '60' }}>
                               <div className="flex justify-between font-semibold">
-                                <span>{scan?.ScanDetail?.Scan || 'Status Update'}</span>
+                                <span>{formatLiveReturnStatus(scan?.ScanDetail?.Scan)}</span>
                                 {scan?.ScanDetail?.ScanDateTime && (
                                   <span className="opacity-60 font-mono text-[10px]">
                                     {format(new Date(scan.ScanDetail.ScanDateTime), 'dd MMM, hh:mm a')}

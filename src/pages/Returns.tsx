@@ -175,6 +175,21 @@ const Returns = () => {
 
 /* ---------------- Details Panel ---------------- */
 
+const formatLiveReturnStatus = (status: string): string => {
+  if (!status) return 'AWB Assigned';
+  const s = status.toLowerCase();
+  if (s.includes('out for delivery') || s.includes('out_for_delivery')) {
+    return 'Out for Delivery to Store/Warehouse';
+  }
+  if (s.includes('delivered') || s.includes('received') || s.includes('rto delivered')) {
+    return 'Delivered to Store/Warehouse';
+  }
+  if (s.includes('picked up') || s.includes('picked_up')) {
+    return 'Picked Up (On the way to Store)';
+  }
+  return status;
+};
+
 const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => void }) => {
   const { store } = useStore();
   const [status, setStatus] = useState<ReturnStatus>(r.status);
@@ -432,7 +447,7 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-medium">
                       <span>Status:</span>
-                      <span className="text-primary uppercase font-bold">{trackingData.status || 'AWB Assigned'}</span>
+                      <span className="text-primary uppercase font-bold">{formatLiveReturnStatus(trackingData.status)}</span>
                     </div>
                     {trackingData.location && (
                       <div className="flex justify-between text-xs font-medium">
@@ -445,7 +460,7 @@ const ReturnDetailsPanel = ({ r, onSaved }: { r: ReturnRequest; onSaved: () => v
                         {trackingData.scans.map((scan: any, i: number) => (
                           <div key={i} className="text-[11px] p-1.5 border rounded bg-background flex flex-col gap-0.5">
                             <div className="flex justify-between font-semibold">
-                              <span>{scan?.ScanDetail?.Scan || 'Status Update'}</span>
+                              <span>{formatLiveReturnStatus(scan?.ScanDetail?.Scan)}</span>
                               {scan?.ScanDetail?.ScanDateTime && (
                                 <span className="opacity-60 text-[9px] font-mono">
                                   {format(new Date(scan.ScanDetail.ScanDateTime), 'dd MMM, hh:mm')}
