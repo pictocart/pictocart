@@ -57,7 +57,30 @@ Deno.serve(async (req) => {
       .eq("id", order.store_id)
       .maybeSingle();
     if (storeErr || !store) return json({ error: "Store not found" }, 404);
-    if (store.user_id !== userId) return json({ error: "Forbidden" }, 403);
+    // Check authorization: Owner, Admin, or Store Staff
+    let isAuthorized = false;
+    if (store.user_id === userId) {
+      isAuthorized = true;
+    } else {
+      const { data: adminCheck } = await admin.rpc("has_role", {
+        _user_id: userId,
+        _role: "admin"
+      });
+      if (adminCheck) {
+        isAuthorized = true;
+      } else {
+        const { data: staffCheck } = await admin
+          .from("store_staff")
+          .select("id")
+          .eq("store_id", order.store_id)
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (staffCheck) {
+          isAuthorized = true;
+        }
+      }
+    }
+    if (!isAuthorized) return json({ error: "Forbidden" }, 403);
     if (!order.razorpay_payment_id) return json({ error: "Order has no captured Razorpay payment" }, 400);
     if (order.payment_status !== "paid" && order.payment_status !== "partially_refunded" && order.payment_status !== "refund_requested") {
       return json({ error: `Cannot refund order in status ${order.payment_status}` }, 400);
