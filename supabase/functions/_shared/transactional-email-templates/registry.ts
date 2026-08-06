@@ -22,6 +22,7 @@ import { template as annualRenewal } from './annual-renewal.tsx'
 import { template as partnerPayoutPaid } from './partner-payout-paid.tsx'
 import { template as customerOtp } from './customer-otp.tsx'
 import { template as replyMessage } from './reply-message.tsx'
+import { template as welcomeMerchant } from './welcome-merchant.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'trial-ending': trialEnding,
@@ -30,6 +31,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'customer-password-reset': customerPasswordReset,
   'low-balance': lowBalance,
   'welcome-customer': welcomeCustomer,
+  'welcome-merchant': welcomeMerchant,
   'partner-invite': partnerInvite,
   'client-store-invite': clientStoreInvite,
   'annual-renewal': annualRenewal,

@@ -475,12 +475,42 @@ const Onboarding = () => {
           const newConfig = { ...existingConfig, homepage_sections: homepageSections };
           const resolved_storefront_manifest = await buildResolvedStorefrontManifest(liveStore, newConfig as any);
 
-          await (supabase.from('stores') as any).update({
+          const { error: updateError } = await (supabase.from('stores') as any).update({
             is_published: true,
             onboarding_step: TOTAL_STEPS,
             settings: currentSettings,
             resolved_storefront_manifest: resolved_storefront_manifest as any,
           }).eq('id', store.id);
+
+          if (updateError) {
+            console.error('Failed to update store on onboarding completion:', updateError);
+            toast.error(`Failed to publish store: ${updateError.message}`);
+            return;
+          }
+
+          // Trigger onboarding welcome email to the merchant
+          if (user?.email) {
+            const storefrontUrl = store.slug 
+              ? `${window.location.origin}/store/${store.slug}`
+              : `${window.location.origin}`;
+            const dashboardUrl = `${window.location.origin}/dashboard`;
+            
+            supabase.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'welcome-merchant',
+                recipientEmail: user.email,
+                templateData: {
+                  storeName: data.storeName || store.name,
+                  name: user.user_metadata?.full_name || '',
+                  storeUrl: storefrontUrl,
+                  dashboardUrl: dashboardUrl,
+                },
+              },
+            }).catch((emailErr) => {
+              console.error('Failed to send onboarding welcome email:', emailErr);
+            });
+          }
+
           // Update the context cache synchronously so the dashboard's
           // "Your store is live at … View" ribbon renders immediately on
           // first paint instead of waiting for a refetch.

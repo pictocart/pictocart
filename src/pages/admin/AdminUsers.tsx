@@ -9,7 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Search, MoreVertical, Trash2, ShieldPlus, ShieldMinus, Eye, UserPlus, Users, KeyRound } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/multi-select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface AdminUser {
   id: string;
@@ -29,8 +30,8 @@ interface AdminUser {
 
 const AdminUsers = () => {
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [storeFilter, setStoreFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string[]>([]);
+  const [storeFilter, setStoreFilter] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
   const [permanentDeleteUser, setPermanentDeleteUser] = useState<AdminUser | null>(null);
@@ -42,6 +43,9 @@ const AdminUsers = () => {
   const [newPasswordVal, setNewPasswordVal] = useState('');
   const [newName, setNewName] = useState('');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const queryClient = useQueryClient();
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -235,13 +239,56 @@ const AdminUsers = () => {
     }
   };
 
+
+  const handleBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+    setIsBulkDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      await Promise.all(
+        selectedUserIds.map(async (userId) => {
+          try {
+            await manageMutation.mutateAsync({ action: 'permanent_delete_user', userId });
+            successCount++;
+          } catch (err) {
+            console.error(`Failed to delete user ${userId}:`, err);
+            failCount++;
+          }
+        })
+      );
+
+      if (successCount > 0) {
+        toast.success(`Successfully deleted ${successCount} user(s)`);
+      }
+      if (failCount > 0) {
+        toast.error(`Failed to delete ${failCount} user(s)`);
+      }
+      setSelectedUserIds([]);
+      setBulkDeleteOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['admin-users-full'] });
+    } catch (e: any) {
+      toast.error('An error occurred during bulk deletion');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const filtered = useMemo(() => {
     let list = users || [];
-    if (roleFilter !== 'all') {
-      list = list.filter((u) => u.roles.includes(roleFilter));
+    if (roleFilter.length > 0) {
+      list = list.filter((u) => u.roles.some((r) => roleFilter.includes(r)));
     }
-    if (storeFilter !== 'all') {
-      list = list.filter((u) => (storeFilter === '__none__' ? !u.storeSlug : u.storeSlug === storeFilter));
+    if (storeFilter.length > 0) {
+      list = list.filter((u) => {
+        const belongsToSelectedStore = u.storeSlug ? storeFilter.includes(u.storeSlug) : false;
+        const noStoreSelected = storeFilter.includes('__none__');
+        if (noStoreSelected && !u.storeSlug) {
+          return true;
+        }
+        return belongsToSelectedStore;
+      });
     }
     if (search) {
       const s = search.toLowerCase();
@@ -256,6 +303,27 @@ const AdminUsers = () => {
     return list;
   }, [users, search, roleFilter, storeFilter]);
 
+  const isAllSelected = filtered.length > 0 && filtered.every((u) => selectedUserIds.includes(u.user_id));
+  const isSomeSelected = filtered.length > 0 && filtered.some((u) => selectedUserIds.includes(u.user_id)) && !isAllSelected;
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = filtered.map((u) => u.user_id);
+      setSelectedUserIds(Array.from(new Set([...selectedUserIds, ...allIds])));
+    } else {
+      const filteredIds = filtered.map((u) => u.user_id);
+      setSelectedUserIds(selectedUserIds.filter((id) => !filteredIds.includes(id)));
+    }
+  };
+
+  const handleSelectRow = (userId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedUserIds([...selectedUserIds, userId]);
+    } else {
+      setSelectedUserIds(selectedUserIds.filter((id) => id !== userId));
+    }
+  };
+
   const storeOptions = useMemo(() => {
     const map = new Map<string, string>();
     (users || []).forEach((u) => {
@@ -263,6 +331,19 @@ const AdminUsers = () => {
     });
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [users]);
+
+  const roleOptions = [
+    { label: 'Admin', value: 'admin' },
+    { label: 'Seller', value: 'seller' },
+    { label: 'Customer', value: 'customer' },
+  ];
+
+  const storeOptionsList = useMemo(() => {
+    return [
+      { label: 'No Store', value: '__none__' },
+      ...storeOptions.map(([slug, name]) => ({ label: name, value: slug })),
+    ];
+  }, [storeOptions]);
 
   const stats = useMemo(() => {
     const all = users || [];
@@ -286,10 +367,23 @@ const AdminUsers = () => {
           <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
           <p className="text-sm text-muted-foreground">View, manage roles, and administer platform users</p>
         </div>
-        <Button onClick={() => setCreateUserOpen(true)} className="flex items-center gap-2 self-start md:self-auto">
-          <UserPlus className="h-4 w-4" />
-          Add User
-        </Button>
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          {selectedUserIds.length > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setBulkDeleteOpen(true)}
+              className="flex items-center gap-2"
+              disabled={isBulkDeleting}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Selected ({selectedUserIds.length})
+            </Button>
+          )}
+          <Button onClick={() => setCreateUserOpen(true)} className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4" />
+            Add User
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -316,29 +410,20 @@ const AdminUsers = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search by name, email, phone, store..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Filter by role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="seller">Seller</SelectItem>
-            <SelectItem value="customer">Customer</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={storeFilter} onValueChange={setStoreFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by store" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Stores</SelectItem>
-            <SelectItem value="__none__">No Store</SelectItem>
-            {storeOptions.map(([slug, name]) => (
-              <SelectItem key={slug} value={slug}>{name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          options={roleOptions}
+          selected={roleFilter}
+          onChange={setRoleFilter}
+          placeholder="All Roles"
+          className="w-full sm:w-[180px]"
+        />
+        <MultiSelect
+          options={storeOptionsList}
+          selected={storeFilter}
+          onChange={setStoreFilter}
+          placeholder="All Stores"
+          className="w-full sm:w-[220px]"
+        />
       </div>
 
       {isLoading ? (
@@ -350,6 +435,12 @@ const AdminUsers = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                  />
+                </TableHead>
                 <TableHead>User</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
                 <TableHead>Store</TableHead>
@@ -361,7 +452,13 @@ const AdminUsers = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow key={user.id} className={selectedUserIds.includes(user.user_id) ? "bg-muted/40" : ""}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedUserIds.includes(user.user_id)}
+                      onCheckedChange={(checked) => handleSelectRow(user.user_id, !!checked)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {user.avatar_url ? (
@@ -447,7 +544,7 @@ const AdminUsers = () => {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -532,6 +629,24 @@ const AdminUsers = () => {
             <Button variant="outline" onClick={() => setDeleteUser(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteUser} disabled={manageMutation.isPending}>
               {manageMutation.isPending ? 'Deleting...' : 'Delete Permanently'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Selected Users</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the <strong>{selectedUserIds.length}</strong> selected user(s) and all their associated data (stores, products, orders, etc.). This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={isBulkDeleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={isBulkDeleting}>
+              {isBulkDeleting ? 'Deleting...' : 'Delete Permanently'}
             </Button>
           </DialogFooter>
         </DialogContent>

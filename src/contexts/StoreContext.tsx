@@ -65,7 +65,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       .from('stores')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(1);
 
     if (error) {
