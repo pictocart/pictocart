@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -6570,7 +6570,14 @@ export type Database = {
       partner_tier: "partner" | "state_head" | "regional_head"
       partner_type: "agency" | "freelancer" | "intern"
       payment_mode_t: "cash" | "upi" | "card" | "bank" | "credit" | "other"
-      payment_status: "pending" | "paid" | "failed" | "refunded" | "cod"
+      payment_status:
+        | "pending"
+        | "paid"
+        | "failed"
+        | "refunded"
+        | "cod"
+        | "refund_in_process"
+        | "refund_requested"
       prep_status:
         | "received"
         | "preparing"
@@ -6779,7 +6786,15 @@ export const Constants = {
       partner_tier: ["partner", "state_head", "regional_head"],
       partner_type: ["agency", "freelancer", "intern"],
       payment_mode_t: ["cash", "upi", "card", "bank", "credit", "other"],
-      payment_status: ["pending", "paid", "failed", "refunded", "cod"],
+      payment_status: [
+        "pending",
+        "paid",
+        "failed",
+        "refunded",
+        "cod",
+        "refund_in_process",
+        "refund_requested",
+      ],
       prep_status: [
         "received",
         "preparing",

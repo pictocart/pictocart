@@ -162,7 +162,7 @@ const navTree: NavEntry[] = [
       { label: 'Staff Management', icon: Users, path: '/settings/staff' },
       { label: 'Domain', icon: Globe, path: '/settings/domain' },
       // { label: 'Email Branding', icon: Mail, path: '/settings/email' },
-      { label: 'Billing', icon: Crown, path: '/billing' },
+      // { label: 'Billing', icon: Crown, path: '/billing' },
       { label: 'AI Wallet', icon: Sparkles, path: '/wallet' },
     ],
   },

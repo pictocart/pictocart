@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useStorefront } from '@/hooks/useStorefront';
 import { usePublishedBlogPosts } from '@/hooks/useBlogPosts';
 import StorefrontLayout, { resolveTheme } from '@/components/storefront/StorefrontLayout';
-import { getStoreThemeTokens, getStorefrontConfig } from '@/lib/storefrontManifest';
+import { getStoreThemeTokens, getStorefrontConfig, getResolvedManifest } from '@/lib/storefrontManifest';
 import SEOHead from '@/components/storefront/SEOHead';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
@@ -21,7 +21,8 @@ const StorefrontBlog = () => {
   const overrides = storefrontConfig?.theme_overrides || {};
   
   // Try to find the journal_list section overrides by index in the manifest page sections
-  const manifestSections = store?.resolved_storefront_manifest?.manifest?.pages?.journal?.sections || [];
+  const resolvedManifest = getResolvedManifest(store);
+  const manifestSections = resolvedManifest?.manifest?.pages?.journal?.sections || [];
   const journalListIdx = manifestSections.findIndex((s: any) => s.type === 'journal_list');
   
   let journalProps: any = {};
