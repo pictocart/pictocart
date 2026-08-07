@@ -283,8 +283,6 @@ async function handleWebhook(req: Request): Promise<Response> {
 
   const subject = (emailType === 'signup' && token)
     ? `${token} is your ${SITE_NAME} verification code`
-    : (emailType === 'recovery' && token)
-    ? `${token} is your password reset code`
     : (EMAIL_SUBJECTS[emailType] || 'Notification');
 
   if (storeSender) {
